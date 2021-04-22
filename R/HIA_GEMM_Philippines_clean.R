@@ -3,12 +3,12 @@ require(lauR)
 loadlibs(online=F)
 require(ncdf4)
 
+source("R/puffvis.R")
+
 resultsdir = 'sample data/'
 resultsdir %>% setwd
 
 #process CALPUFF results
-source("R/puffvis.R")
-
 fileSpecs <- getPuffCSVs(ext=".csv", gasunit = 'ug')
 
 makeGrid(UTMz=51, UTMhem='N', mapres=1)
@@ -22,7 +22,7 @@ fileSpecs <- getPuffCSVs(ext=".tif", gasunit = 'ug')
 fileSpecs$name[1] %>% raster %>% raster %>% fixproj -> gridR
 makeMap(gridR, admin_level=adm_level)
 
-read_xlsx('./../PH Coal plants.xlsx', sheet='All', skip=1, n_max=45) -> CFPPs
+read_xlsx('PH Coal plants.xlsx', sheet='All', skip=1, n_max=45) -> CFPPs
 
 HIArasterpath=boxpath('GIS/HIA/')
 #http://fizz.phys.dal.ca/~atmos/martin/?page_id=140
@@ -114,7 +114,7 @@ for(s in scens[queue]) {
 
 
 #read HIA input data
-HIApath='data/'
+HIApath='../data/'
 
 source(paste0(HIApath, 'helper functions.R'))
 source(paste0(HIApath, 'gemm_function.R'))
@@ -424,10 +424,7 @@ hia_by_year_scaled %>% filter(fuel == 'COAL', !is.na(scenario)) %>%
 fileSpecs$name -> files
 
 plotKM <- 400
-#CFPP_SP %>% extent %>% add(plotKM) -> plot_bb
-gridR %>% extent -> plot_bb
-#plot_bb@ymin %<>% add(100)
-#plot_bb@ymax %<>% add(100)
+CFPP_SP %>% extent %>% add(plotKM) -> plot_bb
 
 CFPPs %<>% distinct(Lat, Long, .keep_all = T) %>%
   sel(Plant, Lat, Long, Status) %>% mutate(Source = Plant %>% gsub(' power station', '', ., ignore.case = T) %>%
@@ -448,16 +445,16 @@ if("kml" %in% outputs) {
   #install.packages(c('plotrix', 'dismo', 'pixmap', 'RSAGA', 'colorRamps', 'aqp'))
   library(plotKML)
   if(!file.exists("zip.exe"))
-    file.copy(boxpath("tools&templates/zip.exe"),"zip.exe")
+    file.copy(paste0(HIApath, "zip.exe"),"zip.exe")
   labelF <- "factoryTransp3.png"
   if(!file.exists(labelF))
-    file.copy(paste0(boxpath("tools&templates/"), labelF),labelF)
+    file.copy(paste0(HIApath, labelF),labelF)
 }
 
 library(rasterVis)
 
-if(!exists("adm0v2_UTM")) {
-  getadm(0) %>% cropProj(gridR) -> adm0v2_UTM
+if(!exists("adm0_UTM")) {
+  getadm(0) %>% cropProj(gridR) -> adm0_UTM
 }
 
 expPop <- list()
@@ -551,7 +548,7 @@ for(file in queue[ifelse(test,1,T)]) {
                     margin=F,cex=.8,at=plumeBreaks[-length(plumeBreaks)],
                     par.settings=parSets,
                     main=fileSpecs[file,"titletxt"],ylab.right=fileSpecs[file,"unit"]) +
-      layer(sp.lines(adm0v2_UTM, lwd=3, col='darkgray')) +
+      layer(sp.lines(adm0_UTM, lwd=3, col='darkgray')) +
       layer(sp.points(CFPPplot, pch=24,lwd=1.5, col="white",fill="red",cex=.7)) +
       layer(sp.points(cityPlot, pch=1,lwd=3, col=labelcol)) +
       layer(sp.text(coordinates(cityPlot), txt = cityPlot$name,
