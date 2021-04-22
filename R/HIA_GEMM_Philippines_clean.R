@@ -671,9 +671,9 @@ depoR * area(depoR) * 10^2 -> depoR #hectares to km2
 names(depoR) <- paste0(depodf$species,'_',depodf$scenario)
 
 #get deposition by land use type
-raster(GISpath('../ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7.tif')) -> lc
+raster(paste0(HIArasterpath,'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7.tif')) -> lc
 projectRaster(crop(lc,gridLL), gridR, method='ngb') -> lc.utm
-read.csv(GISpath('../ESACCI-LC-Legend.csv'),sep=';',stringsAsFactors = F) -> lc.leg
+read.csv(paste0(HIArasterpath,'ESACCI-LC-Legend.csv'),sep=';',stringsAsFactors = F) -> lc.leg
 
 admUTM$ID <- admUTM$GID_0 %>% as.factor %>% as.numeric
 landmask <- rasterize(admUTM, depoR, "ID")
@@ -714,7 +714,7 @@ hgdepolist %>%
   lapply(function(r) area(r)[r>125] %>% sum) %>% data.frame %>%
   write_csv('hg above 125, km2.csv')
 
-
+#WDPA database extract
 '~/GIS/WDPA/WDPA_Mar2020-Philippines.RDS' %>% readRDS() -> prot
 prot %<>% spTransform(crs(gridR))
 
