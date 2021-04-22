@@ -25,12 +25,15 @@ makeMap(gridR, admin_level=adm_level)
 read_xlsx('PH Coal plants.xlsx', sheet='All', skip=1, n_max=45) -> CFPPs
 
 HIArasterpath=boxpath('GIS/HIA/')
-#http://fizz.phys.dal.ca/~atmos/martin/?page_id=140
+#files that need to be in this folder are found at:
+#https://drive.google.com/drive/folders/1ze78ZzIgh_2oZ8V9KddAGEJdko5AT3M-?usp=sharing
+
+#source of PM2.5 data: http://fizz.phys.dal.ca/~atmos/martin/?page_id=140
 PM25.base <- paste0(HIArasterpath, 'GlobalGWRcwUni_PM25_GL_201601_201612-RH35_Median.nc') %>% raster
 pop <- paste0(HIArasterpath, 'gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_30_sec.tif') %>% raster
 grump <- paste0(HIArasterpath, 'GRUMPv1/glurextents.bil') %>% raster
 crs(grump) <- crs(pop)
-#https://data.world/datasets/no2
+#source of NO2 data: https://data.world/datasets/no2
 NO2.base <- paste0(HIArasterpath, 'no2_agg8.grd') %>% raster
 
 admLL <- getadm(adm_level)
