@@ -16,10 +16,47 @@ hiapoll_to_species <- function(hiapoll){
 }
 
 
-compute_hia_paf <- function(conc_map, calc_causes, scenarios=names(conc_map),
+compute_hia <- function(conc_map,
+                        species,
+                        regions,
+                        scenarios=names(conc_map),
+                        calc_causes=get_calc_causes(),
+                        gemm=get_gemm(),
+                        gbd=get_gbd(),
+                        ihme=get_ihme(),
+                        epi=get_epi(),
+                        crfs=get_crfs(),
+                        scale_base_year=NULL,
+                        scale_target_year=NULL
+                        ){
+
+
+  paf <- compute_hia_paf(conc_adm,
+                         scenarios=scenarios,
+                         calc_causes=calc_causes,
+                         gemm=gemm, gbd=gbd, ihme=ihme)
+
+  hia <- compute_hia_epi(region=regions,
+                         species=species,
+                         pa =paf,
+                         conc_map=conc_map,
+                         epi=epi,
+                         crfs=crfs,
+                         calc_causes=calc_causes)
+
+  if(!any(is.null(c(scale_base_year, scale_target_year)))){
+    hia <- scale_hia_pop(hia, base_year=scale_base_year, target_year=scale_target_year)
+  }
+
+  return(hia)
+}
+
+compute_hia_paf <- function(conc_map, scenarios=names(conc_map),
+                            calc_causes=get_calc_causes(),
                             gemm=get_gemm(), gbd=get_gbd(), ihme=get_ihme()){
 
   paf <- list()
+  adult_ages <- get_adult_ages(ihme)
 
   for(scenario in scenarios) {
 
@@ -48,7 +85,13 @@ compute_hia_paf <- function(conc_map, calc_causes, scenarios=names(conc_map),
                          ihme=ihme,
                          .region="inc_China") -> paf_scenario[[region_id]][[cs_ms]]
       }
-      paf_scenario[[region_id]] %<>% ldply(.id='var')
+      tryCatch({
+        paf_scenario[[region_id]] %<>% ldply(.id='var')
+      }, error=function(e){
+        # For instance if country iso3 not in ihme$ISO3
+        warning("Failed for region ", region_id)
+        paf_scenario[[region_id]] <- NULL
+      })
     }
 
     paf_scenario %<>% ldply(.id='region_id')
@@ -72,10 +115,13 @@ get_nrt_conc <- function(region_ids, conc_name, nrt, conc_map,
 }
 
 
-compute_hia_epi <- function(species, paf, conc_map, epi=get_epi()){
+compute_hia_epi <- function(species, paf, conc_map, regions,
+                            epi=get_epi(), crfs=get_crfs(),
+                            calc_causes=get_calc_causes()){
 
   hia_polls <- species_to_hiapoll(species)
   scenarios <- names(conc_map)
+  hia <- list()
 
   for(scenario in scenarios) {
     conc_scenario <- conc_map[[scenario]]
@@ -95,12 +141,17 @@ compute_hia_epi <- function(species, paf, conc_map, epi=get_epi()){
       full_join(pop_domain %>% sel(region_id, epi_iso3, pop)) %>%
       sel(-epi_iso3)
 
+    # Exclude unmatched countries
+    na_iso3s <- epi_loc$region_id[is.na(epi_loc$estimate)]
+    warning("Couldn't find epidemiological data for regions ",na_iso3s,". Excluding them.")
+    epi_loc %<>% filter(!is.na(estimate))
+
     hia_scenario <- epi_loc %>% sel(region_id, estimate, pop)
 
     for(i in which(crfs$Exposure %in% hia_polls)) {
       species_name <- hiapoll_to_species(crfs$Exposure[i])
 
-      if(grepl('nrt', concname)) {
+      if(grepl('nrt', species_name)) {
         sourceconcs <- get_nrt_conc(hia$GID, species_name, 0, conc_adm = conc_adm)
       } else {
         species_name %>% paste0('conc_base_',.) -> base_name
@@ -109,16 +160,16 @@ compute_hia_epi <- function(species, paf, conc_map, epi=get_epi()){
 
         crfs$Counterfact[i] -> cfconc
 
-        base_concs <- get_nrt_conc(region_ids=hia$region_id, conc_name=base_name, nrt=cfconc, conc_map=conc_scenario,
+        base_concs <- get_nrt_conc(region_ids=hia_scenario$region_id, conc_name=base_name, nrt=cfconc, conc_map=conc_scenario,
                                    units_multiplier=crfs$Units.multiplier[i], nrt_flag=nrt_flag)
 
-        perm_concs <- get_nrt_conc(region_ids=hia$region_id, conc_name=perm_name, nrt=cfconc, conc_map=conc_scenario,
+        perm_concs <- get_nrt_conc(region_ids=hia_scenario$region_id, conc_name=perm_name, nrt=cfconc, conc_map=conc_scenario,
                                    units_multiplier=crfs$Units.multiplier[i], nrt_flag=nrt_flag)
 
         source_concs <- perm_concs - base_concs
       }
 
-      match(hia$estimate, names(crfs)) -> RR.ind
+      match(hia_scenario$estimate, names(crfs)) -> RR.ind
       crfs[i, RR.ind] %>% unlist %>% unname -> RRs
 
       epi_loc[[crfs$Incidence[i]]] / 1e5 * epi_loc$pop * (1 - exp(-log(RRs)*source_concs / crfs$Conc.change[i])) ->
@@ -131,17 +182,30 @@ compute_hia_epi <- function(species, paf, conc_map, epi=get_epi()){
       spread(var, val) -> paf_wide
     epi_loc %>% left_join(paf_wide) -> paf_wide
 
-    paf_wide %>% sel(GID, estimate) -> pm_mort
+    paf_wide %>% sel(region_id, estimate) -> pm_mort
 
     for(cs in calc_causes)
       paf_wide[[cs]] / 1e5 * paf_wide[[paste0('paf_', cs)]] * paf_wide$pop -> pm_mort[[cs]]
 
     names(pm_mort)[sapply(pm_mort, is.numeric)] %<>% paste0('_PM25')
-    full_join(pm_mort, hia_scenario) -> hia[[s]]
-    print(s)
+    full_join(pm_mort, hia_scenario) -> hia_scenario
+
+    # Summing deaths
+    mort_col <- intersect(names(hia_scenario),
+                          c("NCD.LRI_Deaths_PM25","NCD.LRI_Deaths_SO2","NCD.LRI_Deaths_NO2","COPD_Deaths_O3_8h","LRI.child_Deaths_PM25"))
+    hia_scenario %<>%
+      rowwise() %>%
+      dplyr::mutate(Deaths_Total = rowSums(across(any_of(mort_col)))) %>%
+      ungroup()
+
+    hia[[scenario]] <- hia_scenario
+    print(scenario)
   }
 
-  hia %<>% ldply(.id='scenario') %>% mutate(iso3 = region_id %>% substr(1, 3))
+  hia %<>%
+    ldply(.id='scenario') %>%
+    left_join(regions %>% as.data.frame(row.names=NULL) %>% sel(region_id, region_name, iso3=country_id))
+
   return(hia)
 }
 
@@ -196,10 +260,10 @@ country_paf_perm <- function(pm.base,
     } else { ages='25+' }
   }
 
-  ages %>% sapply(function(.a) hr(pm.base, .cause=cause, .age=.a, .region=.region), simplify = 'array') -> rr.base
+  ages %>% sapply(function(.a) hr(pm.base, gbd=gbd, gemm=gemm, .cause=cause, .age=.a, .region=.region), simplify = 'array') -> rr.base
 
   if(.mode == 'change') {
-    ages %>% sapply(function(.a) hr(pm.perm, .cause=cause, .age=.a, .region=.region), simplify = 'array') -> rr.perm
+    ages %>% sapply(function(.a) hr(pm.perm, gbd=gbd, gemm=gemm, .cause=cause, .age=.a, .region=.region), simplify = 'array') -> rr.perm
     paf.perm <- rr.perm / rr.base - 1
 
   } else { paf.perm = (1 - (1 / rr.base)) * (1 - pm.perm / pm.base) }
@@ -209,8 +273,13 @@ country_paf_perm <- function(pm.base,
       orderrows %>%
       apply(2, weighted.mean, w$val) #in case the hr function didn't return an array
   } else {
-    paf.perm %>% apply(1:2, weighted.mean, w$val) %>%
-      orderrows %>% apply(2, weighted.mean, w=pop)
+    tryCatch({
+      paf.perm %>% apply(1:2, weighted.mean, w$val) %>%
+        orderrows %>% apply(2, weighted.mean, w=pop)
+    }, error=function(e){
+      warning("Failed for region ", cy, e)
+      return(NULL)
+    })
   }
 }
 
@@ -235,4 +304,63 @@ country_paf <- function(pm, pop, cy, cs, ms, adult_ages=get_adult_ages(), .regio
   } else {
     paf %>% apply(1:2, weighted.mean, w$val, na.rm=T) %>% apply(2, weighted.mean, w=pop, na.rm=T)
   }
+}
+
+
+scale_hia_pop <- function(hia, base_year=2015, target_year=2019){
+
+  pop_proj <- get_pop_proj()
+
+  #scale population from year of population data to target year of estimates
+  pop_scaling <- pop_proj %>% filter(year %in% c(base_year, target_year), AgeGrp != 'Newborn', !is.na(iso3)) %>%
+    sel(-AgeGrp) %>% group_by(iso3, year) %>% summarise_at('pop', sum)
+
+  pop_scaling$year[pop_scaling$year==base_year] <- 'base'
+  pop_scaling$year[pop_scaling$year==target_year] <- 'target'
+
+  hia_scaled <- pop_scaling %>% spread(year, pop) %>% mutate(scaling=target/base) %>% sel(iso3, scaling) %>%
+    left_join(hia, .) %>%
+    (function(df) df %>% mutate_if(is.numeric, multiply_by, df$scaling)) %>% sel(-scaling)
+
+  return(hia_scaled)
+}
+
+totalise_hia <- function(hia){
+  hia_adm <- hia %>%
+    group_by(region_id, region_name, iso3, scenario, estimate) %>%
+    summarise_if(is.numeric, sum, na.rm=T) %>%
+    gather(Outcome, Number, -region_id, -region_name, -iso3, -scenario, -estimate)
+
+  hia_adm %>%
+    group_by(scenario, estimate, Outcome) %>%
+    summarise_if(is.numeric, sum, na.rm=T) %>%
+    spread(estimate, Number)
+}
+
+
+make_hia_table <- function(hia,
+                           make_ci_fun=make_ci,
+                           res_cols = c('low', 'central', 'high'),
+                           dict=get_dict()) {
+
+  hia_total <- totalise_hia(hia)
+  hia_total %<>% separate(Outcome, c('Cause', 'Outcome', 'Pollutant'), '_')
+  is.na(hia_total$Pollutant) -> ind
+  hia_total$Pollutant[ind] <- hia_total$Outcome[ind]
+  hia_total$Outcome[ind] <- hia_total$Cause[ind]
+
+  hia_table <- hia_total %>%
+    left_join(dict %>% dplyr::rename(Outcome_long = Long.name, Outcome=Code)) %>%
+    left_join(dict %>% dplyr::rename(Cause_long = Long.name, Cause=Code)) %>%
+    sel(-Outcome, -Cause) %>%
+    sel(scenario, Cause=Cause_long, Outcome = Outcome_long, Pollutant, all_of(res_cols))
+
+  hia_table %>% filter(Outcome == 'deaths') -> deaths
+  deaths$Cause[grep('non-comm', deaths$Cause)] <- 'all'
+  hia_table %>% filter(!grepl('deaths|life lost|prev|birthwe', Outcome), !is.na(Outcome)) -> morb
+
+  deaths %<>% filter(Outcome == 'deaths') %>% filter(!(Cause == 'all' & Pollutant == 'PM25'))
+
+  bind_rows(deaths %>% make_ci_fun %>% arrange(desc(Pollutant)), morb %>% make_ci_fun %>% arrange(Outcome)) %>%
+    sel(Outcome, Cause, everything()) %>% mutate(Cause=recode(Cause, deaths='total'))
 }
