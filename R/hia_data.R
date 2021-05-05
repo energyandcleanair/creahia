@@ -34,7 +34,7 @@ adddefos <- function(df, exl='pop') {
 
 get_crfs <- function(){
   print("Getting CRFS")
-  crfs <- read_csv(get_hia_path('CRFs.csv'))
+  crfs <- read_csv(get_hia_path('CRFs.csv'), col_types = cols())
 
   names(crfs) %<>% gsub('RR_', '', .)
   crfs$Exposure %<>% gsub('PM2\\.5', "PM25", .)
@@ -53,7 +53,7 @@ get_crfs <- function(){
 
 get_epi <- function(){
   print("Getting EPI")
-  epi <- read_csv(get_hia_path('epi_for_hia_C40.csv'))
+  epi <- read_csv(get_hia_path('epi_for_hia_C40.csv'), col_types = cols())
 
   epi %<>% adddefos
 
@@ -67,13 +67,37 @@ get_epi <- function(){
 
 get_gdp <- function(){
   print("Getting GDP")
-  read_csv(get_hia_path('GDP.csv'))
+  read_csv(get_hia_path('GDP.csv'), col_types = cols()) %>%
+    dplyr::rename(iso3=ISO3)
+}
+
+get_gdp_historical <- function(start_year=1980, end_year=2020){
+  list(GDP.PPP.2011USD = 'NY.GDP.PCAP.PP.KD',
+       GDP.currUSD     = 'NY.GDP.PCAP.CD',
+       GDP.currLCU     = 'NY.GDP.PCAP.CN',
+       GDP.PPP.tot     = 'NY.GDP.MKTP.PP.KD') %>%
+    lapply(readWB_online, start_date = start_year, end_date = end_year, latest.year.only=F) %>%
+    bind_rows(.id='valuename') %>%
+    sel(country, iso3, year, valuename, Value) %>%
+    spread(valuename, Value)
+}
+
+get_gdp_forecast <- function(){
+  print("Getting GDP forecast")
+  gdp_forecast_file <- get_hia_path('OECD_GDP_forecast.csv')
+  if(!file.exists(gdp_forecast_file)){
+    download.file('https://stats.oecd.org/sdmx-json/data/DP_LIVE/.GDPLTFORECAST.../OECD?contentType=csv&detail=code&separator=comma&csv-lang=en',
+                  gdp_forecast_file)
+  }
+
+  read_csv(gdp_forecast_file, col_types = cols()) %>%
+    sel(iso3=LOCATION, year=TIME, GDP.realUSD.tot=Value)
 }
 
 
 get_valuation <- function(){
   print("Getting valuation")
-  read_csv(get_hia_path('valuation.csv'))
+  read_csv(get_hia_path('valuation.csv'), col_types = cols())
 }
 
 
@@ -91,8 +115,10 @@ get_calc_causes <- function(){
 
 get_pop_proj <- function(){
   get_hia_path('WPP2019_population-death_rate-birth_rate.csv') %>%
-    read_csv() %>%
-    mutate(deaths=pop*death_rate)
+    read_csv(.,col_types = cols()) %>%
+    mutate(deaths=pop*death_rate) %>%
+    dplyr::rename(iso3=ISO3,
+                  year=Yr)
 }
 
 get_gemm <- function(){
@@ -195,4 +221,8 @@ get_gbd <- function(){
     dplyr::rename(cause_short = cause, central=rr_mean, low=rr_lower, high=rr_upper) %>%
     mutate(cause_short = recode(cause_short, lri='LRI.child', t2_dm='Diabetes')) %>%
     dplyr::filter(exposure <=300)
+}
+
+get_dict <- function(){
+  get_hia_path('dict.csv') %>% read_csv(, col_types = cols())
 }
