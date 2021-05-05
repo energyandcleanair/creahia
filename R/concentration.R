@@ -155,3 +155,18 @@ add_pop <- function(concs){
   concs$pop <- list(get_pop(grid_raster))
   return(concs)
 }
+
+
+get_conc_at_locations <- function(){
+
+  #TODO
+  #
+  # #query concentration values for cities
+  # cityConcs <- crop(cityUTM,gridR)
+  #
+  # files[queue] %>% stack %>% extract(cityConcs) %>% data.frame -> cc
+  # names(cc) <- file_species$titletxt[queue] %>% gsub('\n', ' ', .)
+  # cityConcs@data %<>% bind_cols(cc)
+  #
+  # cbind(cityConcs@coords,cityConcs@data) %>% write_csv(paste0("cityConcs.csv"))
+}
