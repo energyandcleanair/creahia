@@ -4,6 +4,7 @@ export("%>%")
 exportPattern("^[[:alpha:]]|\\%+") # For now...
 
 importFrom(RColorBrewer,brewer.pal)
+
 importFrom(dplyr,all_vars)
 importFrom(dplyr,any_vars)
 importFrom(dplyr,arrange)

@@ -30,6 +30,7 @@ Depends:
     tidyverse,
     creahelpers
 Remotes:
+    energyandcleanair/creahelpers,
     laurimyllyvirta/lauR,
     nset-ornl/wbstats
 RoxygenNote: 7.1.1
