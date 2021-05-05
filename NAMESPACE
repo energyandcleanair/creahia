@@ -47,6 +47,7 @@ importFrom(lubridate,ymd_h)
 
 importFrom(magrittr,"%<>%")
 importFrom(magrittr,"%>%")
+importFrom(magrittr,"%T>%")
 importFrom(magrittr,add)
 importFrom(magrittr,divide_by)
 importFrom(magrittr,multiply_by)
