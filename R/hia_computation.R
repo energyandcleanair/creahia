@@ -30,12 +30,13 @@ compute_hia <- function(conc_map,
                         scale_target_year=NULL
                         ){
 
-
+  print("Computing paf")
   paf <- compute_hia_paf(conc_adm,
                          scenarios=scenarios,
                          calc_causes=calc_causes,
                          gemm=gemm, gbd=gbd, ihme=ihme)
 
+  print("Computing epi")
   hia <- compute_hia_epi(region=regions,
                          species=species,
                          pa =paf,
@@ -45,6 +46,7 @@ compute_hia <- function(conc_map,
                          calc_causes=calc_causes)
 
   if(!any(is.null(c(scale_base_year, scale_target_year)))){
+    print("Scaling")
     hia <- scale_hia_pop(hia, base_year=scale_base_year, target_year=scale_target_year)
   }
 
