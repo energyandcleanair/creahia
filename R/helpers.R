@@ -1,36 +1,3 @@
-#' Alias for dplyr::select
-#'
-#' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
-#' @export
-sel <- dplyr::select
-
-
-#' Title
-#'
-#' @param level
-#' @param res
-#' @param version
-#'
-#' @return
-#' @export
-#'
-#' @examples
-getadm <- function(level=0, res='full', version='36') {
-  gis_dir <- creahia.env$gis_dir
-  resext=''
-  if(res!='full') resext=paste0('_', res)
-  f <- file.path(gis_dir,
-                   "boundaries",
-                   paste0('gadm',version,'_',level,resext,'.RDS'))
-
-  if(file.exists(f)) {
-    readRDS(f)
-  } else {
-    raster::shapefile(gsub('\\.RDS','.shp',f),
-                      encoding='UTF-8', use_iconv=TRUE)
-  }
-}
-
 readWB <- function(inF, sheet='Data', skip=3, countries.only=T, ...) {
   read_xls(inF, sheet=sheet, skip=skip, ...) %>%
     gather(Year, Value, matches('[0-9]{4}')) %>% mutate_at('Year', as.numeric) %>%
@@ -52,16 +19,18 @@ getWBCountries <- function(){
 
 readWB_online <- function(indicator, start_date = 2010, end_date = 2019,
                           valuename='Value', latest.year.only=T, ...) {
-  wb_data(indicator, start_date=start_date, end_date=end_date, ...) -> d
+
+  wb_indicators <- getWBIndicators()
+  wbstats::wb_data(indicator, start_date=start_date, end_date=end_date, ...) -> d
   names(d)[names(d) == indicator] <- 'Value'
   d %<>%
-    sel(ISO3=iso3c, country, Year=date, Value) %>%
+    sel(iso3=iso3c, country, year=date, Value) %>%
     filter(!is.na(Value)) %>%
     mutate(Indicator.Code = indicator) %>%
-    right_join(WBindicators, .)
+    right_join(wb_indicators, .)
 
   if(latest.year.only)
-    d %<>% arrange(-Year) %>% distinct(ISO3, .keep_all = T)
+    d %<>% arrange(-year) %>% distinct(iso3, .keep_all = T)
 
   names(d)[names(d) == 'Value'] <- valuename
   if(nrow(d)==0) stop('no data!')
@@ -101,33 +70,15 @@ addlowhigh <-
 
 
 
-makeCI <- function(df, rescols = c('low', 'central', 'high')) { df %>% mutate_at(rescols, scales::comma, accuracy=1) %>%
+make_ci <- function(df, rescols = c('low', 'central', 'high')) {
+  df %>%
+    mutate_at(rescols, scales::comma, accuracy=1) %>%
     mutate(CI = paste0('(', low, ' - ', high, ')')) %>%
-    sel(-low, -high) %>% gather(type, val, central, CI) %>% unite(var, scenario, type) %>% spread(var, val) }
-
-maketable <- function(hiadata, makeCI_fun=makeCI, rescols = c('low', 'central', 'high')) {
-  hiadata %<>% separate(Outcome, c('Cause', 'Outcome', 'Pollutant'), '_')
-  is.na(hiadata$Pollutant) -> ind
-  hiadata$Pollutant[ind] <- hiadata$Outcome[ind]
-  hiadata$Outcome[ind] <- hiadata$Cause[ind]
-
-  hiadata %>% left_join(dict %>% rename(Outcome_long = Long.name, Outcome=Code)) %>%
-    left_join(dict %>% rename(Cause_long = Long.name, Cause=Code)) %>%
-    sel(-Outcome, -Cause) %>%
-    sel(scenario, Cause=Cause_long, Outcome = Outcome_long, Pollutant, all_of(rescols)) ->
-    hiatable
-
-  hiatable %>% filter(Outcome == 'deaths') -> deaths
-  deaths$Cause[grep('non-comm', deaths$Cause)] <- 'all'
-  hiatable %>% filter(!grepl('deaths|life lost|prev|birthwe', Outcome), !is.na(Outcome)) -> morb
+    sel(-low, -high) %>% gather(type, val, central, CI) %>% unite(var, scenario, type) %>%
+    spread(var, val)
+  }
 
 
-  deaths %<>% filter(Outcome == 'deaths') %>% filter(!(Cause == 'all' & Pollutant == 'PM25'))
-
-
-  bind_rows(deaths %>% makeCI_fun %>% arrange(desc(Pollutant)), morb %>% makeCI_fun %>% arrange(Outcome)) %>%
-    sel(Outcome, Cause, everything()) %>% mutate(Cause=recode(Cause, deaths='total'))
-}
 
 
 
@@ -148,18 +99,20 @@ get_map_adm <- function(grid_raster, shp=NULL, admin_level=0, ...) {
 
   crs_to <- CRS(proj4string(grid_raster))
 
-  grid_4326 <- raster::projectExtent(grid_raster, crs(countriesLow)) %>% extend(c(40,40))
+  grid_4326 <- raster::projectExtent(grid_raster, crs(rworldmap::countriesLow)) %>% extend(c(40,40))
 
   adm_4326 <- if(is.null(shp)) {
      creahelpers::get_adm(admin_level, ...)
   } else shp
 
-  adm_utm <- spTransform(crop(adm_4326, grid_4326), crs_to)
+  adm_utm <- spTransform(
+    crop(rgeos::gBuffer(adm_4326, byid=TRUE, width=0), grid_4326),crs_to)
 
   maps <- adm_utm %>%
     sf::st_as_sf() %>%
     dplyr::rename_at(paste0(c("GID_","NAME_"), admin_level), ~c("region_id","region_name")) %>%
-    dplyr::select(region_id, region_name, geometry)
+    dplyr::mutate(country_id=ifelse(admin_level==0, region_id, GID_0)) %>%
+    dplyr::select(region_id, region_name, country_id, geometry)
 
   return(maps)
 }
@@ -167,15 +120,16 @@ get_map_adm <- function(grid_raster, shp=NULL, admin_level=0, ...) {
 
 get_map_cities <- function(grid_raster){
 
-  cities_4326 <- sf::read_sf(creahelpers::get_boundaries_path("citiesDistToLarge.shp")) %>%
-    as("Spatial") %>%
-    raster::crop(grid_4326)
-  cities_utm <- spTransform(cities_4326, crs_to)
+  crs_to <- CRS(proj4string(grid_raster))
+
+  cities_utm <- sf::read_sf(creahelpers::get_boundaries_path("citiesDistToLarge.shp")) %>%
+    sf::st_transform(crs_to) %>%
+    sf::st_crop(grid_raster)
 
   cities_utm %>%
-    sf::st_as_sf() %>%
-    dplyr::mutate(region_id=name, region_name=name) %>%
-    dplyr::select(region_id, region_name, geometry)
+    dplyr::mutate(region_id=name, region_name=name,
+                  country_id=countrycode::countrycode(cntry_t, "country.name","iso3c")) %>%
+    dplyr::select(region_id, region_name, country_id, geometry)
 }
 
 
@@ -192,4 +146,20 @@ country_recode_iso3 <- function(iso3s, replacements=NULL) {
   for(i in 1:length(replacements))
     iso3s[iso3s == replacements[i]] <- names(replacements)[i]
   return(iso3s)
+}
+
+#' Just to put a breakpoint here
+#'
+#' @param e
+#'
+#' @return
+#' @export
+#'
+#' @examples
+debug_and_stop <- function(e){
+  stop(e)
+}
+
+debug_and_warning <- function(e){
+  warning(e)
 }
