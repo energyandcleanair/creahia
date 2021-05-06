@@ -163,7 +163,7 @@ get_econ_forecast <- function(hia_cost){
   gdp_all <- suppressMessages(full_join(gdp_historical, gdp_forecast)) %>%
     filter(iso3 %in% unique(hia_cost$iso3))
 
-  gdp_all < -suppressMessages(gdp_all %>%
+  gdp_all <- suppressMessages(gdp_all %>%
     left_join(popproj_tot) %>%
     mutate(GDP.realUSD = GDP.realUSD.tot*1000/pop) %>%
     group_by(iso3) %>%
