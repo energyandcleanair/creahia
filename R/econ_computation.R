@@ -217,7 +217,7 @@ get_econ_forecast <- function(hia_cost){
            GDPscaling = GDP.PPP.2011USD/GDP.PPP.2011USD[year==pop_targetyr]) %>%
     mutate(fatal=name=='deaths') %>% ungroup %>% sel(iso3, AgeGrp, year, fatal, scaling, GDPscaling) %>% distinct)
 
-  hia_cost %>% suppressMessages(full_join(pop_scaling)) -> hia_by_year
+  hia_by_year <- suppressMessages(hia_cost %>% full_join(pop_scaling))
 
   hia_by_year_scaled <- hia_by_year %>% mutate(
     #number = number*scaling, #CHECK hia had already been scaled
