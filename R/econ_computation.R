@@ -163,8 +163,8 @@ get_econ_forecast <- function(hia_cost){
   gdp_all <- suppressMessages(full_join(gdp_historical, gdp_forecast)) %>%
     filter(iso3 %in% unique(hia_cost$iso3))
 
-  gdp_all <- gdp_all %>%
-    suppressMessages(left_join(popproj_tot)) %>%
+  gdp_all < -suppressMessages(gdp_all %>%
+    left_join(popproj_tot) %>%
     mutate(GDP.realUSD = GDP.realUSD.tot*1000/pop) %>%
     group_by(iso3) %>%
     group_modify(function(df, ...) {
@@ -178,11 +178,11 @@ get_econ_forecast <- function(hia_cost){
       df$GDP.PPP.2011USD[ind] %<>% na.cover(df$GDP.currUSD[ind] * past.scaling$GDP.PPP.2011USD / past.scaling$GDP.currUSD)
 
       future.scaling = df %>% filter(!is.na(GDP.PPP.2011USD+GDP.realUSD)) %>% tail(1)
-      ind=df$Year>future.scaling$Year
+      ind=df$year>future.scaling$year
       df$GDP.PPP.2011USD[ind] %<>% na.cover(df$GDP.realUSD[ind] * past.scaling$GDP.PPP.2011USD / past.scaling$GDP.realUSD)
 
       return(df)
-    })
+    }))
 
   # CHECK elast not used?
   # elast <- gdp_all %>% group_by(iso3) %>%
@@ -203,19 +203,19 @@ get_econ_forecast <- function(hia_cost){
     warning("Missing population or GDP projection information of countries ",missing_iso3s,". These will be ignored")
   }
 
-  pop_scaling <- popproj_tot %>% ungroup %>%
+  pop_scaling <- suppressMessages(popproj_tot %>% ungroup %>%
     filter(iso3 %in% unique(hia_cost$iso3),
            AgeGrp %in% unique(hia_cost$AgeGrp),
            year %in% years) %>%
-    suppressMessages(full_join(gdp_all %>% sel(iso3, year, GDP.PPP.2011USD) %>%
+    full_join(gdp_all %>% sel(iso3, year, GDP.PPP.2011USD) %>%
                 filter(year %in% years,
                        iso3 %in% unique(hia_cost$iso3),
-                       !iso3 %in% missing_iso3s))) %>%
+                       !iso3 %in% missing_iso3s)) %>%
     pivot_longer(c(pop, deaths)) %>%
     group_by(iso3, AgeGrp, name) %>%
     mutate(scaling = value/value[year==pop_targetyr],
            GDPscaling = GDP.PPP.2011USD/GDP.PPP.2011USD[year==pop_targetyr]) %>%
-    mutate(fatal=name=='deaths') %>% ungroup %>% sel(iso3, AgeGrp, year, fatal, scaling, GDPscaling) %>% distinct
+    mutate(fatal=name=='deaths') %>% ungroup %>% sel(iso3, AgeGrp, year, fatal, scaling, GDPscaling) %>% distinct)
 
   hia_cost %>% suppressMessages(full_join(pop_scaling)) -> hia_by_year
 
