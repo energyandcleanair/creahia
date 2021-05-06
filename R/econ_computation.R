@@ -228,7 +228,8 @@ get_econ_forecast <- function(hia_cost){
   hia_by_year_scaled %>%
     filter(
       #fuel == 'COAL', #CHECK fuel hasn't been defined anywhere
-      !is.na(scenario)) %>%
+      !is.na(scenario),
+      year >= pop_baseyr) %>%
     # mutate(NAME_1 = ifelse(ISO3=='KOR', NAME_1, 'All')) %>%
     group_by(across(c(where(is.character), where(is.factor), year))) %>%
     summarise_all(sum, na.rm=T)
