@@ -19,8 +19,8 @@ compute_econ_costs <- function(hia, results_dir, gdp=get_gdp(), dict=get_dict(),
     "hia_cost"=hia_cost,
     "cost_by_cause"=cost_by_cause,
     "cost_by_region"=cost_by_region,
-    "cost_by_country"=cost_by_country
-    # "cost_forecast"=cost_forecast
+    "cost_by_country"=cost_by_country,
+    "cost_forecast"=cost_forecast
   )
 }
 
