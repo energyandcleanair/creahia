@@ -136,8 +136,8 @@ get_gemm <- function(){
   # write.csv(gemm, 'gemm fit parameters.csv') #CHECK necessary?
 
   #read names of causes of death
-  read_xlsx(infile, sheet='GEMM fit parameters', skip=6, n_max=1,
-            col_names=F) %>%
+  suppressMessages(read_xlsx(infile, sheet='GEMM fit parameters', skip=6, n_max=1,
+            col_names=F)) %>%
     unlist %>% subset(!is.na(.)) ->
     causes
 
