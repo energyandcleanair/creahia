@@ -42,7 +42,7 @@ get_hia_cost <- function(hia, valuation=get_valuation(), gdp=get_gdp(), dict=get
   hia_cost$AgeGrp[grepl("0to17|1to18", hia_cost$Cause)] <- "0-18"
 
 
-  hia_cost %<>%
+  suppressMessages(hia_cost %<>%
     left_join(valuation) %>%
     left_join(gdp) %>%
     filter(!is.na(Pollutant)) %>%
@@ -50,7 +50,7 @@ get_hia_cost <- function(hia, valuation=get_valuation(), gdp=get_gdp(), dict=get
                   cost=number*valuation/1e6,
                   cost.USD = cost * GDP.currUSD / GDP.PPP.2011USD,
                   cost.LCU = cost * GDP.currLCU / GDP.PPP.2011USD) %>%
-    ungroup
+    ungroup)
 
   return(hia_cost)
 }
@@ -150,7 +150,7 @@ get_econ_forecast <- function(hia_cost){
         group_by(LocID, iso3, Location, year) %>% sel(-contains('Age')) %>%
         mutate_if(is.numeric, multiply_by, df$multiplier) %>%
         summarise_all(sum) %>%
-        mutate(death_rate = deaths / pop, AgeGrp=df$AgeGrp)
+        mutate(death_rate = deaths / pop)
     }) %>% bind_rows(pop_proj) %>% distinct
 
   #flag mortality outcomes (to be scaled by number of deaths)
@@ -160,11 +160,11 @@ get_econ_forecast <- function(hia_cost){
   gdp_historical <- get_gdp_historical()
   gdp_forecast <- get_gdp_forecast()
 
-  gdp_all <- full_join(gdp_historical, gdp_forecast) %>%
+  gdp_all <- suppressMessages(full_join(gdp_historical, gdp_forecast)) %>%
     filter(iso3 %in% unique(hia_cost$iso3))
 
   gdp_all <- gdp_all %>%
-    left_join(popproj_tot) %>%
+    suppressMessages(left_join(popproj_tot)) %>%
     mutate(GDP.realUSD = GDP.realUSD.tot*1000/pop) %>%
     group_by(iso3) %>%
     group_modify(function(df, ...) {
@@ -198,26 +198,26 @@ get_econ_forecast <- function(hia_cost){
   #   mutate(elast = (GDP.PPP.tot-1) / (GDP.realUSD.tot-1)) %>% summarise_at('elast', mean, na.rm=T)
 
   # Check if any country missing population information
-  missing_iso3s <- setdiff(unique(hia_cost$iso3), unique(popproj_tot$iso3))
+  missing_iso3s <- setdiff(unique(hia_cost$iso3), c(unique(popproj_tot$iso3), unique(gdp_forecast$iso3)))
   if(length(missing_iso3s)>0){
-    warning("Missing population projection information of countries ",missing_iso3s,". These will be ignored")
+    warning("Missing population or GDP projection information of countries ",missing_iso3s,". These will be ignored")
   }
 
   pop_scaling <- popproj_tot %>% ungroup %>%
     filter(iso3 %in% unique(hia_cost$iso3),
            AgeGrp %in% unique(hia_cost$AgeGrp),
            year %in% years) %>%
-    full_join(gdp_all %>% sel(iso3, year, GDP.PPP.2011USD) %>%
+    suppressMessages(full_join(gdp_all %>% sel(iso3, year, GDP.PPP.2011USD) %>%
                 filter(year %in% years,
                        iso3 %in% unique(hia_cost$iso3),
-                       !iso3 %in% missing_iso3s)) %>%
+                       !iso3 %in% missing_iso3s))) %>%
     pivot_longer(c(pop, deaths)) %>%
     group_by(iso3, AgeGrp, name) %>%
     mutate(scaling = value/value[year==pop_targetyr],
            GDPscaling = GDP.PPP.2011USD/GDP.PPP.2011USD[year==pop_targetyr]) %>%
     mutate(fatal=name=='deaths') %>% ungroup %>% sel(iso3, AgeGrp, year, fatal, scaling, GDPscaling) %>% distinct
 
-  hia_cost %>% full_join(pop_scaling) -> hia_by_year
+  hia_cost %>% suppressMessages(full_join(pop_scaling)) -> hia_by_year
 
   hia_by_year_scaled <- hia_by_year %>% mutate(
     #number = number*scaling, #CHECK hia had already been scaled
