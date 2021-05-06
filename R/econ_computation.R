@@ -197,12 +197,20 @@ get_econ_forecast <- function(hia_cost){
   # elast %>% subset(!is.null(.)) %>% bind_rows %>%
   #   mutate(elast = (GDP.PPP.tot-1) / (GDP.realUSD.tot-1)) %>% summarise_at('elast', mean, na.rm=T)
 
+  # Check if any country missing population information
+  missing_iso3s <- setdiff(unique(hia_cost$iso3), unique(popproj_tot$iso3))
+  if(length(missing_iso3s)>0){
+    warning("Missing population projection information of countries ",missing_iso3s,". These will be ignored")
+  }
+
   pop_scaling <- popproj_tot %>% ungroup %>%
     filter(iso3 %in% unique(hia_cost$iso3),
            AgeGrp %in% unique(hia_cost$AgeGrp),
            year %in% years) %>%
     full_join(gdp_all %>% sel(iso3, year, GDP.PPP.2011USD) %>%
-                filter(year %in% years, iso3 %in% unique(hia_cost$iso3))) %>%
+                filter(year %in% years,
+                       iso3 %in% unique(hia_cost$iso3),
+                       !iso3 %in% missing_iso3s)) %>%
     pivot_longer(c(pop, deaths)) %>%
     group_by(iso3, AgeGrp, name) %>%
     mutate(scaling = value/value[year==pop_targetyr],
