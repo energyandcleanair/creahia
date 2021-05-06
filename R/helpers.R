@@ -111,7 +111,7 @@ get_map_adm <- function(grid_raster, shp=NULL, admin_level=0, ...) {
   maps <- adm_utm %>%
     sf::st_as_sf() %>%
     dplyr::rename_at(paste0(c("GID_","NAME_"), admin_level), ~c("region_id","region_name")) %>%
-    dplyr::mutate(country_id=ifelse(admin_level==0, region_id, GID_0)) %>%
+    dplyr::mutate(country_id=if(admin_level==0) region_id else GID_0) %>%
     dplyr::select(region_id, region_name, country_id, geometry)
 
   return(maps)
