@@ -1,4 +1,4 @@
-compute_econ_costs <- function(hia, results_dir, gdp=get_gdp(), dict=get_dict()){
+compute_econ_costs <- function(hia, results_dir, gdp=get_gdp(), dict=get_dict(), valuation=get_valuation()){
 
   hia_cost <- get_hia_cost(hia, valuation, gdp, dict)
 
