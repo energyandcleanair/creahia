@@ -25,7 +25,9 @@ Imports:
     rworldmap,
     maps,
     plotKML,
-    crayon
+    crayon,
+    wbstats,
+    creahelpers
 Depends:
     tidyverse,
     creahelpers
