@@ -12,15 +12,15 @@ compute_econ_costs <- function(hia, results_dir, gdp=get_gdp(), dict=get_dict(),
       write_excel_csv(file.path(results_dir, sprintf('cost_by_cause_%s.csv',tolower(iso3))))
   })
 
-  # Forecast
-  cost_forecast <- get_econ_forecast(hia_cost) %T>% write_csv(file.path(results_dir, 'health_and_cost_by_year.csv'))
+  # Forecast [NOT WORKING YET, some AgeGrp issue]
+  # cost_forecast <- get_econ_forecast(hia_cost) %T>% write_csv(file.path(results_dir, 'health_and_cost_by_year.csv'))
 
   list(
     "hia_cost"=hia_cost,
     "cost_by_cause"=cost_by_cause,
     "cost_by_region"=cost_by_region,
-    "cost_by_country"=cost_by_country,
-    "cost_forecast"=cost_forecast
+    "cost_by_country"=cost_by_country
+    # "cost_forecast"=cost_forecast
   )
 }
 
@@ -85,7 +85,7 @@ get_total_cost_by_country <- function(hia_cost){
 get_cost_by_cause_in_country <- function(hia_cost, iso3, gdp=get_gdp(), dict=get_dict()){
 
   #valuations used
-  currency_name=gdp$Currency.Code[gdp$iso3==iso3]
+  currency_name=unique(gdp$Currency.Code[gdp$iso3==iso3])
 
   hia_focus_cost <- hia_cost %>%
     distinct(iso3, Outcome, .keep_all=T) %>%
@@ -98,7 +98,8 @@ get_cost_by_cause_in_country <- function(hia_cost, iso3, gdp=get_gdp(), dict=get
         Valuation.in.COUNTRY.2019USD=valuation.USD,
         Valuation.in.COUNTRY.2019LCU=valuation.LCU) %>%
     distinct() %>% na.omit() %>%
-    rename_with(function(x) x %>% gsub('COUNTRY', iso3, .) %>% gsub('LCU', if(length(currency_name)> 0 && currency_name!="USD") currency_name else "LCU", .)) %>%
+    rename_with(function(x) x %>% gsub('COUNTRY', iso3, .) %>%
+                  gsub('LCU', if(length(currency_name)> 0 && currency_name!="USD" && !is.na(currency_name)) currency_name else "LCU", .)) %>%
     filter(Outcome.Code != 'LBW') %>%
     right_join(dict %>% dplyr::rename(Outcome.Code=Code, Outcome=Long.name), .) %>%
     sel(-Outcome.Code)
@@ -192,7 +193,8 @@ get_econ_forecast <- function(hia_cost){
 
   pop_scaling <- popproj_tot %>% ungroup %>%
     filter(iso3 %in% unique(hia_cost$iso3),
-           AgeGrp %in% unique(hia_cost$AgeGrp), year %in% years) %>%
+           # AgeGrp %in% unique(hia_cost$AgeGrp), #TOCHECK AgeGrp missing
+           year %in% years) %>%
     full_join(gdp_all %>% sel(iso3, year, GDP.PPP.2011USD) %>%
                 filter(year %in% years, iso3 %in% unique(hia_cost$iso3))) %>%
     pivot_longer(c(pop, deaths)) %>%
