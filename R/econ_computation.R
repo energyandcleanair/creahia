@@ -12,8 +12,8 @@ compute_econ_costs <- function(hia, results_dir, gdp=get_gdp(), dict=get_dict(),
       write_excel_csv(file.path(results_dir, sprintf('cost_by_cause_%s.csv',tolower(iso3))))
   })
 
-  # Forecast [NOT WORKING YET, some AgeGrp issue]
-  # cost_forecast <- get_econ_forecast(hia_cost) %T>% write_csv(file.path(results_dir, 'health_and_cost_by_year.csv'))
+  # Forecast
+  cost_forecast <- get_econ_forecast(hia_cost) %T>% write_csv(file.path(results_dir, 'health_and_cost_by_year.csv'))
 
   list(
     "hia_cost"=hia_cost,
@@ -35,6 +35,12 @@ get_hia_cost <- function(hia, valuation=get_valuation(), gdp=get_gdp(), dict=get
              gsub('\\.[0-9]*to[0-9]*$', '', .) %>% gsub('.*_', '', .))
 
   hia_cost$Cause[grep('exac|sthma', hia_cost$Cause)] <- 'Asthma'
+
+  hia_cost$AgeGrp <- "25+"
+  hia_cost$AgeGrp[grepl("LRI\\.child", hia_cost$Cause)] <- "0-4"
+  hia_cost$AgeGrp[grepl("PTB|LBW", hia_cost$Cause)] <- "Newborn"
+  hia_cost$AgeGrp[grepl("0to17|1to18", hia_cost$Cause)] <- "0-18"
+
 
   hia_cost %<>%
     left_join(valuation) %>%
@@ -128,7 +134,7 @@ get_econ_forecast <- function(hia_cost){
     filter(Outcome != 'LBW',
            Outcome %notin% c('Deaths', 'YLLs') | Cause %in% c('NCD.LRI', 'LRI.child', 'AllCause'),
            Outcome!='YLDs' | Cause != 'NCD.LRI') %>%
-    group_by(scenario, estimate, iso3, region_name, Outcome, Cause, Pollutant) %>%
+    group_by(scenario, estimate, iso3, region_name, Outcome, Cause, AgeGrp, Pollutant) %>%
     summarise_at(c('number', 'cost.USD'), sum, na.rm=T)
 
   #add new age groups to population data
@@ -193,7 +199,7 @@ get_econ_forecast <- function(hia_cost){
 
   pop_scaling <- popproj_tot %>% ungroup %>%
     filter(iso3 %in% unique(hia_cost$iso3),
-           # AgeGrp %in% unique(hia_cost$AgeGrp), #TOCHECK AgeGrp missing
+           AgeGrp %in% unique(hia_cost$AgeGrp),
            year %in% years) %>%
     full_join(gdp_all %>% sel(iso3, year, GDP.PPP.2011USD) %>%
                 filter(year %in% years, iso3 %in% unique(hia_cost$iso3))) %>%
