@@ -54,7 +54,7 @@ get_total_cost_by_cause <- function(hia_cost, res_cols=c("low", "central", "high
 
   hia_cost %>%
     group_by(scenario, estimate, Outcome, Pollutant) %>%
-    summarise_at('cost.USD', sum) %>% na.omit %>%
+    summarise_at('cost.USD', sum, na.rm=T) %>% na.omit %>%
     filter(Outcome != 'LBW') %>% spread(estimate, cost.USD) %>%
     mutate_at(res_cols, scales::comma, accuracy=0.01) %>% mutate(CI = paste0('(', low, ' - ', high, ')')) %>%
     sel(-low, -high)
@@ -97,7 +97,7 @@ get_cost_by_cause_in_country <- function(hia_cost, iso3, gdp=get_gdp(), dict=get
         Valuation.in.COUNTRY.2019USD=valuation.USD,
         Valuation.in.COUNTRY.2019LCU=valuation.LCU) %>%
     distinct() %>% na.omit() %>%
-    rename_with(function(x) x %>% gsub('COUNTRY', iso3, .) %>% gsub('LCU', currency_name, .)) %>%
+    rename_with(function(x) x %>% gsub('COUNTRY', iso3, .) %>% gsub('LCU', if(currency_name!="USD") currency_name else "LCU", .)) %>%
     filter(Outcome.Code != 'LBW') %>%
     right_join(dict %>% dplyr::rename(Outcome.Code=Code, Outcome=Long.name), .) %>%
     sel(-Outcome.Code)
