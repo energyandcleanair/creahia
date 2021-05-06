@@ -86,6 +86,7 @@ get_cost_by_cause_in_country <- function(hia_cost, iso3, gdp=get_gdp(), dict=get
 
   #valuations used
   currency_name=gdp$Currency.Code[gdp$iso3==iso3]
+
   hia_focus_cost <- hia_cost %>%
     distinct(iso3, Outcome, .keep_all=T) %>%
     filter(iso3==!!iso3) %>%
@@ -97,7 +98,7 @@ get_cost_by_cause_in_country <- function(hia_cost, iso3, gdp=get_gdp(), dict=get
         Valuation.in.COUNTRY.2019USD=valuation.USD,
         Valuation.in.COUNTRY.2019LCU=valuation.LCU) %>%
     distinct() %>% na.omit() %>%
-    rename_with(function(x) x %>% gsub('COUNTRY', iso3, .) %>% gsub('LCU', if(currency_name!="USD") currency_name else "LCU", .)) %>%
+    rename_with(function(x) x %>% gsub('COUNTRY', iso3, .) %>% gsub('LCU', if(length(currency_name)> 0 && currency_name!="USD") currency_name else "LCU", .)) %>%
     filter(Outcome.Code != 'LBW') %>%
     right_join(dict %>% dplyr::rename(Outcome.Code=Code, Outcome=Long.name), .) %>%
     sel(-Outcome.Code)
