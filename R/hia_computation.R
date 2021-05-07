@@ -334,9 +334,9 @@ totalise_hia <- function(hia){
     gather(Outcome, Number, -region_id, -region_name, -iso3, -scenario, -estimate)
 
   hia_adm %>%
-    group_by(scenario, estimate, Outcome) %>%
-    summarise_if(is.numeric, sum, na.rm=T) %>%
-    spread(estimate, Number)
+     group_by(region_id, region_name, iso3, scenario, estimate, Outcome) %>%
+     summarise_if(is.numeric, sum, na.rm=T) %>%
+     spread(estimate, Number)
 }
 
 
