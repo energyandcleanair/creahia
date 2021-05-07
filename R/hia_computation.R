@@ -341,7 +341,7 @@ totalise_hia <- function(hia){
 
 
 make_hia_table <- function(hia,
-                           make_ci_fun=make_ci,
+                           make_ci_fun=make_nothing,
                            res_cols = c('low', 'central', 'high'),
                            dict=get_dict()) {
 
@@ -363,6 +363,7 @@ make_hia_table <- function(hia,
 
   deaths %<>% filter(Outcome == 'deaths') %>% filter(!(Cause == 'all' & Pollutant == 'PM25'))
 
-  bind_rows(deaths %>% make_ci_fun %>% arrange(desc(Pollutant)), morb %>% make_ci_fun %>% arrange(Outcome)) %>%
+  bind_rows(deaths %>% make_ci_fun %>% arrange(desc(Pollutant)),
+            morb %>% make_ci_fun %>% arrange(Outcome)) %>%
     sel(Outcome, Cause, everything()) %>% mutate(Cause=recode(Cause, deaths='total'))
 }

@@ -78,8 +78,7 @@ make_ci <- function(df, rescols = c('low', 'central', 'high')) {
     spread(var, val)
   }
 
-
-
+make_nothing <- function(x){x}
 
 
 #' C
