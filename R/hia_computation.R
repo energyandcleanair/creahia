@@ -365,5 +365,6 @@ make_hia_table <- function(hia,
 
   bind_rows(deaths %>% make_ci_fun %>% arrange(desc(Pollutant)),
             morb %>% make_ci_fun %>% arrange(Outcome)) %>%
+    arrange(region_id) %>%
     sel(Outcome, Cause, everything()) %>% mutate(Cause=recode(Cause, deaths='total'))
 }
