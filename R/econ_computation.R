@@ -1,4 +1,7 @@
-compute_econ_costs <- function(hia, results_dir, gdp=get_gdp(), dict=get_dict(), valuation=get_valuation()){
+compute_econ_costs <- function(hia,
+                               results_dir,
+                               iso3s_of_interest=NULL,
+                               gdp=get_gdp(), dict=get_dict(), valuation=get_valuation()){
 
   hia_cost <- get_hia_cost(hia, valuation, gdp, dict)
 
@@ -7,10 +10,13 @@ compute_econ_costs <- function(hia, results_dir, gdp=get_gdp(), dict=get_dict(),
   cost_by_country <- get_total_cost_by_country(hia_cost) %T>% write_csv(file.path(results_dir, 'total_cost_by_country.csv'))
 
   # One more detailed summary by country (with local currency)
-  lapply(unique(hia_cost$iso3), function(iso3){
-    get_cost_by_cause_in_country(hia_cost, iso3, gdp, dict) %>%
-      write_excel_csv(file.path(results_dir, sprintf('cost_by_cause_%s.csv',tolower(iso3))))
-  })
+  if(!is.null(iso3s_of_interest)){
+    lapply(iso3s_of_interest, function(iso3){
+      get_cost_by_cause_in_country(hia_cost, iso3, gdp, dict) %>%
+        write_excel_csv(file.path(results_dir, sprintf('cost_by_cause_%s.csv',tolower(iso3))))
+    })
+  }
+
 
   # Forecast
   cost_forecast <- get_econ_forecast(hia_cost) %T>% write_csv(file.path(results_dir, 'health_and_cost_by_year.csv'))
