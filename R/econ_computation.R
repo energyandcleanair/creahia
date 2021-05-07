@@ -220,7 +220,7 @@ get_econ_forecast <- function(hia_cost){
   hia_by_year <- suppressMessages(hia_cost %>% full_join(pop_scaling))
 
   hia_by_year_scaled <- hia_by_year %>% mutate(
-    #number = number*scaling, #CHECK hia had already been scaled
+    number = number*scaling,
     cost.USD = cost.USD*scaling*GDPscaling) %>%
     group_by(scenario, estimate, iso3, region_name, Outcome, Cause, Pollutant, year) %>%
     summarise_at(c('number', 'cost.USD'), sum)
