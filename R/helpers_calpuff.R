@@ -184,7 +184,9 @@ makeTifs <- function(calpuff_files,
                      subsets = F,
                      max.ranks = 1,
                      overwrite=F,
-                     nmax=4, idp=2, ...) {
+                     nmax=8, idp=1.5, ...) {
+
+  require(gstat)
   if(is.null(queue)) queue = 1:nrow(calpuff_files)
 
 
