@@ -127,12 +127,13 @@ extract_concs_at_map <- function(concs, map){
 }
 
 
+sum_raster_columns = function(x,y) { as.list(stack(unlist(x)) + stack(unlist(y))) }
+
 combine_concs <- function(conc_coal_only, conc_base){
   conc_coal_only %>%
     left_join(conc_base, by=c("species")) %>%
-    rowwise() %>%
     filter(!is.null(conc_base)) %>%
-    mutate(conc_coal=list(conc_coal_only[[1]] + conc_base[[1]]))
+    mutate(conc_coal=sum_raster_columns(conc_coal_only, conc_base))
 }
 
 flatten_concs <- function(concs){
