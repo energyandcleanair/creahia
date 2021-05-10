@@ -57,7 +57,7 @@ gdp <- get_gdp()
 
 
 # 07: HIA Calculations: PAF -----------------------------------------------------------------
-paf <- compute_hia_paf(conc_adm, calc_causes, gemm=gemm, gbd=gbd, ihme=ihme)
+paf <- compute_hia_paf(conc_adm, calc_causes=calc_causes, gemm=gemm, gbd=gbd, ihme=ihme)
 # saveRDS(paf, file.path(project_dir, 'paf.RDS'))
 # save.image()
 
