@@ -224,5 +224,14 @@ get_gbd <- function(){
 }
 
 get_dict <- function(){
-  get_hia_path('dict.csv') %>% read_csv(, col_types = cols())
+  get_hia_path('dict.csv') %>% read_csv(col_types = cols())
+}
+
+merge_into <- c(IND='KAS', AUS='IOA', UK, FIN='ALA')
+use_as_proxy <- c(CHN='HKG', CHN='MAC', AUT='LIE', VUT='PLW', ITA='SMR')
+
+country.recode <- function(ISOcodes, replacements) {
+  for(i in 1:length(replacements))
+    ISOcodes[ISOcodes == replacements[i]] <- names(replacements)[i]
+  return(ISOcodes)
 }
