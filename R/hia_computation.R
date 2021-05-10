@@ -39,7 +39,7 @@ compute_hia <- function(conc_map,
   print("Computing epi")
   hia <- compute_hia_epi(region=regions,
                          species=species,
-                         pa =paf,
+                         paf =paf,
                          conc_map=conc_map,
                          epi=epi,
                          crfs=crfs,
@@ -72,13 +72,14 @@ compute_hia_paf <- function(conc_map, scenarios=names(conc_map),
 
     foreach(region_id = names(conc_scenario)) %dopar% {
       paf_scenario[[region_id]] <- list()
+      conc <- conc_scenario[[region_id]][complete.cases(conc_scenario[[region_id]]),]
 
       for(cs_ms in calc_causes) {
         cs_ms %>% strsplit('_') %>% unlist -> cs.ms
         epi_country <- substr(region_id, 1, 3) # Add a country_id instead
-        country_paf_perm(pm.base = conc_scenario[[region_id]][, 'conc_base_pm25'],
-                         pm.perm = conc_scenario[[region_id]][, 'conc_coal_pm25'],
-                         pop = conc_scenario[[region_id]][, 'pop'],
+        country_paf_perm(pm.base = conc[, 'conc_base_pm25'],
+                         pm.perm = conc[, 'conc_coal_pm25'],
+                         pop = conc[, 'pop'],
                          cy=epi_country,
                          cause=cs.ms[1],
                          measure=cs.ms[2],
@@ -145,7 +146,10 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
 
     # Exclude unmatched countries
     na_iso3s <- epi_loc$region_id[is.na(epi_loc$estimate)]
-    warning("Couldn't find epidemiological data for regions ",na_iso3s,". Excluding them.")
+    if(length(na_iso3s)>0){
+      warning("Couldn't find epidemiological data for regions ", na_iso3s,". Excluding them.")
+    }
+
     epi_loc %<>% filter(!is.na(estimate))
 
     hia_scenario <- epi_loc %>% sel(region_id, estimate, pop)
@@ -186,8 +190,11 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
 
     paf_wide %>% sel(region_id, estimate) -> pm_mort
 
-    for(cs in calc_causes)
+    available_causes <- intersect(unique(paf[[scenario]]$var), names(epi_loc))
+
+    for(cs in intersect(available_causes, calc_causes)){
       paf_wide[[cs]] / 1e5 * paf_wide[[paste0('paf_', cs)]] * paf_wide$pop -> pm_mort[[cs]]
+    }
 
     names(pm_mort)[sapply(pm_mort, is.numeric)] %<>% paste0('_PM25')
     full_join(pm_mort, hia_scenario) -> hia_scenario
@@ -277,9 +284,10 @@ country_paf_perm <- function(pm.base,
   } else {
     tryCatch({
       paf.perm %>% apply(1:2, weighted.mean, w$val) %>%
-        orderrows %>% apply(2, weighted.mean, w=pop)
+        orderrows %>%
+        apply(2, weighted.mean, w=pop)
     }, error=function(e){
-      warning("Failed for region ", cy, e)
+      warning("Failed for region ", cy, cause, e)
       return(NULL)
     })
   }

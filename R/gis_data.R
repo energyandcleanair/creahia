@@ -3,8 +3,9 @@ get_pop <- function(grid_raster){
     raster %>%
     cropProj(grid_raster, expand=1)
   pop_density[is.na(pop_density)] <- 0
+  # pop_density %<>% raster::aggregate(8, mean) %>%
+  #   cropProj(grid_raster, expand=1)
   pop <- pop_density %>% multiply_by(area(pop_density))
-
   return(pop)
 }
 
