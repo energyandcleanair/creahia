@@ -34,13 +34,14 @@ get_conc_calpuff <- function(calpuff_files, utm_zone, utm_hem, map_res, ...){
 
 get_conc_base <- function(species,
                           grid_raster,
-                          no2_min_incr=NULL){
+                          no2_min_incr=NULL,
+                          no2_targetyear=2019){
 
   conc = list()
 
   if("pm25" %in% species){
     #source of PM2.5 data: http://fizz.phys.dal.ca/~atmos/martin/?page_id=140
-    conc["pm25"] <- creahelpers::get_concentration_path('GlobalGWRcwUni_PM25_GL_201601_201612-RH35_Median.nc') %>%
+    conc[["pm25"]] <- creahelpers::get_concentration_path('GlobalGWRcwUni_PM25_GL_201601_201612-RH35_Median.nc') %>%
       raster %>%
       cropProj(grid_raster)
 
@@ -50,36 +51,38 @@ get_conc_base <- function(species,
     #source of NO2 data: https://data.world/datasets/no2
     conc_no2 <- creahelpers::get_concentration_path('no2_agg8.grd') %>%
       raster %>%
-      cropProj(grid_raster)
-
-    #adjust NO2 concentrations using OMI data for 2011 and 2019
-    creahelpers::get_concentration_path("no2_omi_2011.tif") %>% raster %>% cropProj(grid_raster) -> no2_11
-    creahelpers::get_concentration_path("no2_omi_2019.tif") %>% raster %>% cropProj(grid_raster) -> no2_19
-    no2_11 %>% focal(focalWeight(., 100, "circle"), mean, na.rm=T, pad=T, padValue=NA) -> no2_11_smooth
-    no2_19 %>% focal(focalWeight(., 100, "circle"), mean, na.rm=T, pad=T, padValue=NA) -> no2_19_smooth
-    no2_ratio <- no2_19_smooth/no2_11_smooth
-
-    if(!is.null(no2_min_incr)){
-      no2_ratio %<>% max(no2_min_incr)
-    }
-
-    conc_no2 %<>%
-      multiply_by(no2_ratio*2.1) %>%
+      cropProj(grid_raster) %>%
       multiply_by(1.88)
 
+    #adjust NO2 concentrations using OMI data for 2011 and the target year
+    if(!is.null(no2_targetyear)) {
+      creahelpers::get_concentration_path("no2_omi_2011.tif") %>% raster %>% cropProj(grid_raster) -> no2_11
+      creahelpers::get_concentration_path(paste0("no2_omi_",no2_targetyear,".tif")) %>%
+        raster %>% cropProj(grid_raster) -> no2_targetyr
+      no2_11 %>% focal(focalWeight(., 100, "circle"), mean, na.rm=T, pad=T, padValue=NA) -> no2_11_smooth
+      no2_19 %>% focal(focalWeight(., 100, "circle"), mean, na.rm=T, pad=T, padValue=NA) -> no2_targetyr_smooth
+      no2_ratio <- no2_targetyr_smooth/no2_11_smooth
+
+      if(!is.null(no2_min_incr)){
+        no2_ratio %<>% max(no2_min_incr)
+      }
+
+      conc_no2 %<>% multiply_by(no2_ratio)
+    }
+
     conc_no2[] %<>% na.approx(maxgap=5, na.rm=F)
-    conc["no2"] <- conc_no2
+    conc[["no2"]] <- conc_no2
   }
 
   if("o3" %in% species){
     #source of NO2 data: https://data.world/datasets/no2
-    conc["o3"] <- creahelpers::get_concentration_path('O3_77e3b7-xmessy_mmd_kk.nc') %>%
+    conc[["o3"]] <- creahelpers::get_concentration_path('O3_77e3b7-xmessy_mmd_kk.nc') %>%
       raster %>%
       cropProj(grid_raster)
   }
 
   if("so2" %in% species){
-    conc["so2"] <- grid_raster %>% `values<-`(1)
+    conc[["so2"]] <- grid_raster %>% `values<-`(10)
   }
 
   tibble(species=names(conc),
