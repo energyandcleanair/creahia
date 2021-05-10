@@ -63,20 +63,16 @@ compute_hia_paf <- function(conc_map, scenarios=names(conc_map),
   for(scenario in scenarios) {
     message(paste('processing', scenario))
 
-    conc_scenario <- conc_map[[scenario]]
-    names(conc_map) %<>% country.recode(merge_into)
-    conc_scenario %<>% subset(!is.null(.)) %>% lapply(data.frame) %>%
+    conc_scenario <- conc_map[[scenario]] %>% subset(!is.null(.)) %>% lapply(data.frame) %>%
       bind_rows(.id='region_id') %>% dlply(.(region_id))
 
-    paf_scenario = list()
-
     foreach(region_id = names(conc_scenario)) %dopar% {
-      paf_scenario[[region_id]] <- list()
+      paf_region <- list()
       conc <- conc_scenario[[region_id]][complete.cases(conc_scenario[[region_id]]),]
 
       for(cs_ms in calc_causes) {
         cs_ms %>% strsplit('_') %>% unlist -> cs.ms
-        epi_country <- substr(region_id, 1, 3) # Add a country_id instead
+        epi_country <- substr(region_id, 1, 3) %>% country.recode(c(use_as_proxy, merge_into))
         country_paf_perm(pm.base = conc[, 'conc_base_pm25'],
                          pm.perm = conc[, 'conc_coal_pm25'],
                          pop = conc[, 'pop'],
@@ -87,20 +83,19 @@ compute_hia_paf <- function(conc_map, scenarios=names(conc_map),
                          gemm=gemm,
                          gbd=gbd,
                          ihme=ihme,
-                         .region="inc_China") -> paf_scenario[[region_id]][[cs_ms]]
+                         .region="inc_China") -> paf_region[[cs_ms]]
       }
       tryCatch({
-        paf_scenario[[region_id]] %<>% ldply(.id='var')
+        paf_region %<>% ldply(.id='var') %>% mutate(region_id=region_id)
       }, error=function(e){
         # For instance if country iso3 not in ihme$ISO3
         warning("Failed for region ", region_id)
-        paf_scenario[[region_id]] <- NULL
+        paf_region <- NULL
       })
-    }
-
-    paf_scenario %>% bind_rows(.id='region_id')
-  } -> paf
-  return(paf)
+      return(paf_region)
+    } -> paf[[scenario]]
+  }
+  paf %>% bind_rows(.id='scenario')
 }
 
 get_nrt_conc <- function(region_ids, conc_name, nrt, conc_map,

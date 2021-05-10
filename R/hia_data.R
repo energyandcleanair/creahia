@@ -227,7 +227,7 @@ get_dict <- function(){
   get_hia_path('dict.csv') %>% read_csv(col_types = cols())
 }
 
-merge_into <- c(IND='KAS', AUS='IOA', UK, FIN='ALA')
+merge_into <- c(IND='KAS', AUS='IOA', FIN='ALA')
 use_as_proxy <- c(CHN='HKG', CHN='MAC', AUT='LIE', VUT='PLW', ITA='SMR')
 
 country.recode <- function(ISOcodes, replacements) {
