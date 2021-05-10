@@ -61,15 +61,16 @@ compute_hia_paf <- function(conc_map, scenarios=names(conc_map),
   adult_ages <- get_adult_ages(ihme)
 
   for(scenario in scenarios) {
+    message(paste('processing', scenario))
 
     conc_scenario <- conc_map[[scenario]]
-    #names(conc_map) %<>% country.recode(merge_into)
-    conc_scenario %<>% ldply(.id='region_id') %>% dlply(.(region_id))
+    names(conc_map) %<>% country.recode(merge_into)
+    conc_scenario %<>% subset(!is.null(.)) %>% lapply(data.frame) %>%
+      bind_rows(.id='region_id') %>% dlply(.(region_id))
 
     paf_scenario = list()
 
-    for(region_id in names(conc_scenario)) {
-
+    foreach(region_id = names(conc_scenario)) %dopar% {
       paf_scenario[[region_id]] <- list()
 
       for(cs_ms in calc_causes) {
@@ -96,9 +97,8 @@ compute_hia_paf <- function(conc_map, scenarios=names(conc_map),
       })
     }
 
-    paf_scenario %<>% ldply(.id='region_id')
-    paf[[scenario]] <- paf_scenario
-  }
+    paf_scenario %>% bind_rows(.id='region_id')
+  } -> paf
   return(paf)
 }
 
