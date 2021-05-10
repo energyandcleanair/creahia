@@ -3,7 +3,7 @@
 #' @param dir
 #' @param utm_zone
 #' @param utm_hem 'N' or 'S'
-#' @param map_res in degrees??
+#' @param map_res in kilometers
 #'
 #' @return
 #' @export
