@@ -9,26 +9,13 @@
 #' @export
 #'
 #' @examples
-get_conc_calpuff <- function(dir, utm_zone, utm_hem, map_res){
-
-  calpuff_files <- getPuffCSVs(ext=".csv", gasunit = 'ug', dir=dir)
-
+get_conc_calpuff <- function(calpuff_files, utm_zone, utm_hem, map_res, ...){
   grids <- get_grids_calpuff(calpuff_files=calpuff_files, utm_zone=utm_zone, utm_hem=utm_hem, map_res=map_res)
-  # grids$gridR
-  # grids$gridSP
-  # grids$gridLL
 
   # Create tifs from csv results
-  makeTifs(calpuff_files,
-           grids=grids,
-           nmax=8, idp=1.5,
-           queue=which(calpuff_files$period == 'annual' | !is.na(calpuff_files$threshold)),
-           overwrite = F)
-
+  makeTifs(calpuff_files, grids=grids, ...)
 
   #specify function that returns the concentration grid for a specific scenario and pollutant
-
-
   scenarios = unique(calpuff_files$scenario)
   species = unique(calpuff_files$species)
   conc = tidyr::crossing(scenario=scenarios,
