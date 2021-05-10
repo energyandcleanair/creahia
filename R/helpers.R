@@ -92,7 +92,7 @@ make_nothing <- function(x){x}
 #' @export
 #'
 #' @examples
-get_map_adm <- function(grid_raster, shp=NULL, admin_level=0, ...) {
+get_map_adm <- function(grid_raster, shp=NULL, admin_level=0, iso3s=NULL, ...) {
 
   #TODO allow several levels at once
 
@@ -104,8 +104,12 @@ get_map_adm <- function(grid_raster, shp=NULL, admin_level=0, ...) {
      creahelpers::get_adm(admin_level, ...)
   } else shp
 
+  if(!is.null(iso3s)){
+    adm_4326 <- adm_4326[adm_4326$GID_0 %in% iso3s,]
+  }
+
   adm_utm <- spTransform(
-    crop(rgeos::gBuffer(adm_4326, byid=TRUE, width=0), grid_4326),crs_to)
+    crop(rgeos::gBuffer(adm_4326, byid=TRUE, width=0), grid_4326), crs_to)
 
   maps <- adm_utm %>%
     sf::st_as_sf() %>%
