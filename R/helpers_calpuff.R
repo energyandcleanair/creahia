@@ -1,9 +1,21 @@
+#' Build concentration (additional) dataset from CALPUF results
+#'
+#' @param ext
+#' @param gasunit are gas concentrations desired in ug or ppb (CALPOST outputs are assumed to be in ug/m3)
+#' @param utm_hem 'N' or 'S'
+#' @param map_res in kilometers
+#'
+#' @return
+#' @export
+#'
+#' @examples
 getPuffCSVs <- function(ext=".csv", gasunit="ug", dir=".") {
 
   ext<-gsub("^\\.","\\\\.",ext)
   files <- list.files(path=dir, pattern=paste0("rank.*",ext), full.names = T)
-  calpuff_files <- data.frame(path = files, name=basename(files), scale = 1, stringsAsFactors = F)
-  cbind(calpuff_files, colsplit(basename(files),"_",c("X1","species","hr","type","scenario"))[,-1]) -> calpuff_files
+  calpuff_files <- data.frame(path = files, name=basename(files), scale = 1,
+                              stringsAsFactors = F) %>%
+    separate(name,c("X1","species","hr","type","scenario"), "_") %>% sel(-X1) -> calpuff_files
   calpuff_files$type[calpuff_files$type=="conc"] <- "concentration"
   calpuff_files$unit <- "ug/m3"
   calpuff_files[grep("tflx",calpuff_files$name),"type"] <- "deposition"
