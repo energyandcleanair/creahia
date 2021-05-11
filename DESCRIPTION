@@ -28,12 +28,14 @@ Imports:
     crayon,
     wbstats,
     creahelpers,
+    creapuff,
     gstat
 Depends:
     tidyverse,
     creahelpers
 Remotes:
     energyandcleanair/creahelpers,
+    energyandcleanair/creapuff,
     laurimyllyvirta/lauR,
     nset-ornl/wbstats
 RoxygenNote: 7.1.1
