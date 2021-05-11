@@ -9,7 +9,7 @@
 #' @export
 #'
 #' @examples
-getPuffCSVs <- function(ext=".csv", gasunit="ug", dir=".") {
+get_calpuff_files <- function(ext=".csv", gasunit="ug", dir=".") {
 
   ext<-gsub("^\\.","\\\\.",ext)
   files <- list.files(path=dir, pattern=paste0("rank.*",ext), full.names = T)
@@ -189,7 +189,7 @@ readCALPOST = function(csvfile) {
 #' @export
 #'
 #' @examples
-makeTifs <- function(calpuff_files,
+make_tifs <- function(calpuff_files,
                      grids,
                      ext='',
                      queue=NULL,
@@ -198,9 +198,7 @@ makeTifs <- function(calpuff_files,
                      overwrite=F,
                      nmax=8, idp=1.5, ...) {
 
-  require(gstat)
   if(is.null(queue)) queue = 1:nrow(calpuff_files)
-
 
   files = calpuff_files$path
 
@@ -239,7 +237,7 @@ makeTifs <- function(calpuff_files,
         conc_R <- raster(conc_krige,values=T)
         conc_R %<>% crop(grids$gridR)
 
-        writeRaster(conc_R,rfile,format="GTiff",overwrite=T)
+        writeRaster(conc_R, rfile, format="GTiff",overwrite=T)
         raster::plot(conc_R, main=basename(rfile))
         print(paste(files[file],'processed'))
       }

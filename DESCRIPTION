@@ -27,7 +27,8 @@ Imports:
     plotKML,
     crayon,
     wbstats,
-    creahelpers
+    creahelpers,
+    gstat
 Depends:
     tidyverse,
     creahelpers

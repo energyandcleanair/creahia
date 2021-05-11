@@ -37,6 +37,8 @@ importFrom(dplyr,vars)
 importFrom(ggspatial,annotation_spatial)
 importFrom(ggspatial,layer_spatial)
 
+importFrom(gstat,idw)
+
 importFrom(lubridate,"hour<-")
 importFrom(lubridate,day)
 importFrom(lubridate,hour)
