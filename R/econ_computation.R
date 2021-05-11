@@ -121,12 +121,9 @@ get_cost_by_cause_in_country <- function(hia_cost, iso3, gdp=get_gdp(), dict=get
 }
 
 
-get_econ_forecast <- function(hia_cost){
-
-  years <- 1980:2060
-  pop_baseyr <- 2015
-  pop_targetyr <- 2019
-
+get_econ_forecast <- function(hia_cost, years=1980:2060,
+                              pop_baseyr=2015, pop_targetyr=2019
+){
   pop_proj <- get_pop_proj() %>%
     filter(iso3 %in% unique(hia_cost$iso3),
            year %in% years)
