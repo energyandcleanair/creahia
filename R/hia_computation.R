@@ -95,7 +95,7 @@ compute_hia_paf <- function(conc_map, scenarios=names(conc_map),
       return(paf_region)
     } -> paf[[scenario]]
   }
-  paf %>% bind_rows(.id='scenario')
+  paf %>% lapply(bind_rows)
 }
 
 get_nrt_conc <- function(region_ids, conc_name, nrt, conc_map,
