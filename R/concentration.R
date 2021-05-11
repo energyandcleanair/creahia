@@ -9,11 +9,13 @@
 #' @export
 #'
 #' @examples
-get_conc_calpuff <- function(calpuff_files, utm_zone, utm_hem, map_res, ...){
-  grids <- get_grids_calpuff(calpuff_files=calpuff_files, utm_zone=utm_zone, utm_hem=utm_hem, map_res=map_res)
+get_conc_calpuff <- function(dir, utm_zone, utm_hem, map_res, ...){
+
+  calpuff_files <- creapuff::get_calpuff_files(dir=dir)
+  grids <- creapuff::get_grids_calpuff(calpuff_files=calpuff_files, utm_zone=utm_zone, utm_hem=utm_hem, map_res=map_res)
 
   # Create tifs from csv results
-  makeTifs(calpuff_files, grids=grids, ...)
+  creapuff::make_tifs(calpuff_files, grids=grids, ...)
 
   #specify function that returns the concentration grid for a specific scenario and pollutant
   scenarios = unique(calpuff_files$scenario)
@@ -24,7 +26,7 @@ get_conc_calpuff <- function(calpuff_files, utm_zone, utm_hem, map_res, ...){
   conc %<>%
     rowwise() %>%
     dplyr::mutate(
-      conc_coal_only=list(get_conc_raster(calpuff_files, scenario, species))
+      conc_coal_only=list(creapuff::get_conc_raster(calpuff_files, scenario, species))
     )
 
   return(conc)
