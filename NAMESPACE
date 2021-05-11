@@ -86,6 +86,7 @@ importFrom(sp,CRS)
 importFrom(sp,SpatialPointsDataFrame)
 importFrom(sp,coordinates)
 importFrom(sp,spTransform)
+importFrom(sp,proj4string)
 
 importFrom(tidyr,gather)
 importFrom(tidyr,spread)
