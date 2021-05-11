@@ -40,7 +40,7 @@ concs <- combine_concs(conc_coal_only, conc_base) %>% flatten_concs() %>% add_po
 
 # 04: Create support maps (e.g. countries, provinces, cities ) -----------------------------
 adm <- get_map_adm(grid_raster, admin_level=2, res="low")
-adm %<>% subset(country_id=='PHL') %>% head(10)
+#adm %<>% subset(country_id=='PHL') %>% head(10)
 cities <- get_map_cities(grid_raster)
 
 # 05: Extract concentrations ---------------------------------------------------------------
@@ -82,9 +82,20 @@ hia <- compute_hia_epi(species, paf, conc_map=conc_adm, epi=epi, regions=adm)
 # 09: Scale with population growth
 hia <- scale_hia_pop(hia, base_year=2015, target_year=2019)
 
-hia_table <- hia %>% make_hia_table()
+hia_table <- hia %>% group_by(scenario, estimate) %>% summarise_if(is.numeric, sum) %>% make_hia_table()
 hia_table %>% write_csv(file.path(project_dir, 'hia_table.csv'))
 
 # 10: Compute and extract economic costs
-econ_costs <- compute_econ_costs(hia, results_dir=project_dir)
+econ_costs <- compute_econ_costs(hia, results_dir=project_dir, years=2019:2055)
 
+COD = c(atimonan = 2025, kamangas = 2021, pagbilao = 1996,
+        quezonpo = 2000, sbplquez = 2019, smcibaba = 2021,
+        tagkaway=2024) %>% data.frame(scenario=names(.), COD=.)
+
+econ_costs$cost_forecast %>% left_join(COD) %>%
+  filter(year>=2021, year>=COD, year<COD+30) %>%
+  group_by(estimate, iso3, region_name, Outcome, Cause, Pollutant, scenario) %>%
+  summarise_if(is.numeric, sum) ->
+  hia_cumu
+
+hia_cumu %>% write_csv(file.path(project_dir, 'hia_table.csv'))
