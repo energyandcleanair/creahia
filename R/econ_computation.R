@@ -1,7 +1,9 @@
 compute_econ_costs <- function(hia,
                                results_dir,
                                iso3s_of_interest=NULL,
-                               gdp=get_gdp(), dict=get_dict(), valuation=get_valuation()){
+                               gdp=get_gdp(), dict=get_dict(), valuation=get_valuation(),
+                               projection_years=NULL,
+                               ...){
 
   hia_cost <- get_hia_cost(hia, valuation, gdp, dict)
 
@@ -19,7 +21,11 @@ compute_econ_costs <- function(hia,
 
 
   # Forecast
-  cost_forecast <- get_econ_forecast(hia_cost) %T>% write_csv(file.path(results_dir, 'health_and_cost_by_year.csv'))
+  if(length(projection_years)>0) {
+    cost_forecast <- get_econ_forecast(hia_cost, years=projection_years, ...) %T>%
+      write_csv(file.path(results_dir, 'health_and_cost_by_year.csv'))
+  } else cost_forecast=NULL
+
 
   list(
     "hia_cost"=hia_cost,
@@ -27,13 +33,14 @@ compute_econ_costs <- function(hia,
     "cost_by_region"=cost_by_region,
     "cost_by_country"=cost_by_country,
     "cost_forecast"=cost_forecast
-  )
+  ) %>% lapply(add_total_deaths) %>%
+    lapply(add_long_names)
 }
 
 
 get_hia_cost <- function(hia, valuation=get_valuation(), gdp=get_gdp(), dict=get_dict()){
   hia_cost <- hia %>%
-    gather(Outcome, number, -scenario, -region_id, -region_name, -iso3, -estimate, -pop) %>%
+    pivot_longer(c(-where(is.character), -where(is.factor), -pop),names_to='Outcome', values_to='number') %>%
     mutate(Outcome = Outcome %>%gsub('O3_8h', 'O3', .),
            Pollutant = Outcome %>% gsub('.*_', '', .) %>% toupper,
            Cause = Outcome %>% gsub('_.*', '', .)) %>%
@@ -76,9 +83,10 @@ get_total_cost_by_region <- function(hia_cost){
 
   hia_cost_total <- hia_cost %>%
     filter(Outcome != 'LBW') %>%
-    group_by(scenario, iso3, region_id, region_name, estimate, Currency.Name, Currency.Code) %>%
+    group_by(across(c(scenario, any_of(c('iso3', 'region_id', 'region_name')),
+                      estimate, Currency.Name, Currency.Code))) %>%
     sel(starts_with('cost')) %>% summarise_all(sum, na.rm=T) %>%
-    left_join(hia_cost %>% distinct(region_id, pop, GDP.PPP.2011USD)) %>%
+    left_join(hia_cost %>% distinct(across(c(any_of(c('iso3', 'region_id', 'region_name')), pop, GDP.PPP.2011USD)))) %>%
     mutate(cost.percap.USD = cost.USD * 1e6 / pop,
            cost.perc = cost * 1e6 / (GDP.PPP.2011USD * pop))
 
@@ -121,23 +129,18 @@ get_cost_by_cause_in_country <- function(hia_cost, iso3, gdp=get_gdp(), dict=get
 }
 
 
-get_econ_forecast <- function(hia_cost, years=1980:2060,
-                              pop_baseyr=2015, pop_targetyr=2019
+get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F, discount_rate=.03
 ){
   pop_proj <- get_pop_proj() %>%
     filter(iso3 %in% unique(hia_cost$iso3),
-           year %in% years)
-
-  #future impacts
-  # names(hia3) %<>% recode('GID' = paste0('GID_',adm_level))
-  # admLL@data %>% sel(starts_with('GID_'), starts_with('NAME_')) %>%
-  #   right_join(hia3) -> hia3
+           year %in% c(pop_targetyr, years))
 
   hia_cost_future <- hia_cost %>%
     filter(Outcome != 'LBW',
            Outcome %notin% c('Deaths', 'YLLs') | Cause %in% c('NCD.LRI', 'LRI.child', 'AllCause'),
            Outcome!='YLDs' | Cause != 'NCD.LRI') %>%
-    group_by(scenario, estimate, iso3, region_name, Outcome, Cause, AgeGrp, Pollutant) %>%
+    group_by(across(c(scenario, estimate, any_of(c('iso3', 'region_name')),
+                      Outcome, Cause, AgeGrp, Pollutant))) %>%
     summarise_at(c('number', 'cost.USD'), sum, na.rm=T)
 
   #add new age groups to population data
@@ -159,46 +162,66 @@ get_econ_forecast <- function(hia_cost, years=1980:2060,
   #flag mortality outcomes (to be scaled by number of deaths)
   hia_cost$fatal <- grepl('YLLs|YLDs|Deaths', hia_cost$Outcome)
 
-  #gdp data
-  gdp_historical <- get_gdp_historical()
-  gdp_forecast <- get_gdp_forecast()
+  pop_scaling <- suppressMessages(
+    popproj_tot %>% ungroup %>%
+      filter(iso3 %in% unique(hia_cost$iso3),
+             AgeGrp %in% unique(hia_cost$AgeGrp),
+             year %in% c(pop_targetyr, years)) %>%
+      pivot_longer(c(pop, deaths)) %>%
+      group_by(iso3, AgeGrp, name) %>%
+      mutate(scaling = value/value[year==pop_targetyr],
+             GDPscaling = 1) %>%
+      mutate(fatal=name=='deaths') %>% ungroup %>% sel(iso3, AgeGrp, year, fatal, scaling, GDPscaling) %>% distinct
+  )
 
-  gdp_all <- suppressMessages(full_join(gdp_historical, gdp_forecast)) %>%
-    filter(iso3 %in% unique(hia_cost$iso3))
+  if(GDP_scaling) {
+    #gdp data
+    gdp_historical <- get_gdp_historical()
+    gdp_forecast <- get_gdp_forecast()
 
-  gdp_all <- suppressMessages(gdp_all %>%
-    left_join(popproj_tot) %>%
-    mutate(GDP.realUSD = GDP.realUSD.tot*1000/pop) %>%
-    group_by(iso3) %>%
-    group_modify(function(df, ...) {
-      PPP.scaling = df$GDP.PPP.2011USD[df$year==2019] / df$GDP.realUSD[df$year==2019]
+    gdp_all <- suppressMessages(full_join(gdp_historical, gdp_forecast)) %>%
+      filter(iso3 %in% unique(hia_cost$iso3))
 
-      if(length(PPP.scaling)>0)
-        df %<>% mutate(GDP.realUSD = GDP.realUSD)
+    gdp_all <- suppressMessages(gdp_all %>%
+                                  left_join(popproj_tot) %>%
+                                  mutate(GDP.realUSD = GDP.realUSD.tot*1000/pop) %>%
+                                  group_by(iso3) %>%
+                                  group_modify(function(df, ...) {
+                                    PPP.scaling = df$GDP.PPP.2011USD[df$year==2019] / df$GDP.realUSD[df$year==2019]
 
-      past.scaling = df %>% filter(!is.na(GDP.PPP.2011USD+GDP.currUSD)) %>% head(1)
-      ind=df$year<past.scaling$year
-      df$GDP.PPP.2011USD[ind] %<>% na.cover(df$GDP.currUSD[ind] * past.scaling$GDP.PPP.2011USD / past.scaling$GDP.currUSD)
+                                    if(length(PPP.scaling)>0)
+                                      df %<>% mutate(GDP.realUSD = GDP.realUSD)
 
-      future.scaling = df %>% filter(!is.na(GDP.PPP.2011USD+GDP.realUSD)) %>% tail(1)
-      ind=df$year>future.scaling$year
-      df$GDP.PPP.2011USD[ind] %<>% na.cover(df$GDP.realUSD[ind] * past.scaling$GDP.PPP.2011USD / past.scaling$GDP.realUSD)
+                                    past.scaling = df %>% filter(!is.na(GDP.PPP.2011USD+GDP.currUSD)) %>% head(1)
+                                    ind=df$year<past.scaling$year
+                                    df$GDP.PPP.2011USD[ind] %<>% na.cover(df$GDP.currUSD[ind] * past.scaling$GDP.PPP.2011USD / past.scaling$GDP.currUSD)
 
-      return(df)
-    }))
+                                    future.scaling = df %>% filter(!is.na(GDP.PPP.2011USD+GDP.realUSD)) %>% tail(1)
+                                    ind=df$year>future.scaling$year
+                                    df$GDP.PPP.2011USD[ind] %<>% na.cover(df$GDP.realUSD[ind] * past.scaling$GDP.PPP.2011USD / past.scaling$GDP.realUSD)
 
-  # CHECK elast not used?
-  # elast <- gdp_all %>% group_by(iso3) %>%
-  #   group_map(function(df, iso3, ...) {
-  #     df %<>% select_if(is.numeric)
-  #     y1 = df %>% filter(year==2019) %>% distinct(GDP.PPP.tot, GDP.realUSD.tot)
-  #     y0 = df %>% filter(year==2010) %>% distinct(GDP.PPP.tot, GDP.realUSD.tot)
-  #     if(nrow(y0)==1 & nrow(y1)==1) { bind_cols(iso3, y1/y0)
-  #     } else NULL
-  #   })
-  #
-  # elast %>% subset(!is.null(.)) %>% bind_rows %>%
-  #   mutate(elast = (GDP.PPP.tot-1) / (GDP.realUSD.tot-1)) %>% summarise_at('elast', mean, na.rm=T)
+                                    return(df)
+                                  }))
+
+    # CHECK elast not used?
+    # elast <- gdp_all %>% group_by(iso3) %>%
+    #   group_map(function(df, iso3, ...) {
+    #     df %<>% select_if(is.numeric)
+    #     y1 = df %>% filter(year==2019) %>% distinct(GDP.PPP.tot, GDP.realUSD.tot)
+    #     y0 = df %>% filter(year==2010) %>% distinct(GDP.PPP.tot, GDP.realUSD.tot)
+    #     if(nrow(y0)==1 & nrow(y1)==1) { bind_cols(iso3, y1/y0)
+    #     } else NULL
+    #   })
+    #
+    # elast %>% subset(!is.null(.)) %>% bind_rows %>%
+    #   mutate(elast = (GDP.PPP.tot-1) / (GDP.realUSD.tot-1)) %>% summarise_at('elast', mean, na.rm=T)
+
+    pop_scaling %<>% full_join(gdp_all %>% sel(iso3, year, GDP.PPP.2011USD) %>%
+                                 filter(year %in% years,
+                                        iso3 %in% unique(hia_cost$iso3),
+                                        !iso3 %in% missing_iso3s)) %>%
+      mutate(GDPscaling = GDP.PPP.2011USD/GDP.PPP.2011USD[year==pop_targetyr] / (1+discount_rate)^(year-pop_targetyr))
+  }
 
   # Check if any country missing population information
   missing_iso3s <- setdiff(unique(hia_cost$iso3), c(unique(popproj_tot$iso3), unique(gdp_forecast$iso3)))
@@ -206,34 +229,16 @@ get_econ_forecast <- function(hia_cost, years=1980:2060,
     warning("Missing population or GDP projection information of countries ",missing_iso3s,". These will be ignored")
   }
 
-  pop_scaling <- suppressMessages(popproj_tot %>% ungroup %>%
-    filter(iso3 %in% unique(hia_cost$iso3),
-           AgeGrp %in% unique(hia_cost$AgeGrp),
-           year %in% years) %>%
-    full_join(gdp_all %>% sel(iso3, year, GDP.PPP.2011USD) %>%
-                filter(year %in% years,
-                       iso3 %in% unique(hia_cost$iso3),
-                       !iso3 %in% missing_iso3s)) %>%
-    pivot_longer(c(pop, deaths)) %>%
-    group_by(iso3, AgeGrp, name) %>%
-    mutate(scaling = value/value[year==pop_targetyr],
-           GDPscaling = GDP.PPP.2011USD/GDP.PPP.2011USD[year==pop_targetyr]) %>%
-    mutate(fatal=name=='deaths') %>% ungroup %>% sel(iso3, AgeGrp, year, fatal, scaling, GDPscaling) %>% distinct)
-
   hia_by_year <- suppressMessages(hia_cost %>% full_join(pop_scaling))
 
   hia_by_year_scaled <- hia_by_year %>% mutate(
     number = number*scaling,
     cost.USD = cost.USD*scaling*GDPscaling) %>%
-    group_by(scenario, estimate, iso3, region_name, Outcome, Cause, Pollutant, year) %>%
+    group_by(across(c(scenario, estimate, any_of(c('iso3', 'region_id', 'region_name')),
+                      Outcome, Cause, Pollutant, year))) %>%
     summarise_at(c('number', 'cost.USD'), sum)
 
   hia_by_year_scaled %>%
-    filter(
-      #fuel == 'COAL', #CHECK fuel hasn't been defined anywhere
-      !is.na(scenario),
-      year >= pop_baseyr) %>%
-    # mutate(NAME_1 = ifelse(ISO3=='KOR', NAME_1, 'All')) %>%
     group_by(across(c(where(is.character), where(is.factor), year))) %>%
     summarise_all(sum, na.rm=T)
 }
