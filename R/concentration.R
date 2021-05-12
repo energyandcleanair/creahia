@@ -9,29 +9,23 @@
 #' @export
 #'
 #' @examples
-get_conc_calpuff <- function(dir, utm_zone, utm_hem, map_res, ...){
-
-  calpuff_files <- creapuff::get_calpuff_files(dir=dir)
+get_conc_calpuff <- function(calpuff_files, utm_zone, utm_hem, map_res, ...){
   grids <- creapuff::get_grids_calpuff(calpuff_files=calpuff_files, utm_zone=utm_zone, utm_hem=utm_hem, map_res=map_res)
 
   # Create tifs from csv results
   creapuff::make_tifs(calpuff_files, grids=grids, ...)
 
   #specify function that returns the concentration grid for a specific scenario and pollutant
-  scenarios = unique(calpuff_files$scenario)
-  species = unique(calpuff_files$species)
-  conc = tidyr::crossing(scenario=scenarios,
-                         species=species)
+  calpuff_files = getPuffCSVs(ext='\\.tif', dir = unique(dirname(calpuff_files$path)))
 
-  conc %<>%
+  calpuff_files %>%
+    filter(period=='annual') %>%
+    sel(scenario, species) %>%
     rowwise() %>%
     dplyr::mutate(
       conc_coal_only=list(creapuff::get_conc_raster(calpuff_files, scenario, species))
     )
-
-  return(conc)
 }
-
 
 
 get_conc_base <- function(species,
@@ -121,7 +115,7 @@ extract_concs_at_map <- function(concs, map){
       `[[`(1) %>%
       stack -> concs_stack
 
-    raster::extract(concs_stack, adm) -> conc_map[[scenario]]
+    raster::extract(concs_stack, map) -> conc_map[[scenario]]
     names(conc_map[[scenario]]) <- map$region_id
   }
 
