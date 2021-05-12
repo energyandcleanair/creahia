@@ -14,8 +14,7 @@ library(zoo)
 library(magrittr)
 
 setwd(get_env('gis_dir'))
-system('gsutil rsync -r . gs://crea-data/gis')
-system('gsutil cp -r gs://crea-data/gis/* ./')
+#system('gsutil rsync -r . gs://crea-data/gis')
 project_dir <- "F:/TAPM/Phils/case_results"
 
 
@@ -47,7 +46,7 @@ cities <- get_map_cities(grid_raster)
 conc_adm <- extract_concs_at_map(concs, adm)
 # conc_cities <- extract_concs_at_map(concs, cities)
 
-# saveRDS(conc_adm, file.path(project_dir, "conc_adm.RDS"))
+saveRDS(conc_adm, file.path(project_dir, "conc_adm.RDS"))
 # saveRDS(conc_cities, file.path(project_dir, "conc_cities.RDS"))
 
 # If you start from here
@@ -72,21 +71,27 @@ require(future)
 plan(multisession(workers=detectCores()))
 
 paf <- compute_hia_paf(conc_adm, scenarios=scenarios, calc_causes=calc_causes, gemm=gemm, gbd=gbd, ihme=ihme)
-# saveRDS(paf, file.path(project_dir, 'paf.RDS'))
+saveRDS(paf, file.path(project_dir, 'paf.RDS'))
 # save.image()
 
 # 08: HIA Calculations: EPI+PAF -------------------------------------------------------------
 hia <- compute_hia_epi(species, paf, conc_map=conc_adm, epi=epi, regions=adm)
-# saveRDS(hia, file.path(project_dir, 'hia.RDS'))
+saveRDS(hia, file.path(project_dir, 'hia.RDS'))
+hia = readRDS(file.path(project_dir, 'hia.RDS'))
 
 # 09: Scale with population growth
 hia <- scale_hia_pop(hia, base_year=2015, target_year=2019)
 
-hia_table <- hia %>% group_by(scenario, estimate) %>% summarise_if(is.numeric, sum) %>% make_hia_table()
-hia_table %>% write_csv(file.path(project_dir, 'hia_table.csv'))
+hia %>% totalise_hia() %>% make_hia_table() %>% arrange(scenario) %>%
+  write_csv(file.path(project_dir, 'hia_by_admin_area.csv'))
+
+hia %>% totalise_hia(.groups=NULL) %>% make_hia_table() %>% arrange(scenario) %>%
+  write_csv(file.path(project_dir, 'hia_totals.csv'))
 
 # 10: Compute and extract economic costs
-econ_costs <- compute_econ_costs(hia, results_dir=project_dir, years=2019:2055)
+econ_costs <- hia %>% sel(-any_of('Deaths_Total')) %>%
+  group_by(iso3, scenario, estimate) %>% summarise_if(is.numeric, sum) %>%
+  compute_econ_costs(results_dir=project_dir, projection_years=2019:2055)
 
 COD = c(atimonan = 2025, kamangas = 2021, pagbilao = 1996,
         quezonpo = 2000, sbplquez = 2019, smcibaba = 2021,
@@ -94,8 +99,8 @@ COD = c(atimonan = 2025, kamangas = 2021, pagbilao = 1996,
 
 econ_costs$cost_forecast %>% left_join(COD) %>%
   filter(year>=2021, year>=COD, year<COD+30) %>%
-  group_by(estimate, iso3, region_name, Outcome, Cause, Pollutant, scenario) %>%
+  group_by(estimate, Outcome_long, Cause_long, Pollutant, scenario) %>%
   summarise_if(is.numeric, sum) ->
   hia_cumu
 
-hia_cumu %>% write_csv(file.path(project_dir, 'hia_table.csv'))
+hia_cumu %>% write_csv(file.path(project_dir, 'hia_cumulative.csv'))
