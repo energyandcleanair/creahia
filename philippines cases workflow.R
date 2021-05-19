@@ -16,7 +16,7 @@ library(magrittr)
 setwd(get_env('gis_dir'))
 #system('gsutil rsync -r . gs://crea-data/gis')
 project_dir <- "F:/TAPM/Phils/case_results"
-
+load(file.path(project_dir, '.RData'))
 
 
 # 01: Get coal additional concentrations from CALPUFF --------------------------------------
