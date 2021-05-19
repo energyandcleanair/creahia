@@ -90,7 +90,7 @@ hia %>% totalise_hia(.groups=NULL) %>% make_hia_table() %>% arrange(scenario) %>
 
 # 10: Compute and extract economic costs
 econ_costs <- hia %>% sel(-any_of('Deaths_Total')) %>%
-  group_by(iso3, scenario, estimate) %>% summarise_if(is.numeric, sum) %>%
+  group_by(iso3, scenario, estimate) %>% summarise_if(is.numeric, sum, na.rm=T) %>%
   compute_econ_costs(results_dir=project_dir, projection_years=2019:2055)
 
 COD = c(atimonan = 2025, kamangas = 2021, pagbilao = 1996,
@@ -100,7 +100,7 @@ COD = c(atimonan = 2025, kamangas = 2021, pagbilao = 1996,
 econ_costs$cost_forecast %>% left_join(COD) %>%
   filter(year>=2021, year>=COD, year<COD+30) %>%
   group_by(estimate, Outcome_long, Cause_long, Pollutant, scenario) %>%
-  summarise_if(is.numeric, sum) ->
+  summarise_if(is.numeric, sum) %>% sel(-COD) ->
   hia_cumu
 
 hia_cumu %>% write_csv(file.path(project_dir, 'hia_cumulative.csv'))
