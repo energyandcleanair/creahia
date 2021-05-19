@@ -365,12 +365,14 @@ make_hia_table <- function(hia_total,
     sel(Outcome_long, Cause_long, everything()) %>% mutate(Cause_long=recode(Cause_long, deaths='total'))
 }
 
+#a simple renaming function that accepts string variables as arguments; !!newname := !!oldname was causing grief
+rename_str = function(df, oldname, newname) { names(df)[names(df)==oldname]<-newname; df }
 add_long_names <- function(df, cols = c('Outcome', 'Cause'), dict=get_dict()) {
   for(cn in intersect(names(df), cols)) {
     out_cn = paste0(cn, '_long')
     df %<>%
-      left_join(dict %>% rename(!!cn := Code)) %>%
-      rename(!!out_cn := Long.name)
+      left_join(dict %>% rename_str('Code', cn)) %>%
+      rename_str('Long.name', out_cn)
     df[[out_cn]] %<>% na.cover(df[[cn]])
   }
 

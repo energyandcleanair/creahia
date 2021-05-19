@@ -169,10 +169,14 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
              year %in% c(pop_targetyr, years)) %>%
       pivot_longer(c(pop, deaths)) %>%
       group_by(iso3, AgeGrp, name) %>%
-      mutate(scaling = value/value[year==pop_targetyr],
-             GDPscaling = 1) %>%
-      mutate(fatal=name=='deaths') %>% ungroup %>% sel(iso3, AgeGrp, year, fatal, scaling, GDPscaling) %>% distinct
+      dplyr::mutate(scaling = value/value[year==pop_targetyr],
+                    GDPscaling = 1) %>%
+      mutate(fatal=name=='deaths') %>% ungroup %>%
+      sel(iso3, AgeGrp, year, fatal, scaling, GDPscaling) %>%
+      distinct
   )
+
+  missing_iso3s <- setdiff(unique(hia_cost$iso3), c(unique(popproj_tot$iso3)))
 
   if(GDP_scaling) {
     #gdp data
@@ -221,10 +225,11 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
                                         iso3 %in% unique(hia_cost$iso3),
                                         !iso3 %in% missing_iso3s)) %>%
       mutate(GDPscaling = GDP.PPP.2011USD/GDP.PPP.2011USD[year==pop_targetyr] / (1+discount_rate)^(year-pop_targetyr))
+
+    missing_iso3s <- setdiff(unique(hia_cost$iso3), c(unique(popproj_tot$iso3), unique(gdp_forecast$iso3)))
   }
 
   # Check if any country missing population information
-  missing_iso3s <- setdiff(unique(hia_cost$iso3), c(unique(popproj_tot$iso3), unique(gdp_forecast$iso3)))
   if(length(missing_iso3s)>0){
     warning("Missing population or GDP projection information of countries ",missing_iso3s,". These will be ignored")
   }
