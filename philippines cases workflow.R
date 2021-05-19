@@ -20,7 +20,7 @@ load(file.path(project_dir, '.RData'))
 
 
 # 01: Get coal additional concentrations from CALPUFF --------------------------------------
-calpuff_files <- getPuffCSVs(ext=".csv", gasunit = 'ug', dir=project_dir)
+calpuff_files <- creapuff::get_calpuff_files(ext=".csv", gasunit = 'ug', dir=project_dir)
 
 calpuff_files %>% filter(period=='annual' | !is.na(threshold)) %>%
   get_conc_calpuff(utm_zone = 51, utm_hem = 'N', map_res =1) -> conc_coal_only

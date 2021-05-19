@@ -16,7 +16,7 @@ get_conc_calpuff <- function(calpuff_files, utm_zone, utm_hem, map_res, ...){
   creapuff::make_tifs(calpuff_files, grids=grids, ...)
 
   #specify function that returns the concentration grid for a specific scenario and pollutant
-  calpuff_files = getPuffCSVs(ext='\\.tif', dir = unique(dirname(calpuff_files$path)))
+  calpuff_files = creapuff::get_calpuff_files(ext='\\.tif', dir = unique(dirname(calpuff_files$path)))
 
   calpuff_files %>%
     filter(period=='annual') %>%
