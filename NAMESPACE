@@ -75,6 +75,7 @@ importFrom(raster,projectExtent)
 importFrom(raster,projectRaster)
 
 importFrom(rasterVis,levelplot)
+importFrom(rasterVis,rasterTheme)
 
 importFrom(readxl,read_xlsx)
 
