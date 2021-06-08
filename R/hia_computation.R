@@ -347,13 +347,17 @@ make_hia_table <- function(hia_total,
                            make_ci_fun=make_nothing,
                            res_cols = c('low', 'central', 'high'),
                            dict=get_dict()) {
-  hia_total %<>% separate(Outcome, c('Cause', 'Outcome', 'Pollutant'), '_')
-  is.na(hia_total$Pollutant) -> ind
-  hia_total$Pollutant[ind] <- hia_total$Outcome[ind]
-  hia_total$Outcome[ind] <- hia_total$Cause[ind]
+  if('Cause' %notin% names(hia_total)) {
+    hia_total %<>% separate(Outcome, c('Cause', 'Outcome', 'Pollutant'), '_')
+    is.na(hia_total$Pollutant) -> ind
+    hia_total$Pollutant[ind] <- hia_total$Outcome[ind]
+    hia_total$Outcome[ind] <- hia_total$Cause[ind]
+  }
 
-  hia_table <- hia_total %>% add_long_names(dict=dict) %>%
-    sel(scenario, Cause_long, Outcome_long, Pollutant, all_of(res_cols))
+  if('Outcome_long' %notin% names(hia_total)) {
+    hia_table <- hia_total %>% add_long_names(dict=dict) %>%
+      sel(scenario, Cause_long, Outcome_long, Pollutant, all_of(res_cols))
+  }
 
   hia_table %>% filter(Outcome_long == 'deaths') -> deaths
   hia_table %>% filter(!grepl('deaths|life lost|prev|birthwe', Outcome_long), !is.na(Outcome_long)) -> morb
@@ -388,6 +392,6 @@ add_total_deaths <- function(df, include_PM_causes = 'NCD\\.LRI|LRI\\.child') {
       filter(Outcome %in% c('Deaths', 'YLLs'),
              (Pollutant != 'PM25' | grepl(include_PM_causes, Cause))) %>%
       summarise_at(vars(c(starts_with('number'), starts_with('cost.'))), sum, na.rm=T) %>%
-      mutate(Cause='Total') %>% bind_rows(df, .)
+      mutate(Cause='Total', Pollutant='Total') %>% bind_rows(df, .)
   } else df
 }
