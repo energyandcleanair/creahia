@@ -6,7 +6,7 @@
 ```{r}
 install.packages("remotes");
 library(remotes);
-remotes::isntall_github("energyandcleanair/creahia")
+remotes::install_github("energyandcleanair/creahia")
 ```
 
 ## Getting started
