@@ -1,6 +1,6 @@
 ---
-title: "example_philippines"
-output: rmarkdown::html_vignette
+title: "CREAHIA: Philippines example"
+output: github_document
 vignette: >
   %\VignetteIndexEntry{example_philippines}
   %\VignetteEngine{knitr::rmarkdown}
@@ -10,8 +10,13 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  out.width = "100%"
 )
+```
+
+```{r, echo=FALSE}
+library(raster)
 ```
 
 # Installation
@@ -47,15 +52,23 @@ scenarios <- unique(conc_perturbation$scenario)
 grid_raster <- conc_perturbation$conc_perturbation[[1]] %>% raster::raster()
 grid_raster
 ```
+Plot pm25 perturbation:
+```{r, fig.fullwidth=TRUE}
+conc_pm25 <- conc_perturbation[conc_perturbation$species=="pm25",]
+rs <- raster::stack(conc_pm25$conc_perturbation)
+names(rs) <- paste(conc_pm25$scenario, conc_pm25$species, sep=" - ")
+raster::plot(rs)
+```
 
 ## Read baseline concentrations
-```{r, cache=FALSE}
+```{r, cache=TRUE}
 conc_baseline <- creahia::get_conc_baseline(species=species, grid_raster=grid_raster)
 conc_baseline
 ```
 
+
 ## Combine both
-```{r}
+```{r, cache=TRUE}
 concs <- creahia::combine_concs(conc_perturbation, conc_baseline) %>%
   flatten_concs() %>% # Make it one row per scenario
   add_pop() # Add popilation data
@@ -63,19 +76,18 @@ concs <- creahia::combine_concs(conc_perturbation, conc_baseline) %>%
 
 ## Select regions of interest
 We select regions of interest from GADM dataset, at the administrative level 2.
-```{r}
+```{r, message=FALSE, cache=TRUE}
 regions <- creahia::get_adm(grid_raster, admin_level=2)
 regions <- regions[1:5,] # For example purposes, we only keep a subset
 ```
 
 and extract concentrations there:
-```{r}
+```{r, cache=TRUE}
 conc_regions <- creahia::extract_concs_at_regions(concs, regions)
-conc_regions
 ```
 
 # Health Impact Assessment
-```{r, cache=TRUE}
+```{r, cache=TRUE, message=FALSE}
 hia <- compute_hia(conc_map=conc_regions,
                    species=species,
                    regions=regions)

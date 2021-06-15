@@ -10,4 +10,8 @@ remotes::install_github("energyandcleanair/creahia")
 ```
 
 ## Getting started
-See the [vignette]()
+See the [vignette](vignettes/example_philippines.md)
+
+
+## Contact us
+For any question or suggestion, please [contact us](mailto:hubert@energyandcleanair.org).

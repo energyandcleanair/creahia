@@ -98,7 +98,7 @@ get_conc_baseline <- function(species,
   }
 
   if("so2" %in% species){
-    conc[["so2"]] <- grid_raster %>% `values<-`(10)
+    conc[["so2"]] <- grid_raster %>% `raster::values<-`(10)
   }
 
   tibble(species=names(conc),
