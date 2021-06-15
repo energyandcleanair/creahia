@@ -154,7 +154,7 @@ get_gemm <- function(){
   names(gemm)[seq_along(newnames)] <- newnames
 
   gemm %<>% gather(cause, value, -region, -age) %>%
-    separate(cause, c('cause', 'param'), '_')
+    tidyr::separate(cause, c('cause', 'param'), '_')
   gemm$age[gemm$age=='30-35'] <- '30-34'
   # setwd(origwd)
 

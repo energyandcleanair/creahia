@@ -23,31 +23,29 @@ load(file.path(project_dir, '.RData'))
 calpuff_files <- creapuff::get_calpuff_files(ext=".csv", gasunit = 'ug', dir=project_dir)
 
 calpuff_files %>% filter(period=='annual' | !is.na(threshold)) %>%
-  get_conc_calpuff(utm_zone = 51, utm_hem = 'N', map_res =1) -> conc_coal_only
+  get_conc_calpuff(utm_zone = 51, utm_hem = 'N', map_res =1) -> conc_additional
 
-species = unique(conc_coal_only$species)
-scenarios = unique(conc_coal_only$scenario)
-grid_raster = conc_coal_only$conc_coal_only[[1]] %>% raster
+species = unique(conc_additional$species)
+scenarios = unique(conc_additional$scenario)
+grid_raster = conc_additional$conc_additional[[1]] %>% raster
 
 
 # 02: Get base concentration levels --------------------------------------------------------
-conc_base <- get_conc_base(species=species, grid_raster=grid_raster, no2_targetyear = NULL)
+conc_base <- get_conc_baseline(species=species, grid_raster=grid_raster, no2_targetyear = NULL)
 conc_base$conc_base$no2 %<>% multiply_by(1.2)
 # 03: Combine and flatten: one row per scenario --------------------------------------------
-concs <- combine_concs(conc_coal_only, conc_base) %>% flatten_concs() %>% add_pop()
+concs <- combine_concs(conc_additional, conc_base) %>% flatten_concs() %>% add_pop()
 
 
 # 04: Create support maps (e.g. countries, provinces, cities ) -----------------------------
-adm <- get_map_adm(grid_raster, admin_level=2, res="low")
+adm <- get_adm(grid_raster, admin_level=2, res="low")
 #adm %<>% subset(country_id=='PHL') %>% head(10)
 cities <- get_map_cities(grid_raster)
 
 # 05: Extract concentrations ---------------------------------------------------------------
-conc_adm <- extract_concs_at_map(concs, adm)
-# conc_cities <- extract_concs_at_map(concs, cities)
+conc_adm <- extract_concs_at_regions(concs, adm)
 
 saveRDS(conc_adm, file.path(project_dir, "conc_adm.RDS"))
-# saveRDS(conc_cities, file.path(project_dir, "conc_cities.RDS"))
 
 # If you start from here
 # conc_adm <- readRDS(file.path(project_dir, "conc_adm.RDS"))

@@ -1,8 +1,9 @@
 hiapoll_species_corr <- function(){
-  list("PM25"="pm25",
-  "NO2"="no2",
-  "O3_8h"="o3",
-  "SO2"="so2")
+  list(
+    "PM25"="pm25",
+    "NO2"="no2",
+    "O3_8h"="o3",
+    "SO2"="so2")
 }
 
 species_to_hiapoll <- function(species){
@@ -31,7 +32,7 @@ compute_hia <- function(conc_map,
                         ){
 
   print("Computing paf")
-  paf <- compute_hia_paf(conc_adm,
+  paf <- compute_hia_paf(conc_map=conc_map,
                          scenarios=scenarios,
                          calc_causes=calc_causes,
                          gemm=gemm, gbd=gbd, ihme=ihme)
@@ -53,9 +54,26 @@ compute_hia <- function(conc_map,
   return(hia)
 }
 
+#' Compute the PAF part of the health impact assessment
+#'
+#' The PAF part corresponds to causes with constant relative risk per concentration change
+#'
+#' @param conc_map
+#' @param scenarios
+#' @param calc_causes
+#' @param gemm
+#' @param gbd
+#' @param ihme
+#'
+#' @return
+#' @export
+#'
+#' @examples
 compute_hia_paf <- function(conc_map, scenarios=names(conc_map),
                             calc_causes=get_calc_causes(),
-                            gemm=get_gemm(), gbd=get_gbd(), ihme=get_ihme()){
+                            gemm=get_gemm(),
+                            gbd=get_gbd(),
+                            ihme=get_ihme()){
 
   paf <- list()
   adult_ages <- get_adult_ages(ihme)
@@ -73,8 +91,8 @@ compute_hia_paf <- function(conc_map, scenarios=names(conc_map),
       for(cs_ms in calc_causes) {
         cs_ms %>% strsplit('_') %>% unlist -> cs.ms
         epi_country <- substr(region_id, 1, 3) %>% country.recode(c(use_as_proxy, merge_into))
-        country_paf_perm(pm.base = conc[, 'conc_base_pm25'],
-                         pm.perm = conc[, 'conc_coal_pm25'],
+        country_paf_perm(pm.base = conc[, 'conc_baseline_pm25'],
+                         pm.perm = conc[, 'conc_scenario_pm25'],
                          pop = conc[, 'pop'],
                          cy=epi_country,
                          cause=cs.ms[1],
@@ -155,8 +173,8 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
       if(grepl('nrt', species_name)) {
         sourceconcs <- get_nrt_conc(hia$GID, species_name, 0, conc_adm = conc_adm)
       } else {
-        species_name %>% paste0('conc_base_',.) -> base_name
-        species_name %>% paste0('conc_coal_',.) -> perm_name
+        species_name %>% paste0('conc_baseline_',.) -> base_name
+        species_name %>% paste0('conc_scenario_',.) -> perm_name
         nrt_flag <- NULL #ifelse(grepl('NCD\\.LRI_', crfs$Incidence[i]), 'grump', NULL)
 
         crfs$Counterfact[i] -> cfconc

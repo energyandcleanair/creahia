@@ -10,30 +10,30 @@ gis_dir <- "/Volumes/ext1/gis/"
 
 
 # 01: Get coal additional concentrations from raster directly -------------------------------
-conc_coal_only <- tibble(scenario="scenario1",
+conc_additional <- tibble(scenario="scenario1",
                          species="pm25",
-                         conc_coal_only=list(raster::raster("../studies/202105_hsbc_coal/results/coal_pm25.grd")))
+                         conc_additional=list(raster::raster("../studies/202105_hsbc_coal/results/coal_pm25.grd")))
 
-species = unique(conc_coal_only$species)
-scenarios = unique(conc_coal_only$scenario)
-grid_raster = conc_coal_only$conc_coal_only[[1]] %>% raster
+species = unique(conc_additional$species)
+scenarios = unique(conc_additional$scenario)
+grid_raster = conc_additional$conc_additional[[1]] %>% raster
 
 # 02: Get base concentration levels --------------------------------------------------------
-conc_base <- creahia::get_conc_base(species=species, grid_raster=grid_raster)
+conc_base <- creahia::get_conc_baseline(species=species, grid_raster=grid_raster)
 
 # 03: Combine and flatten: one row per scenario --------------------------------------------
-concs <- creahia::combine_concs(conc_coal_only, conc_base) %>% flatten_concs() %>% add_pop()
+concs <- creahia::combine_concs(conc_additional, conc_base) %>% flatten_concs() %>% add_pop()
 
 # 04: Create support maps (e.g. countries, provinces, cities ) -----------------------------
-adm <- creahia::get_map_adm(grid_raster, admin_level=0, res="coarse", iso3s=c("CHN", "PAK", "IND", "BGD"))
+adm <- creahia::get_adm(grid_raster, admin_level=0, res="coarse", iso3s=c("CHN", "PAK", "IND", "BGD"))
 # adm <- adm[adm$country_id %in% c("CHN", "PAK", "IND", "BGD"),] # FOR DEBUG
 
 # 05: Extract concentrations ---------------------------------------------------------------
-conc_adm <- extract_concs_at_map(concs, adm)
+conc_adm <- extract_concs_at_regions(concs, adm)
 c <- conc_adm$scenario1$CHN
 weighted.mean(c[2,],c[3,])
 
-save.image()
+# save.image()
 
 # 06: Compute hia --------------------------------------------------------------------------
 hia <- creahia::compute_hia(conc_map=conc_adm, species=species, regions=adm,

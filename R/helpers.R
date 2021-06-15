@@ -81,7 +81,7 @@ make_ci <- function(df, rescols = c('low', 'central', 'high')) {
 make_nothing <- function(x){x}
 
 
-#' C
+#' Get administrative areas
 #'
 #' @param grid_raster maps will be projected and croped on this raster
 #' @param shp optional shapefile path that will serve as map
@@ -92,7 +92,7 @@ make_nothing <- function(x){x}
 #' @export
 #'
 #' @examples
-get_map_adm <- function(grid_raster, shp=NULL, admin_level=0, iso3s=NULL, ...) {
+get_adm <- function(grid_raster, shp=NULL, admin_level=0, iso3s=NULL, ...) {
 
   #TODO allow several levels at once
 

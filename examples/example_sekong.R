@@ -1,10 +1,14 @@
-gis_dir <- "~/GIS/"
+# library(remotes)
+# remotes::install_github("energyandcleanair/creahia")
+
 
 devtools::install_github('energyandcleanair/creahia')
 
 library(creahia)
 library(creapuff)
-creahia::set_env('gis_dir',gis_dir)
+gis_dir <- "/Volumes/ext1/gis/"
+
+# creahia::set_env('gis_dir',gis_dir)
 
 # For development only
 library(raster)
@@ -47,30 +51,30 @@ grids <- get_grids_calpuff(calpuff_files,
 
 calpuff_files %>%
   filter(period=='annual' | !is.na(threshold)) %>%
-  make_tifs(grids = grids) -> conc_coal_only
+  make_tifs(grids = grids) -> conc_perturbation
 
-species = unique(conc_coal_only$species)
-grid_raster = conc_coal_only$conc_coal_only[[1]] %>% raster
+species = unique(conc_perturbation$species)
+grid_raster = conc_perturbation$conc_perturbation[[1]] %>% raster
 
 
 # 02: Get base concentration levels --------------------------------------------------------
-conc_base <- get_conc_base(species=species, grid_raster=grid_raster, no2_targetyear = NULL)
+conc_base <- get_conc_baseline(species=species, grid_raster=grid_raster, no2_targetyear = NULL)
 conc_base$conc_base$no2 %<>% multiply_by(1.2)
+
+
 # 03: Combine and flatten: one row per scenario --------------------------------------------
-concs <- combine_concs(conc_coal_only, conc_base) %>% flatten_concs() %>% add_pop()
+concs <- combine_concs(conc_perturbation, conc_base) %>% flatten_concs() %>% add_pop()
 
 
 # 04: Create support maps (e.g. countries, provinces, cities ) -----------------------------
-adm <- get_map_adm(grid_raster, admin_level=2, res="low")
+adm <- get_adm(grid_raster, admin_level=2, res="low")
 #adm %<>% subset(country_id=='PHL') %>% head(10)
 cities <- get_map_cities(grid_raster)
 
 # 05: Extract concentrations ---------------------------------------------------------------
-conc_adm <- extract_concs_at_map(concs, adm)
-# conc_cities <- extract_concs_at_map(concs, cities)
-
+conc_adm <- extract_concs_at_regions(concs, adm)
 saveRDS(conc_adm, file.path(project_dir, "conc_adm.RDS"))
-# saveRDS(conc_cities, file.path(project_dir, "conc_cities.RDS"))
+
 
 # If you start from here
 conc_adm <- readRDS(file.path(project_dir, "conc_adm.RDS"))

@@ -1,0 +1,89 @@
+---
+title: "example_philippines"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{example_philippines}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Installation
+```{r, eval = FALSE}
+library(remotes)
+remotes::install_github("energyandcleanair/creahia")
+```
+
+```{r,  message=FALSE}
+library(creahia)
+```
+
+Configuration:
+```{r}
+calpuff_dir <- "../examples/example_ph"
+gis_dir <- "/Volumes/ext1/gis/" # Where to find baseline concentration etc. Contact-us to have access to the required data
+```
+
+# Create concentration fields
+
+To perform an health impact assessment, `creahia` requires:
+- `conc_scenario`: the concentration field of one or several species in one or several scenarios for which we want to evaluate the health impact
+- `conc_baseline`: the baseline concentration of the selected species.
+
+We also define `conc_perturbation` such that `conc_scenario = conc_baseline + conc_perturbation`.
+
+## Read CALPUFF results
+```{r, cache=TRUE, message=FALSE, warning=FALSE}
+conc_perturbation <- creahia::get_conc_calpuff(calpuff_dir=calpuff_dir, utm_zone=51, utm_hem='N', map_res=1)
+
+species <- unique(conc_perturbation$species)
+scenarios <- unique(conc_perturbation$scenario)
+grid_raster <- conc_perturbation$conc_perturbation[[1]] %>% raster::raster()
+grid_raster
+```
+
+## Read baseline concentrations
+```{r, cache=FALSE}
+conc_baseline <- creahia::get_conc_baseline(species=species, grid_raster=grid_raster)
+conc_baseline
+```
+
+## Combine both
+```{r}
+concs <- creahia::combine_concs(conc_perturbation, conc_baseline) %>%
+  flatten_concs() %>% # Make it one row per scenario
+  add_pop() # Add popilation data
+```
+
+## Select regions of interest
+We select regions of interest from GADM dataset, at the administrative level 2.
+```{r}
+regions <- creahia::get_adm(grid_raster, admin_level=2)
+regions <- regions[1:5,] # For example purposes, we only keep a subset
+```
+
+and extract concentrations there:
+```{r}
+conc_regions <- creahia::extract_concs_at_regions(concs, regions)
+conc_regions
+```
+
+# Health Impact Assessment
+```{r, cache=TRUE}
+hia <- compute_hia(conc_map=conc_regions,
+                   species=species,
+                   regions=regions)
+hia
+```
+
+Summarise HIA:
+```
+hia_table <- hia %>% totalise_hia() %>% make_hia_table()
+hia_table
+```

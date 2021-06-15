@@ -1,21 +1,30 @@
-#' Build concentration (additional) dataset from CALPUF results
+#' Build concentration dataset from CALPUF results
 #'
-#' @param dir
+#' CALPUFF typically exports results in a series of .csv files. This function leverages `creapuff` package to transform
+#' these .csv files into .tiff that correspond to additional sources for instance.
+#'
+#' @param calpuff_dir
+#' @param calpuff_files
 #' @param utm_zone
 #' @param utm_hem 'N' or 'S'
 #' @param map_res in kilometers
 #'
-#' @return
+#' @return a tibble with three columns: `scenario` (chr), `species` (chr), `conc_perturbation` (RasterLayer)
 #' @export
 #'
 #' @examples
-get_conc_calpuff <- function(calpuff_files, utm_zone, utm_hem, map_res, ...){
+get_conc_calpuff <- function(calpuff_dir=NULL, calpuff_files=NULL, utm_zone, utm_hem, map_res, ...){
+
+  if(is.null(calpuff_files)){
+    calpuff_files <- creapuff::get_calpuff_files(dir=calpuff_dir)
+  }
+
   grids <- creapuff::get_grids_calpuff(calpuff_files=calpuff_files, utm_zone=utm_zone, utm_hem=utm_hem, map_res=map_res)
 
   # Create tifs from csv results
   creapuff::make_tifs(calpuff_files, grids=grids, ...)
 
-  #specify function that returns the concentration grid for a specific scenario and pollutant
+  # Specify function that returns the concentration grid for a specific scenario and pollutant
   calpuff_files = creapuff::get_calpuff_files(ext='\\.tif', dir = unique(dirname(calpuff_files$path)))
 
   calpuff_files %>%
@@ -23,12 +32,23 @@ get_conc_calpuff <- function(calpuff_files, utm_zone, utm_hem, map_res, ...){
     sel(scenario, species) %>%
     rowwise() %>%
     dplyr::mutate(
-      conc_coal_only=list(creapuff::get_conc_raster(calpuff_files, scenario, species))
+      conc_perturbation=list(creapuff::get_conc_raster(calpuff_files, scenario, species))
     )
 }
 
 
-get_conc_base <- function(species,
+#' Get baseline concentrations for various species
+#'
+#' @param species
+#' @param grid_raster
+#' @param no2_min_incr
+#' @param no2_targetyear
+#'
+#' @return
+#' @export a tibble with `species` (chr) and `conc_baseline` (RasterLayer) columns
+#'
+#' @examples
+get_conc_baseline <- function(species,
                           grid_raster,
                           no2_min_incr=NULL,
                           no2_targetyear=2019){
@@ -56,7 +76,7 @@ get_conc_base <- function(species,
       creahelpers::get_concentration_path(paste0("no2_omi_",no2_targetyear,".tif")) %>%
         raster %>% cropProj(grid_raster) -> no2_targetyr
       no2_11 %>% focal(focalWeight(., 100, "circle"), mean, na.rm=T, pad=T, padValue=NA) -> no2_11_smooth
-      no2_19 %>% focal(focalWeight(., 100, "circle"), mean, na.rm=T, pad=T, padValue=NA) -> no2_targetyr_smooth
+      no2_targetyr %>% focal(focalWeight(., 100, "circle"), mean, na.rm=T, pad=T, padValue=NA) -> no2_targetyr_smooth
       no2_ratio <- no2_targetyr_smooth/no2_11_smooth
 
       if(!is.null(no2_min_incr)){
@@ -82,7 +102,7 @@ get_conc_base <- function(species,
   }
 
   tibble(species=names(conc),
-         conc_base=conc)
+         conc_baseline=conc)
 }
 
 
@@ -96,7 +116,7 @@ get_conc_base <- function(species,
 #' @export
 #'
 #' @examples
-extract_concs_at_map <- function(concs, map){
+extract_concs_at_regions <- function(concs, regions){
 
   conc_map <- list()
 
@@ -105,31 +125,31 @@ extract_concs_at_map <- function(concs, map){
 
     scenario <- concs$scenario[i]
 
-    cols_to_extract <- c(paste0("conc_coal_", species),
-                         paste0("conc_base_", species),
+    cols_to_extract <- c(paste0("conc_scenario_", species),
+                         paste0("conc_baseline_", species),
                          "pop") %>%
       intersect(names(concs))
 
     concs[i,cols_to_extract] %>%
-      transpose %>%
+      purrr::transpose() %>%
       `[[`(1) %>%
       stack -> concs_stack
 
-    raster::extract(concs_stack, map) -> conc_map[[scenario]]
-    names(conc_map[[scenario]]) <- map$region_id
+    raster::extract(concs_stack, regions) -> conc_map[[scenario]]
+    names(conc_map[[scenario]]) <- regions$region_id
   }
 
   return(conc_map)
 }
 
 
-sum_raster_columns = function(x,y) { as.list(stack(unlist(x)) + stack(unlist(y))) }
+sum_raster_columns = function(x,y) { list(raster::stack(unlist(x)) + raster::stack(unlist(y))) }
 
-combine_concs <- function(conc_coal_only, conc_base){
-  conc_coal_only %>%
-    left_join(conc_base, by=c("species")) %>%
-    filter(!is.null(conc_base)) %>%
-    mutate(conc_coal=sum_raster_columns(conc_coal_only, conc_base))
+combine_concs <- function(conc_perturbation, conc_baseline){
+  conc_perturbation %>%
+    left_join(conc_baseline, by=c("species")) %>%
+    filter(!is.null(conc_baseline)) %>%
+    mutate(conc_scenario=sum_raster_columns(conc_perturbation, conc_baseline))
 }
 
 flatten_concs <- function(concs){
