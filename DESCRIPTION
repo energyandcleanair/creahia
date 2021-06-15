@@ -30,7 +30,8 @@ Imports:
     creahelpers,
     creapuff,
     gstat,
-    rasterVis
+    rasterVis,
+    foreach
 Depends:
     tidyverse,
     creahelpers
@@ -40,3 +41,7 @@ Remotes:
     laurimyllyvirta/lauR,
     nset-ornl/wbstats
 RoxygenNote: 7.1.1
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
