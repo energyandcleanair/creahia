@@ -1,0 +1,61 @@
+Outcome,Cause,region_id,region_name,iso3,scenario,Pollutant,low,central,high
+deaths,total,BGD,Bangladesh,BGD,scenario1,Total,967.6760678843091,1461.685925114964,2090.712785046017
+deaths,chronic obstructive pulmonary disease,BGD,Bangladesh,BGD,scenario1,PM25,56.15825690267822,177.77154670669236,476.97459181034066
+deaths,diabetes,BGD,Bangladesh,BGD,scenario1,PM25,1.5368711392582086,5.769500779648895,13.22742922287809
+deaths,ischaemic heart disease,BGD,Bangladesh,BGD,scenario1,PM25,359.7571926291451,540.4181637826152,761.2800871877917
+deaths,lung cancer,BGD,Bangladesh,BGD,scenario1,PM25,13.336760788806327,39.50123632044394,96.41224382653392
+deaths,lower respiratory infections,BGD,Bangladesh,BGD,scenario1,PM25,32.68175536830677,98.45329848007214,202.7576337765722
+deaths,lower respiratory infections in children,BGD,Bangladesh,BGD,scenario1,PM25,14.967548664813407,29.13864392382404,46.70021812662229
+deaths,stroke,BGD,Bangladesh,BGD,scenario1,PM25,169.9460696260107,495.07547373425484,959.6154742503512
+"asthma emergency room visits, adults","asthma emergency room visits, adults",BGD,Bangladesh,BGD,scenario1,PM25,1603.6172065851026,2448.729643743873,3286.9269003778863
+"asthma emergency room visits, children","asthma emergency room visits, children",BGD,Bangladesh,BGD,scenario1,PM25,1098.0372879704407,2098.5487525310414,3086.8287900481173
+preterm births,preterm births,BGD,Bangladesh,BGD,scenario1,PM25,2045.8907798192188,4218.47999371038,4478.828480335055
+work absence (sick leave days),work absence (sick leave days),BGD,Bangladesh,BGD,scenario1,PM25,1300264.1017392485,1528209.2219043789,1754557.2625324635
+years lived with disability,chronic obstructive pulmonary disease,BGD,Bangladesh,BGD,scenario1,PM25,463.06414751334256,1274.634826522724,2366.17666500605
+years lived with disability,diabetes,BGD,Bangladesh,BGD,scenario1,PM25,22.80907449579339,94.78681704244958,237.69832805566824
+years lived with disability,stroke,BGD,Bangladesh,BGD,scenario1,PM25,245.92967151197917,753.1363796076724,1532.0274833205808
+deaths,total,CHN,China,CHN,scenario1,Total,3009.0749134451444,4244.073288027142,5730.511292274531
+deaths,chronic obstructive pulmonary disease,CHN,China,CHN,scenario1,PM25,263.75791539042467,680.8594715978742,1288.2701934797626
+deaths,diabetes,CHN,China,CHN,scenario1,PM25,7.143241801327895,27.89434496782613,57.55880837793718
+deaths,ischaemic heart disease,CHN,China,CHN,scenario1,PM25,995.583564840513,1293.0807657768216,1624.8405314764918
+deaths,lung cancer,CHN,China,CHN,scenario1,PM25,289.0740622847417,594.076050834411,996.3059871356479
+deaths,lower respiratory infections,CHN,China,CHN,scenario1,PM25,96.76684495598343,240.69104630210572,438.04492515673047
+deaths,lower respiratory infections in children,CHN,China,CHN,scenario1,PM25,5.471452528522224,8.179959822239066,11.469178602598214
+deaths,stroke,CHN,China,CHN,scenario1,PM25,491.0879163566826,1220.5432741780999,2147.939127691677
+"asthma emergency room visits, adults","asthma emergency room visits, adults",CHN,China,CHN,scenario1,PM25,889.1975552770375,1358.0309980371815,1823.1803071005943
+"asthma emergency room visits, children","asthma emergency room visits, children",CHN,China,CHN,scenario1,PM25,342.92356844455503,655.550642623453,964.5070539944379
+preterm births,preterm births,CHN,China,CHN,scenario1,PM25,626.2265136085744,1293.1829825314785,1373.241868484249
+work absence (sick leave days),work absence (sick leave days),CHN,China,CHN,scenario1,PM25,2396794.9587991326,2817364.028414048,3235103.095494093
+years lived with disability,chronic obstructive pulmonary disease,CHN,China,CHN,scenario1,PM25,1041.0017743836586,2873.652559988287,5386.336391431058
+years lived with disability,diabetes,CHN,China,CHN,scenario1,PM25,207.01341715023116,1014.1199204674798,2512.990191317671
+years lived with disability,stroke,CHN,China,CHN,scenario1,PM25,1329.3429954286617,4096.213555805413,8391.583965981066
+deaths,total,IND,India,IND,scenario1,Total,7472.988250060526,10666.20285469846,14516.699888308183
+deaths,chronic obstructive pulmonary disease,IND,India,IND,scenario1,PM25,752.6362771582147,2145.989921462016,3951.328945187064
+deaths,diabetes,IND,India,IND,scenario1,PM25,21.19394697779039,56.13027341267306,102.07386580299548
+deaths,ischaemic heart disease,IND,India,IND,scenario1,PM25,3580.055921533026,4683.453488456991,5944.220660601089
+deaths,lung cancer,IND,India,IND,scenario1,PM25,122.93380748045892,259.6237579204511,439.6947947051418
+deaths,lower respiratory infections,IND,India,IND,scenario1,PM25,443.7483120707401,1130.7515041116576,2055.4484626034873
+deaths,lower respiratory infections in children,IND,India,IND,scenario1,PM25,152.42357471403463,238.22842903820595,355.5417041051657
+deaths,stroke,IND,India,IND,scenario1,PM25,658.975305300027,1670.1921316480486,2988.6362188188195
+"asthma emergency room visits, adults","asthma emergency room visits, adults",IND,India,IND,scenario1,PM25,7618.767567014561,11634.320151764327,15617.310488874748
+"asthma emergency room visits, children","asthma emergency room visits, children",IND,India,IND,scenario1,PM25,4784.5987029077505,9144.747643884342,13452.070994229558
+preterm births,preterm births,IND,India,IND,scenario1,PM25,9853.105522112544,20323.33227196774,21578.494625908457
+work absence (sick leave days),work absence (sick leave days),IND,India,IND,scenario1,PM25,7531731.03632424,8852376.111375328,10163851.377322368
+years lived with disability,chronic obstructive pulmonary disease,IND,India,IND,scenario1,PM25,4045.339784530123,10689.34562998054,19137.145004093374
+years lived with disability,diabetes,IND,India,IND,scenario1,PM25,404.7845664068216,1347.8976654693508,2900.105591996892
+years lived with disability,stroke,IND,India,IND,scenario1,PM25,1161.2615841269005,3512.2737541320307,7113.742613425683
+deaths,total,PAK,Pakistan,PAK,scenario1,Total,365.8332091296682,536.4646637058976,764.8515282690416
+deaths,chronic obstructive pulmonary disease,PAK,Pakistan,PAK,scenario1,PM25,19.57985231924314,55.94564523737883,112.16972577439762
+deaths,diabetes,PAK,Pakistan,PAK,scenario1,PM25,0.6718015531037215,2.645820777327874,6.150092669483835
+deaths,ischaemic heart disease,PAK,Pakistan,PAK,scenario1,PM25,156.78160690508363,218.1677145027883,298.9263926502439
+deaths,lung cancer,PAK,Pakistan,PAK,scenario1,PM25,8.62958114652985,20.44456284282221,39.5903846524978
+deaths,lower respiratory infections,PAK,Pakistan,PAK,scenario1,PM25,6.601555552730694,21.288037911518096,46.24734772174748
+deaths,lower respiratory infections in children,PAK,Pakistan,PAK,scenario1,PM25,17.733430903445278,31.14589262213867,50.036951633513006
+deaths,stroke,PAK,Pakistan,PAK,scenario1,PM25,34.766098143778265,92.57509256665644,178.4652737947374
+"asthma emergency room visits, adults","asthma emergency room visits, adults",PAK,Pakistan,PAK,scenario1,PM25,388.2698921288103,592.9700559745645,796.0501383430519
+"asthma emergency room visits, children","asthma emergency room visits, children",PAK,Pakistan,PAK,scenario1,PM25,405.36081178771764,774.8758233793079,1140.0211938421562
+preterm births,preterm births,PAK,Pakistan,PAK,scenario1,PM25,601.2489685190295,1241.2763442391447,1318.080089776938
+work absence (sick leave days),work absence (sick leave days),PAK,Pakistan,PAK,scenario1,PM25,445868.6334455201,524093.2202692407,601787.703514624
+years lived with disability,chronic obstructive pulmonary disease,PAK,Pakistan,PAK,scenario1,PM25,124.80657613263297,339.92804788109476,631.5617080341699
+years lived with disability,diabetes,PAK,Pakistan,PAK,scenario1,PM25,9.3727319323854,40.83412631059064,102.5317410290316
+years lived with disability,stroke,PAK,Pakistan,PAK,scenario1,PM25,70.0064209919274,214.03351614944305,437.73241274536315

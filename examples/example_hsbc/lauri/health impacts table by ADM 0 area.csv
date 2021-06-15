@@ -1,0 +1,841 @@
+GID_0,Outcome,Cause,Pollutant,HSBC_central,HSBC_high,HSBC_low
+IND,deaths,total,Total,11159.20403,15186.79278,7817.951463
+AFG,deaths,chronic obstructive pulmonary disease,PM25,2.523987212,5.637929309,0.639311953
+AFG,deaths,diabetes,PM25,0.362137219,0.790764228,0.086991103
+AFG,deaths,ischaemic heart disease,PM25,31.01445279,44.26934216,20.52552183
+AFG,deaths,lower respiratory infections,PM25,5.29345748,11.26536962,1.709996867
+AFG,deaths,lower respiratory infections in children,PM25,7.788914308,11.92419071,4.76352866
+AFG,deaths,lung cancer,PM25,1.203402096,2.998441939,0.359863446
+AFG,deaths,stroke,PM25,12.50920362,26.58305872,3.770014279
+AFG,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,50.07758818,67.23043977,32.78908903
+AFG,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,85.97062441,126.4891113,44.97148438
+AFG,preterm births,preterm births,PM25,159.9976911,169.9039895,77.47504083
+AFG,work absence (sick leave days),work absence (sick leave days),PM25,39718.5999,45608.04387,33789.32201
+AFG,years lived with disability,chronic obstructive pulmonary disease,PM25,17.98527279,34.16495015,6.382124691
+AFG,years lived with disability,diabetes,PM25,8.142693682,16.00694673,2.33201039
+AFG,years lived with disability,stroke,PM25,29.33019722,58.61527049,9.810426757
+CHN,deaths,total,Total,4327.157646,5842.690418,3068.00791
+AGO,deaths,chronic obstructive pulmonary disease,PM25,0.376166813,0.826116838,0.117826896
+AGO,deaths,diabetes,PM25,0.38081578,0.834096734,0.045376472
+AGO,deaths,ischaemic heart disease,PM25,2.064811307,3.104318036,1.282541279
+AGO,deaths,lower respiratory infections,PM25,3.03701795,6.348618023,1.020181726
+AGO,deaths,lower respiratory infections in children,PM25,0.893698755,1.368853459,0.521541916
+AGO,deaths,lung cancer,PM25,0.304465058,0.627633164,0.117417097
+AGO,deaths,stroke,PM25,1.422600857,2.91464884,0.484328707
+AGO,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,14.93780346,20.05484015,9.780536848
+AGO,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,33.01518875,48.57710858,17.2697454
+AGO,preterm births,preterm births,PM25,35.98765889,38.21681385,17.42247754
+AGO,work absence (sick leave days),work absence (sick leave days),PM25,8911.209719,10232.7572,7580.775996
+AGO,years lived with disability,chronic obstructive pulmonary disease,PM25,4.188327153,7.882019755,1.507962147
+AGO,years lived with disability,diabetes,PM25,6.090838477,14.22660009,0.661743645
+AGO,years lived with disability,stroke,PM25,3.985746449,7.986969872,1.325164867
+BGD,deaths,total,Total,1580.104993,2260.036004,1046.124613
+ARE,deaths,chronic obstructive pulmonary disease,PM25,0.042793701,0.105706754,0.009801471
+ARE,deaths,diabetes,PM25,0.002340856,0.007835884,2.54E-04
+ARE,deaths,ischaemic heart disease,PM25,0.331200865,0.524315398,0.195152255
+ARE,deaths,lower respiratory infections,PM25,0.0283585,0.068088876,0.007458899
+ARE,deaths,lower respiratory infections in children,PM25,1.39E-04,2.69E-04,6.20E-05
+ARE,deaths,lung cancer,PM25,0.025802832,0.055192479,0.009505057
+ARE,deaths,stroke,PM25,0.108229284,0.251358423,0.032027185
+ARE,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,2.050742856,2.753244433,1.342721838
+ARE,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0.68733869,1.01132399,0.359535088
+ARE,preterm births,preterm births,PM25,0.60991587,0.647697224,0.2952678
+ARE,work absence (sick leave days),work absence (sick leave days),PM25,2259.283774,2594.345002,1921.971022
+ARE,years lived with disability,chronic obstructive pulmonary disease,PM25,0.663710727,1.254241631,0.236259921
+ARE,years lived with disability,diabetes,PM25,0.094624968,0.31526356,0.010268737
+ARE,years lived with disability,stroke,PM25,1.044624873,2.127354002,0.345452245
+IDN,deaths,total,Total,1096.069807,1476.629502,754.5022398
+AUS,deaths,chronic obstructive pulmonary disease,PM25,0.008736992,0.015966027,0.003239926
+AUS,deaths,diabetes,PM25,0.008219223,0.010326953,0.002212014
+AUS,deaths,ischaemic heart disease,PM25,0.028327202,0.034360895,0.021345589
+AUS,deaths,lower respiratory infections,PM25,0.008528641,0.015482647,0.003121095
+AUS,deaths,lower respiratory infections in children,PM25,3.01E-05,6.03E-05,1.37E-05
+AUS,deaths,lung cancer,PM25,0.010340026,0.016520473,0.005220907
+AUS,deaths,stroke,PM25,0.006114345,0.010828746,0.002306116
+AUS,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,0.031531615,0.042333194,0.020645233
+AUS,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0.015073074,0.022178043,0.007884432
+AUS,preterm births,preterm births,PM25,0.002987819,0.00317291,0.001446401
+AUS,work absence (sick leave days),work absence (sick leave days),PM25,40.08782313,46.03312918,34.102596
+AUS,years lived with disability,chronic obstructive pulmonary disease,PM25,0.074921905,0.141394112,0.026519427
+AUS,years lived with disability,diabetes,PM25,0.219138877,0.347779825,0.045143506
+AUS,years lived with disability,stroke,PM25,0.023658366,0.047470905,0.00785084
+VNM,deaths,total,Total,593.0322639,816.0056047,407.4694149
+BGD,deaths,chronic obstructive pulmonary disease,PM25,192.3127895,515.9865721,60.75224018
+BGD,deaths,diabetes,PM25,6.264357505,14.30818319,1.656914468
+BGD,deaths,ischaemic heart disease,PM25,584.2548961,823.0306804,388.9401494
+BGD,deaths,lower respiratory infections,PM25,106.9822236,220.3221071,35.51298777
+BGD,deaths,lower respiratory infections in children,PM25,31.54208314,50.49227371,16.25845922
+BGD,deaths,lung cancer,PM25,42.72065127,104.2693337,14.4238204
+BGD,deaths,stroke,PM25,535.4819704,1037.929883,183.8176599
+BGD,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,2645.700287,3551.329143,1732.604471
+BGD,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,2267.35299,3335.141171,1186.35739
+BGD,preterm births,preterm births,PM25,4557.974774,4839.288856,2210.489424
+BGD,work absence (sick leave days),work absence (sick leave days),PM25,1651146.798,1895707.535,1404861.522
+BGD,years lived with disability,chronic obstructive pulmonary disease,PM25,1378.896588,2559.707388,500.9447561
+BGD,years lived with disability,diabetes,PM25,102.9167915,257.1195933,24.59066643
+BGD,years lived with disability,stroke,PM25,814.6026761,1657.049353,266.0029505
+PAK,deaths,total,Total,572.0209428,815.3057707,389.9286862
+BHR,deaths,chronic obstructive pulmonary disease,PM25,0.00206965,0.004296108,7.00E-04
+BHR,deaths,diabetes,PM25,4.56E-04,0.001487199,1.34E-05
+BHR,deaths,ischaemic heart disease,PM25,0.02315791,0.032008468,0.016306542
+BHR,deaths,lower respiratory infections,PM25,0.001809367,0.003726245,6.02E-04
+BHR,deaths,lower respiratory infections in children,PM25,3.01E-05,4.88E-05,1.54E-05
+BHR,deaths,lung cancer,PM25,0.003291833,0.006572761,0.001321612
+BHR,deaths,stroke,PM25,0.004663445,0.009741461,0.001654002
+BHR,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,0.210304073,0.28234587,0.13769632
+BHR,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0.127898943,0.188185762,0.066901699
+BHR,preterm births,preterm births,PM25,0.110266511,0.117097049,0.053381158
+BHR,work absence (sick leave days),work absence (sick leave days),PM25,136.2686039,156.4778674,115.9235551
+BHR,years lived with disability,chronic obstructive pulmonary disease,PM25,0.032359196,0.063269596,0.011171453
+BHR,years lived with disability,diabetes,PM25,0.009715877,0.035590088,2.43E-04
+BHR,years lived with disability,stroke,PM25,0.046340698,0.09462193,0.015150143
+MMR,deaths,total,Total,538.119968,741.8903073,380.7352159
+BRN,deaths,chronic obstructive pulmonary disease,PM25,0.060997039,0.117557516,0.02198242
+BRN,deaths,diabetes,PM25,0.237694351,0.322446354,0.059712478
+BRN,deaths,ischaemic heart disease,PM25,0.345904811,0.448128132,0.260088108
+BRN,deaths,lower respiratory infections,PM25,0.158376372,0.310743688,0.056838966
+BRN,deaths,lower respiratory infections in children,PM25,0.003555131,0.005808728,0.002037411
+BRN,deaths,lung cancer,PM25,0.102533116,0.179677018,0.047597928
+BRN,deaths,stroke,PM25,0.093239142,0.173368631,0.03589351
+BRN,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,0.361057425,0.48472867,0.236408098
+BRN,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0.273805242,0.402851177,0.143228381
+BRN,preterm births,preterm births,PM25,0.504918703,0.536185984,0.244475357
+BRN,work absence (sick leave days),work absence (sick leave days),PM25,709.3637552,814.5474045,603.4686133
+BRN,years lived with disability,chronic obstructive pulmonary disease,PM25,0.514792207,0.982844465,0.181978824
+BRN,years lived with disability,diabetes,PM25,5.113141766,8.295467344,1.028752035
+BRN,years lived with disability,stroke,PM25,0.666504343,1.339749197,0.221433185
+THA,deaths,total,Total,331.6056077,502.361129,203.5478628
+BTN,deaths,chronic obstructive pulmonary disease,PM25,2.282130933,4.947071283,0.740805313
+BTN,deaths,diabetes,PM25,0.186089123,0.406648465,0.049799569
+BTN,deaths,ischaemic heart disease,PM25,3.848950976,5.476105168,2.532455701
+BTN,deaths,lower respiratory infections,PM25,1.285814513,3.051825666,0.339101987
+BTN,deaths,lower respiratory infections in children,PM25,0.213577521,0.38999593,0.111084131
+BTN,deaths,lung cancer,PM25,0.255266876,0.548314288,0.093145819
+BTN,deaths,stroke,PM25,1.462953377,2.99073669,0.484844598
+BTN,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,13.46009697,18.06830612,8.814300521
+BTN,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,12.8937642,18.96719682,6.74601718
+BTN,preterm births,preterm births,PM25,10.96936954,11.64697419,5.317608909
+BTN,work absence (sick leave days),work absence (sick leave days),PM25,8990.247809,10322.22989,7648.973719
+BTN,years lived with disability,chronic obstructive pulmonary disease,PM25,10.472477,19.21383647,3.876767992
+BTN,years lived with disability,diabetes,PM25,3.203431965,7.271022383,0.79168099
+BTN,years lived with disability,stroke,PM25,3.47530222,7.054435841,1.140638198
+JPN,deaths,total,Total,329.4065036,408.2908112,257.0006741
+BWA,deaths,chronic obstructive pulmonary disease,PM25,0.65225742,1.466369932,0.187686723
+BWA,deaths,diabetes,PM25,0.495095063,1.321092038,0.112325552
+BWA,deaths,ischaemic heart disease,PM25,2.518694985,3.914903004,1.530103123
+BWA,deaths,lower respiratory infections,PM25,5.361031223,12.099481,1.625555591
+BWA,deaths,lower respiratory infections in children,PM25,0.435800689,0.680712705,0.226228126
+BWA,deaths,lung cancer,PM25,0.557238892,1.179711166,0.199533527
+BWA,deaths,stroke,PM25,1.73601215,3.702343226,0.56112013
+BWA,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,14.18277804,19.04021715,9.286654829
+BWA,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,17.0777559,25.12557425,8.933795763
+BWA,preterm births,preterm births,PM25,17.2213126,18.28702031,8.34111282
+BWA,work absence (sick leave days),work absence (sick leave days),PM25,7973.622944,9155.729571,6783.464612
+BWA,years lived with disability,chronic obstructive pulmonary disease,PM25,6.332517096,11.76496252,2.315547344
+BWA,years lived with disability,diabetes,PM25,3.767375251,10.41709598,0.801270884
+BWA,years lived with disability,stroke,PM25,4.743366024,9.464384447,1.584302159
+NPL,deaths,total,Total,314.8710787,436.6673672,206.6977337
+CHN,deaths,chronic obstructive pulmonary disease,PM25,693.0435575,1311.310606,268.4806423
+CHN,deaths,diabetes,PM25,26.00199264,53.43418439,6.813794751
+CHN,deaths,ischaemic heart disease,PM25,1315.638816,1653.181263,1012.954739
+CHN,deaths,lower respiratory infections,PM25,237.2625087,431.7900754,95.39177396
+CHN,deaths,lower respiratory infections in children,PM25,8.222805646,11.54843375,5.511783337
+CHN,deaths,lung cancer,PM25,606.9869138,1017.950216,295.3587838
+CHN,deaths,stroke,PM25,1253.757502,2206.378451,504.4544231
+CHN,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,1415.658225,1900.546213,926.9299463
+CHN,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,683.3685703,1005.435651,357.4752407
+CHN,preterm births,preterm births,PM25,1348.939203,1432.450122,653.2256097
+CHN,work absence (sick leave days),work absence (sick leave days),PM25,2933288.742,3368216.973,2495414.231
+CHN,years lived with disability,chronic obstructive pulmonary disease,PM25,2925.077018,5482.669762,1059.64147
+CHN,years lived with disability,diabetes,PM25,945.3220262,2332.91107,197.465937
+CHN,years lived with disability,stroke,PM25,4207.67276,8619.864891,1365.523778
+PHL,deaths,total,Total,284.1751506,400.9869464,189.6754865
+COD,deaths,chronic obstructive pulmonary disease,PM25,1.413251012,3.617010479,0.387682169
+COD,deaths,diabetes,PM25,0.261183287,0.71107683,0.054752754
+COD,deaths,ischaemic heart disease,PM25,4.671493343,7.28991637,2.831480134
+COD,deaths,lower respiratory infections,PM25,9.174808086,21.16916895,2.816132842
+COD,deaths,lower respiratory infections in children,PM25,1.489079165,2.571955645,0.72844767
+COD,deaths,lung cancer,PM25,0.605861361,1.811159978,0.165798548
+COD,deaths,stroke,PM25,3.706474162,7.824051628,1.194018784
+COD,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,28.02671572,37.62749965,18.35048163
+COD,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,46.59595371,68.55941607,24.37357954
+COD,preterm births,preterm births,PM25,69.24864466,73.53818783,33.52441674
+COD,work absence (sick leave days),work absence (sick leave days),PM25,16897.02286,19402.90628,14374.29646
+COD,years lived with disability,chronic obstructive pulmonary disease,PM25,10.27697706,19.31642834,3.72607358
+COD,years lived with disability,diabetes,PM25,4.601085731,13.14304119,0.877387411
+COD,years lived with disability,stroke,PM25,7.815563088,15.64764783,2.598569767
+LKA,deaths,total,Total,255.1351726,386.6641079,159.9979285
+HKG,deaths,chronic obstructive pulmonary disease,PM25,5.228692869,9.893119028,2.025585143
+HKG,deaths,diabetes,PM25,0.119148492,0.269545638,0.026199779
+HKG,deaths,ischaemic heart disease,PM25,9.492856418,11.92823235,7.308948299
+HKG,deaths,lower respiratory infections,PM25,2.269849184,4.130774962,0.912615189
+HKG,deaths,lower respiratory infections in children,PM25,0.063795658,0.084151518,0.042329462
+HKG,deaths,lung cancer,PM25,4.513632589,7.569567339,2.196337688
+HKG,deaths,stroke,PM25,9.266144943,16.30674596,3.728255934
+HKG,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,9.495874237,12.74828798,6.217654442
+HKG,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,4.583853822,6.744121689,2.397874352
+HKG,preterm births,preterm births,PM25,9.092839767,9.655686058,4.403518205
+HKG,work absence (sick leave days),work absence (sick leave days),PM25,19515.47024,22408.96041,16602.34465
+HKG,years lived with disability,chronic obstructive pulmonary disease,PM25,22.06835225,41.36373512,7.994595062
+HKG,years lived with disability,diabetes,PM25,4.331733167,11.76823431,0.759277918
+HKG,years lived with disability,stroke,PM25,31.09769892,63.70725651,10.09214329
+ZAF,deaths,total,Total,198.1450445,257.5653611,146.1434017
+IDN,deaths,chronic obstructive pulmonary disease,PM25,83.65556011,154.129346,31.03298761
+IDN,deaths,diabetes,PM25,54.38597883,110.52236,12.94789682
+IDN,deaths,ischaemic heart disease,PM25,375.5697257,476.9786428,281.0624515
+IDN,deaths,lower respiratory infections,PM25,98.75772456,177.9713538,37.03393126
+IDN,deaths,lower respiratory infections in children,PM25,9.445348681,15.12290824,5.48678187
+IDN,deaths,lung cancer,PM25,67.76184571,122.2989141,28.2260227
+IDN,deaths,stroke,PM25,353.3132872,614.5686452,139.3877937
+IDN,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,926.8378598,1244.28176,606.8723497
+IDN,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,745.7827499,1097.246161,390.1314239
+IDN,preterm births,preterm births,PM25,875.5399853,929.7324043,424.0232795
+IDN,work absence (sick leave days),work absence (sick leave days),PM25,706745.7748,811528.4701,601250.9692
+IDN,years lived with disability,chronic obstructive pulmonary disease,PM25,574.8400765,1068.357543,209.2734113
+IDN,years lived with disability,diabetes,PM25,477.7537303,1136.961434,93.23475827
+IDN,years lived with disability,stroke,PM25,1172.180093,2399.895369,378.7206841
+KOR,deaths,total,Total,93.88004626,118.3782358,71.37707718
+IND,deaths,chronic obstructive pulmonary disease,PM25,2246.060046,4135.581052,787.7332286
+IND,deaths,diabetes,PM25,59.54076884,107.1239651,22.16939982
+IND,deaths,ischaemic heart disease,PM25,4900.366713,6219.523659,3745.866956
+IND,deaths,lower respiratory infections,PM25,1184.849063,2153.781575,464.9790191
+IND,deaths,lower respiratory infections in children,PM25,249.6961105,371.7190604,159.3415763
+IND,deaths,lung cancer,PM25,271.6781499,460.1095582,128.6417561
+IND,deaths,stroke,PM25,1747.941546,3127.759954,689.6515614
+IND,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,12173.02689,16340.44583,7971.539612
+IND,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,9568.179579,14074.95035,5006.139883
+IND,preterm births,preterm births,PM25,21264.83202,22578.14597,10309.54241
+IND,work absence (sick leave days),work absence (sick leave days),PM25,9262303.622,10634511.25,7880502.015
+IND,years lived with disability,chronic obstructive pulmonary disease,PM25,11187.80284,20029.51801,4233.982158
+IND,years lived with disability,diabetes,PM25,1429.796408,3043.588168,423.4148034
+IND,years lived with disability,stroke,PM25,3675.773895,7444.892736,1215.319941
+MYS,deaths,total,Total,87.64999403,127.9964405,55.82389198
+IRN,deaths,chronic obstructive pulmonary disease,PM25,0.351435502,0.599822862,0.137897111
+IRN,deaths,diabetes,PM25,0.049433331,0.086490273,0.018271115
+IRN,deaths,ischaemic heart disease,PM25,3.043423107,3.663986938,2.478668585
+IRN,deaths,lower respiratory infections,PM25,0.573626588,0.970540615,0.230446398
+IRN,deaths,lower respiratory infections in children,PM25,0.013670837,0.020356338,0.007988973
+IRN,deaths,lung cancer,PM25,0.302224335,0.47058678,0.157876834
+IRN,deaths,stroke,PM25,0.983035263,1.629925839,0.408967686
+IRN,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,6.61837615,8.885578715,4.333368044
+IRN,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,3.565749636,5.246521116,1.865177909
+IRN,preterm births,preterm births,PM25,4.94142561,5.247532687,2.392168938
+IRN,work absence (sick leave days),work absence (sick leave days),PM25,4360.168217,5006.806394,3709.186627
+IRN,years lived with disability,chronic obstructive pulmonary disease,PM25,3.744910586,7.024306961,1.351899995
+IRN,years lived with disability,diabetes,PM25,1.483675298,3.259442389,0.449400206
+IRN,years lived with disability,stroke,PM25,4.397268469,8.992708861,1.431646548
+TWN,deaths,total,Total,80.22281695,118.6992373,52.61490346
+JPN,deaths,chronic obstructive pulmonary disease,PM25,15.28522292,31.50202285,5.14927237
+JPN,deaths,diabetes,PM25,2.408462055,4.163858141,0.605169806
+JPN,deaths,ischaemic heart disease,PM25,52.43697917,64.53096104,37.63644803
+JPN,deaths,lower respiratory infections,PM25,135.7872079,234.3333699,50.19965178
+JPN,deaths,lower respiratory infections in children,PM25,0.04356089,0.055423997,0.03109236
+JPN,deaths,lung cancer,PM25,39.19508367,60.48223048,19.37550091
+JPN,deaths,stroke,PM25,34.27538842,59.20525828,12.59850584
+JPN,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,51.8078178,69.55407155,33.9216133
+JPN,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,14.36554757,21.13646149,7.514536616
+JPN,preterm births,preterm births,PM25,29.89610855,31.74752298,14.47499512
+JPN,work absence (sick leave days),work absence (sick leave days),PM25,103405.1596,118739.0999,87967.79379
+JPN,years lived with disability,chronic obstructive pulmonary disease,PM25,142.8767076,272.3104783,50.92608262
+JPN,years lived with disability,diabetes,PM25,210.6756961,454.1022898,44.61245545
+JPN,years lived with disability,stroke,PM25,231.3872559,460.1886998,76.42255439
+KHM,deaths,total,Total,73.72888564,103.0607977,48.85777141
+KAZ,deaths,chronic obstructive pulmonary disease,PM25,0.299756876,0.564206774,0.109933689
+KAZ,deaths,diabetes,PM25,0.023545796,0.050924399,0.005005603
+KAZ,deaths,ischaemic heart disease,PM25,1.328627112,1.689695186,1.016904253
+KAZ,deaths,lower respiratory infections,PM25,0.304406353,0.600832264,0.109905123
+KAZ,deaths,lower respiratory infections in children,PM25,0.018453517,0.028504058,0.01135043
+KAZ,deaths,lung cancer,PM25,0.164094911,0.286107045,0.076473372
+KAZ,deaths,stroke,PM25,0.763588266,1.397573833,0.294172786
+KAZ,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,1.189499895,1.596976696,0.77882277
+KAZ,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0.500265635,0.736073356,0.261679825
+KAZ,preterm births,preterm births,PM25,1.309363589,1.39047453,0.633870855
+KAZ,work absence (sick leave days),work absence (sick leave days),PM25,1708.62774,1962.026728,1453.52659
+KAZ,years lived with disability,chronic obstructive pulmonary disease,PM25,1.036665416,2.016475986,0.358150699
+KAZ,years lived with disability,diabetes,PM25,0.945994096,2.412461488,0.161931728
+KAZ,years lived with disability,stroke,PM25,1.764744244,3.550084968,0.577563987
+PRK,deaths,total,Total,66.62353256,91.49165846,47.03053726
+KGZ,deaths,chronic obstructive pulmonary disease,PM25,0.306675144,0.59225575,0.1149101
+KGZ,deaths,diabetes,PM25,0.017257523,0.039342369,0.00369465
+KGZ,deaths,ischaemic heart disease,PM25,2.610808633,3.224334762,2.039247554
+KGZ,deaths,lower respiratory infections,PM25,0.172821054,0.337858329,0.062884334
+KGZ,deaths,lower respiratory infections in children,PM25,0.07851984,0.104644372,0.052576638
+KGZ,deaths,lung cancer,PM25,0.14053701,0.241967698,0.06595245
+KGZ,deaths,stroke,PM25,0.904490841,1.63855952,0.352507556
+KGZ,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,1.83807198,2.467709235,1.203481635
+KGZ,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,1.245694937,1.832854935,0.651606413
+KGZ,preterm births,preterm births,PM25,6.436951209,6.835652794,3.116346389
+KGZ,work absence (sick leave days),work absence (sick leave days),PM25,2708.902659,3110.631423,2304.471036
+KGZ,years lived with disability,chronic obstructive pulmonary disease,PM25,1.546159321,3.040278955,0.526818906
+KGZ,years lived with disability,diabetes,PM25,0.838024076,2.271426333,0.143271307
+KGZ,years lived with disability,stroke,PM25,2.199035888,4.432737716,0.722519199
+MOZ,deaths,total,Total,59.81220545,91.35978516,36.74438627
+KHM,deaths,chronic obstructive pulmonary disease,PM25,4.665981051,9.492625864,1.529549681
+KHM,deaths,diabetes,PM25,1.480863117,3.836066728,0.360314453
+KHM,deaths,ischaemic heart disease,PM25,18.77223365,26.61301881,12.73667582
+KHM,deaths,lower respiratory infections,PM25,32.75790714,65.00066478,11.54669723
+KHM,deaths,lower respiratory infections in children,PM25,4.104703803,6.187579386,2.599147687
+KHM,deaths,lung cancer,PM25,4.607504826,9.227456747,1.816196999
+KHM,deaths,stroke,PM25,22.92821412,44.2566525,8.133978618
+KHM,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,38.7077112,51.96504892,25.34499481
+KHM,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,43.35811754,63.79115714,22.68144461
+KHM,preterm births,preterm births,PM25,79.88921839,84.83369198,38.69160753
+KHM,work absence (sick leave days),work absence (sick leave days),PM25,56383.56861,64742.97117,47967.33659
+KHM,years lived with disability,chronic obstructive pulmonary disease,PM25,33.44226291,62.68016083,12.08527126
+KHM,years lived with disability,diabetes,PM25,26.70844046,73.23796952,5.893460335
+KHM,years lived with disability,stroke,PM25,55.8321581,111.7471219,18.45580701
+AFG,deaths,total,Total,58.37808353,85.11878425,36.9568797
+KOR,deaths,chronic obstructive pulmonary disease,PM25,5.755454556,10.71206623,2.064513571
+KOR,deaths,diabetes,PM25,1.068557477,2.248429298,0.301620603
+KOR,deaths,ischaemic heart disease,PM25,14.1114681,18.33617459,10.29025111
+KOR,deaths,lower respiratory infections,PM25,21.62472791,40.23797644,5.849519586
+KOR,deaths,lower respiratory infections in children,PM25,0.012104307,0.017319295,0.007969267
+KOR,deaths,lung cancer,PM25,14.91133203,24.79063098,7.25392593
+KOR,deaths,stroke,PM25,15.06965934,28.4987979,5.809903809
+KOR,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,35.07090719,47.08366911,22.96318843
+KOR,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,12.48185829,18.36468274,6.529279403
+KOR,preterm births,preterm births,PM25,20.89054276,22.18402875,10.11558188
+KOR,work absence (sick leave days),work absence (sick leave days),PM25,73771.08606,84709.93238,62758.28633
+KOR,years lived with disability,chronic obstructive pulmonary disease,PM25,67.23315661,125.9467343,24.1986329
+KOR,years lived with disability,diabetes,PM25,26.42112715,67.37475273,6.051019379
+KOR,years lived with disability,stroke,PM25,96.82457296,195.0059241,32.15073142
+ZWE,deaths,total,Total,48.25946326,71.16529875,30.25145404
+LAO,deaths,chronic obstructive pulmonary disease,PM25,3.48446643,7.311925018,1.142590363
+LAO,deaths,diabetes,PM25,0.58045127,1.304470523,0.162179067
+LAO,deaths,ischaemic heart disease,PM25,14.20883741,19.84586765,9.669900941
+LAO,deaths,lower respiratory infections,PM25,7.889881384,16.14597922,2.644804767
+LAO,deaths,lower respiratory infections in children,PM25,2.593393847,4.005571291,1.534262478
+LAO,deaths,lung cancer,PM25,2.353583832,4.837883991,0.886785282
+LAO,deaths,stroke,PM25,11.96486363,23.69693375,4.264592415
+LAO,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,28.50671532,38.26903178,18.66618443
+LAO,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,43.11151044,63.4253761,22.55350382
+LAO,preterm births,preterm births,PM25,61.30511769,65.09713465,29.69960843
+LAO,work absence (sick leave days),work absence (sick leave days),PM25,39176.87477,44984.0188,33329.93867
+LAO,years lived with disability,chronic obstructive pulmonary disease,PM25,23.83795456,44.48800443,8.591365651
+LAO,years lived with disability,diabetes,PM25,10.50762479,25.16234914,2.669953257
+LAO,years lived with disability,stroke,PM25,34.07158856,68.23437348,11.26042206
+LAO,deaths,total,Total,41.80425757,59.44543893,27.60044797
+LKA,deaths,chronic obstructive pulmonary disease,PM25,12.25726607,27.32397451,3.470992953
+LKA,deaths,diabetes,PM25,104.171376,147.962873,2.698419549
+LKA,deaths,ischaemic heart disease,PM25,94.58206786,137.8411599,61.32723675
+LKA,deaths,lower respiratory infections,PM25,19.41201064,43.48014384,6.291031895
+LKA,deaths,lower respiratory infections in children,PM25,0.34683928,0.854570572,0.018988953
+LKA,deaths,lung cancer,PM25,6.560098979,13.2955585,2.573228661
+LKA,deaths,stroke,PM25,20.41047288,41.67667118,6.902299532
+LKA,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,18.84116798,25.29522773,12.33631582
+LKA,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,12.44848238,18.31604735,6.511651012
+LKA,preterm births,preterm births,PM25,3.764860234,3.998068543,1.822640631
+LKA,work absence (sick leave days),work absence (sick leave days),PM25,51351.04385,58963.79593,43686.3998
+LKA,years lived with disability,chronic obstructive pulmonary disease,PM25,131.6621062,245.6342391,47.68094008
+LKA,years lived with disability,diabetes,PM25,1845.314547,2762.7197,43.79308647
+LKA,years lived with disability,stroke,PM25,105.4502359,212.4226795,35.02581547
+HKG,deaths,total,Total,31.04609667,41.91397823,22.01167556
+LSO,deaths,chronic obstructive pulmonary disease,PM25,0.546970985,1.227001391,0.163490938
+LSO,deaths,diabetes,PM25,0.509444083,1.147627627,0.07357416
+LSO,deaths,ischaemic heart disease,PM25,1.212674612,1.871875734,0.731688251
+LSO,deaths,lower respiratory infections,PM25,2.850284295,6.167076203,0.911285816
+LSO,deaths,lower respiratory infections in children,PM25,0.393486723,0.5686045,0.23132338
+LSO,deaths,lung cancer,PM25,0.210976051,0.464189442,0.072997094
+LSO,deaths,stroke,PM25,1.121174453,2.32880657,0.368666337
+LSO,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,5.802534076,7.790055358,3.799297898
+LSO,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,9.580775831,14.0962691,5.011726608
+LSO,preterm births,preterm births,PM25,7.562930004,8.031196865,3.662144151
+LSO,work absence (sick leave days),work absence (sick leave days),PM25,3120.611109,3583.33506,2654.758019
+LSO,years lived with disability,chronic obstructive pulmonary disease,PM25,3.421161672,6.224906751,1.275402413
+LSO,years lived with disability,diabetes,PM25,2.615338389,6.049115473,0.362129429
+LSO,years lived with disability,stroke,PM25,1.820659281,3.63295474,0.611133791
+MDG,deaths,total,Total,21.29274247,34.8833137,12.87438107
+MAC,deaths,chronic obstructive pulmonary disease,PM25,1.309822657,2.478270454,0.507427231
+MAC,deaths,diabetes,PM25,0.025803198,0.045930677,0.006263257
+MAC,deaths,ischaemic heart disease,PM25,2.373307653,2.98216992,1.827312604
+MAC,deaths,lower respiratory infections,PM25,0.508286202,0.924922243,0.204379168
+MAC,deaths,lower respiratory infections in children,PM25,0.016710897,0.022675689,0.012809821
+MAC,deaths,lung cancer,PM25,1.145276641,1.920670437,0.55729573
+MAC,deaths,stroke,PM25,2.408820401,4.239088742,0.969195029
+MAC,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,2.484614783,3.33561474,1.626862262
+MAC,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,1.1993746,1.764612487,0.627408862
+MAC,preterm births,preterm births,PM25,2.379152428,2.52642124,1.152188076
+MAC,work absence (sick leave days),work absence (sick leave days),PM25,5106.259344,5863.345403,4344.035371
+MAC,years lived with disability,chronic obstructive pulmonary disease,PM25,5.528270355,10.36180019,2.002717708
+MAC,years lived with disability,diabetes,PM25,0.93809468,2.005311528,0.181511191
+MAC,years lived with disability,stroke,PM25,8.084134504,16.56128464,2.623546959
+ZMB,deaths,total,Total,20.60334982,30.4447827,13.27962999
+MDG,deaths,chronic obstructive pulmonary disease,PM25,0.837152303,1.845699632,0.249396126
+MDG,deaths,diabetes,PM25,1.764420356,5.569755262,0.350983729
+MDG,deaths,ischaemic heart disease,PM25,5.895919616,9.137722177,3.523368497
+MDG,deaths,lower respiratory infections,PM25,2.887968739,6.146660242,0.93829582
+MDG,deaths,lower respiratory infections in children,PM25,1.447523177,4.757581771,0.396500198
+MDG,deaths,lung cancer,PM25,0.195141746,0.41153313,0.072236189
+MDG,deaths,stroke,PM25,3.018526542,6.284064262,0.985946577
+MDG,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,3.856293061,5.17730705,2.524902107
+MDG,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,7.087456623,10.42822574,3.707322833
+MDG,preterm births,preterm births,PM25,0,0,0
+MDG,work absence (sick leave days),work absence (sick leave days),PM25,9905.432242,11374.42793,8426.559724
+MDG,years lived with disability,chronic obstructive pulmonary disease,PM25,7.973691912,14.87208486,2.892946134
+MDG,years lived with disability,diabetes,PM25,24.8899596,81.00456984,4.633628514
+MDG,years lived with disability,stroke,PM25,6.93459941,13.77113009,2.343716533
+COD,deaths,total,Total,19.36846632,29.40500233,12.18349278
+MDV,deaths,chronic obstructive pulmonary disease,PM25,0.189541256,0.368565673,0.066904151
+MDV,deaths,diabetes,PM25,0.237810648,0.577382487,0.00709815
+MDV,deaths,ischaemic heart disease,PM25,1.202026384,1.605673725,0.861778092
+MDV,deaths,lower respiratory infections,PM25,0.096796103,0.193792964,0.033385988
+MDV,deaths,lower respiratory infections in children,PM25,0.006687633,0.03798733,2.34E-04
+MDV,deaths,lung cancer,PM25,0.060329029,0.113474338,0.026005548
+MDV,deaths,stroke,PM25,0.19092976,0.373176894,0.06894971
+MDV,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,0.050019159,0.067153838,0.032749927
+MDV,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0.054126811,0.079640374,0.02831272
+MDV,preterm births,preterm births,PM25,0,0,0
+MDV,work absence (sick leave days),work absence (sick leave days),PM25,1554.613003,1785.145383,1322.525445
+MDV,years lived with disability,chronic obstructive pulmonary disease,PM25,2.076632948,3.835415743,0.753259151
+MDV,years lived with disability,diabetes,PM25,7.268040223,19.62881122,0.186135375
+MDV,years lived with disability,stroke,PM25,1.21687139,2.4702349,0.398042098
+MWI,deaths,total,Total,18.59492818,26.83111034,12.11177023
+MMR,deaths,chronic obstructive pulmonary disease,PM25,78.52674369,149.7019654,25.53068562
+MMR,deaths,diabetes,PM25,9.539215957,20.63519517,2.952979808
+MMR,deaths,ischaemic heart disease,PM25,115.7971347,156.685317,83.60399117
+MMR,deaths,lower respiratory infections,PM25,96.03053,185.3069313,34.27907697
+MMR,deaths,lower respiratory infections in children,PM25,14.54400884,22.44415847,8.185409072
+MMR,deaths,lung cancer,PM25,31.53909448,66.55900382,11.75069272
+MMR,deaths,stroke,PM25,186.4683351,340.1212753,72.27607956
+MMR,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,467.0017077,626.9137197,305.800309
+MMR,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,422.743666,621.9142391,221.1640367
+MMR,preterm births,preterm births,PM25,420.5636051,446.5649558,203.7920473
+MMR,work absence (sick leave days),work absence (sick leave days),PM25,306445.1895,351861.5919,260715.5932
+MMR,years lived with disability,chronic obstructive pulmonary disease,PM25,437.5607904,792.4008694,162.6392965
+MMR,years lived with disability,diabetes,PM25,115.8655069,288.9102847,29.39590306
+MMR,years lived with disability,stroke,PM25,292.9906716,589.4811972,96.31497133
+TZA,deaths,total,Total,13.95569186,19.99730296,9.100323293
+MNG,deaths,chronic obstructive pulmonary disease,PM25,0.056114504,0.121476289,0.018315862
+MNG,deaths,diabetes,PM25,0.041685048,0.076870485,0.009838841
+MNG,deaths,ischaemic heart disease,PM25,1.383180861,1.945468298,0.955738878
+MNG,deaths,lower respiratory infections,PM25,0.085197447,0.186048134,0.027670846
+MNG,deaths,lower respiratory infections in children,PM25,0.062723437,0.103511238,0.025819919
+MNG,deaths,lung cancer,PM25,0.137501991,0.269265819,0.056486535
+MNG,deaths,stroke,PM25,0.637220305,1.29893162,0.22410156
+MNG,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,0.652920163,0.876582845,0.427499496
+MNG,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0.446189526,0.65650476,0.233394642
+MNG,preterm births,preterm births,PM25,0.85680427,0.909879551,0.414788086
+MNG,work absence (sick leave days),work absence (sick leave days),PM25,976.2244518,1121.000056,830.4753244
+MNG,years lived with disability,chronic obstructive pulmonary disease,PM25,0.30631312,0.625279223,0.100076637
+MNG,years lived with disability,diabetes,PM25,1.893914032,3.516988477,0.42701246
+MNG,years lived with disability,stroke,PM25,1.132586387,2.289008709,0.370837049
+UZB,deaths,total,Total,12.15561259,16.79786273,8.470106992
+MNP,deaths,chronic obstructive pulmonary disease,PM25,0,0,0
+MNP,deaths,diabetes,PM25,0,0,0
+MNP,deaths,ischaemic heart disease,PM25,0,0,0
+MNP,deaths,lower respiratory infections,PM25,0,0,0
+MNP,deaths,lower respiratory infections in children,PM25,0,0,0
+MNP,deaths,lung cancer,PM25,0,0,0
+MNP,deaths,stroke,PM25,0,0,0
+MNP,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,0,0,0
+MNP,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0,0,0
+MNP,preterm births,preterm births,PM25,0,0,0
+MNP,work absence (sick leave days),work absence (sick leave days),PM25,0,0,0
+MNP,years lived with disability,chronic obstructive pulmonary disease,PM25,0,0,0
+MNP,years lived with disability,diabetes,PM25,0,0,0
+MNP,years lived with disability,stroke,PM25,0,0,0
+BWA,deaths,total,Total,11.01158102,17.0714952,6.677001701
+MOZ,deaths,chronic obstructive pulmonary disease,PM25,2.069944991,4.602536324,0.632908053
+MOZ,deaths,diabetes,PM25,6.460619537,11.11326949,1.507647853
+MOZ,deaths,ischaemic heart disease,PM25,12.77088353,19.44412933,7.924891244
+MOZ,deaths,lower respiratory infections,PM25,16.99072174,35.98867578,5.634198835
+MOZ,deaths,lower respiratory infections in children,PM25,7.8893889,13.12712428,3.618448662
+MOZ,deaths,lung cancer,PM25,0.963538875,1.947114713,0.376420091
+MOZ,deaths,stroke,PM25,12.47450086,25.48815646,4.205317798
+MOZ,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,32.22955685,43.26930162,21.10266251
+MOZ,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,67.60551196,99.46943569,35.36427071
+MOZ,preterm births,preterm births,PM25,122.9210346,130.5332306,59.5158321
+MOZ,work absence (sick leave days),work absence (sick leave days),PM25,44651.69057,51272.82682,37985.82822
+MOZ,years lived with disability,chronic obstructive pulmonary disease,PM25,20.68050058,38.69770104,7.532269527
+MOZ,years lived with disability,diabetes,PM25,66.32006827,118.6327075,14.25819589
+MOZ,years lived with disability,stroke,PM25,25.20601086,50.01843723,8.499672292
+RUS,deaths,total,Total,10.31978177,13.81096613,7.457847612
+MWI,deaths,chronic obstructive pulmonary disease,PM25,0.783983516,1.636217126,0.253475446
+MWI,deaths,diabetes,PM25,1.193483235,2.274601986,0.331220555
+MWI,deaths,ischaemic heart disease,PM25,3.82233628,5.638098957,2.44599407
+MWI,deaths,lower respiratory infections,PM25,6.534867816,13.18226862,2.279877941
+MWI,deaths,lower respiratory infections in children,PM25,2.386902202,3.628314367,1.292407592
+MWI,deaths,lung cancer,PM25,0.264429312,0.510895096,0.1101905
+MWI,deaths,stroke,PM25,2.630882959,5.310134381,0.901540345
+MWI,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,11.06451725,14.85460407,7.244564882
+MWI,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,24.85185919,36.5654568,12.99980566
+MWI,preterm births,preterm births,PM25,47.7908527,50.75062301,23.13858338
+MWI,work absence (sick leave days),work absence (sick leave days),PM25,16847.0879,19345.39259,14331.94598
+MWI,years lived with disability,chronic obstructive pulmonary disease,PM25,7.487311477,14.01105771,2.70793852
+MWI,years lived with disability,diabetes,PM25,15.81358993,33.03114268,3.835364125
+MWI,years lived with disability,stroke,PM25,6.525768067,13.10244367,2.155274273
+BTN,deaths,total,Total,10.160701,14.34625908,6.677349293
+MYS,deaths,chronic obstructive pulmonary disease,PM25,5.047869093,10.72853699,1.698862944
+MYS,deaths,diabetes,PM25,2.73561426,4.880434215,0.665889718
+MYS,deaths,ischaemic heart disease,PM25,37.31048338,51.86237603,25.97290799
+MYS,deaths,lower respiratory infections,PM25,44.54165483,90.01971481,12.87737884
+MYS,deaths,lower respiratory infections in children,PM25,0.162338116,0.280872692,0.079890542
+MYS,deaths,lung cancer,PM25,4.909267893,9.612012529,1.998605164
+MYS,deaths,stroke,PM25,12.98992987,26.08941755,4.565723107
+MYS,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,43.61854313,58.5590792,28.55989213
+MYS,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,32.23674513,47.43020981,16.86310396
+MYS,preterm births,preterm births,PM25,53.1945532,56.48838457,25.75713401
+MYS,work absence (sick leave days),work absence (sick leave days),PM25,52635.39883,60440.12126,44777.88443
+MYS,years lived with disability,chronic obstructive pulmonary disease,PM25,43.2572989,80.67335324,15.56617653
+MYS,years lived with disability,diabetes,PM25,125.3436231,232.9104128,27.00844822
+MYS,years lived with disability,stroke,PM25,65.20134008,129.4378007,21.64679468
+AGO,deaths,total,Total,8.451889295,12.5056135,5.495781948
+NAM,deaths,chronic obstructive pulmonary disease,PM25,0.308412771,0.663285109,0.097627597
+NAM,deaths,diabetes,PM25,0.720329153,1.334073031,0.211662099
+NAM,deaths,ischaemic heart disease,PM25,1.035652692,1.51026053,0.680050812
+NAM,deaths,lower respiratory infections,PM25,1.565129237,3.445389756,0.499195915
+NAM,deaths,lower respiratory infections in children,PM25,0.162623737,0.330647493,0.072585623
+NAM,deaths,lung cancer,PM25,0.071344006,0.13958772,0.029248902
+NAM,deaths,stroke,PM25,0.585667592,1.171014756,0.206383338
+NAM,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,3.057354882,4.10463331,2.001823516
+NAM,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,5.306542908,7.80770963,2.775810431
+NAM,preterm births,preterm births,PM25,3.801701643,4.037166652,1.84057263
+NAM,work absence (sick leave days),work absence (sick leave days),PM25,1884.606124,2164.077397,1603.250695
+NAM,years lived with disability,chronic obstructive pulmonary disease,PM25,2.16006787,4.000765004,0.78961321
+NAM,years lived with disability,diabetes,PM25,5.882816519,11.6173823,1.558314413
+NAM,years lived with disability,stroke,PM25,1.271780258,2.548316234,0.423495309
+MAC,deaths,total,Total,7.827189252,10.56774162,5.551178018
+NPL,deaths,chronic obstructive pulmonary disease,PM25,97.28858023,189.3134442,31.83009384
+NPL,deaths,diabetes,PM25,0.600827835,1.52994076,0.126521286
+NPL,deaths,ischaemic heart disease,PM25,93.18139975,132.9191387,61.37816617
+NPL,deaths,lower respiratory infections,PM25,21.63065913,48.21658957,6.440328829
+NPL,deaths,lower respiratory infections in children,PM25,7.886212691,12.59308784,4.192321951
+NPL,deaths,lung cancer,PM25,6.999261437,14.63441692,2.621894459
+NPL,deaths,stroke,PM25,45.42067618,93.23617692,15.38644537
+NPL,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,520.7939087,699.0712689,341.0510286
+NPL,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,550.049009,809.1040106,287.799351
+NPL,preterm births,preterm births,PM25,251.529694,267.0574808,121.971111
+NPL,work absence (sick leave days),work absence (sick leave days),PM25,401698.3176,461200.9348,341777.3645
+NPL,years lived with disability,chronic obstructive pulmonary disease,PM25,292.4307682,526.0020976,109.3326232
+NPL,years lived with disability,diabetes,PM25,19.53242326,52.14404502,3.891920266
+NPL,years lived with disability,stroke,PM25,69.73213591,143.0498825,22.75494821
+SGP,deaths,total,Total,7.474782857,9.466364859,5.677662375
+OMN,deaths,chronic obstructive pulmonary disease,PM25,0.012640413,0.026165962,0.00386098
+OMN,deaths,diabetes,PM25,0.002361584,0.005507075,5.00E-04
+OMN,deaths,ischaemic heart disease,PM25,0.290979968,0.375086687,0.220106363
+OMN,deaths,lower respiratory infections,PM25,0.028962949,0.059139288,0.009712881
+OMN,deaths,lower respiratory infections in children,PM25,0.001752783,0.002741588,9.61E-04
+OMN,deaths,lung cancer,PM25,0.011347911,0.023172116,0.004643881
+OMN,deaths,stroke,PM25,0.067035763,0.133417224,0.024064829
+OMN,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,1.244076186,1.670246117,0.814557771
+OMN,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0.788855061,1.160691039,0.41263666
+OMN,preterm births,preterm births,PM25,1.23760996,1.314273713,0.599143132
+OMN,work absence (sick leave days),work absence (sick leave days),PM25,1133.098536,1301.141609,963.9262109
+OMN,years lived with disability,chronic obstructive pulmonary disease,PM25,0.15867769,0.321277442,0.05242422
+OMN,years lived with disability,diabetes,PM25,0.050891327,0.134142958,0.00928054
+OMN,years lived with disability,stroke,PM25,0.41150989,0.844719848,0.134403324
+SWZ,deaths,total,Total,6.798545464,10.79311464,4.111324214
+PAK,deaths,chronic obstructive pulmonary disease,PM25,59.47091896,119.2374907,20.81368445
+PAK,deaths,diabetes,PM25,2.72271404,6.306284476,0.667494158
+PAK,deaths,ischaemic heart disease,PM25,232.73412,318.8846693,167.2495212
+PAK,deaths,lower respiratory infections,PM25,22.16617689,48.1541699,6.873999971
+PAK,deaths,lower respiratory infections in children,PM25,32.98840022,52.80064607,18.60428626
+PAK,deaths,lung cancer,PM25,21.74928808,42.11685257,9.180323041
+PAK,deaths,stroke,PM25,98.3164549,189.5327958,36.92235687
+PAK,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,638.9288134,857.7485606,418.363283
+PAK,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,834.9333103,1228.379048,436.7788922
+PAK,preterm births,preterm births,PM25,1337.460493,1420.215125,647.8404719
+PAK,work absence (sick leave days),work absence (sick leave days),PM25,564713.1055,648429.1328,480425.845
+PAK,years lived with disability,chronic obstructive pulmonary disease,PM25,361.3477564,671.3561328,132.6713119
+PAK,years lived with disability,diabetes,PM25,42.02085417,105.1357047,9.31263672
+PAK,years lived with disability,stroke,PM25,227.3072221,464.877391,74.34830162
+LSO,deaths,total,Total,6.521287208,9.948640081,3.971985105
+PHL,deaths,chronic obstructive pulmonary disease,PM25,15.18269988,30.30116235,5.606836542
+PHL,deaths,diabetes,PM25,30.76268698,55.01761467,6.682266802
+PHL,deaths,ischaemic heart disease,PM25,109.6957593,143.4565516,79.94522309
+PHL,deaths,lower respiratory infections,PM25,77.90137059,141.6451137,26.72737814
+PHL,deaths,lower respiratory infections in children,PM25,7.219686073,13.57906146,3.354302784
+PHL,deaths,lung cancer,PM25,11.2624728,19.64962711,5.267510267
+PHL,deaths,stroke,PM25,42.40201067,77.24850567,15.98850364
+PHL,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,82.29173867,110.4797742,53.88131189
+PHL,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,122.798007,180.6759485,64.23510293
+PHL,preterm births,preterm births,PM25,175.3662546,186.2267846,84.90671048
+PHL,work absence (sick leave days),work absence (sick leave days),PM25,122497.2385,140661.5379,104210.2136
+PHL,years lived with disability,chronic obstructive pulmonary disease,PM25,158.7289218,290.7818845,58.82425738
+PHL,years lived with disability,diabetes,PM25,373.8713209,768.2806909,66.37753694
+PHL,years lived with disability,stroke,PM25,153.7933716,310.2042323,50.25739098
+TJK,deaths,total,Total,6.405356352,9.307210973,4.296264851
+PLW,deaths,chronic obstructive pulmonary disease,PM25,0,0,0
+PLW,deaths,diabetes,PM25,0,0,0
+PLW,deaths,ischaemic heart disease,PM25,0,0,0
+PLW,deaths,lower respiratory infections,PM25,0,0,0
+PLW,deaths,lower respiratory infections in children,PM25,0,0,0
+PLW,deaths,lung cancer,PM25,0,0,0
+PLW,deaths,stroke,PM25,0,0,0
+PLW,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,0,0,0
+PLW,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0,0,0
+PLW,preterm births,preterm births,PM25,0,0,0
+PLW,work absence (sick leave days),work absence (sick leave days),PM25,0,0,0
+PLW,years lived with disability,chronic obstructive pulmonary disease,PM25,0,0,0
+PLW,years lived with disability,diabetes,PM25,0,0,0
+PLW,years lived with disability,stroke,PM25,0,0,0
+IRN,deaths,total,Total,5.938666475,7.280996823,4.675807201
+PRK,deaths,chronic obstructive pulmonary disease,PM25,14.54688187,28.78874528,5.036151338
+PRK,deaths,diabetes,PM25,0.413923741,1.092087653,0.091886884
+PRK,deaths,ischaemic heart disease,PM25,19.76482688,27.6963765,13.50588037
+PRK,deaths,lower respiratory infections,PM25,8.592327596,17.60655154,2.931853514
+PRK,deaths,lower respiratory infections in children,PM25,0.249505324,0.396427761,0.135769984
+PRK,deaths,lung cancer,PM25,5.287300973,10.37837587,2.131196376
+PRK,deaths,stroke,PM25,24.24524122,45.80579149,8.996562054
+PRK,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,27.14010122,36.43650551,17.77029676
+PRK,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,14.53717429,21.38883369,7.604366588
+PRK,preterm births,preterm births,PM25,30.34176997,32.22061175,14.69142589
+PRK,work absence (sick leave days),work absence (sick leave days),PM25,38765.92755,44514.34763,32978.68939
+PRK,years lived with disability,chronic obstructive pulmonary disease,PM25,55.89822221,101.2638918,20.95433697
+PRK,years lived with disability,diabetes,PM25,11.52024218,32.14763705,2.350264221
+PRK,years lived with disability,stroke,PM25,57.3617995,114.7157087,19.13350912
+NAM,deaths,total,Total,4.375268678,6.625630442,2.804826687
+QAT,deaths,chronic obstructive pulmonary disease,PM25,0.00163057,0.00397425,4.96E-04
+QAT,deaths,diabetes,PM25,5.93E-04,0.001561707,9.49E-05
+QAT,deaths,ischaemic heart disease,PM25,0.043848568,0.064314262,0.028921862
+QAT,deaths,lower respiratory infections,PM25,0.002432235,0.005423226,7.84E-04
+QAT,deaths,lower respiratory infections in children,PM25,1.22E-04,2.29E-04,5.94E-05
+QAT,deaths,lung cancer,PM25,0.005010651,0.010729698,0.001884676
+QAT,deaths,stroke,PM25,0.00681514,0.015129094,0.002157781
+QAT,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,0.830830077,1.115438866,0.543985164
+QAT,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0.439031478,0.645974207,0.229649841
+QAT,preterm births,preterm births,PM25,0.131501407,0.139647286,0.063661454
+QAT,work absence (sick leave days),work absence (sick leave days),PM25,691.8642643,794.4706267,588.5684138
+QAT,years lived with disability,chronic obstructive pulmonary disease,PM25,0.069400899,0.139650124,0.023144708
+QAT,years lived with disability,diabetes,PM25,0.03522436,0.099175672,0.005099672
+QAT,years lived with disability,stroke,PM25,0.124663057,0.254948258,0.04050552
+KGZ,deaths,total,Total,4.092349537,5.40536481,2.980046916
+RUS,deaths,chronic obstructive pulmonary disease,PM25,0.344666627,0.634968052,0.134132246
+RUS,deaths,diabetes,PM25,0.142609226,0.224834141,0.04544554
+RUS,deaths,ischaemic heart disease,PM25,5.910628754,7.369592506,4.557665398
+RUS,deaths,lower respiratory infections,PM25,0.796524564,1.406385175,0.318844696
+RUS,deaths,lower respiratory infections in children,PM25,0.01000382,0.013925699,0.006230667
+RUS,deaths,lung cancer,PM25,0.579381992,0.959040779,0.285150778
+RUS,deaths,stroke,PM25,2.106960305,3.657860564,0.852951623
+RUS,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,1.575950756,2.115813161,1.03184953
+RUS,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0.48851614,0.718786798,0.255533433
+RUS,preterm births,preterm births,PM25,1.645227916,1.747146929,0.796455933
+RUS,work absence (sick leave days),work absence (sick leave days),PM25,2883.325637,3310.942118,2452.837572
+RUS,years lived with disability,chronic obstructive pulmonary disease,PM25,1.973731442,3.876921723,0.669551165
+RUS,years lived with disability,diabetes,PM25,4.363321431,8.300866375,1.097964411
+RUS,years lived with disability,stroke,PM25,4.516086971,9.171643128,1.483618299
+MNG,deaths,total,Total,3.110252827,4.657117254,2.00961117
+SAU,deaths,chronic obstructive pulmonary disease,PM25,0.002331138,0.004904094,7.58E-04
+SAU,deaths,diabetes,PM25,1.69E-04,4.44E-04,2.74E-05
+SAU,deaths,ischaemic heart disease,PM25,0.047929052,0.066068211,0.033191901
+SAU,deaths,lower respiratory infections,PM25,0.006144135,0.013032713,0.002004816
+SAU,deaths,lower respiratory infections in children,PM25,3.15E-05,5.75E-05,1.32E-05
+SAU,deaths,lung cancer,PM25,0.002047126,0.00401397,8.29E-04
+SAU,deaths,stroke,PM25,0.014487004,0.029000301,0.004778854
+SAU,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,0.204049855,0.273949864,0.133601055
+SAU,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0.187291912,0.275575364,0.097968767
+SAU,preterm births,preterm births,PM25,0.078940572,0.083830826,0.038215098
+SAU,work absence (sick leave days),work absence (sick leave days),PM25,140.920555,161.8200571,119.8807167
+SAU,years lived with disability,chronic obstructive pulmonary disease,PM25,0.040213976,0.077716996,0.01388849
+SAU,years lived with disability,diabetes,PM25,0.009651889,0.02673822,0.001409899
+SAU,years lived with disability,stroke,PM25,0.087451502,0.176695551,0.02892408
+KAZ,deaths,total,Total,2.977786327,3.970162034,2.146810085
+SGP,deaths,chronic obstructive pulmonary disease,PM25,0.341602591,0.712375301,0.12476375
+SGP,deaths,diabetes,PM25,0.012434856,0.021900728,0.004698877
+SGP,deaths,ischaemic heart disease,PM25,2.174873855,2.657406037,1.676786729
+SGP,deaths,lower respiratory infections,PM25,4.510103808,7.972796324,1.708769652
+SGP,deaths,lower respiratory infections in children,PM25,0.005120742,0.007407836,0.003260612
+SGP,deaths,lung cancer,PM25,1.009535191,1.627733395,0.500069204
+SGP,deaths,stroke,PM25,0.703574222,1.285688811,0.257093061
+SGP,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,3.173279138,4.260201359,2.077757824
+SGP,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,1.210907267,1.781611073,0.633430662
+SGP,preterm births,preterm births,PM25,4.863888378,5.165028065,2.355256197
+SGP,work absence (sick leave days),work absence (sick leave days),PM25,9369.861094,10759.20221,7971.119146
+SGP,years lived with disability,chronic obstructive pulmonary disease,PM25,4.772385529,9.150366183,1.675323877
+SGP,years lived with disability,diabetes,PM25,2.442881451,5.277943828,0.750242947
+SGP,years lived with disability,stroke,PM25,8.305005975,16.60969291,2.741217161
+MDV,deaths,total,Total,2.580786177,3.566513484,1.785748094
+SWZ,deaths,chronic obstructive pulmonary disease,PM25,0.382311411,0.83626535,0.11904635
+SWZ,deaths,diabetes,PM25,0.499235485,1.313987118,0.091091684
+SWZ,deaths,ischaemic heart disease,PM25,1.373491523,2.137613148,0.845120517
+SWZ,deaths,lower respiratory infections,PM25,2.54165057,5.785441969,0.772750683
+SWZ,deaths,lower respiratory infections in children,PM25,0.445862285,0.688230359,0.251135457
+SWZ,deaths,lung cancer,PM25,0.241006077,0.543029316,0.075806863
+SWZ,deaths,stroke,PM25,1.027133813,2.189924778,0.336533822
+SWZ,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,10.56458328,14.18274638,6.917561268
+SWZ,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,18.47845574,27.18610228,9.66662477
+SWZ,preterm births,preterm births,PM25,10.73560409,11.39987655,5.200073927
+SWZ,work absence (sick leave days),work absence (sick leave days),PM25,3280.212275,3766.491395,2790.615902
+SWZ,years lived with disability,chronic obstructive pulmonary disease,PM25,3.578177868,6.538249995,1.330209896
+SWZ,years lived with disability,diabetes,PM25,2.533485106,6.913941492,0.43618269
+SWZ,years lived with disability,stroke,PM25,2.303520807,4.603596617,0.77274196
+TLS,deaths,total,Total,2.146769639,3.218986474,1.299922443
+THA,deaths,chronic obstructive pulmonary disease,PM25,23.20293502,48.14589292,7.522876707
+THA,deaths,diabetes,PM25,6.763965652,11.42625642,2.123912019
+THA,deaths,ischaemic heart disease,PM25,69.11432636,101.290907,44.16178907
+THA,deaths,lower respiratory infections,PM25,74.42186865,154.6105585,20.92606007
+THA,deaths,lower respiratory infections in children,PM25,0.380740729,0.588350282,0.21119936
+THA,deaths,lung cancer,PM25,33.74524675,64.73085303,13.98201469
+THA,deaths,stroke,PM25,58.41971103,121.569024,19.39569263
+THA,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,419.2337262,562.8132796,274.5090699
+THA,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,180.4958869,265.5515354,94.42266617
+THA,preterm births,preterm births,PM25,195.3993342,207.4904316,94.64441776
+THA,work absence (sick leave days),work absence (sick leave days),PM25,245928.632,282386.7133,209221.8674
+THA,years lived with disability,chronic obstructive pulmonary disease,PM25,230.4619732,426.8604816,83.7031734
+THA,years lived with disability,diabetes,PM25,158.6041478,285.0862828,45.21940863
+THA,years lived with disability,stroke,PM25,289.6492233,575.231471,96.86841315
+TKM,deaths,total,Total,1.396481178,2.041920499,0.931045196
+TJK,deaths,chronic obstructive pulmonary disease,PM25,0.270036916,0.670406064,0.085737742
+TJK,deaths,diabetes,PM25,0.035089206,0.071908763,0.012444969
+TJK,deaths,ischaemic heart disease,PM25,3.908469306,5.208850908,2.885882441
+TJK,deaths,lower respiratory infections,PM25,0.407978399,0.874735046,0.139792622
+TJK,deaths,lower respiratory infections in children,PM25,0.372154005,0.629809485,0.217169286
+TJK,deaths,lung cancer,PM25,0.173139105,0.330632522,0.073174084
+TJK,deaths,stroke,PM25,1.52995731,2.96678629,0.551372674
+TJK,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,2.781005387,3.733635044,1.820875413
+TJK,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,3.023066582,4.447971116,1.581333736
+TJK,preterm births,preterm births,PM25,15.1551222,16.09376379,7.337333439
+TJK,work absence (sick leave days),work absence (sick leave days),PM25,3555.762229,4083.068226,3024.905462
+TJK,years lived with disability,chronic obstructive pulmonary disease,PM25,1.353669465,2.698473478,0.457501676
+TJK,years lived with disability,diabetes,PM25,0.696641405,1.570377348,0.213067962
+TJK,years lived with disability,stroke,PM25,2.680913985,5.477067291,0.875385856
+BRN,deaths,total,Total,1.091824762,1.446217963,0.796671323
+TKM,deaths,chronic obstructive pulmonary disease,PM25,0.025395887,0.073089263,0.00810373
+TKM,deaths,diabetes,PM25,0.005246498,0.00930503,0.002261697
+TKM,deaths,ischaemic heart disease,PM25,0.931076369,1.245771794,0.676096123
+TKM,deaths,lower respiratory infections,PM25,0.038620287,0.081899584,0.01277458
+TKM,deaths,lower respiratory infections in children,PM25,0.050148272,0.078298949,0.031500936
+TKM,deaths,lung cancer,PM25,0.034310593,0.064919765,0.014726383
+TKM,deaths,stroke,PM25,0.411499528,0.799482689,0.149828327
+TKM,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,1.010452088,1.356592316,0.661592397
+TKM,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0.804621602,1.183889865,0.420883674
+TKM,preterm births,preterm births,PM25,1.725876375,1.832786417,0.835516903
+TKM,work absence (sick leave days),work absence (sick leave days),PM25,833.2310678,956.8028398,708.8289573
+TKM,years lived with disability,chronic obstructive pulmonary disease,PM25,0.20043693,0.404175444,0.066559706
+TKM,years lived with disability,diabetes,PM25,0.140834838,0.273514052,0.051882519
+TKM,years lived with disability,stroke,PM25,1.015210412,2.03452819,0.334812777
+ARE,deaths,total,Total,0.69727621,1.084499191,0.422626445
+TLS,deaths,chronic obstructive pulmonary disease,PM25,0.137974168,0.296523338,0.043442659
+TLS,deaths,diabetes,PM25,0.17905521,0.360160445,0.016292796
+TLS,deaths,ischaemic heart disease,PM25,1.150813789,1.660342124,0.716959171
+TLS,deaths,lower respiratory infections,PM25,0.221206669,0.467262336,0.069098954
+TLS,deaths,lower respiratory infections in children,PM25,0.080901862,0.340759891,0.009812886
+TLS,deaths,lung cancer,PM25,0.068809096,0.142615421,0.024122831
+TLS,deaths,stroke,PM25,0.278761726,0.579207288,0.091970093
+TLS,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,0.109627749,0.147182004,0.071778551
+TLS,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,0.20710526,0.30472748,0.108332965
+TLS,preterm births,preterm births,PM25,0,0,0
+TLS,work absence (sick leave days),work absence (sick leave days),PM25,571.7226821,656.5075018,486.3670754
+TLS,years lived with disability,chronic obstructive pulmonary disease,PM25,0.716909534,1.344069397,0.257964617
+TLS,years lived with disability,diabetes,PM25,3.752074485,7.932768755,0.33009276
+TLS,years lived with disability,stroke,PM25,0.837064678,1.665842811,0.276472231
+OMN,deaths,total,Total,0.388337662,0.511417555,0.285098109
+TWN,deaths,chronic obstructive pulmonary disease,PM25,6.105010752,12.24923521,2.13675502
+TWN,deaths,diabetes,PM25,4.997125313,9.338111012,1.088870645
+TWN,deaths,ischaemic heart disease,PM25,12.56311793,17.30994702,8.832228204
+TWN,deaths,lower respiratory infections,PM25,25.64567613,50.15991099,9.249794691
+TWN,deaths,lower respiratory infections in children,PM25,0.025107578,0.038360035,0.014937507
+TWN,deaths,lung cancer,PM25,9.864147971,18.13566675,4.385610438
+TWN,deaths,stroke,PM25,7.768965012,15.35560763,2.723262789
+TWN,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,30.09246355,40.39984095,19.7035432
+TWN,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,11.70512732,17.22178854,6.122999788
+TWN,preterm births,preterm births,PM25,9.427460495,10.01116955,4.565000911
+TWN,work absence (sick leave days),work absence (sick leave days),PM25,35276.75302,40507.48944,30010.61864
+TWN,years lived with disability,chronic obstructive pulmonary disease,PM25,25.48408776,48.04179569,9.166434416
+TWN,years lived with disability,diabetes,PM25,82.97573428,173.3558269,15.83268868
+TWN,years lived with disability,stroke,PM25,53.98621401,107.9347449,17.88552902
+AUS,deaths,total,Total,0.111163984,0.135623834,0.087959408
+TZA,deaths,chronic obstructive pulmonary disease,PM25,0.488755934,1.002346748,0.160265948
+TZA,deaths,diabetes,PM25,1.331652095,2.25168904,0.376174642
+TZA,deaths,ischaemic heart disease,PM25,2.941237255,4.440206188,1.788227624
+TZA,deaths,lower respiratory infections,PM25,4.152103645,8.293670312,1.455144791
+TZA,deaths,lower respiratory infections in children,PM25,2.160219655,3.600042748,1.0635549
+TZA,deaths,lung cancer,PM25,0.289567991,0.654138024,0.103907518
+TZA,deaths,stroke,PM25,1.9379856,3.941064192,0.662904725
+TZA,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,7.256070638,9.741709284,4.750903901
+TZA,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,15.32354395,22.54648717,8.015480384
+TZA,preterm births,preterm births,PM25,39.86363298,42.33302397,19.29836017
+TZA,work absence (sick leave days),work absence (sick leave days),PM25,11548.20278,13260.84948,9824.047528
+TZA,years lived with disability,chronic obstructive pulmonary disease,PM25,4.719883734,8.873071777,1.698572146
+TZA,years lived with disability,diabetes,PM25,13.05586861,23.96460291,3.252189731
+TZA,years lived with disability,stroke,PM25,4.848110383,9.708118032,1.61125465
+QAT,deaths,total,Total,0.076144636,0.114723775,0.048032581
+UZB,deaths,chronic obstructive pulmonary disease,PM25,0.22474221,0.536435281,0.076953374
+UZB,deaths,diabetes,PM25,0.073474907,0.127966256,0.032320919
+UZB,deaths,ischaemic heart disease,PM25,8.739388607,11.01713979,6.792475709
+UZB,deaths,lower respiratory infections,PM25,0.534284037,1.08253138,0.184482477
+UZB,deaths,lower respiratory infections in children,PM25,0.518603743,0.804310888,0.349412994
+UZB,deaths,lung cancer,PM25,0.333044009,0.599832554,0.149902777
+UZB,deaths,stroke,PM25,2.678034795,5.061557228,1.012389692
+UZB,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,6.85798717,9.207232894,4.490271742
+UZB,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,3.713161082,5.463383179,1.94229837
+UZB,preterm births,preterm births,PM25,16.89412304,17.94058209,8.178845583
+UZB,work absence (sick leave days),work absence (sick leave days),PM25,9155.403731,10513.16553,7788.512167
+UZB,years lived with disability,chronic obstructive pulmonary disease,PM25,1.860309477,3.724103174,0.619034149
+UZB,years lived with disability,diabetes,PM25,1.182190884,2.416597737,0.425143355
+UZB,years lived with disability,stroke,PM25,7.289636306,14.793547,2.373108849
+SAU,deaths,total,Total,0.072913469,0.10467818,0.047918337
+VNM,deaths,chronic obstructive pulmonary disease,PM25,48.3130355,102.2982559,8.190168325
+VNM,deaths,diabetes,PM25,23.64525853,45.49812933,4.852067895
+VNM,deaths,ischaemic heart disease,PM25,142.6708991,200.8077465,96.11628095
+VNM,deaths,lower respiratory infections,PM25,79.78327435,164.1641117,27.39660451
+VNM,deaths,lower respiratory infections in children,PM25,3.709181063,5.747015914,2.22827891
+VNM,deaths,lung cancer,PM25,49.74521181,96.61515906,20.3540378
+VNM,deaths,stroke,PM25,190.9958524,365.5630177,68.84395435
+VNM,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,249.9742158,335.5836651,163.6809905
+VNM,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,164.4787063,241.9844262,86.04436776
+VNM,preterm births,preterm births,PM25,273.5938151,290.5213956,132.5270176
+VNM,work absence (sick leave days),work absence (sick leave days),PM25,446889.6692,513136.9853,380189.8088
+VNM,years lived with disability,chronic obstructive pulmonary disease,PM25,347.8785391,651.0388317,125.975173
+VNM,years lived with disability,diabetes,PM25,330.988384,692.700588,60.61682234
+VNM,years lived with disability,stroke,PM25,496.8319238,999.5607787,164.8886334
+BHR,deaths,total,Total,0.052289376,0.07456869,0.035065769
+YEM,deaths,chronic obstructive pulmonary disease,PM25,2.25E-06,4.96E-06,6.95E-07
+YEM,deaths,diabetes,PM25,3.92E-08,1.50E-07,0
+YEM,deaths,ischaemic heart disease,PM25,3.01E-05,4.37E-05,2.06E-05
+YEM,deaths,lower respiratory infections,PM25,2.45E-06,5.91E-06,6.78E-07
+YEM,deaths,lower respiratory infections in children,PM25,1.42E-06,2.81E-06,5.56E-07
+YEM,deaths,lung cancer,PM25,1.12E-06,2.59E-06,3.85E-07
+YEM,deaths,stroke,PM25,9.66E-06,2.04E-05,3.18E-06
+YEM,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,6.64E-05,8.91E-05,4.34E-05
+YEM,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,1.01E-04,1.49E-04,5.31E-05
+YEM,preterm births,preterm births,PM25,1.86E-04,1.98E-04,9.02E-05
+YEM,work absence (sick leave days),work absence (sick leave days),PM25,0.040536517,0.046548373,0.034484296
+YEM,years lived with disability,chronic obstructive pulmonary disease,PM25,1.77E-05,3.36E-05,6.28E-06
+YEM,years lived with disability,diabetes,PM25,1.34E-06,4.86E-06,0
+YEM,years lived with disability,stroke,PM25,2.87E-05,5.77E-05,9.56E-06
+YEM,deaths,total,Total,4.53E-05,6.91E-05,2.97E-05
+ZAF,deaths,chronic obstructive pulmonary disease,PM25,13.41196566,23.74627678,5.379417377
+ZAF,deaths,diabetes,PM25,17.40920878,26.77771398,4.896894317
+ZAF,deaths,ischaemic heart disease,PM25,40.91723798,50.27415406,31.89028861
+ZAF,deaths,lower respiratory infections,PM25,60.90329865,108.1256828,24.14092731
+ZAF,deaths,lower respiratory infections in children,PM25,4.058011462,6.566453478,2.413022663
+ZAF,deaths,lung cancer,PM25,11.60976164,19.41754684,5.78838979
+ZAF,deaths,stroke,PM25,28.51042211,48.33151963,11.7612812
+ZAF,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,245.5268909,329.6206199,160.7652975
+ZAF,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,275.8143194,405.7972049,144.2829115
+ZAF,preterm births,preterm births,PM25,244.3584389,259.4838581,118.3402681
+ZAF,work absence (sick leave days),work absence (sick leave days),PM25,124136.0754,142540.7038,105606.3977
+ZAF,years lived with disability,chronic obstructive pulmonary disease,PM25,139.2534317,257.1636739,51.17897964
+ZAF,years lived with disability,diabetes,PM25,161.8844859,305.4277052,35.16206714
+ZAF,years lived with disability,stroke,PM25,99.0812787,200.8152941,32.75218897
+MNP,deaths,total,Total,0,0,0
+ZMB,deaths,chronic obstructive pulmonary disease,PM25,0.880202969,1.83832796,0.283086625
+ZMB,deaths,diabetes,PM25,0.535987442,1.515081302,0.063491428
+ZMB,deaths,ischaemic heart disease,PM25,3.687945895,5.554213463,2.351648999
+ZMB,deaths,lower respiratory infections,PM25,7.253333082,14.95522068,2.447104394
+ZMB,deaths,lower respiratory infections in children,PM25,2.069187226,3.18887936,1.223990881
+ZMB,deaths,lung cancer,PM25,0.500328204,1.048456537,0.185675774
+ZMB,deaths,stroke,PM25,4.508937854,9.021936054,1.573099893
+ZMB,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,15.17082685,20.36741822,9.933241253
+ZMB,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,30.3573873,44.66565425,15.87980667
+ZMB,preterm births,preterm births,PM25,71.96278261,76.41919458,34.84314471
+ZMB,work absence (sick leave days),work absence (sick leave days),PM25,20178.16143,23170.35497,17165.77968
+ZMB,years lived with disability,chronic obstructive pulmonary disease,PM25,8.718513547,16.25274842,3.148921275
+ZMB,years lived with disability,diabetes,PM25,5.889768655,17.79149097,0.619146417
+ZMB,years lived with disability,stroke,PM25,8.491297947,17.01786518,2.826327792
+PLW,deaths,total,Total,0,0,0
+ZWE,deaths,chronic obstructive pulmonary disease,PM25,1.420300369,3.170536534,0.399481249
+ZWE,deaths,diabetes,PM25,2.975169454,6.258024768,0.711312483
+ZWE,deaths,ischaemic heart disease,PM25,13.43233472,19.21280977,9.032623953
+ZWE,deaths,lower respiratory infections,PM25,25.06884982,52.27422651,7.857139095
+ZWE,deaths,lower respiratory infections in children,PM25,5.323195385,7.921733768,2.987456197
+ZWE,deaths,lung cancer,PM25,1.353337401,2.604177438,0.552170829
+ZWE,deaths,stroke,PM25,5.003378968,10.71135626,1.692563295
+ZWE,"asthma emergency room visits, adults","asthma emergency room visits, adults",PM25,28.32901129,38.03221996,18.54896455
+ZWE,"asthma emergency room visits, children","asthma emergency room visits, children",PM25,59.40990464,87.40947166,31.07774203
+ZWE,preterm births,preterm births,PM25,89.35804963,94.89012069,43.27160088
+ZWE,work absence (sick leave days),work absence (sick leave days),PM25,33939.59533,38971.957,28873.15082
+ZWE,years lived with disability,chronic obstructive pulmonary disease,PM25,21.4956366,40.03746847,7.808756489
+ZWE,years lived with disability,diabetes,PM25,36.56955398,81.71730346,8.051595487
+ZWE,years lived with disability,stroke,PM25,14.44314873,28.88945081,4.812774792

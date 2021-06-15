@@ -1,0 +1,7 @@
+Outcome,Pollutant,HSBC_central,HSBC_CI
+Absences,PM25,382,(325 - 439)
+Deaths,PM25,0,(0 - 0)
+exac,PM25,2,(1 - 2)
+PTB,PM25,547,(265 - 581)
+YLDs,PM25,377,(118 - 745)
+YLLs,PM25,"5,714","(3,973 - 7,860)"

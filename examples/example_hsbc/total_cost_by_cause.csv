@@ -1,0 +1,8 @@
+scenario,Outcome,Pollutant,central,CI
+scenario1,Absences,PM25,372.02,(316.50 - 427.17)
+scenario1,Deaths,PM25,0.00,(0.00 - 0.00)
+scenario1,Deaths,TOTAL,0.00,(0.00 - 0.00)
+scenario1,exac,PM25,1.61,(0.97 - 2.24)
+scenario1,PTB,PM25,523.62,(253.76 - 555.98)
+scenario1,YLDs,PM25,313.19,(106.33 - 611.28)
+scenario1,YLLs,PM25,"5,446.58","(3,796.69 - 7,476.91)"
