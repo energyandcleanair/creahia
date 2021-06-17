@@ -16,11 +16,11 @@ gis_dir <- "/Volumes/ext1/gis/"
 
 
 # 01: Get coal additional concentrations from CALPUFF --------------------------------------
-conc_perturbation <- creahia::get_conc_calpuff(calpuff_dir=project_dir, utm_zone=51, utm_hem='N', map_res=1)
+conc_additional <- creahia::get_conc_calpuff(calpuff_dir=project_dir, utm_zone=51, utm_hem='N', map_res=1)
 
-species = unique(conc_perturbation$species)
-scenarios = unique(conc_perturbation$scenario)
-grid_raster = conc_perturbation$conc_perturbation[[1]] %>% raster
+species = unique(conc_additional$species)
+scenarios = unique(conc_additional$scenario)
+grid_raster = conc_additional$conc_additional[[1]] %>% raster
 
 
 # 02: Get base concentration levels --------------------------------------------------------
@@ -28,7 +28,7 @@ conc_baseline <- creahia::get_conc_baseline(species=species, grid_raster=grid_ra
 
 
 # 03: Combine and flatten: one row per scenario --------------------------------------------
-concs <- creahia::combine_concs(conc_perturbation, conc_baseline) %>% flatten_concs() %>% add_pop()
+concs <- creahia::combine_concs(conc_additional, conc_baseline) %>% flatten_concs() %>% add_pop()
 
 
 # 04: Create support maps (e.g. countries, provinces, cities ) -----------------------------

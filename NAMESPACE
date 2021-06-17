@@ -66,6 +66,7 @@ importFrom(plyr,dlply)
 importFrom(plyr,ldply)
 
 importFrom(raster,"crs<-")
+importFrom(raster,"values<-")
 importFrom(raster,aggregate)
 importFrom(raster,crs)
 importFrom(raster,crop)
