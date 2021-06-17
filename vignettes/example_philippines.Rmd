@@ -95,3 +95,4 @@ Summarise HIA:
 hia_table <- hia %>% totalise_hia() %>% make_hia_table()
 hia_table
 ```
+
