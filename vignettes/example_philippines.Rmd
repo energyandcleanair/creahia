@@ -71,12 +71,11 @@ concs <- creahia::combine_concs(conc_perturbation, conc_baseline) %>%
 ```
 
 ## Select regions of interest
-We select regions of interest from GADM dataset, at the administrative level 2.
+We select regions of interest from GADM dataset, at the administrative level 1.
 ```{r, message=FALSE, cache=TRUE}
-regions <- creahia::get_adm(grid_raster, admin_level=2)
-regions <- regions[1:5,] # For example purposes, we only keep a subset
+regions <- creahia::get_adm(grid_raster, admin_level=1)
+# regions <- regions[1:5,] # For example purposes, we only keep a subset
 ```
-
 and extract concentrations there:
 ```{r, cache=TRUE}
 conc_regions <- creahia::extract_concs_at_regions(concs, regions)
