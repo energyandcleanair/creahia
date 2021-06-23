@@ -31,10 +31,18 @@ adddefos <- function(df, exl='pop') {
     ddply(.(estimate), fillcol, targetcols)
 }
 
+get_crfs_versions <- function(){
+  list(
+    "default"="CRFs.csv",
+    "C40"="CRFs_C40.csv",
+    "Krewski"="CRFs_Krewski.csv"
+  )
+}
 
-get_crfs <- function(){
+get_crfs <- function(version="default"){
   print("Getting CRFS")
-  crfs <- read_csv(get_hia_path('CRFs.csv'), col_types = cols())
+  filename <- get_crfs_versions()[[version]]
+  crfs <- read_csv(get_hia_path(filename), col_types = cols())
 
   names(crfs) %<>% gsub('RR_', '', .)
   crfs$Exposure %<>% gsub('PM2\\.5', "PM25", .)
