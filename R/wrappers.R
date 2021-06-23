@@ -16,7 +16,7 @@ wrappers.compute_hia_two_images <- function(perturbation_rasters,
                                             scenario_name="scenario",
                                             crfs_version="default",
                                             scale_base_year=2015,
-                                            scale_base_year=2025){
+                                            scale_target_year=2025){
 
 
   #TODO make it work with raster stack as well
@@ -25,7 +25,7 @@ wrappers.compute_hia_two_images <- function(perturbation_rasters,
 
   # 02: Get base concentration levels --------------------------------------------------------
   if(is.null(baseline_rasters)){
-    conc_baseline <- creahia::get_conc_base(species=species, grid_raster=grid_raster)
+    conc_baseline <- creahia::get_conc_baseline(species=species, grid_raster=grid_raster)
   }else{
     conc_baseline <- tibble(species=names(baseline_rasters), conc_baseline=baseline_rasters)
   }

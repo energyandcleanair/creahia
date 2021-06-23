@@ -1,0 +1,76 @@
+library(testthat)
+
+get_examples_dir <- function(){
+  if(dir.exists("../../../examples")) "../../../examples" else "examples"
+}
+
+test_that("wrapper 2 images works", {
+
+  dir <- get_examples_dir()
+  perturbation_rasters <- list(
+    "no2"=raster::raster(file.path(dir, "example_ph", "rank(0)_no2_8760hr_conc_opr_all.tif")),
+    "pm25"=raster::raster(file.path(dir, "example_ph", "rank(0)_pm25_8760hr_conc_opr_all.tif"))
+  )
+
+
+
+})
+
+test_that("running average", {
+
+  values <- seq(1,365)
+  dates <- seq(lubridate::date("2018-01-01"),
+               lubridate::date("2018-12-31"),
+               by="days")
+
+  df <- tibble::tibble(value=values, date=dates)
+
+  # Shuffle it
+  df <- df[sample(nrow(df)),]
+
+  # 0 and 1 running width should have no effect (except day averaging at some point?)
+  df_0 <- utils.rolling_average(df, average_by = "day", average_width = 0,
+                                vars_to_avg = "value", group_by_cols = NULL) %>%
+    dplyr::arrange(date)
+  expect_true(all(df_0 %>% dplyr::arrange(date) %>% dplyr::pull(value)
+                  == df %>% dplyr::arrange(date) %>% dplyr::pull(value)))
+
+  df_1 <- utils.rolling_average(df, average_by = "day", average_width = 1,
+                                vars_to_avg = "value", group_by_cols = NULL) %>%
+    dplyr::arrange(date)
+  expect_true(all(df_1 %>% dplyr::arrange(date) %>% dplyr::pull(value) == df_1 %>% dplyr::arrange(date) %>% dplyr::pull(value)))
+
+  # 2
+  df_2 <- utils.rolling_average(df, average_by = "day", average_width = 2,
+                                vars_to_avg = "value", group_by_cols = NULL) %>%
+    dplyr::arrange(date)
+  expect_true(is.na(df_2$value[1]))
+  expect_true(all(df_2$value[2:365]==seq(1.5,364.5)))
+
+  # 5
+  df_5 <- utils.rolling_average(df, average_by = "day", average_width = 5,
+                                vars_to_avg = "value", group_by_cols = NULL) %>%
+    dplyr::arrange(date)
+  all(is.na(df_5$value[1:4]))
+  expect_true(all(df_5$value[5:365]==seq(3,363)))
+
+  #  with NAs
+  values <- c(1,2,3,NA,NA,NA,7,8,9)
+  dates <- seq(lubridate::date("2018-01-01"),
+               lubridate::date("2018-01-09"),
+               by="days")
+  df <- tibble::tibble(value=values, date=dates, group="1")
+  utils.rolling_average(df, average_by = "day", average_width = 2,
+                       vars_to_avg = "value", group_by_cols = "group",
+                       min_values=0) %>%
+    dplyr::arrange(date)
+
+  utils.rolling_average(df, average_by = "day", average_width = 3,
+                        vars_to_avg = "value", group_by_cols = "group",
+                        min_values=2) %>%
+    dplyr::arrange(date)
+
+
+
+
+})
