@@ -361,10 +361,22 @@ totalise_hia <- function(hia, .groups=c('region_id', 'region_name', 'iso3')){
 }
 
 
+#' Summarise hia results
+#'
+#' @param hia_total
+#' @param make_ci_fun
+#' @param res_cols
+#' @param dict
+#'
+#' @return
+#' @export
+#'
+#' @examples
 make_hia_table <- function(hia_total,
                            make_ci_fun=make_nothing,
                            res_cols = c('low', 'central', 'high'),
                            dict=get_dict()) {
+
   if('Cause' %notin% names(hia_total)) {
     hia_total %<>% separate(Outcome, c('Cause', 'Outcome', 'Pollutant'), '_')
     is.na(hia_total$Pollutant) -> ind

@@ -43,7 +43,7 @@ adm <- get_adm(grid_raster, admin_level=2, res="low")
 cities <- get_map_cities(grid_raster)
 
 # 05: Extract concentrations ---------------------------------------------------------------
-conc_adm <- extract_concs_at_regions(concs, adm)
+conc_adm <- extract_concs_at_regions(concs, adm, species)
 
 saveRDS(conc_adm, file.path(project_dir, "conc_adm.RDS"))
 

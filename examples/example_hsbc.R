@@ -29,7 +29,7 @@ adm <- creahia::get_adm(grid_raster, admin_level=0, res="coarse", iso3s=c("CHN",
 # adm <- adm[adm$country_id %in% c("CHN", "PAK", "IND", "BGD"),] # FOR DEBUG
 
 # 05: Extract concentrations ---------------------------------------------------------------
-conc_adm <- extract_concs_at_regions(concs, adm)
+conc_adm <- extract_concs_at_regions(concs, adm, species)
 c <- conc_adm$scenario1$CHN
 weighted.mean(c[2,],c[3,])
 

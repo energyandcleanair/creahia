@@ -37,7 +37,7 @@ regions <- regions[1:5,] # For example purposes, we only keep a subset
 
 
 # 05: Extract concentrations ---------------------------------------------------------------
-conc_regions <- creahia::extract_concs_at_regions(concs, regions)
+conc_regions <- creahia::extract_concs_at_regions(concs, regions, species)
 
 # Saving point: if you want to restart from here later on
 # saveRDS(conc_adm, file.path(project_dir, "conc_adm.RDS"))

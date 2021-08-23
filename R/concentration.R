@@ -116,7 +116,7 @@ get_conc_baseline <- function(species,
 #' @export
 #'
 #' @examples
-extract_concs_at_regions <- function(concs, regions){
+extract_concs_at_regions <- function(concs, regions, species){
 
   conc_map <- list()
 
@@ -149,6 +149,7 @@ combine_concs <- function(conc_perturbation, conc_baseline){
   conc_perturbation %>%
     left_join(conc_baseline, by=c("species")) %>%
     filter(!is.null(conc_baseline)) %>%
+    rowwise() %>%
     mutate(conc_scenario=sum_raster_columns(conc_perturbation, conc_baseline))
 }
 
@@ -158,7 +159,7 @@ flatten_concs <- function(concs){
     tidyr::pivot_wider(names_from=species, values_from=-c(scenario, species))
 }
 
-add_pop <- function(concs){
+add_pop <- function(concs, grid_raster){
   concs$pop <- list(get_pop(grid_raster))
   return(concs)
 }
