@@ -15,6 +15,7 @@ Imports:
     countrycode,
     magrittr,
     readxl,
+    readr,
     plyr,
     rgdal,
     sp,
