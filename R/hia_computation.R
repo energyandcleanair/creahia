@@ -25,8 +25,10 @@ compute_hia <- function(conc_map,
                         gemm=get_gemm(),
                         gbd=get_gbd(),
                         ihme=get_ihme(),
-                        epi=get_epi(),
-                        crfs=get_crfs(),
+                        epi_version="default",
+                        epi=get_epi(version=epi_version),
+                        crfs_version="default",
+                        crfs=get_crfs(version=crfs_version),
                         scale_base_year=NULL,
                         scale_target_year=NULL
                         ){
@@ -40,7 +42,7 @@ compute_hia <- function(conc_map,
   print("Computing epi")
   hia <- compute_hia_epi(region=regions,
                          species=species,
-                         paf =paf,
+                         paf=paf,
                          conc_map=conc_map,
                          epi=epi,
                          crfs=crfs,
@@ -348,16 +350,29 @@ scale_hia_pop <- function(hia, base_year=2015, target_year=2019){
   return(hia_scaled)
 }
 
-totalise_hia <- function(hia, .groups=c('region_id', 'region_name', 'iso3')){
+
+
+totalise_hia <- function(hia){
+
   hia_adm <- hia %>%
     group_by(across(c(scenario, estimate, all_of(.groups)))) %>%
     summarise_if(is.numeric, sum, na.rm=T) %>%
     pivot_longer(is.numeric, names_to='Outcome', values_to='Number')
 
-  hia_adm %>%
+  hia_total <- hia_adm %>%
     group_by(across(c(all_of(.groups), scenario, estimate, Outcome))) %>%
-     summarise_if(is.numeric, sum, na.rm=T) %>%
-     spread(estimate, Number)
+    summarise_if(is.numeric, sum, na.rm=T) %>%
+    spread(estimate, Number)
+
+  # Add cause long name & unit
+  hia_total$pollutant <- lapply(str_split(hia_total$Outcome, "_"), function(x){tail(x, 1)}) %>% unlist
+  hia_total$unit <- lapply(str_split(hia_total$Outcome, "_"), function(x){ifelse(length(x)==3, x[2], "")}) %>% unlist
+  hia_total$cause <- lapply(str_split(hia_total$Outcome, "_"), function(x){x[1]}) %>% unlist
+
+  hia_total %>%
+    left_join(get_dict() %>% rename(cause=Code, cause_name=Long.name)) %>%
+    dplyr::select(region_id, region_name, iso3, scenario, cause, cause_name, unit, pollutant, central, high, low) %>%
+    arrange(region_name, cause)
 }
 
 
