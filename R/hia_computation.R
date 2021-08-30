@@ -352,7 +352,7 @@ scale_hia_pop <- function(hia, base_year=2015, target_year=2019){
 
 
 
-totalise_hia <- function(hia){
+totalise_hia <- function(hia, .groups=c("scenario","iso3","region_id","region_name")){
 
   hia_adm <- hia %>%
     group_by(across(c(scenario, estimate, all_of(.groups)))) %>%

@@ -1,21 +1,29 @@
 compute_econ_costs <- function(hia,
                                results_dir,
                                iso3s_of_interest=NULL,
-                               gdp=get_gdp(), dict=get_dict(), valuation=get_valuation(),
+                               gdp=get_gdp(),
+                               dict=get_dict(),
+                               valuation_version="default",
+                               valuation=get_valuation(version=valuation_version),
                                projection_years=NULL,
+                               suffix="",
                                ...){
 
-  hia_cost <- get_hia_cost(hia, valuation, gdp, dict)
+  hia_cost <- get_hia_cost(hia=hia,
+                           valuation_version=valuation_version,
+                           valuation=valuation,
+                           gdp=gdp,
+                           dict=dict)
 
-  cost_by_cause <- get_total_cost_by_cause(hia_cost) %T>% write_csv(file.path(results_dir, 'total_cost_by_cause.csv'))
-  cost_by_region <- get_total_cost_by_region(hia_cost) %T>% write_csv(file.path(results_dir, 'total_cost_by_region.csv'))
-  cost_by_country <- get_total_cost_by_country(hia_cost) %T>% write_csv(file.path(results_dir, 'total_cost_by_country.csv'))
+  cost_by_cause <- get_total_cost_by_cause(hia_cost) %T>% write_csv(file.path(results_dir, sprintf('total_cost_by_cause%s.csv', suffix)))
+  cost_by_region <- get_total_cost_by_region(hia_cost) %T>% write_csv(file.path(results_dir, sprintf('total_cost_by_region%s.csv', suffix)))
+  cost_by_country <- get_total_cost_by_country(hia_cost) %T>% write_csv(file.path(results_dir, sprintf('total_cost_by_country%s.csv', suffix)))
 
   # One more detailed summary by country (with local currency)
   if(!is.null(iso3s_of_interest)){
     lapply(iso3s_of_interest, function(iso3){
       get_cost_by_cause_in_country(hia_cost, iso3, gdp, dict) %>%
-        write_excel_csv(file.path(results_dir, sprintf('cost_by_cause_%s.csv',tolower(iso3))))
+        write_excel_csv(file.path(results_dir, sprintf('cost_by_cause_%s%s.csv', tolower(iso3), suffix)))
     })
   }
 
@@ -23,7 +31,7 @@ compute_econ_costs <- function(hia,
   # Forecast
   if(length(projection_years)>0) {
     cost_forecast <- get_econ_forecast(hia_cost, years=projection_years, ...) %T>%
-      write_csv(file.path(results_dir, 'health_and_cost_by_year.csv'))
+      write_csv(file.path(results_dir, sprintf('health_and_cost_by_year%s.csv', suffix)))
   } else cost_forecast=NULL
 
 
@@ -38,7 +46,11 @@ compute_econ_costs <- function(hia,
 }
 
 
-get_hia_cost <- function(hia, valuation=get_valuation(), gdp=get_gdp(), dict=get_dict()){
+get_hia_cost <- function(hia,
+                         valuation_version="default",
+                         valuation=get_valuation(valuation_version),
+                         gdp=get_gdp(),
+                         dict=get_dict()){
   hia_cost <- hia %>%
     pivot_longer(c(-where(is.character), -where(is.factor), -pop),names_to='Outcome', values_to='number') %>%
     mutate(Outcome = Outcome %>%gsub('O3_8h', 'O3', .),
@@ -46,6 +58,9 @@ get_hia_cost <- function(hia, valuation=get_valuation(), gdp=get_gdp(), dict=get
            Cause = Outcome %>% gsub('_.*', '', .)) %>%
     mutate(Outcome = Outcome %>% gsub('_[A-Za-z0-9]*$', '', .) %>%
              gsub('\\.[0-9]*to[0-9]*$', '', .) %>% gsub('.*_', '', .))
+
+  # Remove the TOTAL deaths number to avoid double counting
+  hia_cost %<>% filter(Pollutant!="TOTAL")
 
   hia_cost$Cause[grep('exac|sthma', hia_cost$Cause)] <- 'Asthma'
 
@@ -56,13 +71,14 @@ get_hia_cost <- function(hia, valuation=get_valuation(), gdp=get_gdp(), dict=get
 
 
   suppressMessages(hia_cost %<>%
+    left_join(dict %>% rename(Outcome=Code, Outcome.long=Long.name)) %>%
     left_join(valuation) %>%
     left_join(gdp) %>%
     filter(!is.na(Pollutant)) %>%
     dplyr::mutate(valuation = Valuation.2011.IntlDollars * (GDP.PPP.2011USD / 15914.05317)^Elasticity,
-                  cost=number*valuation/1e6,
-                  cost.USD = cost * GDP.currUSD / GDP.PPP.2011USD,
-                  cost.LCU = cost * GDP.currLCU / GDP.PPP.2011USD) %>%
+                  cost.mn=number*valuation/1e6,
+                  cost.mnUSD = cost.mn * GDP.currUSD / GDP.PPP.2011USD,
+                  cost.mnLCU = cost.mn * GDP.currLCU / GDP.PPP.2011USD) %>%
     ungroup)
 
   return(hia_cost)
@@ -72,10 +88,11 @@ get_hia_cost <- function(hia, valuation=get_valuation(), gdp=get_gdp(), dict=get
 get_total_cost_by_cause <- function(hia_cost, res_cols=c("low", "central", "high")){
 
   hia_cost %>%
-    group_by(scenario, estimate, Outcome, Pollutant) %>%
-    summarise_at('cost.USD', sum, na.rm=T) %>% na.omit %>%
-    filter(Outcome != 'LBW') %>% spread(estimate, cost.USD) %>%
+    group_by(scenario, estimate, Outcome, Outcome.long, Pollutant) %>%
+    summarise_at('cost.mnUSD', sum, na.rm=T) %>% na.omit %>%
+    filter(Outcome != 'LBW') %>% spread(estimate, cost.mnUSD) %>%
     mutate_at(res_cols, scales::comma, accuracy=0.01) %>% mutate(CI = paste0('(', low, ' - ', high, ')')) %>%
+    rename(cost.mnUSD=central) %>%
     sel(-low, -high)
 }
 
@@ -87,18 +104,18 @@ get_total_cost_by_region <- function(hia_cost){
                       estimate, Currency.Name, Currency.Code))) %>%
     sel(starts_with('cost')) %>% summarise_all(sum, na.rm=T) %>%
     left_join(hia_cost %>% distinct(across(c(any_of(c('iso3', 'region_id', 'region_name')), pop, GDP.PPP.2011USD)))) %>%
-    mutate(cost.percap.USD = cost.USD * 1e6 / pop,
-           cost.perc = cost * 1e6 / (GDP.PPP.2011USD * pop))
+    mutate(cost.percap.USD = cost.mnUSD * 1e6 / pop,
+           cost.perc = cost.mnUSD * 1e6 / (GDP.PPP.2011USD * pop)) #HT: cost in USD
 
   hia_cost_total %>%
-    arrange(estimate, desc(cost.perc)) %>% sel(-starts_with('GDP'), -starts_with('valuation'), -cost)
+    arrange(estimate, desc(cost.perc)) %>% sel(-starts_with('GDP'), -starts_with('valuation'), -cost.mn)
 }
 
 get_total_cost_by_country <- function(hia_cost){
 
   hia_cost_national <- get_total_cost_by_region(hia_cost) %>%
     group_by(scenario, iso3, estimate) %>%
-    summarise_at(c('cost.LCU', 'cost.USD'), sum)
+    summarise_at(c('cost.mnLCU', 'cost.mnUSD'), sum)
 }
 
 
@@ -108,11 +125,12 @@ get_cost_by_cause_in_country <- function(hia_cost, iso3, gdp=get_gdp(), dict=get
   currency_name=unique(gdp$Currency.Code[gdp$iso3==iso3])
 
   hia_focus_cost <- suppressMessages(hia_cost %>%
-    distinct(iso3, Outcome, .keep_all=T) %>%
+    distinct(iso3, Outcome, Outcome.long, .keep_all=T) %>%
     filter(iso3==!!iso3) %>%
     mutate(valuation.USD = valuation * GDP.currUSD / GDP.PPP.2011USD,
            valuation.LCU = valuation * GDP.currLCU / GDP.PPP.2011USD) %>%
-    sel(Outcome.Code=Outcome,
+    sel(Outcome,
+        Outcome.long,
         Valuation.at.world.avg.GDP.2011.IntlDollars=Valuation.2011.IntlDollars,
         Valuation.in.COUNTRY.2011.IntlDollars=valuation,
         Valuation.in.COUNTRY.2019USD=valuation.USD,
@@ -120,10 +138,7 @@ get_cost_by_cause_in_country <- function(hia_cost, iso3, gdp=get_gdp(), dict=get
     distinct() %>% na.omit() %>%
     rename_with(function(x) x %>% gsub('COUNTRY', iso3, .) %>%
                   gsub('LCU', if(length(currency_name)> 0 && currency_name!="USD" && !is.na(currency_name)) currency_name else "LCU", .)) %>%
-    filter(Outcome.Code != 'LBW') %>%
-    right_join(dict %>% dplyr::rename(Outcome.Code=Code, Outcome=Long.name), .) %>%
-    sel(-Outcome.Code))
-
+    filter(Outcome != 'LBW'))
 
   return(hia_focus_cost)
 }
@@ -145,9 +160,9 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
 
   #add new age groups to population data
   add_age_groups <- tibble(AgeGrp=c('25+','0-18','1-18','18-99', '20-65'),
-                          AgeLow=c(25,0,0,20, 20),
-                          AgeHigh=c(99,20,99, 99, 64),
-                          multiplier=c(1,19/20,18/20, 82/80, 46/45))
+                          AgeLow=c(25, 0, 0, 20, 20),
+                          AgeHigh=c(99, 20, 99, 99, 64),
+                          multiplier=c(1, 19/20, 18/20, 82/80, 46/45))
 
   popproj_tot <- add_age_groups %>%
     group_by(AgeGrp) %>%
