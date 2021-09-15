@@ -122,7 +122,7 @@ HIApath='../data/'
 source(paste0(HIApath, 'helper functions.R'))
 source(paste0(HIApath, 'gemm_function.R'))
 source(paste0(HIApath, 'read HIA data.R'))
-HIApath %>% paste0('WPP2019_population-death_rate-birth_rate.csv') %>% read_csv() %>%
+creahelpers::get_population_path('WPP2019_population-death_rate-birth_rate.csv') %>% read_csv() %>%
   mutate(deaths=pop*death_rate) -> popproj
 
 crfs$Incidence[crfs$Exposure %in% c('SO2', 'NO2') & grepl('Deaths|YLLs', crfs$Incidence)] %<>%
