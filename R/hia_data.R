@@ -139,7 +139,7 @@ get_calc_causes <- function(){
 
 
 get_pop_proj <- function(){
-  get_hia_path('WPP2019_population-death_rate-birth_rate.csv') %>%
+  creahelpers::get_population_path('WPP2019_population-death_rate-birth_rate.csv') %>%
     read_csv(.,col_types = cols()) %>%
     mutate(deaths=pop*death_rate) %>%
     dplyr::rename(iso3=ISO3,

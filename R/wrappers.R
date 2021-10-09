@@ -38,7 +38,7 @@ wrappers.compute_hia_two_images <- function(perturbation_rasters,
   }else{
     # Work with either RasterStack or list of rasters
     conc_baseline <- tibble(species=names(baseline_rasters),
-                            conc_baseline=raster::as.list(raster::stack(perturbation_rasters)))
+                            conc_baseline=raster::as.list(raster::stack(baseline_rasters)))
   }
 
   # 03: Combine and flatten: one row per scenario --------------------------------------------

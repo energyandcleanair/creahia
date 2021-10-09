@@ -216,7 +216,9 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
 
     # Summing deaths
     mort_col <- intersect(names(hia_scenario),
-                          c("NCD.LRI_Deaths_PM25","NCD.LRI_Deaths_SO2","NCD.LRI_Deaths_NO2","COPD_Deaths_O3_8h","LRI.child_Deaths_PM25"))
+                          c("NCD.LRI_Deaths_PM25","NCD.LRI_Deaths_SO2",
+                            "NCD.LRI_Deaths_NO2","COPD_Deaths_O3_8h","LRI.child_Deaths_PM25",
+                            "AllCauses_Deaths_NO2"))
     hia_scenario %<>%
       rowwise() %>%
       dplyr::mutate(Deaths_Total = rowSums(across(any_of(mort_col)))) %>%
@@ -431,11 +433,16 @@ add_long_names <- function(df, cols = c('Outcome', 'Cause'), dict=get_dict()) {
   return(df)
 }
 
-add_total_deaths <- function(df, include_PM_causes = 'NCD\\.LRI|LRI\\.child') {
+add_total_deaths <- function(df,
+                             include_PM_causes = 'NCD\\.LRI|LRI\\.child',
+                             include_NO2_causes = 'NCD\\.LRI|LRI\\.child|AllCauses') {
   if('Cause' %in% names(df)) {
-    df %>% group_by(across(c(where(is.character),where(is.factor), -Cause))) %>%
-      filter(Outcome %in% c('Deaths', 'YLLs'),
-             (Pollutant != 'PM25' | grepl(include_PM_causes, Cause))) %>%
+    df %>% group_by(across(c(where(is.character), where(is.factor), -Cause))) %>%
+      filter(Outcome %in% c('Deaths', 'YLLs'),(
+        !Pollutant %in% c('PM25','NO2') |
+          (Pollutant=='PM25' & grepl(include_PM_causes, Cause)) |
+          (Pollutant=='NO2' & grepl(include_NO2_causes, Cause))
+        )) %>%
       summarise_at(vars(c(starts_with('number'), starts_with('cost.'))), sum, na.rm=T) %>%
       mutate(Cause='Total', Pollutant='Total') %>% bind_rows(df, .)
   } else df
