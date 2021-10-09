@@ -218,7 +218,7 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
     mort_col <- intersect(names(hia_scenario),
                           c("NCD.LRI_Deaths_PM25","NCD.LRI_Deaths_SO2",
                             "NCD.LRI_Deaths_NO2","COPD_Deaths_O3_8h","LRI.child_Deaths_PM25",
-                            "AllCauses_Deaths_NO2"))
+                            "AllCause_Deaths_NO2"))
     hia_scenario %<>%
       rowwise() %>%
       dplyr::mutate(Deaths_Total = rowSums(across(any_of(mort_col)))) %>%
@@ -435,7 +435,7 @@ add_long_names <- function(df, cols = c('Outcome', 'Cause'), dict=get_dict()) {
 
 add_total_deaths <- function(df,
                              include_PM_causes = 'NCD\\.LRI|LRI\\.child',
-                             include_NO2_causes = 'NCD\\.LRI|LRI\\.child|AllCauses') {
+                             include_NO2_causes = 'NCD\\.LRI|LRI\\.child|AllCause') {
   if('Cause' %in% names(df)) {
     df %>% group_by(across(c(where(is.character), where(is.factor), -Cause))) %>%
       filter(Outcome %in% c('Deaths', 'YLLs'),(
