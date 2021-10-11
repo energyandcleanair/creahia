@@ -151,6 +151,13 @@ country_recode_iso3 <- function(iso3s, replacements=NULL) {
   return(iso3s)
 }
 
+
+orderrows <- function(df) {
+  df %>% apply(1, sort) %>% t -> rr.out
+  colnames(rr.out) <- c('low', 'central', 'high')
+  rr.out
+}
+
 #' Just to put a breakpoint here
 #'
 #' @param e

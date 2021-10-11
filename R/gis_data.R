@@ -10,7 +10,7 @@ get_pop <- function(grid_raster){
 }
 
 get_pop_proj <- function(){
-  get_hia_path('WPP2019_population-death_rate-birth_rate.csv') %>%
+  creahelpers::get_population_path('WPP2019_population-death_rate-birth_rate.csv') %>%
     read_csv() %>%
     mutate(deaths=pop*death_rate)
 }

@@ -40,8 +40,9 @@ get_crfs_versions <- function(){
 }
 
 get_crfs <- function(version="default"){
-  print("Getting CRFS")
   filename <- get_crfs_versions()[[version]]
+  print(sprintf("Getting CRFS: %s", filename))
+
   crfs <- read_csv(get_hia_path(filename), col_types = cols())
 
   names(crfs) %<>% gsub('RR_', '', .)
@@ -58,11 +59,19 @@ get_crfs <- function(version="default"){
   return(crfs)
 }
 
+get_epi_versions <- function(){
+  list(
+    "default"="epi_for_hia.csv",
+    "C40"="epi_for_hia_C40.csv"
+  )
+}
 
-get_epi <- function(){
-  print("Getting EPI")
-  epi <- read_csv(get_hia_path('epi_for_hia_C40.csv'), col_types = cols())
+get_epi <- function(version="default"){
 
+  filename <- get_epi_versions()[[version]]
+  print(sprintf("Getting epi: %s", filename))
+
+  epi <- read_csv(get_hia_path(filename), col_types = cols())
   epi %<>% adddefos
 
   #add missing admin regions
@@ -78,6 +87,7 @@ get_gdp <- function(){
   read_csv(get_hia_path('GDP.csv'), col_types = cols()) %>%
     dplyr::rename(iso3=ISO3)
 }
+
 
 get_gdp_historical <- function(start_year=1980, end_year=2020){
   list(GDP.PPP.2011USD = 'NY.GDP.PCAP.PP.KD',
@@ -102,10 +112,17 @@ get_gdp_forecast <- function(){
     sel(iso3=LOCATION, year=TIME, GDP.realUSD.tot=Value)
 }
 
+get_valuation_versions <- function(){
+  list(
+    "default"="valuation.csv",
+    "viscusi"="valuation_viscusi.csv"
+  )
+}
 
-get_valuation <- function(){
-  print("Getting valuation")
-  read_csv(get_hia_path('valuation.csv'), col_types = cols())
+get_valuation <- function(version="default"){
+  filename <- get_valuation_versions()[[version]]
+  print(sprintf("Getting epi: %s", filename))
+  read_csv(get_hia_path(filename), col_types = cols())
 }
 
 
@@ -122,7 +139,7 @@ get_calc_causes <- function(){
 
 
 get_pop_proj <- function(){
-  get_hia_path('WPP2019_population-death_rate-birth_rate.csv') %>%
+  creahelpers::get_population_path('WPP2019_population-death_rate-birth_rate.csv') %>%
     read_csv(.,col_types = cols()) %>%
     mutate(deaths=pop*death_rate) %>%
     dplyr::rename(iso3=ISO3,

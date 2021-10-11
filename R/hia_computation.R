@@ -25,8 +25,10 @@ compute_hia <- function(conc_map,
                         gemm=get_gemm(),
                         gbd=get_gbd(),
                         ihme=get_ihme(),
-                        epi=get_epi(),
-                        crfs=get_crfs(),
+                        epi_version="default",
+                        epi=get_epi(version=epi_version),
+                        crfs_version="default",
+                        crfs=get_crfs(version=crfs_version),
                         scale_base_year=NULL,
                         scale_target_year=NULL
                         ){
@@ -40,7 +42,7 @@ compute_hia <- function(conc_map,
   print("Computing epi")
   hia <- compute_hia_epi(region=regions,
                          species=species,
-                         paf =paf,
+                         paf=paf,
                          conc_map=conc_map,
                          epi=epi,
                          crfs=crfs,
@@ -218,7 +220,9 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
 
     # Summing deaths
     mort_col <- intersect(names(hia_scenario),
-                          c("NCD.LRI_Deaths_PM25","NCD.LRI_Deaths_SO2","NCD.LRI_Deaths_NO2","COPD_Deaths_O3_8h","LRI.child_Deaths_PM25"))
+                          c("NCD.LRI_Deaths_PM25","NCD.LRI_Deaths_SO2",
+                            "NCD.LRI_Deaths_NO2","COPD_Deaths_O3_8h","LRI.child_Deaths_PM25",
+                            "AllCause_Deaths_NO2"))
     hia_scenario %<>%
       rowwise() %>%
       dplyr::mutate(Deaths_Total = rowSums(across(any_of(mort_col)))) %>%
@@ -352,16 +356,29 @@ scale_hia_pop <- function(hia, base_year=2015, target_year=2019){
   return(hia_scaled)
 }
 
-totalise_hia <- function(hia, .groups=c('region_id', 'region_name', 'iso3')){
+
+
+totalise_hia <- function(hia, .groups=c("scenario","iso3","region_id","region_name")){
+
   hia_adm <- hia %>%
     group_by(across(c(scenario, estimate, all_of(.groups)))) %>%
     summarise_if(is.numeric, sum, na.rm=T) %>%
     pivot_longer(is.numeric, names_to='Outcome', values_to='Number')
 
-  hia_adm %>%
+  hia_total <- hia_adm %>%
     group_by(across(c(all_of(.groups), scenario, estimate, Outcome))) %>%
-     summarise_if(is.numeric, sum, na.rm=T) %>%
-     spread(estimate, Number)
+    summarise_if(is.numeric, sum, na.rm=T) %>%
+    spread(estimate, Number)
+
+  # Add cause long name & unit
+  hia_total$pollutant <- lapply(str_split(hia_total$Outcome, "_"), function(x){tail(x, 1)}) %>% unlist
+  hia_total$unit <- lapply(str_split(hia_total$Outcome, "_"), function(x){ifelse(length(x)==3, x[2], "")}) %>% unlist
+  hia_total$cause <- lapply(str_split(hia_total$Outcome, "_"), function(x){x[1]}) %>% unlist
+
+  hia_total %>%
+    left_join(get_dict() %>% rename(cause=Code, cause_name=Long.name)) %>%
+    dplyr::select(region_id, region_name, iso3, scenario, cause, cause_name, unit, pollutant, central, high, low) %>%
+    arrange(region_name, cause)
 }
 
 
@@ -420,11 +437,16 @@ add_long_names <- function(df, cols = c('Outcome', 'Cause'), dict=get_dict()) {
   return(df)
 }
 
-add_total_deaths <- function(df, include_PM_causes = 'NCD\\.LRI|LRI\\.child') {
+add_total_deaths <- function(df,
+                             include_PM_causes = 'NCD\\.LRI|LRI\\.child',
+                             include_NO2_causes = 'NCD\\.LRI|LRI\\.child|AllCause') {
   if('Cause' %in% names(df)) {
-    df %>% group_by(across(c(where(is.character),where(is.factor), -Cause))) %>%
-      filter(Outcome %in% c('Deaths', 'YLLs'),
-             (Pollutant != 'PM25' | grepl(include_PM_causes, Cause))) %>%
+    df %>% group_by(across(c(where(is.character), where(is.factor), -Cause))) %>%
+      filter(Outcome %in% c('Deaths', 'YLLs'),(
+        !Pollutant %in% c('PM25','NO2') |
+          (Pollutant=='PM25' & grepl(include_PM_causes, Cause)) |
+          (Pollutant=='NO2' & grepl(include_NO2_causes, Cause))
+        )) %>%
       summarise_at(vars(c(starts_with('number'), starts_with('cost.'))), sum, na.rm=T) %>%
       mutate(Cause='Total', Pollutant='Total') %>% bind_rows(df, .)
   } else df

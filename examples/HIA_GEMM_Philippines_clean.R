@@ -30,7 +30,7 @@ HIArasterpath=boxpath('GIS/HIA/')
 
 #source of PM2.5 data: http://fizz.phys.dal.ca/~atmos/martin/?page_id=140
 PM25.base <- paste0(HIArasterpath, 'GlobalGWRcwUni_PM25_GL_201601_201612-RH35_Median.nc') %>% raster
-pop <- paste0(HIArasterpath, 'gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_30_sec.tif') %>% raster
+pop <- paste0(HIArasterpath, 'gpw_v4_population_density_rev11_2020_30_sec.tif') %>% raster
 grump <- paste0(HIArasterpath, 'GRUMPv1/glurextents.bil') %>% raster
 crs(grump) <- crs(pop)
 #source of NO2 data: https://data.world/datasets/no2
@@ -122,7 +122,7 @@ HIApath='../data/'
 source(paste0(HIApath, 'helper functions.R'))
 source(paste0(HIApath, 'gemm_function.R'))
 source(paste0(HIApath, 'read HIA data.R'))
-HIApath %>% paste0('WPP2019_population-death_rate-birth_rate.csv') %>% read_csv() %>%
+creahelpers::get_population_path('WPP2019_population-death_rate-birth_rate.csv') %>% read_csv() %>%
   mutate(deaths=pop*death_rate) -> popproj
 
 crfs$Incidence[crfs$Exposure %in% c('SO2', 'NO2') & grepl('Deaths|YLLs', crfs$Incidence)] %<>%

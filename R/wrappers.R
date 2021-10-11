@@ -10,13 +10,16 @@
 #' @examples
 wrappers.compute_hia_two_images <- function(perturbation_rasters,
                                             baseline_rasters=NULL,
+                                            regions=NULL,
                                             administrative_level=1,
                                             administrative_res="coarse",
                                             administrative_iso3s=NULL,
                                             scenario_name="scenario",
+                                            scale_base_year=2020,
+                                            scale_target_year=2025,
                                             crfs_version="default",
-                                            scale_base_year=2015,
-                                            scale_target_year=2025){
+                                            epi_version="default",
+                                            valuation_version="default"){
 
 
   #TODO make it work with raster stack as well
@@ -35,7 +38,7 @@ wrappers.compute_hia_two_images <- function(perturbation_rasters,
   }else{
     # Work with either RasterStack or list of rasters
     conc_baseline <- tibble(species=names(baseline_rasters),
-                            conc_baseline=raster::as.list(raster::stack(perturbation_rasters)))
+                            conc_baseline=raster::as.list(raster::stack(baseline_rasters)))
   }
 
   # 03: Combine and flatten: one row per scenario --------------------------------------------
@@ -58,7 +61,9 @@ wrappers.compute_hia_two_images <- function(perturbation_rasters,
                               species=species,
                               regions=regions,
                               scale_base_year=scale_base_year,
-                              scale_target_year=scale_target_year)
+                              scale_target_year=scale_target_year,
+                              epi_version=epi_version,
+                              crfs_version=crfs_version)
 
   # hia_table <- hia %>% totalise_hia() %>% make_hia_table()
   return(hia)

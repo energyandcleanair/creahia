@@ -20,7 +20,7 @@ conc_additional <- creahia::get_conc_calpuff(calpuff_dir=project_dir, utm_zone=5
 
 species = unique(conc_additional$species)
 scenarios = unique(conc_additional$scenario)
-grid_raster = conc_additional$conc_additional[[1]] %>% raster
+grid_raster = conc_additional$conc_perturbation[[1]] %>% raster
 
 
 # 02: Get base concentration levels --------------------------------------------------------
@@ -28,7 +28,7 @@ conc_baseline <- creahia::get_conc_baseline(species=species, grid_raster=grid_ra
 
 
 # 03: Combine and flatten: one row per scenario --------------------------------------------
-concs <- creahia::combine_concs(conc_additional, conc_baseline) %>% flatten_concs() %>% add_pop()
+concs <- creahia::combine_concs(conc_additional, conc_baseline) %>% flatten_concs() %>% add_pop(grid_raster)
 
 
 # 04: Create support maps (e.g. countries, provinces, cities ) -----------------------------
