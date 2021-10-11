@@ -81,29 +81,33 @@ compute_hia_paf <- function(conc_map, scenarios=names(conc_map),
   for(scenario in scenarios) {
     message(paste('processing', scenario))
 
-    conc_scenario <- conc_map[[scenario]] %>% subset(!is.null(.)) %>% lapply(data.frame) %>%
+    conc_scenario <- conc_map[[scenario]] %>%
+      subset(!is.null(.)) %>%
+      subset(!is.na(unique(.))) %>% # sum(., na.rm=T) %>%
+     lapply(data.frame) %>%
       bind_rows(.id='region_id') %>% dlply(.(region_id))
 
     foreach(region_id = names(conc_scenario)) %dopar% {
-      paf_region <- list()
-      conc <- conc_scenario[[region_id]][complete.cases(conc_scenario[[region_id]]),]
-
-      for(cs_ms in calc_causes) {
-        cs_ms %>% strsplit('_') %>% unlist -> cs.ms
-        epi_country <- substr(region_id, 1, 3) %>% country.recode(c(use_as_proxy, merge_into))
-        country_paf_perm(pm.base = conc[, 'conc_baseline_pm25'],
-                         pm.perm = conc[, 'conc_scenario_pm25'],
-                         pop = conc[, 'pop'],
-                         cy=epi_country,
-                         cause=cs.ms[1],
-                         measure=cs.ms[2],
-                         adult_ages=adult_ages,
-                         gemm=gemm,
-                         gbd=gbd,
-                         ihme=ihme,
-                         .region="inc_China") -> paf_region[[cs_ms]]
-      }
       tryCatch({
+        paf_region <- list()
+        conc <- conc_scenario[[region_id]][complete.cases(conc_scenario[[region_id]]),]
+
+        for(cs_ms in calc_causes) {
+          cs_ms %>% strsplit('_') %>% unlist -> cs.ms
+          epi_country <- substr(region_id, 1, 3) %>% country.recode(c(use_as_proxy, merge_into))
+          country_paf_perm(pm.base = conc[, 'conc_baseline_pm25'],
+                           pm.perm = conc[, 'conc_scenario_pm25'],
+                           pop = conc[, 'pop'],
+                           cy=epi_country,
+                           cause=cs.ms[1],
+                           measure=cs.ms[2],
+                           adult_ages=adult_ages,
+                           gemm=gemm,
+                           gbd=gbd,
+                           ihme=ihme,
+                           .region="inc_China") -> paf_region[[cs_ms]]
+        }
+
         paf_region %<>% ldply(.id='var') %>% mutate(region_id=region_id)
       }, error=function(e){
         # For instance if country iso3 not in ihme$ISO3
