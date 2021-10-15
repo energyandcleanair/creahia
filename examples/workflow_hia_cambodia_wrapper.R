@@ -88,28 +88,28 @@ names(conc_perturbation$conc_perturbation)=species
 grid_raster = conc_perturbation$conc_perturbation[[1]] %>% raster
 
 
-# # 02: Get base concentration levels -------------------------------------------------------------
-# conc_base <- get_conc_baseline(species=species, grid_raster=grid_raster, no2_targetyear = 2020) # NULL ?
-#
-#
-# # 03: Create support maps (e.g. countries, provinces, cities ) ----------------------------------
-# adm <- get_adm(grid_raster, admin_level=2, res="low", iso3s=c("KHM"))  # Regions. iso3 can be NULL
-#
-# # 04: HIA Calculations:
-# hia <-  wrappers.compute_hia_two_images(conc_perturbation$conc_perturbation,  #   perturbation_rasters=raster::stack(perturbation_map)
-#                                         baseline_rasters=conc_base$conc_baseline,  # baseline_rasters=raster::stack(who_map)
-#                                         regions=adm,
-#                                         # administrative_level=2,  #  administrative_level = 0        # use only by --> get_adm
-#                                         # administrative_res="coarse",                                # use only by --> get_adm
-#                                         # administrative_iso3s=c("IDN", "KHM", "LAO", "VNM", "THA"),  # use only by --> get_adm
-#                                         scenario_name=scenario_prefix,
-#                                         scale_base_year=2020,
-#                                         scale_target_year=2025,
-#                                         crfs_version="default",  # crfs_version="C40"  # could be default
-#                                         epi_version="default",  # epi_version="C40"  # could be default
-#                                         valuation_version="default")  # valuation_version="viscusi"
-# saveRDS(hia, file.path(project_dir, paste0('hia','_',scenario_prefix,'.RDS')))
-hia <- readRDS(file.path(project_dir, paste0('hia','_',scenario_prefix,'.RDS')))
+# 02: Get base concentration levels -------------------------------------------------------------
+conc_base <- get_conc_baseline(species=species, grid_raster=grid_raster, no2_targetyear = 2020) # NULL ?
+
+
+# 03: Create support maps (e.g. countries, provinces, cities ) ----------------------------------
+adm <- get_adm(grid_raster, admin_level=2, res="low")  #, iso3s=c("KHM"))  # Regions. iso3 can be NULL
+
+# 04: HIA Calculations:
+hia <-  wrappers.compute_hia_two_images(conc_perturbation$conc_perturbation,  #   perturbation_rasters=raster::stack(perturbation_map)
+                                        baseline_rasters=conc_base$conc_baseline,  # baseline_rasters=raster::stack(who_map)
+                                        regions=adm,
+                                        # administrative_level=2,  #  administrative_level = 0        # use by --> get_adm
+                                        # administrative_res="coarse",                                # use by --> get_adm
+                                        # administrative_iso3s=c("IDN", "KHM", "LAO", "VNM", "THA"),  # use by --> get_adm
+                                        scenario_name=scenario_prefix,
+                                        scale_base_year=2020,
+                                        scale_target_year=2025,
+                                        crfs_version="default",  # crfs_version="C40"  # could be default
+                                        epi_version="default",  # epi_version="C40"  # could be default
+                                        valuation_version="default")  # valuation_version="viscusi"
+saveRDS(hia, file.path(project_dir, paste0('hia','_',scenario_prefix,'.RDS')))
+# hia <- readRDS(file.path(project_dir, paste0('hia','_',scenario_prefix,'.RDS')))
 
 
 # 05: Create tables -----------------------------------------------------------------------------
@@ -126,18 +126,6 @@ hia_table_total <- hia_table %>%
   group_by(iso3, scenario, cause, cause_name, unit, pollutant) %>%
   summarise_if(is.numeric, sum) %>%
   write_csv(file.path(project_dir, paste0('hia_totals_by_country','_',scenario_prefix,'.csv')))
-
-#  hia %>% totalise_hia() %>% arrange(scenario) %>%
-#    write_csv(file.path(project_dir, paste0('hia_by_admin_area','_',scenario_prefix,'.csv')))
-#
-#  hia %>% totalise_hia(.groups=NULL) %>% arrange(scenario) %>%
-#    write_csv(file.path(project_dir, paste0('hia_totals','_',scenario_prefix,'.csv')))
-
-# hia %>% totalise_hia() %>% make_hia_table() %>% arrange(scenario) %>%
-#   write_csv(file.path(project_dir, paste0('hia_by_admin_area','_',scenario_prefix,'.csv')))
-
-# hia %>% totalise_hia(.groups=NULL) %>% make_hia_table() %>% arrange(scenario) %>%
-#   write_csv(file.path(project_dir, paste0('hia_totals','_',scenario_prefix,'.csv')))
 
 
 # 06: Compute and extract economic costs --------------------------------------------------------
