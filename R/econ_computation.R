@@ -156,7 +156,7 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
            Outcome!='YLDs' | Cause != 'NCD.LRI') %>%
     group_by(across(c(scenario, estimate, any_of(c('iso3', 'region_name')),
                       Outcome, Cause, AgeGrp, Pollutant))) %>%
-    summarise_at(c('number', 'cost.USD'), sum, na.rm=T)
+    summarise_at(c('number', 'cost.mnUSD'), sum, na.rm=T)
 
   #add new age groups to population data
   add_age_groups <- tibble(AgeGrp=c('25+','0-18','1-18','18-99', '20-65'),
@@ -253,10 +253,10 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
 
   hia_by_year_scaled <- hia_by_year %>% mutate(
     number = number*scaling,
-    cost.USD = cost.USD*scaling*GDPscaling) %>%
+    cost.mnUSD = cost.mnUSD*scaling*GDPscaling) %>%
     group_by(across(c(scenario, estimate, any_of(c('iso3', 'region_id', 'region_name')),
                       Outcome, Cause, Pollutant, year))) %>%
-    summarise_at(c('number', 'cost.USD'), sum)
+    summarise_at(c('number', 'cost.mnUSD'), sum)
 
   hia_by_year_scaled %>%
     group_by(across(c(where(is.character), where(is.factor), year))) %>%
