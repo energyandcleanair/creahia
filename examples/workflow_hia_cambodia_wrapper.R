@@ -16,8 +16,8 @@ library(magrittr)
 # Parameters ####################################################################################
 # ============================= Project specific ================================================
 # Select macro-scenario
-scenario_prefix <- "ScAll" ; scenario_description='Operating&Proposed' # All stations : operating and proposed
-# scenario_prefix <- "ScB" ; scenario_description='Operating'          # Currently operating
+# scenario_prefix <- "ScAll" ; scenario_description='Operating&Proposed' # All stations : operating and proposed
+scenario_prefix <- "ScB" ; scenario_description='Operating'          # Currently operating
 
 # project_dir="G:/projects/chile"        # calpuff_external_data persistent disk (project data)
 project_dir="H:/projects/cambodia"       # calpuff_external_data-2 persistent disk (project data)
@@ -93,21 +93,38 @@ conc_base <- get_conc_baseline(species=species, grid_raster=grid_raster, no2_tar
 
 
 # 03: Create support maps (e.g. countries, provinces, cities ) ----------------------------------
-adm <- get_adm(grid_raster, admin_level=2, res="low")  #, iso3s=c("KHM"))  # Regions. iso3 can be NULL
+regions <- get_adm(grid_raster, admin_level=0, res="full", iso3s=NULL)
+# Input parameters:
+#
+# admin_level=2 -> Highest degree of res.
+# admin_level=1 -> Main regions.
+# admin_level=0 -> States
+#
+# res=null/""full -> Highest res of GADM file
+# res="low"       -> Medium res
+# res="coarse"    -> Lowest res
+#
+# iso3s=c("IDN", "KHM", "LAO", "VNM", "THA")
+
 
 # 04: HIA Calculations:
-hia <-  wrappers.compute_hia_two_images(conc_perturbation$conc_perturbation,  #   perturbation_rasters=raster::stack(perturbation_map)
+# TODO : add no2_targetyear as input parameter in the wrapper, to calculate conc_base in the wrapper?
+# TODO : change name no2_targetyear -> no2_target_year
+# TODO : change name scale_base_year -> pop_base_year
+# TODO : change value for scale_base_year from 2020 -> 2019, as default in wrapper
+# TODO : change name scale_target_year -> pop_target_year
+hia <-  wrappers.compute_hia_two_images(conc_perturbation$conc_perturbation,       # perturbation_rasters=raster::stack(perturbation_map)
                                         baseline_rasters=conc_base$conc_baseline,  # baseline_rasters=raster::stack(who_map)
-                                        regions=adm,
-                                        # administrative_level=2,  #  administrative_level = 0        # use by --> get_adm
-                                        # administrative_res="coarse",                                # use by --> get_adm
-                                        # administrative_iso3s=c("IDN", "KHM", "LAO", "VNM", "THA"),  # use by --> get_adm
+                                        regions=regions,
+                                        # administrative_level=0,    # Overridden by : regions --> get_adm
+                                        # administrative_res="low",  # Overridden by : regions --> get_adm
+                                        # administrative_iso3s=NULL, # Overridden by : regions --> get_adm
                                         scenario_name=scenario_prefix,
-                                        scale_base_year=2020,
-                                        scale_target_year=2025,
-                                        crfs_version="default",  # crfs_version="C40"  # could be default
-                                        epi_version="default",  # epi_version="C40"  # could be default
-                                        valuation_version="default")  # valuation_version="viscusi"
+                                        scale_base_year=2019,        # Population base year : reference year of INPUT data, for total epidemiological and total population
+                                        scale_target_year=2025,      # Population target year
+                                        crfs_version="default",      # crfs_version="C40"
+                                        epi_version="default",       # epi_version="C40"
+                                        valuation_version="default") # valuation_version="viscusi"
 saveRDS(hia, file.path(project_dir, paste0('hia','_',scenario_prefix,'.RDS')))
 # hia <- readRDS(file.path(project_dir, paste0('hia','_',scenario_prefix,'.RDS')))
 
@@ -116,29 +133,47 @@ saveRDS(hia, file.path(project_dir, paste0('hia','_',scenario_prefix,'.RDS')))
 hia_table <- hia %>% totalise_hia()
 
 # Table by regions (admin area)
-# hia_table_adm <- hia_table %>%
+# hia_table_by_region <- hia_table %>%
 #   group_by(region_id, region_name, iso3, scenario, cause, cause_name, unit, pollutant) %>%
 #   summarise_if(is.numeric, sum) %>%
-#   write_csv(file.path(project_dir, paste0('hia_totals_by_admin_area','_',scenario_prefix,'.csv')))
+#   write_csv(file.path(project_dir, paste0('hia_totals_by_region','_',scenario_prefix,'.csv')))
 
 # Total by country
-hia_table_total <- hia_table %>%
+hia_table_by_country <- hia_table %>%
   group_by(iso3, scenario, cause, cause_name, unit, pollutant) %>%
   summarise_if(is.numeric, sum) %>%
   write_csv(file.path(project_dir, paste0('hia_totals_by_country','_',scenario_prefix,'.csv')))
 
+# Total over the entire domain
+hia_table_full_domain <- hia_table %>%
+  group_by(scenario, cause, cause_name, unit, pollutant) %>%
+  summarise_if(is.numeric, sum) %>%
+  write_csv(file.path(project_dir, paste0('hia_totals_full_domain','_',scenario_prefix,'.csv')))
+
 
 # 06: Compute and extract economic costs --------------------------------------------------------
+# TODO : change name scale_target_year -> pop_target_year
 econ_costs <- hia %>% sel(-any_of('Deaths_Total')) %>%
   group_by(iso3, scenario, estimate) %>% summarise_if(is.numeric, sum, na.rm=T) %>%
-  compute_econ_costs(results_dir=project_dir, projection_years=2025:2054, pop_targetyr=2025, iso3s_of_interest=NULL, suffix=paste0("_",scenario_prefix), valuation_version="default")
+  compute_econ_costs(results_dir=project_dir,
+                     pop_targetyr=2025,  # Same as scale_target_year
+                     projection_years=2025:2054,
+                     iso3s_of_interest=NULL,
+                     suffix=paste0("_",scenario_prefix),
+                     valuation_version="default")
 
 econ_costs$cost_forecast %>%
   group_by(estimate, Outcome_long, Cause_long, Pollutant, scenario, iso3) %>%
   summarise_if(is.numeric, sum) ->
-  hia_cumu
+  hia_cumu_by_country
 
-hia_cumu %>% write_csv(file.path(project_dir, paste0('hia_cumulative','_',scenario_prefix,'.csv')))
+econ_costs$cost_forecast %>%
+  group_by(estimate, Outcome_long, Cause_long, Pollutant, scenario) %>%
+  summarise_if(is.numeric, sum) ->
+  hia_cumu_full_domain
+
+hia_cumu_by_country %>% write_csv(file.path(project_dir, paste0('hia_cumulative_by_country','_',scenario_prefix,'.csv')))
+hia_cumu_full_domain %>% write_csv(file.path(project_dir, paste0('hia_cumulative_full_domain','_',scenario_prefix,'.csv')))
 
 
 
