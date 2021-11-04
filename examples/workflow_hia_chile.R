@@ -1,6 +1,6 @@
 # library(remotes)
 # remotes::install_github("energyandcleanair/creahia")
-# devtools::install_github('energyandcleanair/creahia')
+# devtools::reload(pkgload::inst("creahia"))
 # remotes::install_github("energyandcleanair/creapuff", ref="main", dependencies=T, update=T)
 # devtools::reload(pkgload::inst("creapuff"))
 library(creahia)
@@ -22,10 +22,9 @@ output_dir <- file.path(project_dir,"calpuff_suite") # Where to write all genera
 
 # ================================ General =====================================
 gis_dir <- "F:/gis"                    # The folder where we store general GIS data
-# gis_dir <- "/Volumes/ext1/gis/"
-# Or :
+
 # setwd(get_env('gis_dir'))
-# system('gsutil rsync -r . gs://crea-data/gis')
+# system('gsutil rsync -r gs://crea-data/gis .')  # Run this command in local gis folder
 
 
 # HIA ########################################################################
