@@ -19,8 +19,8 @@ library(magrittr)
 # scenario_prefix <- "ScAll" ; scenario_description='Operating&Proposed' # All stations : operating and proposed
 scenario_prefix <- "ScB" ; scenario_description='Operating'          # Currently operating
 
-# project_dir="G:/projects/chile"        # calpuff_external_data persistent disk (project data)
-project_dir="H:/projects/cambodia"       # calpuff_external_data-2 persistent disk (project data)
+# project_dir="G:/chile"        # calpuff_external_data persistent disk (project data)
+project_dir="H:/cambodia"       # calpuff_external_data-2 persistent disk (project data)
 output_dir <- file.path(project_dir,"calpuff_suite") # Where to write all generated files
 
 # ================================ General ======================================================

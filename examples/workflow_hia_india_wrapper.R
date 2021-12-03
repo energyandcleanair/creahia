@@ -13,16 +13,38 @@ library(zoo)
 library(magrittr)
 
 
+for (i_Sc in seq(1,16)) {
 # Parameters ####################################################################################
 # ============================= Project specific ================================================
-# Select macro-scenario
-# scenario_prefix <- "ScA"
-# scenario_prefix <- "ScB"
-scenario_prefix <- "ScC"
+# Select macro scenario
+# Select macro scenarios
+if (i_Sc==1) {scenario_prefix <- "ScA_all" ; scenario_description='CHANDRAPUR CFPP, all units, SO2 compliance, 85% PLF'}
+if (i_Sc==2) {scenario_prefix <- "ScA_34"  ; scenario_description='CHANDRAPUR CFPP, units 3-4, SO2 compliance, 85% PLF'}
+if (i_Sc==3) {scenario_prefix <- "ScA_567" ; scenario_description='CHANDRAPUR CFPP, units 5-6-7, SO2 compliance, 85% PLF'}
+if (i_Sc==4) {scenario_prefix <- "ScA_89"  ; scenario_description='CHANDRAPUR CFPP, units 8-9, SO2 compliance, 85% PLF'}
 
-# project_dir="G:/projects/chile"        # calpuff_external_data persistent disk (project data)
-project_dir="H:/indonesia"       # calpuff_external_data-2 persistent disk (project data)
+if (i_Sc==5) {scenario_prefix <- "ScB_all" ; scenario_description='CHANDRAPUR CFPP, all units, SO2 compliance, actual PLF'}
+if (i_Sc==6) {scenario_prefix <- "ScB_34"  ; scenario_description='CHANDRAPUR CFPP, units 3-4, SO2 compliance, actual PLF'}
+if (i_Sc==7) {scenario_prefix <- "ScB_567" ; scenario_description='CHANDRAPUR CFPP, units 5-6-7, SO2 compliance, actual PLF'}
+if (i_Sc==8) {scenario_prefix <- "ScB_89"  ; scenario_description='CHANDRAPUR CFPP, units 8-9, SO2 compliance, actual PLF'}
+
+if (i_Sc==9 ){scenario_prefix <- "ScC_all" ; scenario_description='CHANDRAPUR CFPP, all units, actual SO2, 85% PLF'}
+if (i_Sc==10){scenario_prefix <- "ScC_34"  ; scenario_description='CHANDRAPUR CFPP, units 3-4, actual SO2, 85% PLF'}
+if (i_Sc==11){scenario_prefix <- "ScC_567" ; scenario_description='CHANDRAPUR CFPP, units 5-6-7, actual SO2, 85% PLF'}
+if (i_Sc==12){scenario_prefix <- "ScC_89"  ; scenario_description='CHANDRAPUR CFPP, units 8-9, actual SO2, 85% PLF'}
+
+if (i_Sc==13){scenario_prefix <- "ScD_all" ; scenario_description='CHANDRAPUR CFPP, all units, actual SO2, actual PLF'}
+if (i_Sc==14){scenario_prefix <- "ScD_34"  ; scenario_description='CHANDRAPUR CFPP, units 3-4, actual SO2, actual PLF'}
+if (i_Sc==15){scenario_prefix <- "ScD_567" ; scenario_description='CHANDRAPUR CFPP, units 5-6-7, actual SO2, actual PLF'}
+if (i_Sc==16){scenario_prefix <- "ScD_89"  ; scenario_description='CHANDRAPUR CFPP, units 8-9, actual SO2, actual PLF'}
+
+# project_dir="Z:/"             # network disk (project data)
+# project_dir="G:/chile"        # calpuff_external_data   persistent disk (project data)
+# project_dir="H:/cambodia"     # calpuff_external_data-2 persistent disk (project data)
+# project_dir="H:/indonesia"    # calpuff_external_data-2 persistent disk (project data)
+project_dir="I:/india"          # calpuff_external_data-3 persistent disk (project data)
 output_dir <- file.path(project_dir,"calpuff_suite") # Where to write all generated files
+
 
 # ================================ General ======================================================
 gis_dir <- "F:/gis"                    # The folder where we store general GIS data
@@ -94,14 +116,14 @@ conc_base <- get_conc_baseline(species=species, grid_raster=grid_raster, no2_tar
 
 
 # 03: Create support maps (e.g. countries, provinces, cities ) ----------------------------------
-regions <- get_adm(grid_raster, admin_level=0, res="full", iso3s=NULL)
+regions <- get_adm(grid_raster, admin_level=2, res="full", iso3s=NULL)
 # Input parameters:
 #
 # admin_level=2 -> Highest degree of res.
 # admin_level=1 -> Main regions.
 # admin_level=0 -> States
 #
-# res=null/""full -> Highest res of GADM file
+# res=null/"full" -> Highest res of GADM file
 # res="low"       -> Medium res
 # res="coarse"    -> Lowest res
 #
@@ -133,11 +155,11 @@ saveRDS(hia, file.path(project_dir, paste0('hia','_',scenario_prefix,'.RDS')))
 # 05: Create tables -----------------------------------------------------------------------------
 hia_table <- hia %>% totalise_hia()
 
-# Table by regions (admin area)
-# hia_table_by_region <- hia_table %>%
-#   group_by(region_id, region_name, iso3, scenario, cause, cause_name, unit, pollutant) %>%
-#   summarise_if(is.numeric, sum) %>%
-#   write_csv(file.path(project_dir, paste0('hia_totals_by_region','_',scenario_prefix,'.csv')))
+# Table by regions (if admin_level>0)
+hia_table_by_region <- hia_table %>%
+  group_by(region_id, region_name, iso3, scenario, cause, cause_name, unit, pollutant) %>%
+  summarise_if(is.numeric, sum) %>%
+  write_csv(file.path(project_dir, paste0('hia_totals_by_region','_',scenario_prefix,'.csv')))
 
 # Total by country
 hia_table_by_country <- hia_table %>%
@@ -176,5 +198,5 @@ econ_costs$cost_forecast %>%
 hia_cumu_by_country %>% write_csv(file.path(project_dir, paste0('hia_cumulative_by_country','_',scenario_prefix,'.csv')))
 hia_cumu_full_domain %>% write_csv(file.path(project_dir, paste0('hia_cumulative_full_domain','_',scenario_prefix,'.csv')))
 
-
+}
 
