@@ -112,7 +112,7 @@ grid_raster = conc_perturbation$conc_perturbation[[1]] %>% raster
 
 
 # 02: Get base concentration levels -------------------------------------------------------------
-conc_base <- get_conc_baseline(species=species, grid_raster=grid_raster, no2_targetyear = 2020) # NULL ?
+conc_base <- get_conc_baseline(species=species, grid_raster=grid_raster, no2_targetyear = 2020)  # no2_targetyear : same as WRF meteo data
 
 
 # 03: Create support maps (e.g. countries, provinces, cities ) ----------------------------------
