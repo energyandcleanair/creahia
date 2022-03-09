@@ -99,7 +99,9 @@ get_total_cost_by_cause <- function(hia_cost, res_cols=c("low", "central", "high
 get_total_cost_by_region <- function(hia_cost){
 
   hia_cost_total <- hia_cost %>%
-    filter(Outcome != 'LBW') %>%
+    filter(Outcome != 'LBW',
+           Outcome %notin% c('Deaths', 'YLLs') | Cause %in% c('NCD.LRI', 'LRI.child', 'AllCause'),
+           Outcome!='YLDs' | Cause != 'NCD.LRI') %>%
     group_by(across(c(scenario, any_of(c('iso3', 'region_id', 'region_name')),
                       estimate, Currency.Name, Currency.Code))) %>%
     sel(starts_with('cost')) %>% summarise_all(sum, na.rm=T) %>%
