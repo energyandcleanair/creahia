@@ -170,6 +170,11 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
     hia_scenario <- epi_loc %>% sel(region_id, estimate, pop)
 
     for(i in which(crfs$Exposure %in% hia_polls)) {
+
+      if(!crfs$Incidence[i] %in% names(epi_loc)){
+        stop("CRFS and EPI data are not matching")
+      }
+
       species_name <- hiapoll_to_species(crfs$Exposure[i])
 
       if(grepl('nrt', species_name)) {
