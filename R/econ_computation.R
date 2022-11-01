@@ -13,7 +13,9 @@ compute_econ_costs <- function(hia,
                            valuation_version=valuation_version,
                            valuation=valuation,
                            gdp=gdp,
-                           dict=dict)
+                           dict=dict) %T>%
+    write_csv(file.path(results_dir, sprintf('cost_detailed_%s.csv', suffix)))
+
 
   cost_by_cause <- get_total_cost_by_cause(hia_cost) %T>% write_csv(file.path(results_dir, sprintf('total_cost_by_cause%s.csv', suffix)))
   cost_by_region <- get_total_cost_by_region(hia_cost) %T>% write_csv(file.path(results_dir, sprintf('total_cost_by_region%s.csv', suffix)))
