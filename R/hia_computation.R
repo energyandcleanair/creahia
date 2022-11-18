@@ -213,7 +213,7 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
     hia_scenario %<>% to_long_hia()
     hia_scenario %<>% add_double_counted(crfs=crfs, epi=epi)
     hia_scenario %<>% add_age_group()
-    hia_scenario %<>% clean_cause()
+    hia_scenario %<>% clean_cause_outcome()
 
     hia[[scenario]] <- hia_scenario
     print(scenario)
@@ -512,9 +512,12 @@ add_age_group <- function(hia){
   return(hia)
 }
 
-clean_cause <- function(hia){
+clean_cause_outcome <- function(hia){
   # Clean asthma
   hia$Cause[grep('exac|sthma', hia$Cause)] <- 'Asthma'
+
+  # Valuation is now different between deaths and deaths.child
+  hia$Outcome[grepl("LRI\\.child", hia$Cause) & (hia$Outcome=='Deaths')] <- 'Deaths.child'
   return(hia)
 }
 

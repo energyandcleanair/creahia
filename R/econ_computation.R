@@ -21,11 +21,27 @@ compute_econ_costs <- function(hia,
     write_csv(file.path(results_dir, sprintf('cost_detailed_%s.csv', suffix)))
 
 
-  cost_by_outcome <- get_total_cost_by_outcome(hia_cost) %T>% write_csv(file.path(results_dir, sprintf('cost_by_outcome%s.csv', suffix)))
-  cost_by_region <- get_total_cost_by_region(hia_cost) %T>% write_csv(file.path(results_dir, sprintf('cost_by_region%s.csv', suffix)))
-  cost_by_region_outcome <- get_total_cost_by_region_outcome(hia_cost) %T>% write_csv(file.path(results_dir, sprintf('cost_by_region_outcome%s.csv', suffix)))
+  # Ceate summary tables
+  dir.create(file.path(results_dir, 'formatted'))
 
-#
+  cost_by_outcome <- get_total_cost_by_outcome(hia_cost) %T>%
+    write_csv(file.path(results_dir, sprintf('cost_by_outcome%s.csv', suffix)))
+
+  cost_by_outcome %>%
+    format_hia_table() %>%
+    write_csv(file.path(results_dir, sprintf('formatted/cost_by_outcome%s.csv', suffix)))
+
+  cost_by_region <- get_total_cost_by_region(hia_cost) %T>%
+    write_csv(file.path(results_dir, sprintf('cost_by_region%s.csv', suffix)))
+
+  cost_by_region %>%
+    format_hia_table() %>%
+    write_csv(file.path(results_dir, sprintf('formatted/cost_by_region%s.csv', suffix)))
+
+
+  # cost_by_region_outcome <- get_total_cost_by_region_outcome(hia_cost) %T>% write_csv(file.path(results_dir, sprintf('cost_by_region_outcome%s.csv', suffix)))
+
+
 #   # Forecast
 #   if(length(projection_years)>0) {
 #     cost_forecast <- get_econ_forecast(hia_cost, years=projection_years, ...) %T>%
@@ -36,8 +52,8 @@ compute_econ_costs <- function(hia,
   list(
     "hia_cost" = hia_cost,
     "cost_by_outcome" = cost_by_outcome,
-    "cost_by_region" = cost_by_region,
-    "cost_by_region_outcome" = cost_by_region_outcome
+    "cost_by_region" = cost_by_region
+    # "cost_by_region_outcome" = cost_by_region_outcome
     # "cost_forecast" = cost_forecast
   ) %>%
     # lapply(add_total_deaths) %>%
@@ -55,12 +71,9 @@ get_hia_cost <- function(hia,
 
   hia_cost <- hia
 
-  # wbstats::wb_data(c(gdp_intl2017='NY.GDP.PCAP.PP.KD', gni_intl2017='NY.GNP.PCAP.PP.KD'),
-  #                  start_date=2017, end_date=2017,
-  #                  country='World')
   # Values from above, at the time of creating valuation_viscusi.csv
-  gdp_world_ppp_2017intl <- 16276
-  gni_world_ppp_2017intl <- 15927
+  gdp_world_ppp_2017intl <- 16276.48
+  gni_world_ppp_2017intl <- 15927.18
 
   nrow_before <- nrow(hia_cost)
   hia_cost <- hia_cost %>%
@@ -73,9 +86,13 @@ get_hia_cost <- function(hia,
         gni_or_gdp=='gni' ~ valuation_world_2017_intl2017_gni * (GNI.PC.PPP.2017USD / gni_world_ppp_2017intl)^elasticity,
         gni_or_gdp=='gdp' ~ valuation_world_2017_intl2017_gdp * (GDP.PC.PPP.2017USD / gdp_world_ppp_2017intl)^elasticity),
       cost_mn_2017USD = number * valuation_intl2017_dollars/1e6,
-      cost_mn_currentUSD = cost_mn_2017USD * GDP.PC.PPP.currUSD / GDP.PC.PPP.2017USD,
+
+      cost_mn_currentUSD = case_when(
+        gni_or_gdp=='gni' ~  cost_mn_2017USD * GNI.PC.PPP.currUSD / GNI.PC.PPP.2017USD,
+        gni_or_gdp=='gdp' ~  cost_mn_2017USD * GDP.PC.PPP.currUSD / GDP.PC.PPP.2017USD,
+      ),
       cost_mn_currentLCU = cost_mn_currentUSD * PPP.convLCUUSD,
-      share_gdp = cost_mn_currentLCU / GDP.TOT.currLCU) %>%
+      share_gdp = cost_mn_currentLCU * 1e6 / GDP.TOT.currLCU) %>%
     ungroup
 
   if(nrow(hia_cost) != nrow_before){stop('Wrong joins')}
@@ -84,7 +101,7 @@ get_hia_cost <- function(hia,
 
 
 
-get_total_cost_by_outcome <- function(hia_cost, res_cols=c("low", "central", "high")){
+get_total_cost_by_outcome <- function(hia_cost){
 
   gdp_gni <- hia_cost %>%
     ungroup() %>%
@@ -93,8 +110,6 @@ get_total_cost_by_outcome <- function(hia_cost, res_cols=c("low", "central", "hi
 
   gdp_gni_tbl <-  tibble(unit=c('mn_currentLCU', 'mn_currentUSD'),
                          gdp=c(gdp_gni$GDP.TOT.currLCU / 1e6, gdp_gni$GDP.TOT.currUSD / 1e6))
-
-  comma <- function(x){scales::comma(x, accuracy = 0.01)}
 
   hia_cost %>%
     filter(!double_counted) %>%
@@ -111,52 +126,64 @@ get_total_cost_by_outcome <- function(hia_cost, res_cols=c("low", "central", "hi
     select(-c(gdp)) %>%
     tidyr::pivot_wider(names_from = unit,
                        values_from = c(value, share_gdp)) %>%
-    select(-c(share_gdp_number)) %>%
-    tidyr::pivot_wider(names_from='estimate',
-                       values_from=c('value_mn_currentLCU', 'value_mn_currentUSD', 'value_number',
-                                     'share_gdp_mn_currentLCU', 'share_gdp_mn_currentUSD')) %>%
-    mutate(
-      number = scales::comma(value_number_central, accuracy=1),
-      CI_number = sprintf('(%s - %s)',
-                          scales::comma(value_number_low, accuracy=1),
-                          scales::comma(value_number_high, accuracy=1)),
-      CI_mn_currentLCU = sprintf('(%s - %s)', comma(value_mn_currentLCU_low), comma(value_mn_currentLCU_high)),
-      CI_mn_currentUSD = sprintf('(%s - %s)', comma(value_mn_currentUSD_low), comma(value_mn_currentUSD_high)),
-      CI_share_gdp = sprintf('(%.1f%% - %.1f%%)', share_gdp_mn_currentLCU_low*100, share_gdp_mn_currentLCU_high*100),
-      share_gdp = sprintf('%.1f%%', share_gdp_mn_currentLCU_central * 100),
+    select(-c(share_gdp_number, share_gdp_mn_currentUSD)) %>%
+    rename(share_gdp=share_gdp_mn_currentLCU,
+           number=value_number) %>%
+    rename_with(~stringr::str_replace(.x, 'value_', 'cost_'))
+}
+
+
+
+format_hia_table <- function(table, CI_underneath=F){
+
+
+  values <- intersect(names(table),
+                      c('cost_mn_currentLCU', 'cost_mn_currentUSD', 'number', 'share_gdp'))
+  groups <- intersect(names(table),
+                      c('scenario', 'Outcome', 'Outcome.long'))
+
+  formatted <- table %>%
+    select_at(c(values, groups, 'estimate')) %>%
+    tidyr::pivot_longer(cols = values,
+                        names_to='indicator') %>%
+    tidyr::pivot_wider(names_from='estimate') %>%
+    mutate(CI=case_when(
+                  grepl('number', indicator) ~ sprintf('(%s - %s)', scales::comma(low, 1), scales::comma(high, 1)),
+                  grepl('share', indicator) ~ sprintf('(%.1f%% - %.1f%%', low*100, high*100),
+                  grepl('cost_mn', indicator) ~ sprintf('(%s - %s)', scales::comma(low, 1), scales::comma(high, 1)),
+                  T ~ sprintf('(%s - %s)', scales::comma(low, 0.1), scales::comma(high, 0.1))),
+          central=case_when(
+            grepl('number', indicator) ~ scales::comma(central, 1),
+            grepl('share', indicator) ~ scales::percent(central, .1),
+            grepl('cost_mn', indicator) ~ scales::comma(central, 1),
+            T ~ scales::comma(central, 1))
     ) %>%
-    mutate_at(c('value_mn_currentUSD_central', 'value_mn_currentUSD_central'), comma) %>%
-    select(scenario,
-           Outcome,
-           Outcome.long,
-           number,
-           CI_number,
-           cost_mn_currentUSD=value_mn_currentUSD_central,
-           CI_mn_currentUSD,
-           cost_mn_currentLCU=value_mn_currentLCU_central,
-           CI_mn_currentLCU,
-           share_gdp,
-           CI_share_gdp
-    )
+    select(-c(low, high))
+
+  if(CI_underneath){
+    formatted <- formatted %>%
+      mutate(central = sprintf('%s\n%s', central, CI)) %>%
+      select(-c(CI))
+  }
+
+  formatted %>%
+    pivot_wider(names_from=indicator,
+                values_from = intersect(names(.), c('central', 'CI'))) %>%
+    rename_with(~gsub('central_','',.x))
 }
 
 get_total_cost_by_region <- function(hia_cost){
+
 
   gdp_gni <- hia_cost %>%
     ungroup() %>%
     distinct(region_id, GDP.TOT.currLCU, GDP.TOT.currUSD)
 
-  comma <- function(x){scales::comma(x, accuracy = 0.01)}
-
   hia_cost %>%
     filter(!double_counted) %>%
     group_by(scenario, estimate, region_id, pop, GDP.TOT.currLCU, GDP.TOT.currUSD) %>%
     summarise_at(c('cost_mn_currentUSD', 'cost_mn_currentLCU'), sum, na.rm=T) %>%
-    mutate(share_gdp = sprintf('%.1f%%', cost_mn_currentLCU*1e6/GDP.TOT.currLCU*100),
-           # number = scales::comma(number, accuracy=1),
-           cost_mn_currentLCU = comma(cost_mn_currentLCU),
-           cost_mn_currentUSD = comma(cost_mn_currentUSD)
-           ) %>%
+    mutate(share_gdp = cost_mn_currentLCU*1e6/GDP.TOT.currLCU) %>%
     ungroup() %>%
     select(-starts_with('GDP'))
 }
@@ -310,21 +337,3 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
     group_by(across(c(where(is.character), where(is.factor), year))) %>%
     summarise_all(sum, na.rm=T)
 }
-
-#
-# add_total_deaths <- function(df,
-#                              include_PM_causes = 'NCD\\.LRI|LRI\\.child',
-#                              include_NO2_causes = 'NCD\\.LRI|LRI\\.child|AllCause') {
-#
-#   if('Cause' %in% names(df)) {
-#     df %>%
-#       group_by(across(c(where(is.character), where(is.factor), -Cause))) %>%
-#       filter(
-#         (!Outcome %in% c('Deaths', 'YLLs')) | (tolower(Pollutant)=='total')
-#        ) %>%
-#       summarise_at(vars(c(starts_with('number'), starts_with('cost.'))), sum, na.rm=T) %>%
-#       mutate(Cause='Total', Pollutant='Total') %>%
-#       View()
-#       bind_rows(df, .)
-#   } else df
-# }
