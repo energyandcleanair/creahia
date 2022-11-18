@@ -1,74 +1,3 @@
-hiapoll_species_corr <- function(){
-  list(
-    "PM25"="pm25",
-    "NO2"="no2",
-    "O3_8h"="o3",
-    "SO2"="so2")
-}
-
-species_to_hiapoll <- function(species){
-  corr <- hiapoll_species_corr()
-  names(corr)[which(corr %in% species)]
-}
-
-hiapoll_to_species <- function(hiapoll){
-  corr <- hiapoll_species_corr()
-  corr[hiapoll] %>% unlist() %>% as.vector()
-}
-
-
-#' Key function to add a double_counted field to hia results
-#'
-#' @param hia
-#' @param crfs
-#' @param epi
-#'
-#' @return
-#' @export
-#'
-#' @examples
-add_double_counted <- function(hia, crfs, epi){
-
-  # Use CRFS double counted field first
-  joined <- hia %>%
-    left_join(crfs %>%
-                mutate(Cause = crf_incidence_to_cause(Incidence),
-                       Outcome = crf_effectname_to_outcome(effectname),
-                       Pollutant = Exposure) %>%
-                select(Cause, Outcome, Pollutant, double_counted=Double.Counted),
-              by=c('Cause', 'Outcome', 'Pollutant'))
-
-  # Except PM25, all of them should have been found in CRFs
-  if(nrow(joined %>% filter(is.na(double_counted) & Pollutant != 'PM25')) > 0){
-    stop('merged has failed in double counting detection')
-  }
-
-  # Manual for epi PM25
-  joined[joined$Pollutant=='PM25' &
-           !joined$Cause %in% c('NCD.LRI', 'LRI.child') &
-           joined$Outcome %in% c('YLLs', 'Deaths')
-         ,'double_counted'] <- TRUE
-
-  joined <- joined %>%
-    mutate(double_counted=tidyr::replace_na(double_counted, FALSE))
-
-  return(joined)
-}
-
-
-add_age_group <- function(hia){
-  hia$AgeGrp <- "25+"
-  hia$AgeGrp[grepl("LRI\\.child", hia$Cause)] <- "0-4"
-  hia$AgeGrp[grepl("PTB|LBW", hia$Cause)] <- "Newborn"
-  hia$AgeGrp[grepl("0to17|1to18", hia$Cause)] <- "0-18"
-  return(hia)
-}
-
-clean_cause <- function(hia){
-  # Clean asthma
-  hia$Cause[grep('exac|sthma', hia$Cause)] <- 'Asthma'
-  return(hia)
-}
 
 compute_hia <- function(conc_map,
                         species,
@@ -499,6 +428,7 @@ make_hia_table <- function(hia_total,
 
 #a simple renaming function that accepts string variables as arguments; !!newname := !!oldname was causing grief
 rename_str = function(df, oldname, newname) { names(df)[names(df)==oldname]<-newname; df }
+
 add_long_names <- function(df, cols = c('Outcome', 'Cause'), dict=get_dict()) {
   for(cn in intersect(names(df), cols)) {
     out_cn = paste0(cn, '_long')
@@ -514,4 +444,77 @@ add_long_names <- function(df, cols = c('Outcome', 'Cause'), dict=get_dict()) {
   return(df)
 }
 
+
+
+hiapoll_species_corr <- function(){
+  list(
+    "PM25"="pm25",
+    "NO2"="no2",
+    "O3_8h"="o3",
+    "SO2"="so2")
+}
+
+species_to_hiapoll <- function(species){
+  corr <- hiapoll_species_corr()
+  names(corr)[which(corr %in% species)]
+}
+
+hiapoll_to_species <- function(hiapoll){
+  corr <- hiapoll_species_corr()
+  corr[hiapoll] %>% unlist() %>% as.vector()
+}
+
+
+#' Key function to add a double_counted field to hia results
+#'
+#' @param hia
+#' @param crfs
+#' @param epi
+#'
+#' @return
+#' @export
+#'
+#' @examples
+add_double_counted <- function(hia, crfs, epi){
+
+  # Use CRFS double counted field first
+  joined <- hia %>%
+    left_join(crfs %>%
+                mutate(Cause = crf_incidence_to_cause(Incidence),
+                       Outcome = crf_effectname_to_outcome(effectname),
+                       Pollutant = Exposure) %>%
+                select(Cause, Outcome, Pollutant, double_counted=Double.Counted),
+              by=c('Cause', 'Outcome', 'Pollutant'))
+
+  # Except PM25, all of them should have been found in CRFs
+  if(nrow(joined %>% filter(is.na(double_counted) & Pollutant != 'PM25')) > 0){
+    stop('merged has failed in double counting detection')
+  }
+
+  # Manual for epi PM25
+  joined[joined$Pollutant=='PM25' &
+           !joined$Cause %in% c('NCD.LRI', 'LRI.child') &
+           joined$Outcome %in% c('YLLs', 'Deaths')
+         ,'double_counted'] <- TRUE
+
+  joined <- joined %>%
+    mutate(double_counted=tidyr::replace_na(double_counted, FALSE))
+
+  return(joined)
+}
+
+
+add_age_group <- function(hia){
+  hia$AgeGrp <- "25+"
+  hia$AgeGrp[grepl("LRI\\.child", hia$Cause)] <- "0-4"
+  hia$AgeGrp[grepl("PTB|LBW", hia$Cause)] <- "Newborn"
+  hia$AgeGrp[grepl("0to17|1to18", hia$Cause)] <- "0-18"
+  return(hia)
+}
+
+clean_cause <- function(hia){
+  # Clean asthma
+  hia$Cause[grep('exac|sthma', hia$Cause)] <- 'Asthma'
+  return(hia)
+}
 
