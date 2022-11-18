@@ -82,23 +82,45 @@ get_epi <- function(version="default"){
 }
 
 
-get_gdp <- function(){
+get_gdp <- function(year){
+
   print("Getting GDP")
-  read_csv(get_hia_path('GDP.csv'), col_types = cols()) %>%
-    dplyr::rename(iso3=ISO3)
+  read_csv(get_hia_path('gdp.csv'), col_types = cols()) %>%
+    filter(year == !!year)
+}
+
+#' Every time new data is available, we want to build a new gdp.csv file
+#'
+#' @return
+#' @export
+#'
+#' @examples
+recreate_gdp <- function(){
+  gdp <- get_gdp_timeseries()
+  write_csv(gdp, 'inst/extdata/gdp.csv')
 }
 
 
-get_gdp_historical <- function(start_year=1980, end_year=2020){
-  list(GDP.PPP.2011USD = 'NY.GDP.PCAP.PP.KD',
-       GDP.currUSD     = 'NY.GDP.PCAP.CD',
-       GDP.currLCU     = 'NY.GDP.PCAP.CN',
-       GDP.PPP.tot     = 'NY.GDP.MKTP.PP.KD') %>%
+get_gdp_timeseries <- function(start_year=1980, end_year=2021){
+  list(GDP.PC.PPP.2017USD = 'NY.GDP.PCAP.PP.KD',
+       GDP.PC.PPP.currUSD = 'NY.GDP.PCAP.PP.CD',
+       GDP.PC.currLCU     = 'NY.GDP.PCAP.CN',
+       GDP.PC.currUSD     = 'NY.GDP.PCAP.PP.CD',
+       GDP.TOT.currLCU     = 'NY.GDP.MKTP.CN',
+       GDP.TOT.currUSD     = 'NY.GDP.MKTP.CD',
+
+       GNI.PC.PPP.2017USD = 'NY.GNP.PCAP.PP.KD',
+       GNI.PC.PPP.currUSD = 'NY.GNP.PCAP.PP.CD',
+       GNI.PC.currLCU     = 'NY.GNP.PCAP.CN',
+       GNI.PC.currUSD     = 'NY.GNP.PCAP.CD',
+       PPP.convLCUUSD  = 'PA.NUS.PPP'
+       ) %>%
     lapply(readWB_online, start_date = start_year, end_date = end_year, latest.year.only=F) %>%
     bind_rows(.id='valuename') %>%
     sel(country, iso3, year, valuename, Value) %>%
     spread(valuename, Value)
 }
+
 
 get_gdp_forecast <- function(){
   print("Getting GDP forecast")

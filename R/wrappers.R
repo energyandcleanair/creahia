@@ -63,7 +63,8 @@ wrappers.compute_hia_two_images <- function(perturbation_rasters,
                               scale_base_year=scale_base_year,
                               scale_target_year=scale_target_year,
                               epi_version=epi_version,
-                              crfs_version=crfs_version)
+                              crfs_version=crfs_version
+                              )
 
   # hia_table <- hia %>% totalise_hia() %>% make_hia_table()
   return(hia)

@@ -17,6 +17,59 @@ hiapoll_to_species <- function(hiapoll){
 }
 
 
+#' Key function to add a double_counted field to hia results
+#'
+#' @param hia
+#' @param crfs
+#' @param epi
+#'
+#' @return
+#' @export
+#'
+#' @examples
+add_double_counted <- function(hia, crfs, epi){
+
+  # Use CRFS double counted field first
+  joined <- hia %>%
+    left_join(crfs %>%
+                mutate(Cause = crf_incidence_to_cause(Incidence),
+                       Outcome = crf_effectname_to_outcome(effectname),
+                       Pollutant = Exposure) %>%
+                select(Cause, Outcome, Pollutant, double_counted=Double.Counted),
+              by=c('Cause', 'Outcome', 'Pollutant'))
+
+  # Except PM25, all of them should have been found in CRFs
+  if(nrow(joined %>% filter(is.na(double_counted) & Pollutant != 'PM25')) > 0){
+    stop('merged has failed in double counting detection')
+  }
+
+  # Manual for epi PM25
+  joined[joined$Pollutant=='PM25' &
+           !joined$Cause %in% c('NCD.LRI', 'LRI.child') &
+           joined$Outcome %in% c('YLLs', 'Deaths')
+         ,'double_counted'] <- TRUE
+
+  joined <- joined %>%
+    mutate(double_counted=tidyr::replace_na(double_counted, FALSE))
+
+  return(joined)
+}
+
+
+add_age_group <- function(hia){
+  hia$AgeGrp <- "25+"
+  hia$AgeGrp[grepl("LRI\\.child", hia$Cause)] <- "0-4"
+  hia$AgeGrp[grepl("PTB|LBW", hia$Cause)] <- "Newborn"
+  hia$AgeGrp[grepl("0to17|1to18", hia$Cause)] <- "0-18"
+  return(hia)
+}
+
+clean_cause <- function(hia){
+  # Clean asthma
+  hia$Cause[grep('exac|sthma', hia$Cause)] <- 'Asthma'
+  return(hia)
+}
+
 compute_hia <- function(conc_map,
                         species,
                         regions,
@@ -30,7 +83,8 @@ compute_hia <- function(conc_map,
                         crfs_version="default",
                         crfs=get_crfs(version=crfs_version),
                         scale_base_year=NULL,
-                        scale_target_year=NULL
+                        scale_target_year=NULL,
+                        diagnostic_folder='diagnostic'
                         ){
 
   print("Computing paf")
@@ -71,7 +125,7 @@ compute_hia <- function(conc_map,
 #' @export
 #'
 #' @examples
-compute_hia_paf <- function(conc_map, scenarios=names(conc_map),
+  compute_hia_paf <- function(conc_map, scenarios=names(conc_map),
                             calc_causes=get_calc_causes(),
                             gemm=get_gemm(),
                             gbd=get_gbd(),
@@ -207,9 +261,11 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
     }
 
     #calculate PM mortality
-    paf[[scenario]] %>% gather(estimate, val, low, central, high) %>%
+    paf[[scenario]] %>%
+      gather(estimate, val, low, central, high) %>%
       mutate(var=paste0('paf_', var)) %>%
       spread(var, val) -> paf_wide
+
     epi_loc %>% left_join(paf_wide) -> paf_wide
 
     paf_wide %>% sel(region_id, estimate) -> pm_mort
@@ -223,15 +279,12 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
     names(pm_mort)[sapply(pm_mort, is.numeric)] %<>% paste0('_PM25')
     full_join(pm_mort, hia_scenario) -> hia_scenario
 
-    # Summing deaths
-    mort_col <- intersect(names(hia_scenario),
-                          c("NCD.LRI_Deaths_PM25","NCD.LRI_Deaths_SO2",
-                            "NCD.LRI_Deaths_NO2","COPD_Deaths_O3_8h","LRI.child_Deaths_PM25",
-                            "AllCause_Deaths_NO2"))
-    hia_scenario %<>%
-      rowwise() %>%
-      dplyr::mutate(Deaths_Total = rowSums(across(any_of(mort_col)))) %>%
-      ungroup()
+
+    # Reformat, add double_counted, AgeGrp and clean asthma
+    hia_scenario %<>% to_long_hia()
+    hia_scenario %<>% add_double_counted(crfs=crfs, epi=epi)
+    hia_scenario %<>% add_age_group()
+    hia_scenario %<>% clean_cause()
 
     hia[[scenario]] <- hia_scenario
     print(scenario)
@@ -239,11 +292,30 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
 
   hia %<>%
     ldply(.id='scenario') %>%
-    left_join(regions %>% as.data.frame(row.names=NULL) %>% sel(region_id, region_name, iso3=country_id))
+    left_join(regions %>% as.data.frame(row.names=NULL) %>% sel(region_id, region_name, iso3=country_id)) %>%
+    tibble()
 
   return(hia)
 }
 
+crf_incidence_to_cause <- function(Incidence){
+  Incidence %>% gsub('_.*', '', .)
+}
+
+crf_effectname_to_outcome <- function(effectname){
+  effectname %>% gsub('O3_8h', 'O3', .) %>% gsub('_[A-Za-z0-9]*$', '', .) %>%
+    gsub('\\.[0-9]*to[0-9]*$', '', .) %>% gsub('.*_', '', .)
+}
+
+to_long_hia <- function(hia){
+  hia %>%
+    pivot_longer(c(-where(is.character), -where(is.factor), -pop),names_to='Outcome', values_to='number') %>%
+    mutate(Outcome = Outcome %>% gsub('O3_8h', 'O3', .),
+           Pollutant = Outcome %>% gsub('.*_', '', .) %>% toupper,
+           Cause = Outcome %>% gsub('_.*', '', .)) %>%
+    mutate(Outcome = Outcome %>% gsub('_[A-Za-z0-9]*$', '', .) %>%
+             gsub('\\.[0-9]*to[0-9]*$', '', .) %>% gsub('.*_', '', .))
+}
 
 
 #define a function to calculate the hazard ratio for a specific concentration, cause and age group
@@ -363,7 +435,7 @@ scale_hia_pop <- function(hia, base_year=2015, target_year=2019){
 
 
 
-totalise_hia <- function(hia, .groups=c("scenario","iso3","region_id","region_name")){
+totalise_hia <- function(hia, .groups=c("scenario", "iso3", "region_id", "region_name")){
 
   hia_adm <- hia %>%
     group_by(across(c(scenario, estimate, all_of(.groups)))) %>%
@@ -442,17 +514,4 @@ add_long_names <- function(df, cols = c('Outcome', 'Cause'), dict=get_dict()) {
   return(df)
 }
 
-add_total_deaths <- function(df,
-                             include_PM_causes = 'NCD\\.LRI|LRI\\.child',
-                             include_NO2_causes = 'NCD\\.LRI|LRI\\.child|AllCause') {
-  if('Cause' %in% names(df)) {
-    df %>% group_by(across(c(where(is.character), where(is.factor), -Cause))) %>%
-      filter(Outcome %in% c('Deaths', 'YLLs'),(
-        !Pollutant %in% c('PM25','NO2') |
-          (Pollutant=='PM25' & grepl(include_PM_causes, Cause)) |
-          (Pollutant=='NO2' & grepl(include_NO2_causes, Cause))
-        )) %>%
-      summarise_at(vars(c(starts_with('number'), starts_with('cost.'))), sum, na.rm=T) %>%
-      mutate(Cause='Total', Pollutant='Total') %>% bind_rows(df, .)
-  } else df
-}
+

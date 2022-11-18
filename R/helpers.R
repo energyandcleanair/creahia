@@ -12,7 +12,8 @@ getWBIndicators <- function(){
 }
 
 getWBCountries <- function(){
-  wbstats::wb_countries() %>% sel(ISO3=iso3c, Region=region, IncomeGroup=income_level, country) %>%
+  wbstats::wb_countries() %>%
+    sel(ISO3=iso3c, Region=region, IncomeGroup=income_level, country) %>%
     filter(IncomeGroup != 'Aggregates')
 }
 

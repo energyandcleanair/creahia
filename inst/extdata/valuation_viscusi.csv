@@ -1,8 +1,8 @@
-Outcome,Outcome_name,Valuation,Currency,Unit,Year,Source,Reference income level,Valuation.2011.IntlDollars,Elasticity
-Asthma.Prev,Year lived with asthma,"3,914",USD,case,2010,Brandt et al 2012,California,1242,1
-exac,Asthma emergency room visits,844,USD,visit,2010,Brandt et al 2012,California,268,1
-PTB,Preterm birth,"321,989",USD,birth,2010,Trasande et al 2016,U.S.,112365,1
-Deaths,"Deaths, adults","9,631,000",USD,death,2015,Viscusi and Masterman (2017),U.S.,2909928,1
-Deaths.child,"Deaths, children","19,262,000",USD,death,2015,OECD 2012,U.S.,5819856,1
-YLDs,Year lived with disability,"62,800",GBP,year lived with disability,2018,Birchby 2019,UK,32922,1
-Absences,Lost workday,130,EUR,work day,2010,EEA 2014,EU,90,1
+Outcome,Outcome_name,currency,unit,elasticity,valuation_world_2017_intl2017_gdp,valuation_world_2017_intl2017_gni
+Asthma.Prev,Year lived with asthma,USD,case,1,1080.9514991282952,1062.5131482408547
+exac,Asthma emergency room visits,USD,visit,1,233.0922496842824,229.11627417355174
+PTB,Preterm birth,USD,birth,1,108078.71108829381,106235.15640511397
+Deaths,"Deaths, adults",USD,death,1,2775052.255971379,2658024.0044839554
+Deaths.child,"Deaths, children",USD,death,1,5550104.511942758,5316048.008967911
+YLDs,Year lived with disability,GBP,year lived with disability,1,28483.10947746124,28250.08335399414
+Absences,Lost workday,EUR,work day,1,79.35160296007,78.1208481052636

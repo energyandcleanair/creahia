@@ -5,6 +5,8 @@ exportPattern("^[[:alpha:]]|\\%+") # For now...
 
 importFrom(RColorBrewer,brewer.pal)
 
+importFrom(creahelpers,sel)
+
 importFrom(dplyr,all_vars)
 importFrom(dplyr,any_vars)
 importFrom(dplyr,arrange)
@@ -29,6 +31,7 @@ importFrom(dplyr,rename)
 importFrom(dplyr,rowwise)
 importFrom(dplyr,select)
 importFrom(dplyr,summarise)
+importFrom(dplyr,summarise_at)
 importFrom(dplyr,summarise_all)
 importFrom(dplyr,tibble)
 importFrom(dplyr,ungroup)

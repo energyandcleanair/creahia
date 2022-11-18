@@ -32,7 +32,8 @@ Imports:
     creapuff,
     gstat,
     rasterVis,
-    foreach
+    foreach,
+    priceR
 Depends:
     tidyverse,
     creahelpers
