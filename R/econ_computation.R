@@ -18,7 +18,7 @@ compute_econ_costs <- function(hia,
                            gdp=gdp,
                            dict=dict,
                            gni_or_gdp=gni_or_gdp) %T>%
-    write_csv(file.path(results_dir, sprintf('cost_detailed_%s.csv', suffix)))
+    write_csv(file.path(results_dir, sprintf('cost_detailed%s.csv', suffix)))
 
 
   # Ceate summary tables
