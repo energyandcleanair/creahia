@@ -8,7 +8,6 @@ compute_econ_costs <- function(hia,
                                valuation=get_valuation(version=valuation_version),
                                projection_years=NULL,
                                suffix="",
-                               gni_or_gdp='gni',
                                ...){
 
   hia_cost <- get_hia_cost(hia=hia,
@@ -16,8 +15,7 @@ compute_econ_costs <- function(hia,
                            valuation=valuation,
                            current_year=current_year,
                            gdp=gdp,
-                           dict=dict,
-                           gni_or_gdp=gni_or_gdp) %T>%
+                           dict=dict) %T>%
     write_csv(file.path(results_dir, sprintf('cost_detailed%s.csv', suffix)))
 
 
@@ -66,14 +64,16 @@ get_hia_cost <- function(hia,
                          valuation=get_valuation(valuation_version),
                          current_year=2019,
                          gdp=get_gdp(year=current_year),
-                         dict=get_dict(),
-                         gni_or_gdp='gni'){
+                         dict=get_dict()){
 
   hia_cost <- hia
 
   # Values from above, at the time of creating valuation_viscusi.csv
+  gdp_world_2017_current <- 10825.9
+  gdp_world_2017_constant2015 <- 10625.26
   gdp_world_ppp_2017intl <- 16276.48
   gni_world_ppp_2017intl <- 15927.18
+
 
   nrow_before <- nrow(hia_cost)
   hia_cost <- hia_cost %>%
@@ -82,17 +82,17 @@ get_hia_cost <- function(hia,
     left_join(gdp, by=c('iso3')) %>%
     filter(!is.na(Pollutant)) %>%
     dplyr::mutate(
-      valuation_intl2017_dollars = case_when(
-        gni_or_gdp=='gni' ~ valuation_world_2017_intl2017_gni * (GNI.PC.PPP.2017USD / gni_world_ppp_2017intl)^elasticity,
-        gni_or_gdp=='gdp' ~ valuation_world_2017_intl2017_gdp * (GDP.PC.PPP.2017USD / gdp_world_ppp_2017intl)^elasticity),
-      cost_mn_2017USD = number * valuation_intl2017_dollars/1e6,
-
-      cost_mn_currentUSD = case_when(
-        gni_or_gdp=='gni' ~  cost_mn_2017USD * GNI.PC.PPP.currUSD / GNI.PC.PPP.2017USD,
-        gni_or_gdp=='gdp' ~  cost_mn_2017USD * GDP.PC.PPP.currUSD / GDP.PC.PPP.2017USD,
-      ),
-      cost_mn_currentLCU = cost_mn_currentUSD * PPP.convLCUUSD,
-      share_gdp = cost_mn_currentLCU * 1e6 / GDP.TOT.currLCU) %>%
+      lcu_per_usd = GDP.PC.currLCU / GDP.PC.currUSD,
+      valuation_current_usd = case_when(
+        gni_or_gdp=='gni' & ppp ~ valuation_world_2017 * (GNI.PC.PPP.2017USD / gni_world_ppp_2017intl)^elasticity * GNI.PC.PPP.currUSD / GNI.PC.PPP.2017USD * PPP.convLCUUSD / lcu_per_usd,
+        gni_or_gdp=='gdp' & ppp ~ valuation_world_2017 * (GDP.PC.PPP.2017USD / gdp_world_ppp_2017intl)^elasticity * GDP.PC.PPP.currUSD / GDP.PC.PPP.2017USD * PPP.convLCUUSD / lcu_per_usd,
+        gni_or_gdp=='gdp' & !ppp ~ valuation_world_2017 * (GDP.PC.2015USD / gdp_world_2017_constant2015)^elasticity * GDP.PC.currUSD / GDP.PC.2015USD ,
+        T ~ NA_real_ # Other cases not yet supported
+        ),
+      cost_mn_currentUSD = number * valuation_current_usd / 1e6,
+      cost_mn_currentLCU = cost_mn_currentUSD * lcu_per_usd,
+      share_gdp = cost_mn_currentLCU * 1e6 / GDP.TOT.currLCU
+      ) %>%
     ungroup
 
   if(nrow(hia_cost) != nrow_before){stop('Wrong joins')}
@@ -103,13 +103,13 @@ get_hia_cost <- function(hia,
 
 get_total_cost_by_outcome <- function(hia_cost){
 
-  gdp_gni <- hia_cost %>%
+  gdp <- hia_cost %>%
     ungroup() %>%
     distinct(region_id, GDP.TOT.currLCU, GDP.TOT.currUSD) %>%
     summarise_at(c('GDP.TOT.currLCU', 'GDP.TOT.currUSD'), sum)
 
-  gdp_gni_tbl <-  tibble(unit=c('mn_currentLCU', 'mn_currentUSD'),
-                         gdp=c(gdp_gni$GDP.TOT.currLCU / 1e6, gdp_gni$GDP.TOT.currUSD / 1e6))
+  gdp_tbl <-  tibble(unit=c('mn_currentLCU', 'mn_currentUSD'),
+                         gdp=c(gdp$GDP.TOT.currLCU / 1e6, gdp$GDP.TOT.currUSD / 1e6))
 
   hia_cost %>%
     filter(!double_counted) %>%
@@ -121,7 +121,7 @@ get_total_cost_by_outcome <- function(hia_cost){
                         names_to='unit'
     ) %>%
     filter(Outcome != 'LBW') %>%
-    left_join(gdp_gni_tbl) %>%
+    left_join(gdp_tbl) %>%
     mutate(share_gdp = value / gdp) %>%
     select(-c(gdp)) %>%
     tidyr::pivot_wider(names_from = unit,
@@ -129,7 +129,9 @@ get_total_cost_by_outcome <- function(hia_cost){
     select(-c(share_gdp_number, share_gdp_mn_currentUSD)) %>%
     rename(share_gdp=share_gdp_mn_currentLCU,
            number=value_number) %>%
-    rename_with(~stringr::str_replace(.x, 'value_', 'cost_'))
+    rename_with(~stringr::str_replace(.x, 'value_', 'cost_')) %>%
+    mutate(valuation_currentUSD = cost_mn_currentUSD * 1e6 / number,
+           valuation_currentLCU = cost_mn_currentLCU * 1e6 / number)
 }
 
 
@@ -149,7 +151,7 @@ format_hia_table <- function(table, CI_underneath=F){
     tidyr::pivot_wider(names_from='estimate') %>%
     mutate(CI=case_when(
                   grepl('number', indicator) ~ sprintf('(%s - %s)', scales::comma(low, 1), scales::comma(high, 1)),
-                  grepl('share', indicator) ~ sprintf('(%.1f%% - %.1f%%', low*100, high*100),
+                  grepl('share', indicator) ~ sprintf('(%.1f%% - %.1f%%)', low*100, high*100),
                   grepl('cost_mn', indicator) ~ sprintf('(%s - %s)', scales::comma(low, 1), scales::comma(high, 1)),
                   T ~ sprintf('(%s - %s)', scales::comma(low, 0.1), scales::comma(high, 0.1))),
           central=case_when(
@@ -173,11 +175,6 @@ format_hia_table <- function(table, CI_underneath=F){
 }
 
 get_total_cost_by_region <- function(hia_cost){
-
-
-  gdp_gni <- hia_cost %>%
-    ungroup() %>%
-    distinct(region_id, GDP.TOT.currLCU, GDP.TOT.currUSD)
 
   hia_cost %>%
     filter(!double_counted) %>%

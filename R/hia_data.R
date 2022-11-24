@@ -105,7 +105,8 @@ get_gdp_timeseries <- function(start_year=1980, end_year=2021){
   list(GDP.PC.PPP.2017USD = 'NY.GDP.PCAP.PP.KD',
        GDP.PC.PPP.currUSD = 'NY.GDP.PCAP.PP.CD',
        GDP.PC.currLCU     = 'NY.GDP.PCAP.CN',
-       GDP.PC.currUSD     = 'NY.GDP.PCAP.PP.CD',
+       GDP.PC.currUSD     = 'NY.GDP.PCAP.CD',
+       GDP.PC.2015USD     = 'NY.GDP.PCAP.KD',
        GDP.TOT.currLCU     = 'NY.GDP.MKTP.CN',
        GDP.TOT.currUSD     = 'NY.GDP.MKTP.CD',
 

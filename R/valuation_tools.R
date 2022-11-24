@@ -39,39 +39,50 @@ create_valuation_file <- function(input_file='inst/extdata/valuation_viscusi_raw
 
   # Step 1: scale to 2017$ using CPI
   # https://aspe.hhs.gov/sites/default/files/2021-07/hhs-guidelines-appendix-d-vsl-update.pdf
-  cpi <- wbstats::wb_data('FP.CPI.TOTL', start_date=start_year, end_date=end_year, country=unique(valuation$cpi_ref))
-
-  cpi_eu <- eurostat::get_eurostat("tec00027", stringsAsFactors = FALSE,  time_format = "num") %>%
-    filter(geo=='EU') %>%
-    mutate(geo='EUU')
-
-  cpi_cal <- cpi %>%
-    filter(iso3c=='USA') %>%
-    mutate(iso3c='California')
-
-  cpi_all <- bind_rows(
-    cpi %>% select(reference_income_level=iso3c, year=date, cpi_refyear='FP.CPI.TOTL'),
-    cpi_cal %>% select(reference_income_level=iso3c, year=date, cpi_refyear='FP.CPI.TOTL'),
-    cpi_eu %>% select(reference_income_level=geo, year=time, cpi_refyear=values),
-  ) %>%
-    filter(!is.na(cpi_refyear))
-
-  cpi_all <- cpi_all %>%
-    left_join(cpi_all %>%
-                filter(year==2017) %>%
-                select(reference_income_level, cpi_2017=cpi_refyear))
+  # cpi <- wbstats::wb_data('FP.CPI.TOTL', start_date=start_year, end_date=end_year, country=unique(valuation$cpi_ref))
+  #
+  # cpi_eu <- eurostat::get_eurostat("tec00027", stringsAsFactors = FALSE,  time_format = "num") %>%
+  #   filter(geo=='EU') %>%
+  #   mutate(geo='EUU')
+  #
+  # cpi_cal <- cpi %>%
+  #   filter(iso3c=='USA') %>%
+  #   mutate(iso3c='California')
+  #
+  # cpi_all <- bind_rows(
+  #   cpi %>% select(reference_income_level=iso3c, year=date, cpi_refyear='FP.CPI.TOTL'),
+  #   cpi_cal %>% select(reference_income_level=iso3c, year=date, cpi_refyear='FP.CPI.TOTL'),
+  #   cpi_eu %>% select(reference_income_level=geo, year=time, cpi_refyear=values),
+  # ) %>%
+  #   filter(!is.na(cpi_refyear))
+  #
+  # cpi_all <- cpi_all %>%
+  #   left_join(cpi_all %>%
+  #               filter(year==2017) %>%
+  #               select(reference_income_level, cpi_2017=cpi_refyear))
 
 
   # Step 2: Bring to World average valuation international dollars 2017
   # Using both GDP and GNI
   # Get PPP GDP and GNI in constant 2017 dollars
-  gdp_gni <- wbstats::wb_data(c(gdp_intl2017='NY.GDP.PCAP.PP.KD', gni_intl2017='NY.GNP.PCAP.PP.KD'),
-                              start_date=start_year, end_date=end_year,
-                              country=c(unique(valuation$reference_income_level), 'World')) %>%
+  gdp_gni <- wbstats::wb_data(c(
+    gdp_current='NY.GDP.PCAP.CD',
+    gdp_constant2015='NY.GDP.PCAP.KD',
+    gdp_ppp_current='NY.GDP.PCAP.PP.CD',
+    gni_ppp_current='NY.GNP.PCAP.PP.CD',
+    gdp_ppp_intl2017='NY.GDP.PCAP.PP.KD',
+    gni_ppp_intl2017='NY.GNP.PCAP.PP.KD'),
+    start_date=start_year,
+    end_date=end_year,
+    country=c(unique(valuation$reference_income_level), 'World')) %>%
     select(reference_income_level=iso3c,
            year=date,
-           gdp_intl2017,
-           gni_intl2017)
+           gdp_current,
+           gdp_constant2015,
+           gdp_ppp_current,
+           gni_ppp_current,
+           gdp_ppp_intl2017,
+           gni_ppp_intl2017)
 
   # Create one for California
   #TODO improve
@@ -79,26 +90,39 @@ create_valuation_file <- function(input_file='inst/extdata/valuation_viscusi_raw
   gdp_gni_cal <- gdp_gni %>%
     filter(reference_income_level=='USA') %>%
     mutate(reference_income_level='California',
-           gdp_intl2017 = gdp_intl2017 * cal_vs_us,
-           gni_intl2017 = gni_intl2017 * cal_vs_us,
+           gdp_current = gdp_current * cal_vs_us,
+           gdp_constant2015 = gdp_constant2015 * cal_vs_us,
+           gdp_ppp_current = gdp_ppp_current * cal_vs_us,
+           gni_ppp_current = gni_ppp_current * cal_vs_us,
+           gdp_ppp_intl2017 = gdp_ppp_intl2017 * cal_vs_us,
+           gni_ppp_intl2017 = gni_ppp_intl2017 * cal_vs_us,
            )
   gdp_gni <- bind_rows(gdp_gni, gdp_gni_cal)
 
-
-  gdp_world_2017_intl2017 <- as.numeric(gdp_gni[gdp_gni$reference_income_level =='WLD' & gdp_gni$year == 2017,] %>% pull(gdp_intl2017))
-  gni_world_2017_intl2017 <- as.numeric(gdp_gni[gdp_gni$reference_income_level =='WLD' & gdp_gni$year == 2017,] %>% pull(gni_intl2017))
+  gdp_world_2017_current <- as.numeric(gdp_gni[gdp_gni$reference_income_level =='WLD' & gdp_gni$year == 2017,] %>% pull(gdp_current))
+  gdp_world_2017_constant2015 <- as.numeric(gdp_gni[gdp_gni$reference_income_level =='WLD' & gdp_gni$year == 2017,] %>% pull(gdp_constant2015))
+  gdp_ppp_world_2017_intl2017 <- as.numeric(gdp_gni[gdp_gni$reference_income_level =='WLD' & gdp_gni$year == 2017,] %>% pull(gdp_ppp_intl2017))
+  gni_ppp_world_2017_intl2017 <- as.numeric(gdp_gni[gdp_gni$reference_income_level =='WLD' & gdp_gni$year == 2017,] %>% pull(gni_ppp_intl2017))
 
   valuation_final <- valuation %>%
-    left_join(cpi_all, by=c('reference_income_level', 'year')) %>%
+    # left_join(cpi_all, by=c('reference_income_level', 'year')) %>%
     left_join(gdp_gni) %>%
-    mutate(valuation_refyear_2017cur = valuation_usd * cpi_2017 / cpi_refyear) %>%
-    mutate(valuation_world_2017_intl2017_gdp = as.numeric(valuation_refyear_2017cur * (gdp_world_2017_intl2017 / gdp_intl2017) ^ elasticity),
-           valuation_world_2017_intl2017_gni = as.numeric(valuation_refyear_2017cur * (gni_world_2017_intl2017 / gni_intl2017) ^ elasticity),
-           ) %>%
-    select(Outcome, Outcome_name, currency, unit, elasticity,
-           valuation_world_2017_intl2017_gdp, valuation_world_2017_intl2017_gni) %>%
-    filter(!is.na(valuation_world_2017_intl2017_gni),
-           !is.na(valuation_world_2017_intl2017_gdp))
+    mutate(valuation_refyear = case_when(
+      gni_or_gdp=='gni' & ppp ~ valuation_usd * gni_ppp_intl2017 / gni_ppp_current,
+      gni_or_gdp=='gdp' & ppp ~ valuation_usd * gdp_ppp_intl2017 / gdp_ppp_current,
+      gni_or_gdp=='gdp' & !ppp ~ valuation_usd *  gdp_constant2015 / gdp_current,
+      T ~ NA_real_ # Other cases not yet supported
+      )) %>%
+    mutate(ratio=case_when(
+      gni_or_gdp=='gni' & ppp ~ gni_ppp_world_2017_intl2017 / gni_ppp_intl2017,
+      gni_or_gdp=='gdp' & ppp ~ gdp_ppp_world_2017_intl2017 / gdp_ppp_intl2017,
+      gni_or_gdp=='gdp' & !ppp ~ gdp_world_2017_constant2015 / gdp_constant2015,
+      T ~ NA_real_ # Other cases not yet supported
+    )) %>%
+    mutate(valuation_world_2017 = as.numeric(valuation_refyear * ratio ^ elasticity)) %>%
+    select(Outcome, Outcome_name, currency, unit,
+           elasticity, gni_or_gdp, ppp, valuation_world_2017) %>%
+    filter(!is.na(valuation_world_2017))
 
   if(nrow(raw) != nrow(valuation)){stop('Things went wrong')}
 
