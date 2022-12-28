@@ -16,35 +16,35 @@ library(magrittr)
 for (i_Sc in seq(1,16)) {
 # Parameters ####################################################################################
 # ============================= Project specific ================================================
-# Select macro scenario
 # Select macro scenarios
-if (i_Sc==1) {scenario_prefix <- "ScA_all" ; scenario_description='CHANDRAPUR CFPP, all units, SO2 compliance, 85% PLF'}
-if (i_Sc==2) {scenario_prefix <- "ScA_34"  ; scenario_description='CHANDRAPUR CFPP, units 3-4, SO2 compliance, 85% PLF'}
-if (i_Sc==3) {scenario_prefix <- "ScA_567" ; scenario_description='CHANDRAPUR CFPP, units 5-6-7, SO2 compliance, 85% PLF'}
-if (i_Sc==4) {scenario_prefix <- "ScA_89"  ; scenario_description='CHANDRAPUR CFPP, units 8-9, SO2 compliance, 85% PLF'}
+if (i_Sc==1) {scenario_prefix <- "ScA_all" ; scenario_description='Chandrapur CFPP, all units, SO2 compliance, 85% PLF'}
+if (i_Sc==2) {scenario_prefix <- "ScA_34"  ; scenario_description='Chandrapur CFPP, units 3-4, SO2 compliance, 85% PLF'}
+if (i_Sc==3) {scenario_prefix <- "ScA_567" ; scenario_description='Chandrapur CFPP, units 5-6-7, SO2 compliance, 85% PLF'}
+if (i_Sc==4) {scenario_prefix <- "ScA_89"  ; scenario_description='Chandrapur CFPP, units 8-9, SO2 compliance, 85% PLF'}
 
-if (i_Sc==5) {scenario_prefix <- "ScB_all" ; scenario_description='CHANDRAPUR CFPP, all units, SO2 compliance, actual PLF'}
-if (i_Sc==6) {scenario_prefix <- "ScB_34"  ; scenario_description='CHANDRAPUR CFPP, units 3-4, SO2 compliance, actual PLF'}
-if (i_Sc==7) {scenario_prefix <- "ScB_567" ; scenario_description='CHANDRAPUR CFPP, units 5-6-7, SO2 compliance, actual PLF'}
-if (i_Sc==8) {scenario_prefix <- "ScB_89"  ; scenario_description='CHANDRAPUR CFPP, units 8-9, SO2 compliance, actual PLF'}
+if (i_Sc==5) {scenario_prefix <- "ScB_all" ; scenario_description='Chandrapur CFPP, all units, SO2 compliance, actual PLF'}
+if (i_Sc==6) {scenario_prefix <- "ScB_34"  ; scenario_description='Chandrapur CFPP, units 3-4, SO2 compliance, actual PLF'}
+if (i_Sc==7) {scenario_prefix <- "ScB_567" ; scenario_description='Chandrapur CFPP, units 5-6-7, SO2 compliance, actual PLF'}
+if (i_Sc==8) {scenario_prefix <- "ScB_89"  ; scenario_description='Chandrapur CFPP, units 8-9, SO2 compliance, actual PLF'}
 
-if (i_Sc==9 ){scenario_prefix <- "ScC_all" ; scenario_description='CHANDRAPUR CFPP, all units, actual SO2, 85% PLF'}
-if (i_Sc==10){scenario_prefix <- "ScC_34"  ; scenario_description='CHANDRAPUR CFPP, units 3-4, actual SO2, 85% PLF'}
-if (i_Sc==11){scenario_prefix <- "ScC_567" ; scenario_description='CHANDRAPUR CFPP, units 5-6-7, actual SO2, 85% PLF'}
-if (i_Sc==12){scenario_prefix <- "ScC_89"  ; scenario_description='CHANDRAPUR CFPP, units 8-9, actual SO2, 85% PLF'}
+if (i_Sc==9 ){scenario_prefix <- "ScC_all" ; scenario_description='Chandrapur CFPP, all units, actual SO2, 85% PLF'}
+if (i_Sc==10){scenario_prefix <- "ScC_34"  ; scenario_description='Chandrapur CFPP, units 3-4, actual SO2, 85% PLF'}
+if (i_Sc==11){scenario_prefix <- "ScC_567" ; scenario_description='Chandrapur CFPP, units 5-6-7, actual SO2, 85% PLF'}
+if (i_Sc==12){scenario_prefix <- "ScC_89"  ; scenario_description='Chandrapur CFPP, units 8-9, actual SO2, 85% PLF'}
 
-if (i_Sc==13){scenario_prefix <- "ScD_all" ; scenario_description='CHANDRAPUR CFPP, all units, actual SO2, actual PLF'}
-if (i_Sc==14){scenario_prefix <- "ScD_34"  ; scenario_description='CHANDRAPUR CFPP, units 3-4, actual SO2, actual PLF'}
-if (i_Sc==15){scenario_prefix <- "ScD_567" ; scenario_description='CHANDRAPUR CFPP, units 5-6-7, actual SO2, actual PLF'}
-if (i_Sc==16){scenario_prefix <- "ScD_89"  ; scenario_description='CHANDRAPUR CFPP, units 8-9, actual SO2, actual PLF'}
+if (i_Sc==13){scenario_prefix <- "ScD_all" ; scenario_description='Chandrapur CFPP, all units, actual SO2, actual PLF'}
+if (i_Sc==14){scenario_prefix <- "ScD_34"  ; scenario_description='Chandrapur CFPP, units 3-4, actual SO2, actual PLF'}
+if (i_Sc==15){scenario_prefix <- "ScD_567" ; scenario_description='Chandrapur CFPP, units 5-6-7, actual SO2, actual PLF'}
+if (i_Sc==16){scenario_prefix <- "ScD_89"  ; scenario_description='Chandrapur CFPP, units 8-9, actual SO2, actual PLF'}
 
-# project_dir="Z:/"             # network disk (project data)
-# project_dir="G:/chile"        # calpuff_external_data   persistent disk (project data)
-# project_dir="H:/cambodia"     # calpuff_external_data-2 persistent disk (project data)
-# project_dir="H:/indonesia"    # calpuff_external_data-2 persistent disk (project data)
-project_dir="I:/india"          # calpuff_external_data-3 persistent disk (project data)
-output_dir <- file.path(project_dir,"calpuff_suite") # Where to write all generated files
-
+# project_dir="Z:/"                # network disk (project data)
+# project_dir="G:/chile"           # calpuff_external_data   persistent disk (project data)
+# project_dir="H:/cambodia"        # calpuff_external_data-2 persistent disk (project data)
+# project_dir="H:/indonesia"       # calpuff_external_data-2 persistent disk (project data)
+project_dir="I:/india_chandrapur"  # calpuff_external_data-3 persistent disk (project data)
+# output_dir <- file.path(project_dir,"calpuff_suite") # Where to write all generated files
+input_dir <- file.path(project_dir,"calpuff_suite") # Where to read all CALPUFF generated files
+output_dir <- file.path(project_dir,"HIA") ; if (!dir.exists(output_dir)) dir.create(output_dir) # Where to write all HIA files
 
 # ================================ General ======================================================
 gis_dir <- "F:/gis"                    # The folder where we store general GIS data
@@ -58,7 +58,7 @@ gis_dir <- "F:/gis"                    # The folder where we store general GIS d
 
 # HIA ###########################################################################################
 # Load CALMET parameters
-calmet_result <- readRDS(file.path(output_dir,"calmet_result.RDS" ))
+calmet_result <- readRDS(file.path(input_dir,"calmet_result.RDS" ))
 UTMZ <- calmet_result$params[[01]]$IUTMZN
 UTMH <- calmet_result$params[[01]]$UTMHEM
 
@@ -77,7 +77,7 @@ UTMH <- calmet_result$params[[01]]$UTMHEM
 #
 
 # 01: Get coal additional concentrations from CALPUFF -------------------------------------------
-calpuff_files <- get_calpuff_files(ext=paste0(tolower(scenario_prefix),".csv"), gasunit = 'ug', dir=output_dir, hg_scaling=1)
+calpuff_files <- get_calpuff_files(ext=paste0(tolower(scenario_prefix),".csv"), gasunit = 'ug', dir=input_dir, hg_scaling=1e-3)
 # scenarios = unique(calpuff_files$scenario)
 scenario=scenario_prefix
 calpuff_files$scenario = scenario
@@ -97,7 +97,7 @@ calpuff_files %>%
   filter( speciesName=='NO2' | speciesName=='PM2.5'  | speciesName=='SO2') %>% make_tifs(grids = grids)
 
 # =============================== Get Perturbation Raster ========================================
-conc_perturbation <- get_calpuff_files(ext=paste0(tolower(scenario_prefix),".tif"), gasunit = 'ug', dir=output_dir)  %>%
+conc_perturbation <- get_calpuff_files(ext=paste0(tolower(scenario_prefix),".tif"), gasunit = 'ug', dir=input_dir, hg_scaling=1e-3)  %>%
   # filter(period=='annual' | !is.na(threshold)) %>%
   filter(period=='annual') %>%
   filter( speciesName=='NO2' | speciesName=='PM2.5'  | speciesName=='SO2') %>%
@@ -148,8 +148,10 @@ hia <-  wrappers.compute_hia_two_images(conc_perturbation$conc_perturbation,    
                                         crfs_version="default",      # crfs_version="C40"
                                         epi_version="default",       # epi_version="C40"
                                         valuation_version="default") # valuation_version="viscusi"
-saveRDS(hia, file.path(project_dir, paste0('hia','_',scenario_prefix,'.RDS')))
-# hia <- readRDS(file.path(project_dir, paste0('hia','_',scenario_prefix,'.RDS')))
+
+# To start from here
+# saveRDS(hia, file.path(output_dir, paste0('hia','_',scenario_prefix,'.RDS')))
+# hia <- readRDS(file.path(output_dir, paste0('hia','_',scenario_prefix,'.RDS')))
 
 
 # 05: Create tables -----------------------------------------------------------------------------
@@ -159,26 +161,26 @@ hia_table <- hia %>% totalise_hia()
 hia_table_by_region <- hia_table %>%
   group_by(region_id, region_name, iso3, scenario, cause, cause_name, unit, pollutant) %>%
   summarise_if(is.numeric, sum) %>%
-  write_csv(file.path(project_dir, paste0('hia_totals_by_region','_',scenario_prefix,'.csv')))
+  write_csv(file.path(output_dir, paste0('hia_totals_by_region','_',scenario_prefix,'.csv')))
 
 # Total by country
 hia_table_by_country <- hia_table %>%
   group_by(iso3, scenario, cause, cause_name, unit, pollutant) %>%
   summarise_if(is.numeric, sum) %>%
-  write_csv(file.path(project_dir, paste0('hia_totals_by_country','_',scenario_prefix,'.csv')))
+  write_csv(file.path(output_dir, paste0('hia_totals_by_country','_',scenario_prefix,'.csv')))
 
 # Total over the entire domain
 hia_table_full_domain <- hia_table %>%
   group_by(scenario, cause, cause_name, unit, pollutant) %>%
   summarise_if(is.numeric, sum) %>%
-  write_csv(file.path(project_dir, paste0('hia_totals_full_domain','_',scenario_prefix,'.csv')))
+  write_csv(file.path(output_dir, paste0('hia_totals_full_domain','_',scenario_prefix,'.csv')))
 
 
 # 06: Compute and extract economic costs --------------------------------------------------------
 # TODO : change name scale_target_year -> pop_target_year
 econ_costs <- hia %>% sel(-any_of('Deaths_Total')) %>%
   group_by(iso3, scenario, estimate) %>% summarise_if(is.numeric, sum, na.rm=T) %>%
-  compute_econ_costs(results_dir=project_dir,
+  compute_econ_costs(results_dir=output_dir,
                      pop_targetyr=2025,  # Same as scale_target_year
                      projection_years=2025:2054,
                      iso3s_of_interest=NULL,
@@ -195,8 +197,8 @@ econ_costs$cost_forecast %>%
   summarise_if(is.numeric, sum) ->
   hia_cumu_full_domain
 
-hia_cumu_by_country %>% write_csv(file.path(project_dir, paste0('hia_cumulative_by_country','_',scenario_prefix,'.csv')))
-hia_cumu_full_domain %>% write_csv(file.path(project_dir, paste0('hia_cumulative_full_domain','_',scenario_prefix,'.csv')))
+hia_cumu_by_country %>% write_csv(file.path(output_dir, paste0('hia_cumulative_by_country','_',scenario_prefix,'.csv')))
+hia_cumu_full_domain %>% write_csv(file.path(output_dir, paste0('hia_cumulative_full_domain','_',scenario_prefix,'.csv')))
 
 }
 
