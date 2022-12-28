@@ -3,6 +3,8 @@
 #' @param perturbation_rasters
 #' @param baseline_rasters
 #' @param crfs_version
+#' @param return_concentrations include the population-weighted concentrations by admin area in the results. In this case, the function returns a list.
+#' @param pm2.5_to_pm10_ratio if the PM2.5 input data should be used to assess PM10 exposure, provide a ratio to use for calculation of baseline concentrations
 #'
 #' @return
 #' @export
@@ -19,10 +21,10 @@ wrappers.compute_hia_two_images <- function(perturbation_rasters,
                                             scale_target_year=2025,
                                             crfs_version="default",
                                             epi_version="default",
-                                            valuation_version="default"){
+                                            valuation_version="default",
+                                            return_concentrations=F,
+                                            pm2.5_to_pm10_ratio=NULL){
 
-
-  #TODO make it work with raster stack as well
   species <- names(perturbation_rasters)
   grid_raster = perturbation_rasters[[1]] %>% raster
 
@@ -39,6 +41,20 @@ wrappers.compute_hia_two_images <- function(perturbation_rasters,
     # Work with either RasterStack or list of rasters
     conc_baseline <- tibble(species=names(baseline_rasters),
                             conc_baseline=raster::as.list(raster::stack(baseline_rasters)))
+  }
+
+  if(!is.null(pm2.5_to_pm10_ratio)) {
+    if(!('tpm10' %in% conc_perturbation$species)) {
+      conc_perturbation %<>% filter(species=='pm25') %>% mutate(species='tpm10') %>% bind_rows(conc_perturbation)
+      names(conc_perturbation$conc_perturbation) <- conc_perturbation$species
+      species <- conc_perturbation$species
+    }
+
+    if(!('tpm10' %in% conc_baseline$species)) {
+      conc_baseline %<>% filter(species=='pm25') %>% mutate(species='tpm10') %>% bind_rows(conc_baseline)
+      conc_baseline$conc_baseline[[which(conc_baseline$species=='tpm10')]] %<>% divide_by(pm2.5_to_pm10_ratio)
+      names(conc_baseline$conc_baseline) <- conc_baseline$species
+    }
   }
 
   # 03: Combine and flatten: one row per scenario --------------------------------------------
@@ -66,6 +82,19 @@ wrappers.compute_hia_two_images <- function(perturbation_rasters,
                               crfs_version=crfs_version
                               )
 
+  if(return_concentrations) {
+    conc_regions %>%
+      lapply(function(x) {
+        x %>% subset(!is.null(x)) %>% lapply(as_tibble) %>% bind_rows(.id='region_id')
+      }) %>%
+      bind_rows(.id='scenario') %>%
+      group_by(scenario, region_id) %>%
+      summarise(across(-pop, weighted.mean, w=pop, na.rm=T),
+                across(pop, sum, na.rm=T)) ->
+      conc_regions_mean
+    hia <- list(hia=hia, concentrations=conc_regions_mean)
+  }
   # hia_table <- hia %>% totalise_hia() %>% make_hia_table()
+
   return(hia)
 }
