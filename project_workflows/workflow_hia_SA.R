@@ -7,18 +7,27 @@ library(creahia)
 library(creapuff)
 # For development only
 library(raster)
+library(sf)
 library(plyr)
 library(readxl)
 library(zoo)
 library(magrittr)
 library(tidyverse)
+library(lubridate)
 list.files(path='R', full.names=T) %>% sapply(source)
 
-project_dir="I:/SouthAfrica"       # calpuff_external_data-2 persistent disk (project data)
+#project_dir="I:/SouthAfrica"       # calpuff_external_data-2 persistent disk (project data)
+project_dir="C:/Users/lauri/Desktop/My Drive/air pollution/TAPM/2017cases/SouthAfrica2022"
+
 input_dir <- file.path(project_dir,"calpuff_suite") # Where to read all CALPUFF generated files
 output_dir <- file.path(project_dir,"HIA") ; if (!dir.exists(output_dir)) dir.create(output_dir) # Where to write all HIA files
+emissions_dir <- file.path(project_dir,"emissions")
+
+source('project_workflows/emissions_processing_SA.R')
+
 
 gis_dir <- "F:/gis"                    # The folder where we store general GIS data
+#gis_dir <- "C:/Users/lauri/Desktop/My Drive/GIS"
 
 # creahia::set_env('gis_dir',"~/GIS/")
 # Sys.setenv(gis_dir="~/GIS/")
@@ -130,9 +139,13 @@ for (scen in runs[queue]) {
   saveRDS(hia, file.path(output_dir, paste0('hia','_',scen,'.RDS')))
 }
 
-hia <- runs %>% lapply(function(scen) readRDS(file.path(output_dir, paste0('hia','_',scen,'.RDS')))) %>% bind_rows
+hia <- runs %>% lapply(function(scen) readRDS(file.path(output_dir, paste0('hia','_',scen,'.RDS'))) %>% '[['('hia')) %>% bind_rows
 
-calpuff_files_all %>% distinct(scenario, scenario_description) %>%
+calpuff_files_all %>%
+  mutate(scenario_description=case_when(scenario=="lcppipp"~'Lephalale IPP',
+                                        scenario=="lcppmine"~'Lephalale mine',
+                                        T~capitalize_first(source))) %>%
+  distinct(scenario, scenario_description) %>%
   left_join(hia, .) -> hia
 
 
@@ -141,7 +154,7 @@ calpuff_files_all %>% distinct(scenario, scenario_description) %>%
 # TODO : change name scale_target_year -> pop_target_year
 
 
-targetyears = c(2021, seq(2025,2050,5))
+targetyears = c(seq(2025,2050,5))
 
 econ_costs <- hia %>% dplyr::select(-any_of('Deaths_Total')) %>%
   group_by(region_id, region_name, iso3, scenario, scenario_description, estimate) %>%
@@ -150,7 +163,7 @@ econ_costs <- hia %>% dplyr::select(-any_of('Deaths_Total')) %>%
                      pop_targetyr=2021,  # 2025 # Same as scale_target_year
                      projection_years=targetyears,
                      iso3s_of_interest=NULL,
-                     valuation_version="default")
+                     valuation_version="viscusi")
 
 econ_costs$cost_forecast %>% filter(year==2021) %>% write_excel_csv(file.path(output_dir, 'hia results by admin 2 area.csv'))
 econ_costs %>% saveRDS(file.path(output_dir, 'econ_costs.RDS'))
