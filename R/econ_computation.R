@@ -142,7 +142,7 @@ format_hia_table <- function(table, CI_underneath=F){
   values <- intersect(names(table),
                       c('cost_mn_currentLCU', 'cost_mn_currentUSD', 'number', 'share_gdp'))
   groups <- intersect(names(table),
-                      c('scenario', 'Outcome', 'Cause', 'Outcome.long', 'region_id', 'Pollutant', 'AgeGrp'))
+                      c('scenario', 'Outcome', 'Cause', 'Outcome.long', 'region_id', 'Pollutant', 'AgeGrp', 'double_counted'))
 
   formatted <- table %>%
     select_at(c(values, groups, 'estimate')) %>%
