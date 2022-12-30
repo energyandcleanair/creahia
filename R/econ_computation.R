@@ -228,10 +228,8 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
            year %in% c(pop_targetyr, years))
 
   hia_cost_future <- hia_cost %>%
-    filter(Outcome != 'LBW',
-           Outcome %notin% c('Deaths', 'YLLs') | Cause %in% c('NCD.LRI', 'LRI.child', 'AllCause'),
-           Outcome!='YLDs' | Cause != 'NCD.LRI') %>%
-    group_by(across(c(scenario, estimate, any_of(c('iso3', 'region_name')),
+    filter(!double_counted) %>%
+    group_by(across(c(scenario, estimate, any_of(c('iso3', 'region_id', 'region_name')),
                       Outcome, Cause, AgeGrp, Pollutant))) %>%
     summarise_at(c('number', 'cost_mn_currentUSD'), sum, na.rm=T)
 
@@ -328,7 +326,7 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
     warning("Missing population or GDP projection information of countries ",missing_iso3s,". These will be ignored")
   }
 
-  hia_by_year <- suppressMessages(hia_cost %>% full_join(pop_scaling))
+  hia_by_year <- suppressMessages(hia_cost %>% select(-year) %>% full_join(pop_scaling))
 
   hia_by_year_scaled <- hia_by_year %>% mutate(
     number = number*scaling,
