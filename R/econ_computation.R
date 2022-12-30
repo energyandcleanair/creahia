@@ -142,13 +142,13 @@ format_hia_table <- function(table, CI_underneath=F){
   values <- intersect(names(table),
                       c('cost_mn_currentLCU', 'cost_mn_currentUSD', 'number', 'share_gdp'))
   groups <- intersect(names(table),
-                      c('scenario', 'Outcome', 'Outcome.long'))
+                      c('scenario', 'Outcome', 'Cause', 'Outcome.long', 'region_id', 'Pollutant', 'AgeGrp'))
 
   formatted <- table %>%
     select_at(c(values, groups, 'estimate')) %>%
     tidyr::pivot_longer(cols = values,
                         names_to='indicator') %>%
-    tidyr::pivot_wider(names_from='estimate') %>%
+    tidyr::pivot_wider(names_from='estimate', values_from='value') %>%
     mutate(CI=case_when(
                   grepl('number', indicator) ~ sprintf('(%s - %s)', scales::comma(low, 1), scales::comma(high, 1)),
                   grepl('share', indicator) ~ sprintf('(%.1f%% - %.1f%%)', low*100, high*100),
