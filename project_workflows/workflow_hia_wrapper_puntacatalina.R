@@ -12,37 +12,18 @@ library(readxl)
 library(zoo)
 library(magrittr)
 
-
-for (i_Sc in seq(1,16)) {
+for (i_Sc in seq(1,4)) {
 # Parameters ####################################################################################
 # ============================= Project specific ================================================
+scenario_prefix_ref<- "ScA"
+
 # Select macro scenarios
-if (i_Sc==1) {scenario_prefix <- "ScA_all" ; scenario_description='Chandrapur CFPP, all units, SO2 compliance, 85% PLF'}
-if (i_Sc==2) {scenario_prefix <- "ScA_34"  ; scenario_description='Chandrapur CFPP, units 3-4, SO2 compliance, 85% PLF'}
-if (i_Sc==3) {scenario_prefix <- "ScA_567" ; scenario_description='Chandrapur CFPP, units 5-6-7, SO2 compliance, 85% PLF'}
-if (i_Sc==4) {scenario_prefix <- "ScA_89"  ; scenario_description='Chandrapur CFPP, units 8-9, SO2 compliance, 85% PLF'}
+if (i_Sc==1) {scenario_prefix <- "ScA"; scenario_description='CTPC for 2021. Declared emissions'}
+if (i_Sc==2) {scenario_prefix <- "ScB"; scenario_description='CTPC for 2021. Real emissions, best scenario'}
+if (i_Sc==3) {scenario_prefix <- "ScC"; scenario_description='CTPC for 2021. Real emissions, worst scenario'}
+if (i_Sc==4) {scenario_prefix <- "ScD"; scenario_description='CTPC for 2021. Real emissions, mean scenario'}
 
-if (i_Sc==5) {scenario_prefix <- "ScB_all" ; scenario_description='Chandrapur CFPP, all units, SO2 compliance, actual PLF'}
-if (i_Sc==6) {scenario_prefix <- "ScB_34"  ; scenario_description='Chandrapur CFPP, units 3-4, SO2 compliance, actual PLF'}
-if (i_Sc==7) {scenario_prefix <- "ScB_567" ; scenario_description='Chandrapur CFPP, units 5-6-7, SO2 compliance, actual PLF'}
-if (i_Sc==8) {scenario_prefix <- "ScB_89"  ; scenario_description='Chandrapur CFPP, units 8-9, SO2 compliance, actual PLF'}
-
-if (i_Sc==9 ){scenario_prefix <- "ScC_all" ; scenario_description='Chandrapur CFPP, all units, actual SO2, 85% PLF'}
-if (i_Sc==10){scenario_prefix <- "ScC_34"  ; scenario_description='Chandrapur CFPP, units 3-4, actual SO2, 85% PLF'}
-if (i_Sc==11){scenario_prefix <- "ScC_567" ; scenario_description='Chandrapur CFPP, units 5-6-7, actual SO2, 85% PLF'}
-if (i_Sc==12){scenario_prefix <- "ScC_89"  ; scenario_description='Chandrapur CFPP, units 8-9, actual SO2, 85% PLF'}
-
-if (i_Sc==13){scenario_prefix <- "ScD_all" ; scenario_description='Chandrapur CFPP, all units, actual SO2, actual PLF'}
-if (i_Sc==14){scenario_prefix <- "ScD_34"  ; scenario_description='Chandrapur CFPP, units 3-4, actual SO2, actual PLF'}
-if (i_Sc==15){scenario_prefix <- "ScD_567" ; scenario_description='Chandrapur CFPP, units 5-6-7, actual SO2, actual PLF'}
-if (i_Sc==16){scenario_prefix <- "ScD_89"  ; scenario_description='Chandrapur CFPP, units 8-9, actual SO2, actual PLF'}
-
-# project_dir="Z:/"                # network disk (project data)
-# project_dir="G:/chile"           # calpuff_external_data   persistent disk (project data)
-# project_dir="H:/cambodia"        # calpuff_external_data-2 persistent disk (project data)
-# project_dir="H:/indonesia"       # calpuff_external_data-2 persistent disk (project data)
-project_dir="I:/india_chandrapur"  # calpuff_external_data-3 persistent disk (project data)
-# output_dir <- file.path(project_dir,"calpuff_suite") # Where to write all generated files
+project_dir="H:/puntacatalina"       # calpuff_external_data-2 persistent disk (project data)
 input_dir <- file.path(project_dir,"calpuff_suite") # Where to read all CALPUFF generated files
 output_dir <- file.path(project_dir,"HIA") ; if (!dir.exists(output_dir)) dir.create(output_dir) # Where to write all HIA files
 
@@ -112,11 +93,12 @@ grid_raster = conc_perturbation$conc_perturbation[[1]] %>% raster
 
 
 # 02: Get base concentration levels -------------------------------------------------------------
-conc_base <- get_conc_baseline(species=species, grid_raster=grid_raster, no2_targetyear = 2020)  # no2_targetyear : same as WRF meteo data
+conc_base <- get_conc_baseline(species=species, grid_raster=grid_raster, no2_targetyear = 2020) # 2020 # Target year of model simulations (CALPUFF and WRF)
 
 
 # 03: Create support maps (e.g. countries, provinces, cities ) ----------------------------------
-regions <- get_adm(grid_raster, admin_level=2, res="full", iso3s=NULL)
+regions <- get_adm(grid_raster, admin_level=2, res="full", iso3s=c("DOM", "HTI")
+)
 # Input parameters:
 #
 # admin_level=2 -> Highest degree of res.
@@ -140,11 +122,11 @@ hia <-  wrappers.compute_hia_two_images(conc_perturbation$conc_perturbation,    
                                         baseline_rasters=conc_base$conc_baseline,  # baseline_rasters=raster::stack(who_map)
                                         regions=regions,
                                         # administrative_level=0,    # Overridden by : regions --> get_adm
-                                        # administrative_res="low",  # Overridden by : regions --> get_adm
+                                        # administrative_res="full", # Overridden by : regions --> get_adm
                                         # administrative_iso3s=NULL, # Overridden by : regions --> get_adm
                                         scenario_name=scenario_prefix,
                                         scale_base_year=2019,        # Population base year : reference year of INPUT data, for total epidemiological and total population
-                                        scale_target_year=2025,      # Population target year
+                                        scale_target_year=2021,      # 2025 # Population target year (same as no2_targetyear?)
                                         crfs_version="default",      # crfs_version="C40"
                                         epi_version="default",       # epi_version="C40"
                                         valuation_version="default") # valuation_version="viscusi"
@@ -157,7 +139,7 @@ hia <-  wrappers.compute_hia_two_images(conc_perturbation$conc_perturbation,    
 # 05: Create tables -----------------------------------------------------------------------------
 hia_table <- hia %>% totalise_hia()
 
-# Table by regions (if admin_level>0)
+# Table by regions (admin area)
 hia_table_by_region <- hia_table %>%
   group_by(region_id, region_name, iso3, scenario, cause, cause_name, unit, pollutant) %>%
   summarise_if(is.numeric, sum) %>%
@@ -181,8 +163,8 @@ hia_table_full_domain <- hia_table %>%
 econ_costs <- hia %>% sel(-any_of('Deaths_Total')) %>%
   group_by(iso3, scenario, estimate) %>% summarise_if(is.numeric, sum, na.rm=T) %>%
   compute_econ_costs(results_dir=output_dir,
-                     pop_targetyr=2025,  # Same as scale_target_year
-                     projection_years=2025:2054,
+                     pop_targetyr=2021,  # 2025 # Same as scale_target_year
+                     projection_years=2021:2051,  # 2025:2054,
                      iso3s_of_interest=NULL,
                      suffix=paste0("_",scenario_prefix),
                      valuation_version="default")
