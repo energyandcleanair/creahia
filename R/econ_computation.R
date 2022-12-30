@@ -142,13 +142,13 @@ format_hia_table <- function(table, CI_underneath=F){
   values <- intersect(names(table),
                       c('cost_mn_currentLCU', 'cost_mn_currentUSD', 'number', 'share_gdp'))
   groups <- intersect(names(table),
-                      c('scenario', 'Outcome', 'Outcome.long'))
+                      c('scenario', 'Outcome', 'Cause', 'Outcome.long', 'region_id', 'Pollutant', 'AgeGrp', 'double_counted'))
 
   formatted <- table %>%
     select_at(c(values, groups, 'estimate')) %>%
     tidyr::pivot_longer(cols = values,
                         names_to='indicator') %>%
-    tidyr::pivot_wider(names_from='estimate') %>%
+    tidyr::pivot_wider(names_from='estimate', values_from='value') %>%
     mutate(CI=case_when(
                   grepl('number', indicator) ~ sprintf('(%s - %s)', scales::comma(low, 1), scales::comma(high, 1)),
                   grepl('share', indicator) ~ sprintf('(%.1f%% - %.1f%%)', low*100, high*100),
@@ -218,6 +218,11 @@ get_total_cost_by_region_outcome <- function(hia_cost, iso3, gdp=get_gdp(), dict
 
 get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F, discount_rate=.03
 ){
+
+  if(is.list(hia_cost)){
+    hia_cost <- hia_cost$hia_cost
+  }
+
   pop_proj <- get_pop_proj() %>%
     filter(iso3 %in% unique(hia_cost$iso3),
            year %in% c(pop_targetyr, years))
@@ -228,7 +233,7 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
            Outcome!='YLDs' | Cause != 'NCD.LRI') %>%
     group_by(across(c(scenario, estimate, any_of(c('iso3', 'region_name')),
                       Outcome, Cause, AgeGrp, Pollutant))) %>%
-    summarise_at(c('number', 'cost.mnUSD'), sum, na.rm=T)
+    summarise_at(c('number', 'cost_mn_currentUSD'), sum, na.rm=T)
 
   #add new age groups to population data
   add_age_groups <- tibble(AgeGrp=c('25+','0-18','1-18','18-99', '20-65'),
@@ -266,8 +271,10 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
   missing_iso3s <- setdiff(unique(hia_cost$iso3), c(unique(popproj_tot$iso3)))
 
   if(GDP_scaling) {
+    # NOT WORKING YET
+    stop("GDP SCALING NEEDS TO BE FIXED")
     #gdp data
-    gdp_historical <- get_gdp_historical()
+    gdp_historical <- get_gdp()
     gdp_forecast <- get_gdp_forecast()
 
     gdp_all <- suppressMessages(full_join(gdp_historical, gdp_forecast)) %>%
@@ -325,10 +332,10 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
 
   hia_by_year_scaled <- hia_by_year %>% mutate(
     number = number*scaling,
-    cost.mnUSD = cost.mnUSD*scaling*GDPscaling) %>%
+    cost.mnUSD = cost_mn_currentUSD*scaling*GDPscaling) %>%
     group_by(across(c(scenario, estimate, any_of(c('iso3', 'region_id', 'region_name')),
                       Outcome, Cause, Pollutant, year))) %>%
-    summarise_at(c('number', 'cost.mnUSD'), sum)
+    summarise_at(c('number', 'cost_mn_currentUSD'), sum)
 
   hia_by_year_scaled %>%
     group_by(across(c(where(is.character), where(is.factor), year))) %>%
