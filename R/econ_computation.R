@@ -219,7 +219,7 @@ get_total_cost_by_region_outcome <- function(hia_cost, iso3, gdp=get_gdp(), dict
 get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F, discount_rate=.03
 ){
 
-  if(is.list(hia_cost)){
+  if(!is.data.frame(hia_cost)){
     hia_cost <- hia_cost$hia_cost
   }
 
