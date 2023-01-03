@@ -518,6 +518,7 @@ add_double_counted <- function(hia, crfs, epi){
 
   # Manual for epi PM25
   joined[joined$Pollutant=='PM25' &
+           any(joined$Cause == 'NCD.LRI') & #detect if GEMM risk function for NCD+LRI is being used
            !joined$Cause %in% c('NCD.LRI', 'LRI.child') &
            joined$Outcome %in% c('YLLs', 'Deaths')
          ,'double_counted'] <- TRUE
