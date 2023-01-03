@@ -1,20 +1,23 @@
 # library(remotes)
-# remotes::install_github("energyandcleanair/creahia")
+#remotes::install_github("energyandcleanair/creahia")
 # devtools::install_github('energyandcleanair/creahia')
 # remotes::install_github("energyandcleanair/creapuff", ref="main", dependencies=T, update=T)
 # devtools::reload(pkgload::inst("creapuff"))
-library(creahia)
-library(creapuff)
+
 # For development only
 library(raster)
 library(sf)
-library(plyr)
+#library(plyr)
 library(readxl)
 library(zoo)
 library(magrittr)
-library(tidyverse)
+#library(tidyverse)
 library(lubridate)
-list.files(path='R', full.names=T) %>% sapply(source)
+
+library(creahia)
+library(creapuff)
+
+#list.files(path='R', full.names=T) %>% sapply(source)
 
 #project_dir="I:/SouthAfrica"       # calpuff_external_data-2 persistent disk (project data)
 project_dir="C:/Users/lauri/Desktop/My Drive/air pollution/TAPM/2017cases/SouthAfrica2022"
@@ -26,7 +29,7 @@ emissions_dir <- file.path(project_dir,"emissions")
 source('project_workflows/emissions_processing_SA.R')
 
 
-gis_dir <- "F:/gis"                    # The folder where we store general GIS data
+gis_dir <- "~/GIS"                    # The folder where we store general GIS data
 #gis_dir <- "C:/Users/lauri/Desktop/My Drive/GIS"
 
 # creahia::set_env('gis_dir',"~/GIS/")
@@ -55,10 +58,11 @@ calpuff_files_all <- get_calpuff_files(ext=".tif", gasunit = 'ug', dir=input_dir
 
 
 # 02: Get base concentration levels -------------------------------------------------------------
-conc_base <- get_conc_baseline(species=unique(calpuff_files$species), grid_raster=grid_raster, no2_targetyear = 2020) # 2020 # Target year of model simulations (CALPUFF and WRF)
+#conc_base <- get_conc_baseline(species=unique(calpuff_files$species), grid_raster=grid_raster, no2_targetyear = 2020) # 2020 # Target year of model simulations (CALPUFF and WRF)
+conc_base <- readRDS('cached_data/conc_base.RDS')
 
 # 03: Create support maps (e.g. countries, provinces, cities ) ----------------------------------
-regions <- get_adm(grid_raster, admin_level=2, res="low")
+regions <- creahia::get_adm(grid_raster, admin_level=2, res="low")
 
 
 
@@ -84,10 +88,12 @@ calpuff_files_all %<>% filter(grepl('ppm25|so4|no3', subspecies)) %>%
   bind_rows(calpuff_files_all)
 
 runs <- calpuff_files_all$scenario %>% unique
-queue <-grepl('_', runs)
+queue <- F #grepl('_', runs)
+
+causes_to_include = get_calc_causes('GBD only') %>% grep('Death|YLD', ., value=T)
 
 # HIA ###########################################################################################
-
+#scen = runs[6]
 for (scen in runs[queue]) {
   # =============================== Get Perturbation Raster ========================================
   conc_perturbation <- calpuff_files_all  %>%
@@ -95,20 +101,6 @@ for (scen in runs[queue]) {
 
   conc_perturbation$conc_perturbation <- lapply(conc_perturbation$path, raster)
   names(conc_perturbation$conc_perturbation)=conc_perturbation$species
-
-
-
-  # Input parameters:
-  #
-  # admin_level=2 -> Highest degree of res.
-  # admin_level=1 -> Main regions.
-  # admin_level=0 -> States
-  #
-  # res=null/"full" -> Highest res of GADM file
-  # res="low"       -> Medium res
-  # res="coarse"    -> Lowest res
-  #
-  # iso3s=c("IDN", "KHM", "LAO", "VNM", "THA")
 
   pollutants_for_hia = intersect(conc_perturbation$species, conc_base$species)# %>% c('tpm10')
 
@@ -122,24 +114,24 @@ for (scen in runs[queue]) {
   hia <-  wrappers.compute_hia_two_images(perturbation_rasters=conc_perturbation$conc_perturbation[pollutants_for_hia],       # perturbation_rasters=raster::stack(perturbation_map)
                                           baseline_rasters=conc_base$conc_baseline,  # baseline_rasters=raster::stack(who_map)
                                           regions=regions,
-                                          # administrative_level=0,    # Overridden by : regions --> get_adm
-                                          # administrative_res="full", # Overridden by : regions --> get_adm
-                                          # administrative_iso3s=NULL, # Overridden by : regions --> get_adm
                                           scenario_name=scen,
                                           scale_base_year=2019,        # Population base year : reference year of INPUT data, for total epidemiological and total population
                                           scale_target_year=2021,      # 2025 # Population target year (same as no2_targetyear?)
-                                          crfs_version="C40",      # crfs_version="C40"
+                                          crfs_version="Krewski-South Africa",
                                           epi_version="C40",       # epi_version="C40"
                                           valuation_version="viscusi",
-                                          #return_concentrations=T,
-                                          #pm2.5_to_pm10_ratio=.7
+                                          return_concentrations=T,
+                                          gbd_causes='all',
+                                          calc_causes=causes_to_include,
+                                          pm2.5_to_pm10_ratio=.7
                                           ) # valuation_version="viscusi"
 
 
   saveRDS(hia, file.path(output_dir, paste0('hia','_',scen,'.RDS')))
 }
 
-hia <- runs %>% lapply(function(scen) readRDS(file.path(output_dir, paste0('hia','_',scen,'.RDS'))) %>% '[['('hia')) %>% bind_rows
+#hia <- runs %>% lapply(function(scen) readRDS(file.path(output_dir, paste0('hia','_',scen,'.RDS'))) %>% '[['('hia')) %>% bind_rows
+hia <- runs[6] %>% lapply(function(scen) readRDS(file.path(output_dir, paste0('hia','_',scen,'.RDS')))$hia) %>% bind_rows
 
 calpuff_files_all %>%
   mutate(scenario_description=case_when(scenario=="lcppipp"~'Lephalale IPP',
@@ -156,14 +148,26 @@ calpuff_files_all %>%
 
 targetyears = c(seq(2025,2050,5))
 
-econ_costs <- hia %>% dplyr::select(-any_of('Deaths_Total')) %>%
-  group_by(region_id, region_name, iso3, scenario, scenario_description, estimate) %>%
-  summarise_if(is.numeric, sum, na.rm=T) %>%
-  compute_econ_costs(results_dir=output_dir,
-                     pop_targetyr=2021,  # 2025 # Same as scale_target_year
-                     projection_years=targetyears,
-                     iso3s_of_interest=NULL,
-                     valuation_version="viscusi")
+hia_cost <- get_hia_cost(hia=hia, valuation_version="viscusi")
+
+hia_fut <- get_econ_forecast(hia_cost, years=targetyears, pop_targetyr=2019)
+
+adm <- creahelpers::get_adm(level = 2, res='coarse')
+
+hia_cost %>%
+  left_join(adm@data %>% select(region_id=GID_2, NAME_1)) %>%
+  filter(iso3=='ZAF',
+         NAME_1 %in% c('Mpumalanga', 'Gauteng', 'Limpopo')) %>%
+  group_by(year, scenario, Outcome, Cause, Pollutant) %>%
+  summarise(across(number, sum)) %>%
+  filter(Outcome=='Deaths')
+
+econ_costs <- hia %>%
+  creahia::compute_econ_costs(results_dir=output_dir,
+                              pop_targetyr=2021,  # 2025 # Same as scale_target_year
+                              projection_years=targetyears,
+                              iso3s_of_interest='ZA',
+                              valuation_version="viscusi")
 
 econ_costs$cost_forecast %>% filter(year==2021) %>% write_excel_csv(file.path(output_dir, 'hia results by admin 2 area.csv'))
 econ_costs %>% saveRDS(file.path(output_dir, 'econ_costs.RDS'))
