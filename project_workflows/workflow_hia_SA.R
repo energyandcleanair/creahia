@@ -19,8 +19,8 @@ library(creapuff)
 
 #list.files(path='R', full.names=T) %>% sapply(source)
 
-#project_dir="I:/SouthAfrica"       # calpuff_external_data-2 persistent disk (project data)
-project_dir="C:/Users/lauri/Desktop/My Drive/air pollution/TAPM/2017cases/SouthAfrica2022"
+project_dir="I:/SouthAfrica"       # calpuff_external_data-2 persistent disk (project data)
+#project_dir="C:/Users/lauri/Desktop/My Drive/air pollution/TAPM/2017cases/SouthAfrica2022"
 
 input_dir <- file.path(project_dir,"calpuff_suite") # Where to read all CALPUFF generated files
 output_dir <- file.path(project_dir,"HIA") ; if (!dir.exists(output_dir)) dir.create(output_dir) # Where to write all HIA files
@@ -29,8 +29,8 @@ emissions_dir <- file.path(project_dir,"emissions")
 source('project_workflows/emissions_processing_SA.R')
 
 
-gis_dir <- "~/GIS"                    # The folder where we store general GIS data
-#gis_dir <- "C:/Users/lauri/Desktop/My Drive/GIS"
+#gis_dir <- "~/GIS"                    # The folder where we store general GIS data
+gis_dir <- "F:/gis"
 
 # creahia::set_env('gis_dir',"~/GIS/")
 # Sys.setenv(gis_dir="~/GIS/")
@@ -59,10 +59,11 @@ calpuff_files_all <- get_calpuff_files(ext=".tif", gasunit = 'ug', dir=input_dir
 
 # 02: Get base concentration levels -------------------------------------------------------------
 #conc_base <- get_conc_baseline(species=unique(calpuff_files$species), grid_raster=grid_raster, no2_targetyear = 2020) # 2020 # Target year of model simulations (CALPUFF and WRF)
+#saveRDS(conc_base, 'cached_data/conc_base.RDS')
 conc_base <- readRDS('cached_data/conc_base.RDS')
 
 # 03: Create support maps (e.g. countries, provinces, cities ) ----------------------------------
-regions <- creahia::get_adm(grid_raster, admin_level=2, res="low")
+regions <- creahia::get_adm(grid_raster, admin_level=2, res="low") %>% filter(country_id=='ZAF')
 
 
 
@@ -88,13 +89,19 @@ calpuff_files_all %<>% filter(grepl('ppm25|so4|no3', subspecies)) %>%
   bind_rows(calpuff_files_all)
 
 runs <- calpuff_files_all$scenario %>% unique
-queue <- F #grepl('_', runs)
+queue <- grepl('_', runs) & !grepl('pm10', runs)
 
 causes_to_include = get_calc_causes('GBD only') %>% grep('Death|YLD', ., value=T)
 
 # HIA ###########################################################################################
-#scen = runs[6]
+#require(doFuture)
+#registerDoFuture()
+#future::plan("multisession", workers = 4)
+#Sys.setenv(GIS_DIR='F:/gis')
+
+#foreach (scen = runs[queue]) %dopar% ({
 for (scen in runs[queue]) {
+  message(scen)
   # =============================== Get Perturbation Raster ========================================
   conc_perturbation <- calpuff_files_all  %>%
     filter(scenario==scen, period=='annual', speciesName %in% pollutants_to_process)
@@ -127,11 +134,10 @@ for (scen in runs[queue]) {
                                           ) # valuation_version="viscusi"
 
 
-  saveRDS(hia, file.path(output_dir, paste0('hia','_',scen,'.RDS')))
+  saveRDS(hia, file.path(output_dir, paste0('hia_GBD__',scen,'.RDS')))
 }
 
-#hia <- runs %>% lapply(function(scen) readRDS(file.path(output_dir, paste0('hia','_',scen,'.RDS'))) %>% '[['('hia')) %>% bind_rows
-hia <- runs[6] %>% lapply(function(scen) readRDS(file.path(output_dir, paste0('hia','_',scen,'.RDS')))$hia) %>% bind_rows
+hia <- runs[queue] %>% lapply(function(scen) readRDS(file.path(output_dir, paste0('hia_GBD__',scen,'.RDS')))$hia) %>% bind_rows
 
 calpuff_files_all %>%
   mutate(scenario_description=case_when(scenario=="lcppipp"~'Lephalale IPP',
@@ -154,13 +160,13 @@ hia_fut <- get_econ_forecast(hia_cost, years=targetyears, pop_targetyr=2019)
 
 adm <- creahelpers::get_adm(level = 2, res='coarse')
 
-hia_cost %>%
+hia %>%
   left_join(adm@data %>% select(region_id=GID_2, NAME_1)) %>%
   filter(iso3=='ZAF',
          NAME_1 %in% c('Mpumalanga', 'Gauteng', 'Limpopo')) %>%
-  group_by(year, scenario, Outcome, Cause, Pollutant) %>%
-  summarise(across(number, sum)) %>%
-  filter(Outcome=='Deaths')
+  filter(Outcome=='Deaths', Cause != 'AllCause' | Pollutant=='SO2') %>%
+  group_by(Outcome, Pollutant) %>%
+  summarise(across(number, sum))
 
 econ_costs <- hia %>%
   creahia::compute_econ_costs(results_dir=output_dir,
