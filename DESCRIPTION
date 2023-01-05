@@ -1,7 +1,7 @@
 Package: creahia
 Type: Package
 Title: What the Package Does (Title Case)
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: c(
     person("Lauri", "Myllyvirta", email = "lauri@energyandcleanair.org", role = c("cre","aut")),
     person("Hubert", "Thieriot", email = "hubert@energyandcleanair.org", role = c("aut"))
@@ -42,7 +42,7 @@ Remotes:
     energyandcleanair/creapuff,
     laurimyllyvirta/lauR,
     nset-ornl/wbstats
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 Suggests: 
     knitr,
     rmarkdown
