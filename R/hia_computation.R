@@ -35,12 +35,15 @@ compute_hia <- function(conc_map,
   if(length(gbd_causes)>0) message('Using GBD risk functions for ', paste(gbd_causes, collapse=", "))
   if(length(calc_causes_wo_outcome)==0) message('Not using GBD or GEMM risk functions')
 
-  print("Computing paf")
-  paf <- compute_hia_paf(conc_map=conc_map,
-                         scenarios=scenarios,
-                         calc_causes=calc_causes,
-                         gemm=gemm, gbd=gbd, ihme=ihme,
-                         .mode=.mode)
+  paf <- list()
+  if(length(calc_causes)>0) {
+    print("Computing paf")
+    paf <- compute_hia_paf(conc_map=conc_map,
+                           scenarios=scenarios,
+                           calc_causes=calc_causes,
+                           gemm=gemm, gbd=gbd, ihme=ihme,
+                           .mode=.mode)
+  }
 
   print("Computing epi")
   hia <- compute_hia_epi(region=regions,
@@ -213,7 +216,7 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
     }
 
     #calculate PM mortality
-    if(nrow(paf[[scenario]])>0) {
+    if(!is.null(paf[[scenario]]) && nrow(paf[[scenario]])>0) {
       paf[[scenario]] %>%
         gather(estimate, val, low, central, high) %>%
         mutate(var=paste0('paf_', var)) %>%
