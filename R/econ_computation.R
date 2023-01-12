@@ -113,7 +113,7 @@ get_total_cost_by_outcome <- function(hia_cost){
 
   hia_cost %>%
     filter(!double_counted) %>%
-    group_by(scenario, estimate, Outcome, Outcome.long) %>%
+    group_by(across(c(any_of('scenario'), estimate, Outcome, Outcome.long))) %>%
     summarise_at(c('number', 'cost_mn_currentUSD', 'cost_mn_currentLCU'), sum, na.rm=T) %>%
     na.omit %>%
     tidyr::pivot_longer(cols=c(cost_mn_currentLCU, cost_mn_currentUSD, number),
@@ -178,7 +178,7 @@ get_total_cost_by_region <- function(hia_cost){
 
   hia_cost %>%
     filter(!double_counted) %>%
-    group_by(scenario, estimate, region_id, pop, GDP.TOT.currLCU, GDP.TOT.currUSD) %>%
+    group_by(across(c(any_of('scenario'), estimate, region_id, pop, GDP.TOT.currLCU, GDP.TOT.currUSD))) %>%
     summarise_at(c('cost_mn_currentUSD', 'cost_mn_currentLCU'), sum, na.rm=T) %>%
     mutate(share_gdp = cost_mn_currentLCU*1e6/GDP.TOT.currLCU) %>%
     ungroup() %>%
@@ -204,7 +204,7 @@ get_total_cost_by_region_outcome <- function(hia_cost, iso3, gdp=get_gdp(), dict
 
   hia_cost %>%
     filter(!double_counted) %>%
-    group_by(scenario, estimate, region_id, pop, Outcome, Outcome.long, GDP.TOT.currLCU, GDP.TOT.currUSD) %>%
+    group_by(across(c(any_of('scenario'), estimate, region_id, pop, Outcome, Outcome.long, GDP.TOT.currLCU, GDP.TOT.currUSD))) %>%
     summarise_at(c('cost_mn_currentUSD', 'cost_mn_currentLCU'), sum, na.rm=T) %>%
     mutate(share_gdp = sprintf('%.1f%%', cost_mn_currentLCU*1e6/GDP.TOT.currLCU*100),
            # number = scales::comma(number, accuracy=1),
@@ -229,7 +229,7 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
 
   hia_cost_future <- hia_cost %>%
     filter(!double_counted) %>%
-    group_by(across(c(scenario, estimate, any_of(c('iso3', 'region_id', 'region_name')),
+    group_by(across(c(estimate, any_of(c('scenario', 'iso3', 'region_id', 'region_name')),
                       Outcome, Cause, AgeGrp, Pollutant))) %>%
     summarise_at(c('number', 'cost_mn_currentUSD'), sum, na.rm=T)
 
@@ -330,8 +330,8 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
 
   hia_by_year_scaled <- hia_by_year %>% mutate(
     number = number*scaling,
-    cost.mnUSD = cost_mn_currentUSD*scaling*GDPscaling) %>%
-    group_by(across(c(scenario, estimate, any_of(c('iso3', 'region_id', 'region_name')),
+    cost_mn_currentUSD = cost_mn_currentUSD*scaling*GDPscaling) %>%
+    group_by(across(c(estimate, any_of(c('scenario', 'iso3', 'region_id', 'region_name')),
                       Outcome, Cause, Pollutant, year))) %>%
     summarise_at(c('number', 'cost_mn_currentUSD'), sum)
 
