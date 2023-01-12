@@ -227,12 +227,6 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
     filter(iso3 %in% unique(hia_cost$iso3),
            year %in% c(pop_targetyr, years))
 
-  hia_cost_future <- hia_cost %>%
-    filter(!double_counted) %>%
-    group_by(across(c(estimate, any_of(c('scenario', 'iso3', 'region_id', 'region_name')),
-                      Outcome, Cause, AgeGrp, Pollutant))) %>%
-    summarise_at(c('number', 'cost_mn_currentUSD'), sum, na.rm=T)
-
   #add new age groups to population data
   add_age_groups <- tibble(AgeGrp=c('25+','0-18','1-18','18-99', '20-65'),
                           AgeLow=c(25, 0, 0, 20, 20),
@@ -328,14 +322,6 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
 
   hia_by_year <- suppressMessages(hia_cost %>% select(-year) %>% full_join(pop_scaling))
 
-  hia_by_year_scaled <- hia_by_year %>% mutate(
-    number = number*scaling,
-    cost_mn_currentUSD = cost_mn_currentUSD*scaling*GDPscaling) %>%
-    group_by(across(c(estimate, any_of(c('scenario', 'iso3', 'region_id', 'region_name')),
-                      Outcome, Cause, Pollutant, year))) %>%
-    summarise_at(c('number', 'cost_mn_currentUSD'), sum)
-
-  hia_by_year_scaled %>%
-    group_by(across(c(where(is.character), where(is.factor), year))) %>%
-    summarise_all(sum, na.rm=T)
+  hia_by_year %>% mutate(number = number*scaling,
+                         cost_mn_currentUSD = cost_mn_currentUSD*scaling*GDPscaling)
 }
