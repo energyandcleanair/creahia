@@ -82,11 +82,11 @@ get_epi <- function(version="default"){
 }
 
 
-get_gdp <- function(year){
+get_gdp <- function(year=NULL){
 
   print("Getting GDP")
   read_csv(get_hia_path('gdp.csv'), col_types = cols()) %>%
-    filter(year == !!year)
+    filter(is.null(!!year) | year %in% !!year)
 }
 
 #' Every time new data is available, we want to build a new gdp.csv file
@@ -226,7 +226,7 @@ get_ihme <- function(){
   ihme %<>%
     dplyr::filter(age_low>=25) %>%
     group_by_at(vars(-val, -starts_with('age'))) %>%
-    summarize_at('val', sum) %>%
+    summarise_at('val', sum) %>%
     mutate(age='25+') %>% bind_rows(ihme) %>% ungroup
 
   ihme %<>% addiso
@@ -243,7 +243,7 @@ get_ihme <- function(){
   ihme %<>%
     dplyr::filter(grepl('Lower resp|Non-comm', cause_name)) %>%
     group_by_at(vars(-val, -starts_with('cause'))) %>%
-    summarize_at('val', sum) %>%
+    summarise_at('val', sum) %>%
     mutate(cause_name='NCD+LRI', cause_short='NCD.LRI') %>% bind_rows(ihme) %>% ungroup
 
   ihme$age[ihme$age_low>=25] %>% subset(!is.na(.)) %>% unique -> adult.ages
