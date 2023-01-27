@@ -91,6 +91,7 @@ importFrom(rasterVis,levelplot)
 importFrom(rasterVis,rasterTheme)
 
 importFrom(readr,read_csv)
+importFrom(readr,cols)
 
 importFrom(readxl,read_xlsx)
 
