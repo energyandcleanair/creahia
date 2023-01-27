@@ -282,10 +282,10 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr=2019, GDP_scaling=F,
 
     gdp_all <- suppressMessages(gdp_all %>%
                                   left_join(popproj_tot) %>%
-                                  mutate(GDP.realUSD = GDP.realUSD.tot*1000/pop) %>%
+                                  mutate(GDP.realUSD = GDP.realUSD.tot*1000/pop) %>% #HT: Seems to be wrong: pop is the age group population
                                   group_by(iso3) %>%
                                   group_modify(function(df, ...) {
-                                    PPP.scaling = df$GDP.PPP.2011USD[df$year==2019] / df$GDP.realUSD[df$year==2019]
+                                    PPP.scaling = df$GDP.PC.PPP.2017USD[df$year==2019] / df$GDP.PC.currUSD[df$year==2019]
 
                                     if(length(PPP.scaling)>0)
                                       df %<>% mutate(GDP.realUSD = GDP.realUSD)
