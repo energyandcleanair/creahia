@@ -35,7 +35,8 @@ get_crfs_versions <- function(){
   list(
     "default"="CRFs.csv",
     "C40"="CRFs_C40.csv",
-    "Krewski"="CRFs_Krewski.csv"
+    "Krewski"="CRFs_Krewski.csv",
+    "Krewski-South Africa"="CRFs_Krewski_SouthAfrica.csv"
   )
 }
 
@@ -149,15 +150,40 @@ get_valuation <- function(version="default"){
 }
 
 
-get_calc_causes <- function(){
+get_calc_causes <- function(causes_set='GEMM and GBD'){
   print("Getting calc_causes")
-  #define short names
-  names_causes <- c('NCD.LRI', 'IHD', 'Stroke', 'COPD', 'LC', 'LRI')
 
-  c(paste0(c('NCD.LRI', 'LRI.child'), '_YLLs'),
-    paste0(c('Stroke', 'Diabetes', 'COPD'), '_YLDs'),
-    paste0(c(names_causes, 'LRI.child', 'Diabetes'), '_Deaths')) %>%
-    unique
+  if(causes_set=='GEMM and GBD') {
+    #define short names
+    names_causes <- c('NCD.LRI', 'IHD', 'Stroke', 'COPD', 'LC', 'LRI')
+
+    causes_out = c(paste0(c('NCD.LRI', 'LRI.child'), '_YLLs'),
+      paste0(c('Stroke', 'Diabetes', 'COPD'), '_YLDs'),
+      paste0(c(names_causes, 'LRI.child', 'Diabetes'), '_Deaths')) %>%
+      unique
+  }
+
+  if(causes_set=='GEMM only') {
+    #define short names
+    names_causes <- c('NCD.LRI', 'IHD', 'Stroke', 'COPD', 'LC', 'LRI')
+
+    causes_out = c(paste0(c('NCD.LRI'), '_YLLs'),
+                   paste0(c('Stroke', 'COPD'), '_YLDs'),
+                   paste0(c(names_causes), '_Deaths')) %>%
+      unique
+  }
+
+  if(causes_set=='GBD only') {
+    #define short names
+    names_causes <- c('IHD', 'Stroke', 'COPD', 'LC', 'LRI')
+
+    causes_out = c(paste0(c(names_causes, 'LRI.child'), '_YLLs'),
+                   paste0(c('Stroke', 'Diabetes', 'COPD'), '_YLDs'),
+                   paste0(c(names_causes, 'LRI.child', 'Diabetes'), '_Deaths')) %>%
+      unique
+  }
+
+  return(causes_out)
 }
 
 
@@ -260,15 +286,36 @@ get_adult_ages <- function(ihme=get_ihme()){
 }
 
 
-get_gbd <- function(){
+get_gbd <- function(gbd_causes=c('LRI.child', 'Diabetes')){
   print("Getting GBD")
 
+  if(length(gbd_causes)==0) gbd_causes <- 'none'
+
   #read GBD RR values
-  read.csv(get_hia_path('ier_computed_table.csv'), stringsAsFactors = F) %>% sel(-X, -age) %>%
-    dplyr::filter(cause %in% c('lri', 't2_dm')) %>%
+  read_csv(get_hia_path('ier_computed_table.csv')) %>% dplyr::select(-...1) %>%
     dplyr::rename(cause_short = cause, central=rr_mean, low=rr_lower, high=rr_upper) %>%
-    mutate(cause_short = recode(cause_short, lri='LRI.child', t2_dm='Diabetes')) %>%
-    dplyr::filter(exposure <=300)
+    mutate(cause_short = recode(cause_short,
+                                lri='LRI',
+                                t2_dm='Diabetes',
+                                cvd_ihd='IHD',
+                                cvd_stroke='Stroke',
+                                neo_lung='LC',
+                                resp_copd='COPD'),
+           age=case_when(age==99~'25+',
+                         age==80~'80+',
+                         age<80~paste0(age, '-', age+4))) %>%
+    dplyr::filter(exposure <=300, !is.na(age)) ->
+    gbd
+
+  #add the LRI risk function to be used for children if needed
+  if(any(c('LRI.child', 'all') %in% gbd_causes))
+    gbd %<>% filter(cause_short=='LRI') %>%
+    mutate(cause_short='LRI.child', age='Under 5') %>%
+    bind_rows(gbd)
+
+  if(gbd_causes[1] != 'all') gbd %<>% dplyr::filter(cause_short %in% gbd_causes)
+
+  return(gbd)
 }
 
 get_dict <- function(){

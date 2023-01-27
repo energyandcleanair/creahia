@@ -23,7 +23,8 @@ wrappers.compute_hia_two_images <- function(perturbation_rasters,
                                             epi_version="default",
                                             valuation_version="default",
                                             return_concentrations=F,
-                                            pm2.5_to_pm10_ratio=NULL){
+                                            pm2.5_to_pm10_ratio=NULL,
+                                            ...){
 
   species <- names(perturbation_rasters)
   grid_raster = perturbation_rasters[[1]] %>% raster
@@ -79,8 +80,8 @@ wrappers.compute_hia_two_images <- function(perturbation_rasters,
                               scale_base_year=scale_base_year,
                               scale_target_year=scale_target_year,
                               epi_version=epi_version,
-                              crfs_version=crfs_version
-                              )
+                              crfs_version=crfs_version,
+                              ...)
 
   if(return_concentrations) {
     conc_regions %>%
