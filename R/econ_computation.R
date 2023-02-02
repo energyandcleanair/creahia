@@ -1,5 +1,5 @@
 compute_econ_costs <- function(hia,
-                               results_dir,
+                               results_dir=NULL,
                                iso3s_of_interest=NULL,
                                current_year=2019,
                                gdp=get_gdp(year=current_year),
@@ -15,28 +15,31 @@ compute_econ_costs <- function(hia,
                            valuation=valuation,
                            current_year=current_year,
                            gdp=gdp,
-                           dict=dict) %T>%
-    write_csv(file.path(results_dir, sprintf('cost_detailed%s.csv', suffix)))
+                           dict=dict)
 
+  cost_by_outcome <- get_total_cost_by_outcome(hia_cost)
+  cost_by_region <- get_total_cost_by_region(hia_cost)
 
-  # Ceate summary tables
-  dir.create(file.path(results_dir, 'formatted'))
+  if(!is.null(results_dir)){
+    write_csv(hia_cost, file.path(results_dir, sprintf('cost_detailed%s.csv', suffix)))
 
-  cost_by_outcome <- get_total_cost_by_outcome(hia_cost) %T>%
-    write_csv(file.path(results_dir, sprintf('cost_by_outcome%s.csv', suffix)))
+    # Ceate summary tables
+    dir.create(file.path(results_dir, 'formatted'))
+    cost_by_outcome %>%
+      write_csv(file.path(results_dir, sprintf('cost_by_outcome%s.csv', suffix)))
 
-  cost_by_outcome %>%
-    format_hia_table() %>%
-    write_csv(file.path(results_dir, sprintf('formatted/cost_by_outcome%s.csv', suffix)))
+    cost_by_outcome %>%
+      format_hia_table() %>%
+      write_csv(file.path(results_dir, sprintf('formatted/cost_by_outcome%s.csv', suffix)))
 
-  cost_by_region <- get_total_cost_by_region(hia_cost) %T>%
-    write_csv(file.path(results_dir, sprintf('cost_by_region%s.csv', suffix)))
+    cost_by_region %>%
+      write_csv(file.path(results_dir, sprintf('cost_by_region%s.csv', suffix)))
 
-  cost_by_region %>%
-    format_hia_table() %>%
-    write_csv(file.path(results_dir, sprintf('formatted/cost_by_region%s.csv', suffix)))
+    cost_by_region %>%
+      format_hia_table() %>%
+      write_csv(file.path(results_dir, sprintf('formatted/cost_by_region%s.csv', suffix)))
 
-
+    }
   # cost_by_region_outcome <- get_total_cost_by_region_outcome(hia_cost) %T>% write_csv(file.path(results_dir, sprintf('cost_by_region_outcome%s.csv', suffix)))
 
 
@@ -73,7 +76,6 @@ get_hia_cost <- function(hia,
   gdp_world_2017_constant2015 <- 10625.26
   gdp_world_ppp_2017intl <- 16276.48
   gni_world_ppp_2017intl <- 15927.18
-
 
   nrow_before <- nrow(hia_cost)
   hia_cost <- hia_cost %>%
