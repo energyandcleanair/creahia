@@ -1,0 +1,8 @@
+Outcome,Outcome_name,currency,unit,elasticity,gni_or_gdp,ppp,valuation_world_2017
+Asthma.Prev,Year lived with asthma,USD,case,1,gni,TRUE,1042.671210714081
+exac,Asthma emergency room visits,USD,visit,1,gni,TRUE,224.83763460467154
+PTB,Preterm birth,USD,birth,1,gni,TRUE,104251.26440337519
+Deaths,"Deaths, adults",USD,death,1,gni,TRUE,2628917.596548369
+Deaths.child,"Deaths, children",USD,death,1,gni,TRUE,5257835.193096738
+YLDs,Year lived with disability,GBP,year lived with disability,1,gni,TRUE,28393.913632092947
+Absences,Lost workday,EUR,work day,1,gni,TRUE,83.4414660630233

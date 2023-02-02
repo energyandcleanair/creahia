@@ -139,7 +139,9 @@ get_gdp_forecast <- function(){
 get_valuation_versions <- function(){
   list(
     "default"="valuation.csv",
-    "viscusi"="valuation_viscusi.csv"
+    "viscusi"="valuation_viscusi.csv",
+    "viscusi_gdp"="valuation_viscusi_gdp.csv",
+    "viscusi_gni"="valuation_viscusi_gni.csv"
   )
 }
 
