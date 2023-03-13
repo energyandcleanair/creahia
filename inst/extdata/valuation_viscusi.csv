@@ -1,8 +1,8 @@
-Outcome,Outcome_name,currency,unit,elasticity,gni_or_gdp,ppp,valuation_world_2017
-Asthma.Prev,Year lived with asthma,USD,case,1,gdp,TRUE,1077.405086700841
-exac,Asthma emergency room visits,USD,visit,1,gdp,TRUE,232.32751486344142
-PTB,Preterm birth,USD,birth,1,gdp,TRUE,107724.1237784507
-Deaths,"Deaths, adults",USD,death,1,gni,TRUE,2636552.507319073
-Deaths.child,"Deaths, children",USD,death,1,gni,TRUE,5273105.014638146
-YLDs,Year lived with disability,GBP,year lived with disability,1,gni,TRUE,28476.375325565845
-Absences,Lost workday,EUR,work day,1,gdp,TRUE,85.43058875805062
+Outcome,Outcome_name,currency,unit,elasticity,gni_or_gdp,ppp,valuation_world_2017,reference
+Asthma.Prev,Year lived with asthma,USD,case,1,gdp,TRUE,1077.405087,Brandt et al. 2012
+exac,Asthma emergency room visits,USD,visit,1,gdp,TRUE,232.3275149,Brandt et al. 2012
+PTB,Preterm birth,USD,birth,1,gdp,TRUE,107724.1238,Trasande et al. 2016
+Deaths,"Deaths, adults",USD,death,1,gni,TRUE,2636552.507,Viscusi & Masterman 2017
+Deaths.child,"Deaths, children",USD,death,1,gni,TRUE,5273105.015,OECD 2012
+YLDs,Year lived with disability,GBP,year lived with disability,1,gni,TRUE,28476.37533,Birchby 2019
+Absences,Lost workday,EUR,work day,1,gdp,TRUE,85.43058876,EEA 2014
