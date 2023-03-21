@@ -77,6 +77,8 @@ get_hia_cost <- function(hia,
   gdp_world_ppp_2017intl <- 16276.48
   gni_world_ppp_2017intl <- 15927.18
 
+  valuation %<>% select(-any_of('Outcome_name'))
+
   nrow_before <- nrow(hia_cost)
   hia_cost <- hia_cost %>%
     left_join(dict %>% rename(Outcome=Code, Outcome.long=Long.name)) %>%
