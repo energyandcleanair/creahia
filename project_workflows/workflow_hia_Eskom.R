@@ -202,16 +202,13 @@ hia_cost %>% filter(iso3=='ZAF') %>%
 
 hia_fut <- hia_cost %>% get_econ_forecast(years=targetyears, pop_targetyr=2019)
 
-hia_fut %>% group_by(Pollutant) %>%
-  filter(!double_counted, Outcome=='Deaths', estimate=='central', year==2019) %>%
-  summarise(across(number, sum))
-
-
 #add emissions projections to HIA data
 hia_fut %<>% ungroup %>%
   separate(scenario, c('calpuff_name', 'emitted_species')) %>%
   left_join(runs %>% distinct(plant, calpuff_name)) %>%
   mutate(emitted_species = disambiguate(emitted_species, unique(emis_byyear_byplant$emitted_species), ignore.case=T))
+
+hia_fut %>% saveRDS(file.path(output_dir, 'hia_fut.RDS'))
 
 emissions_data %>%
   pivot_longer(c(Hg, NOx, PM, SO2), names_to='emitted_species', values_to='modeled_emissions') %>%
