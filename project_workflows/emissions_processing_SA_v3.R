@@ -1,4 +1,4 @@
-#source('../creapuff/project_workflows/emissions_processing_SA.R')
+source('../creapuff/project_workflows/emissions_processing_SA.R')
 source('project_workflows/Eskom_AEL_data_processing.R')
 source('project_workflows/Eskom_plan_processing_v2.R')
 
@@ -82,14 +82,13 @@ emission_reductions %<>% filter(scenario=='delayed compliance') %>%
 
 
 #calculate emissions
-emission_reductions %<>% mutate(emissions=modeled_emissions *
-                                  case_when(emitted_species=='Hg'~emission_reduction*coal_use_adjustment,
-                                            T~emission_reduction))
+emission_reductions %<>% mutate(emissions=modeled_emissions * emission_reduction *
+                                  case_when(emitted_species=='Hg'~coal_use_adjustment, T~1))
 
 #calculate emissions by year
 emission_reductions %>% ungroup %>%
   rename(year=period_start) %>%
-  select(plant, scenario, emitted_species, year, emissions) %>%
+  select(plant, scenario, emitted_species, year, emissions_wo_decomm=emissions) %>%
   complete(plant, scenario, emitted_species, year=2022:2080) ->
   emis_byyear
 
@@ -103,7 +102,7 @@ emission_reductions %>% ungroup %>% select(plant, scenario, starts_with('decomm'
 emis_byyear %<>%
   group_by(plant, scenario, emitted_species) %>%
   mutate(decommissioning_progress = approx(year, decommissioning_progress, year, rule=2)$y,
-         emissions = approx(year, emissions, year, rule=1:2)$y * (1-decommissioning_progress))
+         emissions = approx(year, emissions_wo_decomm, year, rule=1:2)$y * (1-decommissioning_progress))
 
 emis_byyear %<>% filter(year<=max(year[emissions>0])+1)
 
