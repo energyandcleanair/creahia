@@ -90,36 +90,33 @@ make_ci <- function(df, rescols = c('low', 'central', 'high')) {
 make_nothing <- function(x) {x}
 
 
-#' Get administrative areas
+#' Get administrative areas within the model
 #'
-#' @param grid_raster maps will be projected and croped on this raster
+#' @param grid_raster projection destination and crop extent
 #' @param shp optional shapefile path that will serve as map
 #' @param admin_level GADM level to consider
 #' @param ...
 #'
-#' @return
+#' @return a simple feature collection of administrative boundaries
 #' @export
 #'
 #' @examples
-get_adm <- function(grid_raster, shp = NULL, admin_level = 0, iso3s = NULL, ...) {
-
-  #TODO Danny - allow several levels at once
+get_model_adm <- function(grid_raster, shp = NULL, admin_level = 0, iso3s = NULL, ...) {
 
   crs_to <- CRS(proj4string(grid_raster))
 
   grid_4326 <- projectExtent(grid_raster, crs(rworldmap::countriesLow)) %>%
-    extend(c(40,40))
+    extend(c(40, 40))
 
   adm_4326 <- if(is.null(shp)) {
-     creahelpers::get_adm(admin_level, ...)
-  } else shp
-
-  if(!is.null(iso3s)) {
-    adm_4326 <- adm_4326[adm_4326$GID_0 %in% iso3s,]
+    creahelpers::get_adm(admin_level, ...)
+  } else {
+    shp %>%
+      {if(!is.null(iso3s)) adm_4326[adm_4326$GID_0 %in% iso3s,] else .}
   }
 
-  adm_utm <- spTransform(crop(rgeos::gBuffer(adm_4326, byid = TRUE, width = 0), grid_4326),
-                         crs_to)
+  adm_utm <- adm_4326 %>% crop(grid_4326) %>%
+    spTransform(crs_to)
 
   maps <- adm_utm %>%
     sf::st_as_sf() %>%
