@@ -42,7 +42,6 @@ compute_econ_costs <- function(hia,
   }
   # cost_by_region_outcome <- get_total_cost_by_region_outcome(hia_cost) %T>% write_csv(file.path(results_dir, sprintf('cost_by_region_outcome%s.csv', suffix)))
 
-
   #   # Forecast
   #   if(length(projection_years)>0) {
   #     cost_forecast <- get_econ_forecast(hia_cost, years=projection_years, ...) %T>%
@@ -89,15 +88,23 @@ get_hia_cost <- function(hia,
         gni_or_gdp == 'gni' & ppp ~ valuation_world_2017 * (GNI.PC.PPP.2017USD / gni_world_ppp_2017intl)^elasticity * GNI.PC.PPP.currUSD / GNI.PC.PPP.2017USD * PPP.convLCUUSD / lcu_per_usd,
         gni_or_gdp == 'gdp' & ppp ~ valuation_world_2017 * (GDP.PC.PPP.2017USD / gdp_world_ppp_2017intl)^elasticity * GDP.PC.PPP.currUSD / GDP.PC.PPP.2017USD * PPP.convLCUUSD / lcu_per_usd,
         gni_or_gdp == 'gdp' & !ppp ~ valuation_world_2017 * (GDP.PC.2015USD / gdp_world_2017_constant2015)^elasticity * GDP.PC.currUSD / GDP.PC.2015USD ,
-        T ~ NA_real_ # Other cases not yet supported
-      ),
+        T ~ NA_real_), # Other cases not yet supported
+      valuation_current_lcu = valuation_current_usd * lcu_per_usd,
       cost_mn_currentUSD = number * valuation_current_usd / 1e6,
       cost_mn_currentLCU = cost_mn_currentUSD * lcu_per_usd,
       share_gdp = cost_mn_currentLCU * 1e6 / GDP.TOT.currLCU
-    ) %>%
-    ungroup
+    ) %>% ungroup %>%
+    relocate(starts_with(c('GDP', 'GNI', 'PPP')), .after = everything())
 
+  # checks
   if(nrow(hia_cost) != nrow_before) {stop('Wrong joins')}
+
+  missing_outcome <- hia_cost %>% filter(is.na(valuation_current_usd)) %>%
+    distinct(Outcome) %>% pull()
+  if(length(missing_outcome) > 0) {
+    warning('The following outome(s) do not have valuations: ',
+            paste(missing_outcome, collapse = ', '))
+  }
   return(hia_cost)
 }
 
@@ -173,11 +180,13 @@ format_hia_table <- function(table, CI_underneath = F) {
     rename_with(~gsub('central_', '', .x))
 }
 
+
 get_total_cost_by_region <- function(hia_cost) {
 
   hia_cost %>%
     filter(!double_counted) %>%
-    group_by(across(c(any_of('scenario'), estimate, region_id, pop, GDP.TOT.currLCU, GDP.TOT.currUSD))) %>%
+    group_by(across(c(any_of('scenario'), estimate, region_id, pop, GDP.TOT.currLCU,
+                      GDP.TOT.currUSD))) %>%
     summarise_at(c('cost_mn_currentUSD', 'cost_mn_currentLCU'), sum, na.rm = T) %>%
     mutate(share_gdp = cost_mn_currentLCU * 1e6 / GDP.TOT.currLCU) %>%
     ungroup() %>%
@@ -193,8 +202,8 @@ get_total_cost_by_region <- function(hia_cost) {
 # }
 
 
-get_total_cost_by_region_outcome <- function(hia_cost, iso3,
-                                             gdp = get_gdp(), dict = get_dict()) {
+get_total_cost_by_region_outcome <- function(hia_cost, iso3, gdp = get_gdp(),
+                                             dict = get_dict()) {
 
   gdp_gni <- hia_cost %>%
     ungroup() %>%
@@ -227,7 +236,7 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr = 2019,
     filter(iso3 %in% unique(hia_cost$iso3),
            year %in% c(pop_targetyr, years))
 
-  #add new age groups to population data
+  # add new age groups to population data
   add_age_groups <- tibble(AgeGrp = c('25+','0-18','1-18','18-99', '20-65'),
                            AgeLow = c(25, 0, 0, 20, 20),
                            AgeHigh = c(99, 20, 99, 99, 64),
@@ -244,7 +253,7 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr = 2019,
         mutate(death_rate = deaths / pop)
     }) %>% bind_rows(pop_proj) %>% distinct
 
-  #flag mortality outcomes (to be scaled by number of deaths)
+  # flag mortality outcomes (to be scaled by number of deaths)
   hia_cost$fatal <- grepl('YLLs|YLDs|Deaths', hia_cost$Outcome)
 
   pop_scaling <- suppressMessages(
@@ -317,14 +326,17 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr = 2019,
                   filter(year %in% years,
                          iso3 %in% unique(hia_cost$iso3),
                          !iso3 %in% missing_iso3s)) %>%
-      mutate(GDPscaling = GDP.PPP.2011USD / GDP.PPP.2011USD[year == pop_targetyr] / (1 + discount_rate)^(year - pop_targetyr))
+      mutate(GDPscaling = GDP.PPP.2011USD / GDP.PPP.2011USD[year == pop_targetyr] /
+               (1 + discount_rate)^(year - pop_targetyr))
 
-    missing_iso3s <- setdiff(unique(hia_cost$iso3), c(unique(popproj_tot$iso3), unique(gdp_forecast$iso3)))
+    missing_iso3s <- setdiff(unique(hia_cost$iso3),
+                             c(unique(popproj_tot$iso3), unique(gdp_forecast$iso3)))
   }
 
   # Check if any country missing population information
   if(length(missing_iso3s) > 0) {
-    warning("Missing population or GDP projection information of countries ", missing_iso3s, ". These will be ignored")
+    warning("Missing population or GDP projection information of countries ",
+            missing_iso3s, ". These will be ignored")
   }
 
   hia_by_year <- suppressMessages(hia_cost %>% select(-year) %>% full_join(pop_scaling))

@@ -22,7 +22,6 @@ create_valuation_file <- function(input_file = 'inst/extdata/valuation_viscusi_r
                            na.rm = T)) %>%
     ungroup()
 
-
   valuation <- raw %>%
     left_join(exchange) %>%
     mutate(valuation_usd=case_when(currency == 'USD' ~ valuation,
@@ -65,16 +64,15 @@ create_valuation_file <- function(input_file = 'inst/extdata/valuation_viscusi_r
   # Step 2: Bring to World average valuation international dollars 2017
   # Using both GDP and GNI
   # Get PPP GDP and GNI in constant 2017 dollars
-  gdp_gni <- wbstats::wb_data(c(
-    gdp_current = 'NY.GDP.PCAP.CD',
-    gdp_constant2015 = 'NY.GDP.PCAP.KD',
-    gdp_ppp_current = 'NY.GDP.PCAP.PP.CD',
-    gni_ppp_current = 'NY.GNP.PCAP.PP.CD',
-    gdp_ppp_intl2017 = 'NY.GDP.PCAP.PP.KD',
-    gni_ppp_intl2017 = 'NY.GNP.PCAP.PP.KD'),
-    start_date = start_year,
-    end_date = end_year,
-    country = c(unique(valuation$reference_income_level), 'World')) %>%
+  gdp_gni <- wbstats::wb_data(c(gdp_current = 'NY.GDP.PCAP.CD',
+                                gdp_constant2015 = 'NY.GDP.PCAP.KD',
+                                gdp_ppp_current = 'NY.GDP.PCAP.PP.CD',
+                                gni_ppp_current = 'NY.GNP.PCAP.PP.CD',
+                                gdp_ppp_intl2017 = 'NY.GDP.PCAP.PP.KD',
+                                gni_ppp_intl2017 = 'NY.GNP.PCAP.PP.KD'),
+                              start_date = start_year,
+                              end_date = end_year,
+                              country = c(unique(valuation$reference_income_level), 'World')) %>%
     select(reference_income_level = iso3c,
            year = date,
            gdp_current,
@@ -85,7 +83,7 @@ create_valuation_file <- function(input_file = 'inst/extdata/valuation_viscusi_r
            gni_ppp_intl2017)
 
   # Create one for California
-  #TODO improve
+  # TODO improve
   cal_vs_us <- 79 / 65 # https://datausa.io/profile/geo/california
   gdp_gni_cal <- gdp_gni %>%
     filter(reference_income_level == 'USA') %>%
@@ -95,8 +93,7 @@ create_valuation_file <- function(input_file = 'inst/extdata/valuation_viscusi_r
            gdp_ppp_current = gdp_ppp_current * cal_vs_us,
            gni_ppp_current = gni_ppp_current * cal_vs_us,
            gdp_ppp_intl2017 = gdp_ppp_intl2017 * cal_vs_us,
-           gni_ppp_intl2017 = gni_ppp_intl2017 * cal_vs_us,
-           )
+           gni_ppp_intl2017 = gni_ppp_intl2017 * cal_vs_us)
   gdp_gni <- bind_rows(gdp_gni, gdp_gni_cal)
 
   gdp_world_2017_current <- as.numeric(gdp_gni[gdp_gni$reference_income_level == 'WLD' & gdp_gni$year == 2017,] %>%
@@ -115,14 +112,12 @@ create_valuation_file <- function(input_file = 'inst/extdata/valuation_viscusi_r
       gni_or_gdp == 'gni' & ppp ~ valuation_usd * gni_ppp_intl2017 / gni_ppp_current,
       gni_or_gdp == 'gdp' & ppp ~ valuation_usd * gdp_ppp_intl2017 / gdp_ppp_current,
       gni_or_gdp == 'gdp' & !ppp ~ valuation_usd *  gdp_constant2015 / gdp_current,
-      T ~ NA_real_ # Other cases not yet supported
-      )) %>%
+      T ~ NA_real_)) %>% # Other cases not yet supported
     mutate(ratio = case_when(
       gni_or_gdp == 'gni' & ppp ~ gni_ppp_world_2017_intl2017 / gni_ppp_intl2017,
       gni_or_gdp == 'gdp' & ppp ~ gdp_ppp_world_2017_intl2017 / gdp_ppp_intl2017,
       gni_or_gdp == 'gdp' & !ppp ~ gdp_world_2017_constant2015 / gdp_constant2015,
-      T ~ NA_real_ # Other cases not yet supported
-    )) %>%
+      T ~ NA_real_)) %>% # Other cases not yet supported
     mutate(valuation_world_2017 = as.numeric(valuation_refyear * ratio^elasticity)) %>%
     select(Outcome, Outcome_name, currency, unit,
            elasticity, gni_or_gdp, ppp, valuation_world_2017) %>%
