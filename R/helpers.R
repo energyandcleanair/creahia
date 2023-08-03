@@ -44,11 +44,16 @@ readWB_online <- function(indicator, start_date = 2010, end_date = 2019,
 }
 
 
+# TODO test
 addiso <- function(df, ...) {
-  df$ISO3 <- countrycode::countrycode(df$country, origin = 'country.name', destination = 'iso3c', ...)
-  df$ISO3[grepl('Kosovo', df$country)] <- 'XKX'
-  df$ISO3[grepl('Aland$', df$country)] <- 'FIN'
-  df
+  df %>% mutate(ISO3 = case_when(grepl('Kosovo', country) ~ 'XKX',
+                                 grepl('Aland$', country) ~ 'FIN',
+                                 T ~ countrycode::countrycode(country, origin = 'country.name',
+                                                              destination = 'iso3c', ...)))
+  # df$ISO3 <- countrycode::countrycode(df$country, origin = 'country.name', destination = 'iso3c', ...)
+  # df$ISO3[grepl('Kosovo', df$country)] <- 'XKX'
+  # df$ISO3[grepl('Aland$', df$country)] <- 'FIN'
+  return(df)
 }
 
 
@@ -71,7 +76,8 @@ ihme_getrate <- function(df) {
 addlowhigh <- function(indata) ddply(indata, .(ISO3),
                                      function(df) {
                                        for(col in names(df))
-                                         df[[col]] <- df[[col]] %>% na.fill(df[[col]][df$estimate == 'central'])
+                                         df[[col]] <- df[[col]] %>%
+                                           na.fill(df[[col]][df$estimate == 'central'])
                                        return(df)
                                      })
 
@@ -90,7 +96,7 @@ make_ci <- function(df, rescols = c('low', 'central', 'high')) {
 make_nothing <- function(x) {x}
 
 
-#' Get administrative areas within the model
+#' Get administrative areas covered by the model
 #'
 #' @param grid_raster projection destination and crop extent
 #' @param shp optional shapefile path that will serve as map
@@ -101,7 +107,8 @@ make_nothing <- function(x) {x}
 #' @export
 #'
 #' @examples
-get_model_adm <- function(grid_raster, shp = NULL, admin_level = 0, iso3s = NULL, ...) {
+get_model_adm <- function(grid_raster, shp = NULL,
+                          admin_level = 0, iso3s = NULL, ...) {
 
   crs_to <- CRS(proj4string(grid_raster))
 
@@ -138,7 +145,7 @@ get_map_cities <- function(grid_raster) {
 
   cities_utm %>%
     dplyr::mutate(region_id = name, region_name = name,
-                  country_id = countrycode::countrycode(cntry_t, "country.name","iso3c")) %>%
+                  country_id = countrycode::countrycode(cntry_t, "country.name", "iso3c")) %>%
     dplyr::select(region_id, region_name, country_id, geometry)
 }
 

@@ -16,7 +16,7 @@ get_hia_path <- function(filename) {
 }
 
 
-#fill in default values for places missing data
+# fill in default values for places missing data
 fillcol <- function(df2, targetcols) {
   for(coln in targetcols) {
     defval <- df2[[coln]] %>% median(na.rm = T)
@@ -26,7 +26,7 @@ fillcol <- function(df2, targetcols) {
 }
 
 
-adddefos <- function(df, exl='pop') {
+adddefos <- function(df, exl = 'pop') {
   targetcols <- names(df)[sapply(df, is.numeric) & (!names(df) %in% exl)]
   df %>% ddply(.(estimate, Region, IncomeGroup), fillcol, targetcols) %>%
     ddply(.(estimate), fillcol, targetcols)
@@ -80,7 +80,7 @@ get_epi <- function(version = "default") {
 
   epi <- read_csv(get_hia_path(filename), col_types = cols()) %>% adddefos
 
-  #add missing admin regions
+  # add missing admin regions
   epi <- epi %>% filter(ISO3 == 'CHN') %>%
     mutate(ISO3 = 'HKG', pop = 7.392e6, country = 'Hong Kong',
            IncomeGroup = "High income") %>%
@@ -139,7 +139,7 @@ get_gdp_timeseries <- function(start_year = 1980, end_year = 2021) {
 get_gdp_forecast <- function() {
   print("Getting GDP forecast")
   gdp_forecast_file <- get_hia_path('OECD_GDP_forecast.csv')
-  if(!file.exists(gdp_forecast_file)){
+  if(!file.exists(gdp_forecast_file)) {
     download.file('https://stats.oecd.org/sdmx-json/data/DP_LIVE/.GDPLTFORECAST.../OECD?contentType=csv&detail=code&separator=comma&csv-lang=en',
                   gdp_forecast_file)
   }
@@ -166,47 +166,50 @@ get_valuation <- function(version = "default") {
 }
 
 
-get_calc_causes <- function(causes_set='GEMM and GBD') {
+get_calc_causes <- function(causes_set = 'GEMM and GBD', filter = NULL) {
   print("Getting calc_causes")
 
   if(causes_set == 'GEMM and GBD') {
-    #define short names
+    # define short names
     names_causes <- c('NCD.LRI', 'IHD', 'Stroke', 'COPD', 'LC', 'LRI')
 
-    causes_out = c(paste0(c('NCD.LRI', 'LRI.child'), '_YLLs'),
-      paste0(c('Stroke', 'Diabetes', 'COPD'), '_YLDs'),
-      paste0(c(names_causes, 'LRI.child', 'Diabetes'), '_Deaths')) %>%
+    causes_out <- c(paste0(c('NCD.LRI', 'LRI.child'), '_YLLs'),
+                    paste0(c('Stroke', 'Diabetes', 'COPD'), '_YLDs'),
+                    paste0(c(names_causes, 'LRI.child', 'Diabetes'), '_Deaths')) %>%
       unique
   }
 
   if(causes_set == 'GEMM only') {
-    #define short names
+    # define short names
     names_causes <- c('NCD.LRI', 'IHD', 'Stroke', 'COPD', 'LC', 'LRI')
 
-    causes_out = c(paste0(c('NCD.LRI'), '_YLLs'),
-                   paste0(c('Stroke', 'COPD'), '_YLDs'),
-                   paste0(c(names_causes), '_Deaths')) %>%
+    causes_out <- c(paste0(c('NCD.LRI'), '_YLLs'),
+                    paste0(c('Stroke', 'COPD'), '_YLDs'),
+                    paste0(c(names_causes), '_Deaths')) %>%
       unique
   }
 
   if(causes_set == 'GBD only') {
-    #define short names
+    # define short names
     names_causes <- c('IHD', 'Stroke', 'COPD', 'LC', 'LRI')
 
-    causes_out = c(paste0(c(names_causes, 'LRI.child'), '_YLLs'),
-                   paste0(c('Stroke', 'Diabetes', 'COPD'), '_YLDs'),
-                   paste0(c(names_causes, 'LRI.child', 'Diabetes'), '_Deaths')) %>%
+    causes_out <- c(paste0(c(names_causes, 'LRI.child'), '_YLLs'),
+                    paste0(c('Stroke', 'Diabetes', 'COPD'), '_YLDs'),
+                    paste0(c(names_causes, 'LRI.child', 'Diabetes'), '_Deaths')) %>%
       unique
+  }
+
+  if(!is.null(filter)) {
+    causes_out <- causes_out %>% grep(filter, ., value = T)
   }
 
   return(causes_out)
 }
 
 
-# duplicate? in gis_data.R
 get_pop_proj <- function() {
   creahelpers::get_population_path('WPP2019_population-death_rate-birth_rate.csv') %>%
-    read_csv(.,col_types = cols()) %>%
+    read_csv(., col_types = cols()) %>%
     mutate(deaths = pop * death_rate) %>%
     dplyr::rename(iso3 = ISO3, year = Yr)
 }
@@ -214,7 +217,8 @@ get_pop_proj <- function() {
 
 get_gemm <- function() {
   print("Getting GEMM")
-  #read GEMM function fit parameters
+
+  # read GEMM function fit parameters
   infile <- get_hia_path('GEMM Calculator (PNAS)_ab.xlsx')
   gemm.china <- suppressMessages(read_xlsx(infile, sheet = 'GEMM fit parameters',
                                            skip = 8, n_max = 14))
@@ -224,25 +228,26 @@ get_gemm <- function() {
   gemm <- bind_rows(gemm.china %>% mutate(region = 'inc_China'),
             gemm.exchina %>% mutate(region = 'ex_China'))
 
-  #eliminate empty rows and columns
+  # eliminate empty rows and columns
   gemm <- gemm[rowSums(!is.na(gemm)) > 1, colSums(!is.na(gemm)) > 0]
-  # write.csv(gemm, 'gemm fit parameters.csv') #CHECK necessary?
+  # write.csv(gemm, 'gemm fit parameters.csv') # CHECK necessary?
 
-  #read names of causes of death
+  # read names of causes of death
   causes <- suppressMessages(read_xlsx(infile, sheet = 'GEMM fit parameters',
-                                       skip = 6, n_max = 1, col_names=F)) %>%
+                                       skip = 6, n_max = 1, col_names = F)) %>%
     unlist %>%
     subset(!is.na(.))
 
 
-  #define short names
+  # define short names
   names(causes) <- c('NCD.LRI', 'IHD', 'Stroke', 'COPD', 'LC', 'LRI')
 
-  #remove duplicated age columns
+  # remove duplicated age columns
   names(gemm)[1] <- 'age'
   gemm <- gemm %>% sel(-contains('Age'), age)
 
-  #give parameter columns names; t=theta, se=standard error of theta, a=alpha, u=mu, p=pi
+  # give parameter columns names; t = theta, se = standard error of theta,
+  # a = alpha, u = mu, p = pi
   newnames <- names(causes) %>% sapply(paste, c('t', 'se', 'a', 'u', 'p'), sep = '_') %>%
     as.vector()
   names(gemm)[seq_along(newnames)] <- newnames
@@ -258,7 +263,8 @@ get_gemm <- function() {
 
 get_ihme <- function() {
   print("Getting IHME")
-  #read IHME mortality and morbidity data to enable country calculations
+
+  # read IHME mortality and morbidity data to enable country calculations
   ihme <- read.csv(get_hia_path('IHME-GBD_2017_DATA.csv')) %>%
     dplyr::filter(metric_name == 'Number') %>%
     gather_ihme
@@ -273,20 +279,31 @@ get_ihme <- function() {
     dplyr::filter(age_low >= 25) %>%
     group_by_at(vars(-val, -starts_with('age'))) %>%
     summarise_at('val', sum) %>%
-    mutate(age='25+') %>%
+    mutate(age = '25+') %>%
     bind_rows(ihme) %>%
     ungroup
 
   ihme <- ihme %>% addiso
 
-  ihme$cause_short <- NA
-  ihme$cause_short[grep('Diab', ihme$cause_name)] <- 'Diabetes'
-  ihme$cause_short[grep('Stroke', ihme$cause_name)] <- 'Stroke'
-  ihme$cause_short[grep('Lower resp', ihme$cause_name)] <- 'LRI'
-  ihme$cause_short[grep('Non-comm', ihme$cause_name)] <- 'NCD'
-  ihme$cause_short[grep('Isch', ihme$cause_name)] <- 'IHD'
-  ihme$cause_short[grep('obstr', ihme$cause_name)] <- 'COPD'
-  ihme$cause_short[grep('lung canc', ihme$cause_name)] <- 'LC'
+  # TODO test
+  ihme <- ihme %>%
+    mutate(cause_short = case_when(grep('Diab', cause_name) ~ 'Diabetes',
+                                   grep('Stroke', cause_name) ~ 'Stroke',
+                                   grep('Lower resp', cause_name) ~ 'LRI',
+                                   grep('Non-comm', cause_name) ~ 'NCD',
+                                   grep('Isch', cause_name) ~ 'IHD',
+                                   grep('obstr', cause_name) ~ 'COPD',
+                                   grep('lung canc', cause_name) ~ 'LC',
+                                   T ~ NA))
+
+  # ihme$cause_short <- NA
+  # ihme$cause_short[grep('Diab', ihme$cause_name)] <- 'Diabetes'
+  # ihme$cause_short[grep('Stroke', ihme$cause_name)] <- 'Stroke'
+  # ihme$cause_short[grep('Lower resp', ihme$cause_name)] <- 'LRI'
+  # ihme$cause_short[grep('Non-comm', ihme$cause_name)] <- 'NCD'
+  # ihme$cause_short[grep('Isch', ihme$cause_name)] <- 'IHD'
+  # ihme$cause_short[grep('obstr', ihme$cause_name)] <- 'COPD'
+  # ihme$cause_short[grep('lung canc', ihme$cause_name)] <- 'LC'
 
   ihme <- ihme %>%
     dplyr::filter(grepl('Lower resp|Non-comm', cause_name)) %>%
@@ -309,6 +326,7 @@ get_ihme <- function() {
 
 get_adult_ages <- function(ihme = get_ihme()) {
   print("Getting adult_ages")
+
   ihme$age[ihme$age_low >= 25] %>% subset(!is.na(.)) %>%
     unique
 }
@@ -319,7 +337,7 @@ get_gbd <- function(gbd_causes = c('LRI.child', 'Diabetes')) {
 
   if(length(gbd_causes) == 0) gbd_causes <- 'none'
 
-  #read GBD RR values
+  # read GBD RR values
   gbd <- read_csv(get_hia_path('ier_computed_table.csv')) %>% dplyr::select(-...1) %>%
     dplyr::rename(cause_short = cause, central = rr_mean, low = rr_lower, high = rr_upper) %>%
     mutate(cause_short = recode(cause_short,
@@ -334,7 +352,7 @@ get_gbd <- function(gbd_causes = c('LRI.child', 'Diabetes')) {
                            age < 80 ~ paste0(age, '-', age + 4))) %>%
     dplyr::filter(exposure <= 300, !is.na(age))
 
-  #add the LRI risk function to be used for children if needed
+  # add the LRI risk function to be used for children if needed
   if(any(c('LRI.child', 'all') %in% gbd_causes)) {
     gbd <- gbd %>% filter(cause_short == 'LRI') %>%
       mutate(cause_short = 'LRI.child', age = 'Under 5') %>%

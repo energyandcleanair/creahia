@@ -14,8 +14,7 @@ compute_hia <- function(conc_map,
                         scale_base_year = NULL,
                         scale_target_year = NULL,
                         diagnostic_folder = 'diagnostic',
-                        .mode = 'change'
-                        ) {
+                        .mode = 'change') {
   if(gbd_causes[1] == 'default' & calc_causes[1] == 'GBD only') gbd_causes <- 'all'
 
   if(grepl('GEMM|GBD', calc_causes[1])) calc_causes <- get_calc_causes(calc_causes[1])
@@ -164,11 +163,11 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
 
   for(scenario in scenarios) {
     conc_scenario <- conc_map[[scenario]]
-    #names(conc_adm) %<>% country.recode(merge_into)
+    # names(conc_adm) %<>% country.recode(merge_into)
     conc_scenario <- conc_scenario %>% ldply(.id = 'region_id') %>%
       dlply(.(region_id))
 
-    #calculate health impacts
+    # calculate health impacts
     pop_domain <- conc_scenario %>% ldply(function(df) df %>% sel(-region_id) %>%
                                             apply(2, weighted.mean, w = df[,'pop']) %>%
                                             t %>%
@@ -208,7 +207,7 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
       } else {
         base_name <- species_name %>% paste0('conc_baseline_',.)
         perm_name <- species_name %>% paste0('conc_scenario_',.)
-        nrt_flag <- NULL #ifelse(grepl('NCD\\.LRI_', crfs$Incidence[i]), 'grump', NULL)
+        nrt_flag <- NULL # ifelse(grepl('NCD\\.LRI_', crfs$Incidence[i]), 'grump', NULL)
 
         cfconc <- crfs$Counterfact[i]
 
@@ -259,13 +258,6 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
       hia_scenario <- full_join(pm_mort, hia_scenario)
     }
 
-    # TODO double check the following
-    # Reformat, add double_counted, AgeGrp and clean asthma
-    # hia_scenario %<>% to_long_hia()
-    # hia_scenario %<>% add_double_counted(crfs=crfs, epi=epi)
-    # hia_scenario %<>% add_age_group()
-    # hia_scenario %<>% clean_cause_outcome()
-
     hia_scenario <- hia_scenario %>% to_long_hia() %>%
       add_double_counted(crfs = crfs, epi = epi) %>%
       add_age_group() %>%
@@ -311,7 +303,7 @@ to_long_hia <- function(hia) {
 }
 
 
-#define a function to calculate the hazard ratio for a specific concentration, cause and age group
+# define a function to calculate the hazard ratio for a specific concentration, cause and age group
 hr <- function(pm, .age = '25+', .cause = 'NCD.LRI', .region = 'inc_China',
                gemm = get_gemm(), gbd = get_gbd()) {
 
@@ -334,7 +326,7 @@ hr <- function(pm, .age = '25+', .cause = 'NCD.LRI', .region = 'inc_China',
 }
 
 
-#total fossil fuel PAF for a permutation run
+# total fossil fuel PAF for a permutation run
 country_paf_perm <- function(pm.base,
                              pm.perm,
                              pop,
@@ -346,7 +338,7 @@ country_paf_perm <- function(pm.base,
                              gbd = get_gbd(),
                              ihme = get_ihme(),
                              .region = "inc_China",
-                             .mode = 'change') { #change or attribution?
+                             .mode = 'change') { # change or attribution?
 
   age.specific <- c('NCD.LRI', 'Stroke', 'IHD')
 
@@ -357,10 +349,7 @@ country_paf_perm <- function(pm.base,
                     age %in% ages, estimate == 'central')
   } else {
     w <- data.frame(val = 1)
-    if(grepl('child', cause)) {
-      ages = 'Under 5'
-    } else {
-      ages = '25+'}
+    if(grepl('child', cause)) ages = 'Under 5' else ages = '25+'
   }
 
   rr.base <- ages %>% sapply(function(.a) hr(pm.base, gbd = gbd, gemm = gemm,
@@ -372,7 +361,6 @@ country_paf_perm <- function(pm.base,
                                                .cause = cause, .age = .a, .region = .region),
                                simplify = 'array')
     paf.perm <- rr.perm / rr.base - 1
-
   } else {
     paf.perm <- (1 - (1 / rr.base)) * (1 - pm.perm / pm.base)
   }
@@ -380,7 +368,7 @@ country_paf_perm <- function(pm.base,
   if(length(dim(paf.perm)) == 2) {
     paf.perm %>% t %>%
       orderrows %>%
-      apply(2, weighted.mean, w$val) #in case the hr function didn't return an array
+      apply(2, weighted.mean, w$val) # in case the hr function didn't return an array
   } else {
     tryCatch({
       paf.perm %>% apply(1:2, weighted.mean, w$val) %>%
@@ -413,7 +401,7 @@ country_paf <- function(pm, pop, cy, cs, ms, adult_ages = get_adult_ages(),
 
   if(length(dim(paf)) == 2) {
     paf %>% t %>%
-      apply(2, weighted.mean, w$val) #in case the hr function didn't return an array
+      apply(2, weighted.mean, w$val) # in case the hr function didn't return an array
   } else {
     paf %>% apply(1:2, weighted.mean, w$val, na.rm = T) %>%
       apply(2, weighted.mean, w = pop, na.rm = T)
@@ -425,14 +413,13 @@ scale_hia_pop <- function(hia, base_year = 2015, target_year = 2019) {
 
   pop_proj <- get_pop_proj()
 
-  #scale population from year of population data to target year of estimates
+  # scale population from year of population data to target year of estimates
   pop_scaling <- pop_proj %>% filter(year %in% c(base_year, target_year), AgeGrp != 'Newborn', !is.na(iso3)) %>%
     sel(-AgeGrp) %>%
     group_by(iso3, year) %>%
-    summarise_at('pop', sum)
-
-  pop_scaling$year[pop_scaling$year == base_year] <- 'base'
-  pop_scaling$year[pop_scaling$year == target_year] <- 'target'
+    summarise_at('pop', sum) %>%
+    mutate(year = case_when(year == base_year ~ 'base',
+                            year == target_year ~ 'target'))
 
   hia_scaled <- pop_scaling %>% spread(year, pop) %>%
     mutate(scaling=target/base) %>%
@@ -501,7 +488,8 @@ make_hia_table <- function(hia_total,
   }
 
   deaths <- hia_table %>% filter(Outcome_long == 'deaths')
-  morb <- hia_table %>% filter(!grepl('deaths|life lost|prev|birthwe', Outcome_long), !is.na(Outcome_long))
+  morb <- hia_table %>% filter(!grepl('deaths|life lost|prev|birthwe', Outcome_long),
+                               !is.na(Outcome_long))
 
   deaths <- deaths %>% filter(Outcome_long == 'deaths') %>%
     filter(!(Cause_long == 'all' & Pollutant == 'PM25'))
@@ -513,7 +501,7 @@ make_hia_table <- function(hia_total,
 }
 
 
-#a simple renaming function that accepts string variables as arguments; !!newname := !!oldname was causing grief
+# a simple renaming function that accepts string variables as arguments; !!newname := !!oldname was causing grief
 rename_str <- function(df, oldname, newname) { names(df)[names(df) == oldname] <- newname; df }
 
 
@@ -583,7 +571,7 @@ add_double_counted <- function(hia, crfs, epi) {
 
   # Manual for epi PM25
   joined[joined$Pollutant == 'PM25' &
-           any(joined$Cause == 'NCD.LRI') & #detect if GEMM risk function for NCD+LRI is being used
+           any(joined$Cause == 'NCD.LRI') & # detect if GEMM risk function for NCD+LRI is being used
            !joined$Cause %in% c('NCD.LRI', 'LRI.child') &
            joined$Outcome %in% c('YLLs', 'Deaths'),
          'double_counted'] <- TRUE
@@ -596,10 +584,10 @@ add_double_counted <- function(hia, crfs, epi) {
 
 
 add_age_group <- function(hia) {
-  hia$AgeGrp <- "25+"
-  hia$AgeGrp[grepl("LRI\\.child", hia$Cause)] <- "0-4"
-  hia$AgeGrp[grepl("PTB|LBW", hia$Cause)] <- "Newborn"
-  hia$AgeGrp[grepl("0to17|1to18", hia$Cause)] <- "0-18"
+  hia <- hia %>% mutate(AgeGrp = case_when(grepl("LRI\\.child", Cause) ~ "0-4",
+                                           grepl("PTB|LBW", Cause) ~ "Newborn",
+                                           grepl("0to17|1to18", Cause ~ "0-18"),
+                                           T ~ "25+"))
   return(hia)
 }
 
