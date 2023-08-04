@@ -21,7 +21,7 @@ input_dir <- file.path(project_dir, "sample_data/") # where to read all CALPUFF 
 output_dir <- file.path(project_dir, "sample_data/danny_test"); if(!dir.exists(output_dir)) dir.create(output_dir) # where to write all HIA files
 # emissions_dir <- file.path(project_dir, "emissions")
 
-pollutants_to_process <- c('NO2', 'PM2.5', 'PM10', 'SO2') # e.g. c('no2', 'pm25', ...)
+pollutants_to_process <- c('NO2', 'PM2.5', 'PM10', 'SO2') # e.g. c('NO2', 'PM2.5', ...)
 scenarios_to_process = c('base', 'complian', 'bat', 'baseh') # make sure the file names match the scenarios
 
 # economic valuation variables
@@ -48,7 +48,7 @@ calpuff_files %>%
 
 
 # 02: Get base concentration levels ----
-conc_base <- creahia::wrapper.get_conc_baseline(species = unique(calpuff_files$species),
+conc_base <- creahia::wrappers.get_conc_baseline(species = unique(calpuff_files$species),
                                                 grid_raster = grid_raster,
                                                 no2_targetyear = 2020,
                                                 pm25_to_pm10_ratio = .7)
