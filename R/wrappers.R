@@ -9,7 +9,7 @@
 #' @export
 #'
 #' @examples
-wrapper.get_conc_baseline <- function(species, grid_raster,
+wrappers.get_conc_baseline <- function(species, grid_raster,
                                       no2_min_incr = NULL,
                                       no2_targetyear = 2019,
                                       pm25_to_pm10_ratio = .7) {
