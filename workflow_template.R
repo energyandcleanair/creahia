@@ -17,7 +17,7 @@ require(creahelpers)
 project_dir <- "C:/Users/danny/Desktop/CREA Github/creahia" # project location
 gis_dir <- get_gis_dir() # CREA GIS files
 
-input_dir <- file.path(project_dir, "sample_data/") # where to read all CALPUFF generated files
+input_dir <- file.path(project_dir, "sample_data/updated_TIFs") # where to read all CALPUFF generated files
 output_dir <- file.path(project_dir, "sample_data/danny_test"); if(!dir.exists(output_dir)) dir.create(output_dir) # where to write all HIA files
 # emissions_dir <- file.path(project_dir, "emissions")
 
@@ -49,9 +49,9 @@ calpuff_files %>%
 
 # 02: Get base concentration levels ----
 conc_base <- creahia::wrappers.get_conc_baseline(species = unique(calpuff_files$species),
-                                                grid_raster = grid_raster,
-                                                no2_targetyear = 2020,
-                                                pm25_to_pm10_ratio = .7)
+                                                 grid_raster = grid_raster,
+                                                 no2_targetyear = 2020,
+                                                 pm25_to_pm10_ratio = .7)
 
 
 # 03: Create support maps (e.g. countries, provinces, cities) ----
