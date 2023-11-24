@@ -127,7 +127,7 @@ regions <- creahia::get_adm(grid_raster, admin_level=1, res='coarse')
 and extract concentrations there:
 
 ``` r
-conc_regions <- creahia::extract_concs_at_regions(concs, regions)
+conc_regions <- creahia::extract_concs_at_regions(concs, regions, species)
 ```
 
 # Health Impact Assessment
