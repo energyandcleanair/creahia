@@ -285,25 +285,15 @@ get_ihme <- function() {
 
   ihme <- ihme %>% addiso
 
-  # TODO test
   ihme <- ihme %>%
-    mutate(cause_short = case_when(grep('Diab', cause_name) ~ 'Diabetes',
-                                   grep('Stroke', cause_name) ~ 'Stroke',
-                                   grep('Lower resp', cause_name) ~ 'LRI',
-                                   grep('Non-comm', cause_name) ~ 'NCD',
-                                   grep('Isch', cause_name) ~ 'IHD',
-                                   grep('obstr', cause_name) ~ 'COPD',
-                                   grep('lung canc', cause_name) ~ 'LC',
+    mutate(cause_short = case_when(grepl('Diab', cause_name) ~ 'Diabetes',
+                                   grepl('Stroke', cause_name) ~ 'Stroke',
+                                   grepl('Lower resp', cause_name) ~ 'LRI',
+                                   grepl('Non-comm', cause_name) ~ 'NCD',
+                                   grepl('Isch', cause_name) ~ 'IHD',
+                                   grepl('obstr', cause_name) ~ 'COPD',
+                                   grepl('lung canc', cause_name) ~ 'LC',
                                    T ~ NA))
-
-  # ihme$cause_short <- NA
-  # ihme$cause_short[grep('Diab', ihme$cause_name)] <- 'Diabetes'
-  # ihme$cause_short[grep('Stroke', ihme$cause_name)] <- 'Stroke'
-  # ihme$cause_short[grep('Lower resp', ihme$cause_name)] <- 'LRI'
-  # ihme$cause_short[grep('Non-comm', ihme$cause_name)] <- 'NCD'
-  # ihme$cause_short[grep('Isch', ihme$cause_name)] <- 'IHD'
-  # ihme$cause_short[grep('obstr', ihme$cause_name)] <- 'COPD'
-  # ihme$cause_short[grep('lung canc', ihme$cause_name)] <- 'LC'
 
   ihme <- ihme %>%
     dplyr::filter(grepl('Lower resp|Non-comm', cause_name)) %>%
@@ -316,7 +306,12 @@ get_ihme <- function() {
   adult.ages <- ihme$age[ihme$age_low >= 25] %>% subset(!is.na(.)) %>%
     unique
 
-  ihme <- ihme %>% dplyr::filter(ISO3 == 'ALB') %>%
+  # For some reason, ISO3 is now missing
+  ihme <- ihme %>%
+    mutate(ISO3=countrycode::countrycode(country, "country.name", "iso3c"))
+
+  ihme <- ihme %>%
+    dplyr::filter(ISO3 == 'ALB') %>%
     mutate(ISO3 = 'XKX', country = 'Kosovo') %>%
     bind_rows(ihme)
 
