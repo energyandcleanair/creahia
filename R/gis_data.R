@@ -1,16 +1,16 @@
 get_pop <- function(grid_raster) {
-  f <- creahelpers::get_population_path('gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_30_sec.tif')
-  if(!file.exists(f)) {
-    stop(sprintf("Can't find population file: %s", f))
+  filepath <- creahelpers::get_population_path('gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_30_sec.tif')
+  if(!file.exists(filepath)) {
+    stop(sprintf("Can't find population file: %s", filepath))
   }
 
-  pop_density <- raster(f) %>%
-    creahelpers::cropProj(grid_raster, expand = 1)
+  pop_density <- terra::rast(filepath) %>%
+    project(rast(grid_raster))
+
   pop_density[is.na(pop_density)] <- 0
-  # pop_density %<>% raster::aggregate(8, mean) %>%
-  #   cropProj(grid_raster, expand=1)
-  pop <- pop_density %>% multiply_by(area(pop_density))
-  return(pop)
+  pop <- pop_density %>% multiply_by(terra::cellSize(pop_density, unit='km')) #pop in million
+
+  return(raster(pop))
 }
 
 
