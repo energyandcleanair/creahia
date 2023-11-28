@@ -112,8 +112,8 @@ get_model_adm <- function(grid_raster, shp = NULL,
 
   crs_to <- CRS(proj4string(grid_raster))
 
-  grid_4326 <- projectExtent(grid_raster, crs(rworldmap::countriesLow)) %>%
-    extend(c(40, 40))
+  grid_4326 <- terra::rast(grid_raster) %>%
+    terra::extend(c(40, 40))
 
   adm_4326 <- if(is.null(shp)) {
     creahelpers::get_adm(admin_level, ...)
@@ -122,7 +122,8 @@ get_model_adm <- function(grid_raster, shp = NULL,
       {if(!is.null(iso3s)) adm_4326[adm_4326$GID_0 %in% iso3s,] else .}
   }
 
-  adm_utm <- adm_4326 %>% crop(grid_4326) %>%
+  adm_utm <- adm_4326 %>%
+    crop(raster(grid_4326)) %>%
     spTransform(crs_to)
 
   maps <- adm_utm %>%
