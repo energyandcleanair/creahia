@@ -103,7 +103,8 @@ compute_hia_paf <- function(conc_map,
     paf[[scenario]] <- foreach(region_id = names(conc_scenario)) %dopar% {
       tryCatch({
         paf_region <- list()
-        conc <- conc_scenario[[region_id]][complete.cases(conc_scenario[[region_id]]),]
+        non_na_cols <- c('conc_baseline_pm25', 'conc_scenario_pm25', 'pop')
+        conc <- conc_scenario[[region_id]][complete.cases(conc_scenario[[region_id]][,non_na_cols]),]
 
         for(cs_ms in calc_causes) {
           cs.ms <- cs_ms %>% strsplit('_') %>%
@@ -168,7 +169,9 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
       dlply(.(region_id))
 
     # calculate health impacts
-    pop_domain <- conc_scenario %>% ldply(function(df) df %>% sel(-region_id) %>%
+    pop_domain <- conc_scenario %>% ldply(function(df) df %>%
+                                            sel(-region_id) %>%
+                                            select_if(is.numeric) %>%
                                             apply(2, weighted.mean, w = df[,'pop']) %>%
                                             t %>%
                                             data.frame %>%
@@ -258,7 +261,8 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
       hia_scenario <- full_join(pm_mort, hia_scenario)
     }
 
-    hia_scenario <- hia_scenario %>% to_long_hia() %>%
+    hia_scenario <- hia_scenario %>%
+      to_long_hia() %>%
       add_double_counted(crfs = crfs, epi = epi) %>%
       add_age_group() %>%
       clean_cause_outcome()
@@ -371,7 +375,8 @@ country_paf_perm <- function(pm.base,
       apply(2, weighted.mean, w$val) # in case the hr function didn't return an array
   } else {
     tryCatch({
-      paf.perm %>% apply(1:2, weighted.mean, w$val) %>%
+      paf.perm %>%
+        apply(1:2, weighted.mean, w$val) %>%
         orderrows %>%
         apply(2, weighted.mean, w = pop)
     }, error = function(e) {
@@ -565,7 +570,7 @@ add_double_counted <- function(hia, crfs, epi) {
               by = c('Cause', 'Outcome', 'Pollutant'))
 
   # Except PM25, all of them should have been found in CRFs
-  if(nrow(joined %>% filter(is.na(double_counted) & Pollutant != 'PM25')) > 0) {
+  if(nrow(joined %>% filter(is.na(double_counted) & Pollutant != 'PM25' & number > 0)) > 0) {
     stop('merged has failed in double counting detection')
   }
 
@@ -586,7 +591,7 @@ add_double_counted <- function(hia, crfs, epi) {
 add_age_group <- function(hia) {
   hia <- hia %>% mutate(AgeGrp = case_when(grepl("LRI\\.child", Cause) ~ "0-4",
                                            grepl("PTB|LBW", Cause) ~ "Newborn",
-                                           grepl("0to17|1to18", Cause ~ "0-18"),
+                                           grepl("0to17|1to18", Cause) ~ "0-18",
                                            T ~ "25+"))
   return(hia)
 }
