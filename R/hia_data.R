@@ -51,15 +51,10 @@ get_crfs <- function(version = "default") {
 
   names(crfs) <- names(crfs) %>% gsub('RR_', '', .)
   crfs$Exposure <- crfs$Exposure %>% gsub('PM2\\.5', "PM25", .)
-  crfs$Incidence <- crfs$Incidence %>% gsub('AllCauses', "AllCause", .)
+  crfs$Incidence <- crf_recode_incidence(crfs$Incidence, crfs$Exposure)
   crfs$effectname <- paste0(crfs$Incidence %>% gsub('\\.per|_base', '', .),
                             '_',
                             crfs$Exposure %>% gsub('\\..*|nrt', '', .))
-
-
-  crfs$Incidence[crfs$Exposure %in% c('SO2', 'NO2') & grepl('Deaths|YLLs', crfs$Incidence)] <-
-    crfs$Incidence[crfs$Exposure %in% c('SO2', 'NO2') & grepl('Deaths|YLLs', crfs$Incidence)] %>%
-    gsub('NCD\\.LRI', 'AllCause', .)
 
   return(crfs)
 }

@@ -139,9 +139,11 @@ extract_concs_at_regions <- function(concs, regions, species) {
     concs_stack <- concs[i, cols_to_extract] %>%
       purrr::transpose() %>%
       `[[`(1) %>%
-      stack
+      stack %>%
+      rast
 
-    conc_map[[scenario]] <- raster::extract(concs_stack, regions)
+    extracted <- terra::extract(concs_stack, regions)
+    conc_map[[scenario]] <- split(extracted %>% select(-c(ID)), extracted$ID)
     names(conc_map[[scenario]]) <- regions$region_id
   }
 

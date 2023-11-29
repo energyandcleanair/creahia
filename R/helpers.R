@@ -118,8 +118,11 @@ get_model_adm <- function(grid_raster, shp = NULL,
   adm_4326 <- if(is.null(shp)) {
     creahelpers::get_adm(admin_level, ...)
   } else {
-    shp %>%
-      {if(!is.null(iso3s)) adm_4326[adm_4326$GID_0 %in% iso3s,] else .}
+    shp
+  }
+
+  if(!is.null(iso3s)){
+    adm_4326 <- adm_4326[adm_4326$GID_0 %in% iso3s,]
   }
 
   adm_utm <- adm_4326 %>%
