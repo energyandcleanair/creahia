@@ -184,7 +184,8 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
     epi_loc <- epi %>% sel(-pop, -country) %>%
       dplyr::rename(epi_iso3 = ISO3) %>%
       filter(epi_iso3 %in% pop_domain$epi_iso3) %>%
-      full_join(pop_domain %>% sel(region_id, epi_iso3, pop)) %>%
+      full_join(pop_domain %>% sel(region_id, epi_iso3, pop),
+                multiple='all') %>%
       sel(-epi_iso3)
 
     # Exclude unmatched countries
@@ -291,6 +292,15 @@ crf_effectname_to_outcome <- function(effectname) {
     gsub('_[A-Za-z0-9]*$', '', .) %>%
     gsub('\\.[0-9]*to[0-9]*$', '', .) %>%
     gsub('.*_', '', .)
+}
+
+
+crf_recode_incidence <- function(Incidence, Exposure){
+  gsub('AllCauses', "AllCause", Incidence)
+  case_when(
+    Exposure %in% c('SO2', 'NO2') & grepl('Deaths|YLLs', Incidence) ~ gsub('NCD\\.LRI', 'AllCause', Incidence),
+    T ~ Incidence
+  )
 }
 
 

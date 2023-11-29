@@ -35,7 +35,8 @@ Imports:
     rasterVis,
     foreach,
     priceR,
-    glue
+    glue,
+    terra
 Depends:
     tidyverse,
     creahelpers
