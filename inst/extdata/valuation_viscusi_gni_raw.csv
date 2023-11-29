@@ -1,0 +1,8 @@
+Outcome,Outcome_name,valuation,currency,unit,year,source,reference_income_level,elasticity,gni_or_gdp,ppp
+Asthma.Prev,Year lived with asthma,"3,914",USD,case,2010,Brandt et al 2012,California,1,gni,True
+exac,Asthma emergency room visits,844,USD,visit,2010,Brandt et al 2012,California,1,gni,True
+PTB,Preterm birth,"321,989",USD,birth,2010,Trasande et al 2016,USA,1,gni,True
+Deaths,"Deaths, adults","9,631,000",USD,death,2015,Viscusi and Masterman (2017),USA,1,gni,True
+Deaths.child,"Deaths, children","19,262,000",USD,death,2015,OECD 2012,USA,1,gni,True
+YLDs,Year lived with disability,"62,800",GBP,year lived with disability,2018,Birchby 2019,GBR,1,gni,True
+Absences,Lost workday,130,EUR,work day,2010,EEA 2014,EUU,1,gni,True

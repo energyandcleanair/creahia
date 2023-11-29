@@ -54,7 +54,7 @@ UTMH <- calmet_result$params[[01]]$UTMHEM
 #
 
 # 01: Get coal additional concentrations from CALPUFF -------------------------------------------
-calpuff_files <- get_calpuff_files(ext=paste0(tolower(scenario_prefix),".csv"), gasunit = 'ug', dir=output_dir, hg_scaling=1)
+calpuff_files <- get_calpuff_files(ext=paste0(tolower(scenario_prefix),".csv"), gasunit = 'ug', dir=output_dir, hg_scaling=1e-3)
 # scenarios = unique(calpuff_files$scenario)
 scenario=scenario_prefix
 calpuff_files$scenario = scenario
@@ -74,7 +74,7 @@ calpuff_files %>%
   filter( speciesName=='NO2' | speciesName=='PM2.5'  | speciesName=='SO2') %>% make_tifs(grids = grids)
 
 # =============================== Get Perturbation Raster ========================================
-conc_perturbation <- get_calpuff_files(ext=paste0(tolower(scenario_prefix),".tif"), gasunit = 'ug', dir=output_dir)  %>%
+conc_perturbation <- get_calpuff_files(ext=paste0(tolower(scenario_prefix),".tif"), gasunit = 'ug', dir=output_dir, hg_scaling=1e-3)  %>%
   # filter(period=='annual' | !is.na(threshold)) %>%
   filter(period=='annual') %>%
   filter( speciesName=='NO2' | speciesName=='PM2.5'  | speciesName=='SO2') %>%

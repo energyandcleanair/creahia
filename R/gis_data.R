@@ -1,23 +1,22 @@
-get_pop <- function(grid_raster){
-  pop_density <- creahelpers::get_population_path('gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_30_sec.tif') %>%
-    raster %>%
-    cropProj(grid_raster, expand=1)
+get_pop <- function(grid_raster) {
+  filepath <- creahelpers::get_population_path('gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_30_sec.tif')
+  if(!file.exists(filepath)) {
+    stop(sprintf("Can't find population file: %s", filepath))
+  }
+
+  pop_density <- terra::rast(filepath) %>%
+    project(rast(grid_raster))
+
   pop_density[is.na(pop_density)] <- 0
-  # pop_density %<>% raster::aggregate(8, mean) %>%
-  #   cropProj(grid_raster, expand=1)
-  pop <- pop_density %>% multiply_by(area(pop_density))
-  return(pop)
+  pop <- pop_density %>% multiply_by(terra::cellSize(pop_density, unit='km')) #pop in million
+
+  return(raster(pop))
 }
 
-get_pop_proj <- function(){
-  creahelpers::get_population_path('WPP2019_population-death_rate-birth_rate.csv') %>%
-    read_csv() %>%
-    mutate(deaths=pop*death_rate)
-}
 
-get_grump <- function(grid_raster){
+get_grump <- function(grid_raster) {
   creahelpers::get_landcover_path('GRUMPv1/glurextents.bil') %>%
     raster %>%
-    cropProj(grid_raster, expand=1)
+    cropProj(grid_raster, expand = 1)
 }
 

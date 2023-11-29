@@ -1,6 +1,6 @@
 Incidence,Exposure,Double.Counted,Age_group,Age_low,Age_high,RR_central,RR_low,RR_high,Conc.change,Counterfact,Unit,Units.multiplier,Reference
-Asthma.Inci.1to18,NO2,FALSE,18-Jan,1,18,1.26,1.1,1.37,10,2,ppb,0.532,
-Asthma.Prev.1to18,NO2,FALSE,18-Jan,1,18,1.26,1.1,1.37,10,2,ppb,0.532,
+Asthma.Inci.1to18,NO2,FALSE,1-18,1,18,1.26,1.1,1.37,10,2,ppb,0.532,
+Asthma.Prev.1to18,NO2,FALSE,1-18,1,18,1.26,1.1,1.37,10,2,ppb,0.532,
 exac.0to17,PM2.5,FALSE,0-18,0,18,1.025,1.013,1.037,10,6,ug,1,
 exac.0to17,O3_8h,FALSE,0-18,0,18,1.018,1.01,1.024,10,2,ppb,0.5,
 exac.18to99,PM2.5,FALSE,18-99,18,99,1.023,1.015,1.031,10,6,ug,1,
@@ -18,3 +18,5 @@ TotCV_Deaths,NO2,TRUE,25-99,25,99,1.13,1.09,1.18,10,4.5,ug,1,Faustini et al 2014
 TotResp_Deaths,NO2,TRUE,25-99,25,99,1.03,1.02,1.03,10,4.5,ug,1,Faustini et al 2014
 TotCV_YLLs,NO2,TRUE,25-99,25,99,1.13,1.09,1.18,10,4.5,ug,1,Faustini et al 2014
 TotResp_YLLs,NO2,TRUE,25-99,25,99,1.03,1.02,1.03,10,4.5,ug,1,Faustini et al 2014
+AllCauses_Deaths,PM2.5,FALSE,25-99,25,99,1.043,1.027,1.06,10,5.8,ug,1,Krewski et al 2009
+AllCauses_YLLs,PM2.5,FALSE,25-99,25,99,1.043,1.027,1.06,10,5.8,ug,1,Krewski et al 2009

@@ -5,6 +5,8 @@ exportPattern("^[[:alpha:]]|\\%+") # For now...
 
 importFrom(RColorBrewer,brewer.pal)
 
+importFrom(creahelpers,sel)
+
 importFrom(dplyr,all_vars)
 importFrom(dplyr,any_vars)
 importFrom(dplyr,arrange)
@@ -25,10 +27,12 @@ importFrom(dplyr,mutate_all)
 importFrom(dplyr,mutate_at)
 importFrom(dplyr,mutate_if)
 importFrom(dplyr,pull)
+importFrom(dplyr,relocate)
 importFrom(dplyr,rename)
 importFrom(dplyr,rowwise)
 importFrom(dplyr,select)
 importFrom(dplyr,summarise)
+importFrom(dplyr,summarise_at)
 importFrom(dplyr,summarise_all)
 importFrom(dplyr,tibble)
 importFrom(dplyr,ungroup)
@@ -88,6 +92,7 @@ importFrom(rasterVis,levelplot)
 importFrom(rasterVis,rasterTheme)
 
 importFrom(readr,read_csv)
+importFrom(readr,cols)
 
 importFrom(readxl,read_xlsx)
 
@@ -100,6 +105,11 @@ importFrom(sp,SpatialPointsDataFrame)
 importFrom(sp,coordinates)
 importFrom(sp,spTransform)
 importFrom(sp,proj4string)
+
+importFrom(terra,rast)
+importFrom(terra,extract)
+importFrom(terra,extend)
+importFrom(terra,project)
 
 importFrom(tidyr,gather)
 importFrom(tidyr,separate)
