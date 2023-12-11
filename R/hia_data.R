@@ -285,15 +285,14 @@ get_ihme <- function() {
 
   ihme <- ihme %>% addiso
 
-  # TODO test
   ihme <- ihme %>%
-    mutate(cause_short = case_when(grep('Diab', cause_name) ~ 'Diabetes',
-                                   grep('Stroke', cause_name) ~ 'Stroke',
-                                   grep('Lower resp', cause_name) ~ 'LRI',
-                                   grep('Non-comm', cause_name) ~ 'NCD',
-                                   grep('Isch', cause_name) ~ 'IHD',
-                                   grep('obstr', cause_name) ~ 'COPD',
-                                   grep('lung canc', cause_name) ~ 'LC',
+    mutate(cause_short = case_when(str_detect(cause_name, 'Diab') ~ 'Diabetes',
+                                   str_detect(cause_name, 'Stroke') ~ 'Stroke',
+                                   str_detect(cause_name, 'Lower resp') ~ 'LRI',
+                                   str_detect(cause_name, 'Non-comm') ~ 'NCD',
+                                   str_detect(cause_name, 'Isch') ~ 'IHD',
+                                   str_detect(cause_name, 'obstr') ~ 'COPD',
+                                   str_detect(cause_name, 'lung canc') ~ 'LC',
                                    T ~ NA))
 
   # ihme$cause_short <- NA
