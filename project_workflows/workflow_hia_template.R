@@ -22,7 +22,7 @@ output_dir <- file.path(project_dir, "sample_data/danny_test"); if(!dir.exists(o
 # emissions_dir <- file.path(project_dir, "emissions")
 
 pollutants_to_process <- c('NO2', 'PM2.5', 'PM10', 'SO2') # e.g. c('NO2', 'PM2.5', ...)
-scenarios_to_process = c('base', 'complian', 'bat', 'baseh') # make sure the file names match the scenarios
+scenarios_to_process <- c('base', 'complian', 'bat', 'baseh') # make sure the file names match the scenarios
 
 # economic valuation variables
 targetyears <- 2023
@@ -65,22 +65,23 @@ causes_to_include <- creahia::get_calc_causes(filter = 'Death|YLD')
 
 
 # 04: HIA calculations ----
-creahia::wrappers.compute_hia_two_images(scenarios = scenarios_to_process,
-                                         perturbation_rasters_table = calpuff_files_all,
-                                         baseline_rasters_table = conc_base,
-                                         grid_raster = grid_raster,
-                                         regions = regions,
-                                         scale_base_year = 2019, # Population base year : reference year of INPUT data, for total epidemiological and total population
-                                         scale_target_year = 2022, # Population target year
-                                         crfs_version = "C40",
-                                         epi_version = "C40",
-                                         return_concentrations = T,
-                                         gbd_causes = 'default',
-                                         calc_causes = causes_to_include)
+creahia::wrappers.compute_hia_two_images.character(scenarios = scenarios_to_process,
+                                                   perturbation_rasters_table = calpuff_files_all,
+                                                   baseline_rasters_table = conc_base,
+                                                   grid_raster = grid_raster,
+                                                   regions = regions,
+                                                   scale_base_year = 2019, # Population base year : reference year of INPUT data, for total epidemiological and total population
+                                                   scale_target_year = 2022, # Population target year
+                                                   crfs_version = "C40",
+                                                   epi_version = "C40",
+                                                   return_concentrations = T,
+                                                   gbd_causes = 'default',
+                                                   calc_causes = causes_to_include)
 
 # read the HIA data
-hia <- runs %>% lapply(function(scen) readRDS(file.path(project_dir, 'hia',
-                                                        glue('hia_GBD__{scen}.RDS')))$hia) %>%
+hia <- scenarios_to_process %>%
+  lapply(function(scen) readRDS(file.path(project_dir, 'hia',
+                                          glue('hia_GBD__{scen}.RDS')))$hia) %>%
   bind_rows
 
 hia_totals <- hia %>%
