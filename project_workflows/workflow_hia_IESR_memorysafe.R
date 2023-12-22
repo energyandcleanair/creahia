@@ -133,11 +133,12 @@ hia$hia %<>%
 # 06: Compute and extract economic costs --------------------------------------------------------
 hia_cost <- get_hia_cost(hia$hia, valuation_version="viscusi")
 
-source('../creapuff/project_workflows/read_IESR_emissions.R')
+source('../CALPUFF/creapuff/project_workflows/read_IESR_emissions.R')
 
 targetyears = emis$year %>% unique
 hia_fut <- hia_cost %>% get_econ_forecast(years=targetyears, pop_targetyr=2019)
 
+hia_fut_indo <- hia_fut %>% filter(iso3=='IDN')
 
 #get costs and deaths per t emissions
 require(pbapply)
@@ -158,7 +159,7 @@ scenarios_to_process %>%
       mutate(across(c(number, cost_mn_currentUSD), ~.x * exposure/pop/modeled_emissions)) %>%
       group_by(cluster, year, Outcome, Cause, emitted_species, Pollutant, double_counted, estimate, unit) %>%
       summarise(across(c(number, cost_mn_currentUSD), sum, na.rm=T))
-  }) %>% bind_rows %>% ungroup -> hia_per_t
+  }) %>% bind_rows %>% ungroup -> hia_per_t_region
 
 hia_per_t %>% saveRDS(file.path(output_dir, 'hia_per_t.RDS'))
 hia_per_t <- readRDS(file.path(output_dir, 'hia_per_t.RDS'))
