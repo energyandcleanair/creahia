@@ -1,10 +1,11 @@
 Package: creahia
 Type: Package
-Title: What the Package Does (Title Case)
+Title: CREA HIA
 Version: 0.2.0
 Authors@R: c(
     person("Lauri", "Myllyvirta", email = "lauri@energyandcleanair.org", role = c("cre","aut")),
-    person("Hubert", "Thieriot", email = "hubert@energyandcleanair.org", role = c("aut"))
+    person("Hubert", "Thieriot", email = "hubert@energyandcleanair.org", role = c("aut")),
+    person("Danny", "Hartono", email = "danny@energyandcleanair.org", role = c("aut"))
     )
 Maintainer: Hubert Thieriot <hubert@energyandcleanair.org>
 Description: Health impact assessment from gridded concentration data
@@ -33,7 +34,9 @@ Imports:
     gstat,
     rasterVis,
     foreach,
-    priceR
+    priceR,
+    glue,
+    terra
 Depends:
     tidyverse,
     creahelpers
