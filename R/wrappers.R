@@ -114,6 +114,12 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                                                     pm2.5_to_pm10_ratio = NULL,
                                                     ...){
 
+  # For now, creahelpers work with raster package. To ensure transition,
+  # we become format agnostic for now.
+  perturbation_rasters <- perturbation_rasters %>% creahelpers::to_raster()
+  baseline_rasters <- baseline_rasters %>% creahelpers::to_raster()
+
+
   species <- names(perturbation_rasters)
   grid_raster <- perturbation_rasters[[1]] %>% raster
 
