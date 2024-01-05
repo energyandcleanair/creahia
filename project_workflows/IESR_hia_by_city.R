@@ -81,6 +81,7 @@ scenarios_to_process %>%
 
 adm2 <- readRDS(file.path(gis_dir, 'boundaries/gadm36_2_low.RDS')) %>% subset(NAME_0=='Indonesia')
 
+#aggregate HIA per t emissions to ADM1
 scenarios_to_process %>%
   pblapply(function(scen) {
     paste0('hia_per_t_region-', scen,'.RDS') %>%
@@ -100,22 +101,28 @@ emis %>% ungroup %>%
          year<=2040 | !grepl('1\\.5', scenario) | (Owner=='captive' & grepl('excluding captive', scenario))) %>%
   rename(emitted_species=pollutant) %>%
   group_by(cluster, year) %>%
-  mutate(cur_group_id=cur_group_id()) %>%
-  group_modify(function(df, group) {
-    paste0('hia_per_t_adm1-', group$cluster,'.RDS') %>% file.path(output_dir, .) %>% readRDS -> hia_per_t_adm1
+  mutate(cur_group_id=cur_group_id()) ->
+  emis_for_calcs
 
+emis_for_calcs %>%
+  group_modify(function(df, group) {
+    outname <- file.path(output_dir, paste0('hia_adm1_', group$cluster, '_', group$year, '.RDS'))
     message(unique(df$cur_group_id))
 
-    outname <- file.path(output_dir, paste0('hia_adm1_', group$cluster, '_', group$year, '.RDS'))
+    if(!file.exists(outname)) {
+      paste0('hia_per_t_adm1-', group$cluster,'.RDS') %>% file.path(output_dir, .) %>% readRDS -> hia_per_t_adm1
 
-    df %>%
-      inner_join(hia_per_t_adm1 %>% filter(year==group$year)) %>%
-      group_by(scenario, GID_1, Outcome, Cause, Pollutant, double_counted, estimate, unit) %>%
-      mutate(across(c(number, cost_mn_currentUSD), ~.x*emissions_t)) %>%
-      summarise(across(c(number, cost_mn_currentUSD), sum),
-                across(c(MW, utilization), unique)) %>%
-      mutate(across(c(number_per_TWh=number, cost_mn_currentUSD_per_TWh=cost_mn_currentUSD), ~.x/(MW*8760*utilization)*1e6)) %>%
-      saveRDS(outname)
+
+
+      df %>%
+        inner_join(hia_per_t_adm1 %>% filter(year==group$year)) %>%
+        group_by(scenario, GID_1, Outcome, Cause, Pollutant, double_counted, estimate, unit) %>%
+        mutate(across(c(number, cost_mn_currentUSD), ~.x*emissions_t)) %>%
+        summarise(across(c(number, cost_mn_currentUSD), sum),
+                  across(c(MW, utilization), unique)) %>%
+        mutate(across(c(number_per_TWh=number, cost_mn_currentUSD_per_TWh=cost_mn_currentUSD), ~.x/(MW*8760*utilization)*1e6)) %>%
+        saveRDS(outname)
+    }
 
     return(tibble(outname=outname))
   }) -> adm1_result_files
@@ -143,6 +150,55 @@ hia_fut_adm1 %>% ungroup %>%
          number=number*10504.76/13152.04) %>%
   right_join(adm1 %>% select(NAME_0, NAME_1, GID_1) %>% st_drop_geometry(), .) %>%
   write_excel_csv(file.path(output_dir, 'hia_adm1_by_scenario_for_iesr.csv'))
+
+#total impacts by adm1 and plant unit
+emis_for_calcs %>%
+  group_modify(function(df, group) {
+    outname <- file.path(output_dir, paste0('hia_adm1_byplant_', group$cluster, '_', group$year, '.RDS'))
+    message(unique(df$cur_group_id))
+
+    if(!file.exists(outname)) {
+      paste0('hia_per_t_adm1-', group$cluster,'.RDS') %>% file.path(output_dir, .) %>% readRDS -> hia_per_t_adm1
+
+
+
+      df %>%
+        inner_join(hia_per_t_adm1 %>% filter(year==group$year)) %>%
+        group_by(CFPP.name, scenario, GID_1, Outcome, Cause, Pollutant, double_counted, estimate, unit) %>%
+        mutate(across(c(number, cost_mn_currentUSD), ~.x*emissions_t)) %>%
+        summarise(across(c(number, cost_mn_currentUSD), sum),
+                  across(c(MW, utilization), unique)) %>%
+        mutate(across(c(number_per_TWh=number, cost_mn_currentUSD_per_TWh=cost_mn_currentUSD), ~.x/(MW*8760*utilization)*1e6)) %>%
+        saveRDS(outname)
+    }
+
+    return(tibble(outname=outname))
+  }) -> adm1_byplant_result_files
+
+adm1_byplant_result_files %>% group_by(year) %>% #filter(year==2038) %>%
+  group_walk(function(df, group) {
+    message(group$year)
+    df$outname %>%
+      pblapply(function(f) {
+        f %>% readRDS() %>%
+          filter(grepl('BAU$|1\\.5 degrees$|captive$|2022$', scenario),
+                 grepl('Asthma.Inci|Death|Absence', Outcome),
+                 !double_counted,
+                 group$year>=2023 | scenario=='BAU',
+                 group$year<2023 | scenario != 'BAU') %>%
+          group_by(CFPP.name, scenario, GID_1, Outcome, Pollutant, estimate) %>%
+          summarise(across(number, sum)) %>%
+          add_long_names() %>%
+          mutate(scenario=ifelse(scenario=='BAU', 'Historical', scenario),
+                 number=number*10504.76/13152.04) %>%
+          right_join(adm1 %>% select(NAME_0, NAME_1, GID_1) %>% st_drop_geometry(), .)
+        }) %>% subset(sapply(.,nrow)>0) %>%
+      bind_rows %>%
+      write_excel_csv(file.path(output_dir, paste0('hia_adm1_by_plant_by_scenario_for_iesr_',group$year,'.csv')))
+  })
+
+
+
 
 
 #current impacts by adm2 and plant
