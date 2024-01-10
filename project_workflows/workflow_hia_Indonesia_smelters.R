@@ -21,7 +21,8 @@ require(creahelpers)
 
 #list.files(path='R', full.names=T) %>% sapply(source)
 
-project_dir="G:/IndonesiaIESR"       # calpuff_external_data-2 persistent disk (project data)
+project_dir="G:/Indonesia_smelters/"       # calpuff_external_data-2 persistent disk (project data)
+met_dir="G:/IndonesiaIESR"
 
 input_dir <- file.path(project_dir,"calpuff_suite") # Where to read all CALPUFF generated files
 output_dir <- file.path(project_dir,"HIA") ; if (!dir.exists(output_dir)) dir.create(output_dir) # Where to write all HIA files
@@ -33,14 +34,14 @@ gis_dir <- "H:/gis"
 creahia::set_env('gis_dir',gis_dir)
 Sys.setenv(gis_dir=gis_dir)
 
-setwd(get_gis_dir())
-system("gsutil rsync -r gs://crea-data/gis .")
+#setwd(get_gis_dir())
+#system("gsutil rsync -r gs://crea-data/gis .")
 
 
-pollutants_to_process=c('so2', 'no2', 'ppm25', 'so4', 'no3')
+pollutants_to_process=c('so2', 'no2', 'ppm25', 'pm10', 'so4', 'no3')
 
 # Load CALMET parameters
-calmet_result <- readRDS(file.path(input_dir,"calmet_result.RDS" ))
+calmet_result <- readRDS(file.path(met_dir, "calpuff_suite", "calmet_result.RDS" ))
 UTMZ <- calmet_result$params[[01]]$IUTMZN
 UTMH <- calmet_result$params[[01]]$UTMHEM
 
@@ -53,11 +54,11 @@ grid_raster = grids$gridR
 scenarios_to_process=calpuff_files$scenario %>% unique
 calpuff_files %>% filter(period=='annual', species %in% pollutants_to_process) %>% make_tifs(grids = grids, overwrite = F)
 
-calpuff_files <- get_calpuff_files(ext=".tif", gasunit = 'ug', dir=input_dir, hg_scaling=1e-3)
+calpuff_files <- get_calpuff_files(ext=".tif$", gasunit = 'ug', dir=input_dir, hg_scaling=1e-3)
 
 
 # 02: Get base concentration levels -------------------------------------------------------------
-conc_base <- get_conc_baseline(species=unique(calpuff_files$species), grid_raster=grid_raster, no2_targetyear = 2020) # 2020 # Target year of model simulations (CALPUFF and WRF)
+conc_base <- get_conc_baseline(species=c('pm25', 'no2', 'so2'), grid_raster=grid_raster, no2_targetyear = 2020) # 2020 # Target year of model simulations (CALPUFF and WRF)
 conc_base %>% saveRDS(file.path(output_dir, 'conc_base.RDS'))
 conc_base <- readRDS(file.path(output_dir, 'conc_base.RDS'))
 
@@ -71,57 +72,129 @@ shp=readRDS(file.path(gis_dir, 'boundaries', 'gadm36_2_low.RDS'))
 regions <- creahia::get_adm(grid_raster, shp=shp, admin_level=2)
 
 
-queue <- scenarios_to_process %>% paste0('exp_', .,'.csv') %>% file.path(output_dir, .) %>% file.exists() %>% not
-
 causes_to_include = get_calc_causes() %>% grep('Death|YLD', ., value=T)
 
 # HIA ###########################################################################################
 #require(doFuture)
 #registerDoFuture()
-#future::plan("multisession", workers = 4)
+#future::plan("multisession", workers = 6)
 #Sys.setenv(GIS_DIR='F:/gis')
 
 region_ids <- regions %>% st_drop_geometry() %>% select(region_id)
+
 pop <- creahia::get_pop(grid_raster)
 
-for (scen in scenarios_to_process[queue]) {
-  message(scen)
-  # =============================== Get Perturbation Raster ========================================
-  exposure_rasters <- calpuff_files  %>%
-    filter(scenario==scen, period=='annual', species %in% pollutants_to_process)
+#build model on the effect of release height
+read_csv(file.path(emissions_dir, 'emissions_with_cluster v2.csv')) -> emis
+read_csv(file.path(emissions_dir, 'emissions_by_cluster.csv')) -> emis_cluster
 
-  exposure_rasters$conc <- lapply(exposure_rasters$path, raster) %>% lapply(multiply_by, pop)
+calpuff_files %<>%
+  mutate(loc_cluster=force_numeric(scenario),
+         release_height=gsub('^[a-z]+[0-9]+', '', scenario))
+
+
+calpuff_files %>%
+  group_by(loc_cluster) %>%
+  filter(all(c('l', 'm', 'h') %in% release_height)) ->
+  height_model_inputs
+
+
+emis_cluster %>%
+  distinct(loc_cluster, lat, lon) %>%
+  group_by(loc_cluster) %>%
+  group_modify(function(df, group) {
+    message(group)
+    df %>% mutate(flag=1) %>%
+      to_spdf %>%
+      spTransform(crs(grids$gridR)) %>% rasterize(grids$gridR, 'flag') %>% raster::distance() %>% list() %>%
+      tibble(df, r=.)
+  }) -> dist_rasters
+
+force_decreasing=function(x) { x %>% rev %>% pmax(., cummax(.)) %>% rev }
+
+require(mgcv)
+height_model_inputs %>%
+  group_by(loc_cluster, species, period) %>%
+  group_modify(function(df, group) {
+    df$path %>% stack -> r
+    r %<>% stack(dist_rasters$r[[which(dist_rasters$loc_cluster==group$loc_cluster)]])
+    names(r) <- c(df$release_height, 'dist')
+    r %>% as.data.frame() %>% mutate(l=l/2) %>% filter(l<sort(l, decreasing=T)[20]) -> r_df
+
+    degs=case_when(group$species %in% c('no3', 'so2', 'ppm25')~2, T~3)
+
+    lm(l~poly(pmin(.1, dist^-1), degs), data=r_df) -> m_l
+    lm(m~poly(pmin(.1, dist^-1), degs), data=r_df) -> m_m
+    lm(h~poly(pmin(.1, dist^-1), degs), data=r_df) -> m_h
+
+    #r_df %>% slice_sample(n=2.5e4) %>% pivot_longer(-dist) %>%
+    #  ggplot(aes(dist, value, col=name)) + geom_point(size=.5, alpha=.5) + geom_smooth()
+
+
+    tibble(dist=1:1000) %>%
+      mutate(l=predict(m_l, .), m=predict(m_m, .), h=predict(m_h, .),
+             across(c(l,m,h), force_decreasing)) ->
+      curves
+
+    curves %>%
+      pivot_longer(-dist) %>%
+      mutate(name=recode(name, h='high', m='medium', l='low') %>% factor(levels=c('low', 'medium', 'high'))) %>%
+      ggplot(aes(dist, value, col=name)) + geom_line(linewidth=1) + theme_crea() +
+      labs(color='release height', y='µg/m3', x='distance from source, km', title=paste0(toupper(group$species), ' concentrations'),
+           subtitle='as a function of distance and release height') +
+      scale_color_manual(values=unname(crea_palettes$change[5:7])) -> p_curves
+    quicksave(file.path(output_dir, paste0("release_height_correction_curves_", group$species, '_', group$period, '.png')), plot=p_curves)
+
+    curves %>% mutate(l_to_m=l/m, h_to_m=h/m,
+                      across(contains('to'), function(x) x %>% pmin(3) %>% pmax(.5))) %>%
+      select(dist, contains('to')) -> ratios
+
+    ratios %>%
+      pivot_longer(-dist) %>%
+      mutate(name=recode(name, l_to_m='low to medium', h_to_m='high to medium')) %>%
+      ggplot(aes(dist, value, col=name)) + geom_line(linewidth=1)  + theme_crea() +
+      labs(color='release heights', y='', x='distance from source, km', title=paste0(toupper(group$species), ' concentration ratios'),
+           subtitle='as a function of distance and release height') +
+      scale_color_manual(values=unname(crea_palettes$change[c(2,6)])) -> p_ratios
+    quicksave(file.path(output_dir, paste0("release_height_correction_ratios_", group$species, '_', group$period, '.png')), plot=p_ratios)
+
+    return(tibble(ratios=list(ratios)))
+  }) -> release_height_ratios
+
+clusters_to_process <- unique(calpuff_files$loc_cluster)
+queue <- clusters_to_process %>% paste0('exp_cluster_', .,'.csv') %>% file.path(output_dir, .) %>% file.exists() %>% not
+
+for (clust in clusters_to_process[queue]) {
+  message(clust)
+  # =============================== Get Perturbation Raster ========================================
+  exposure_rasters <- calpuff_files %>%
+    filter(loc_cluster==clust, period=='annual', species %in% pollutants_to_process)
+
+  exposure_rasters$conc <- lapply(exposure_rasters$path, raster)
+
+  distR <- dist_rasters$r[[which(dist_rasters$loc_cluster==unique(exposure_rasters$loc_cluster))[1]]]
+
+  heights_to_process = c('l', 'h') %whichnotin% exposure_rasters$release_height
+
+  for(rh in heights_to_process) {
+    exposure_rasters %<>% filter(release_height=='m') %>% group_by(species, period) %>%
+      group_modify(function(df, group) {
+        release_height_ratios %>% inner_join(group) %>% use_series(ratios) %>% '[['(1) -> ratios
+        df$conc[[1]] <- df$conc[[1]] * approx(ratios$dist, ratios[[paste0(rh,"_to_m")]], values(distR), rule=2)$y
+        df %>% mutate(scenario=gsub('m$', rh, scenario), release_height=rh)
+      }) %>% bind_rows(exposure_rasters)
+  }
+
+  exposure_rasters$conc %<>% lapply(multiply_by, pop)
 
   exposure_rasters$conc %>% stack %>% raster::extract(regions, sum, na.rm=T) %>%
-    as_tibble() %>% set_names(exposure_rasters$species) %>% bind_cols(region_id=region_ids, .) %>%
-    write_csv(file.path(output_dir, paste0('exp_',scen,'.csv')))
+    as_tibble() %>% set_names(paste0(exposure_rasters$species, '_', exposure_rasters$release_height)) %>%
+    bind_cols(region_id=region_ids, .) %>%
+    write_csv(file.path(output_dir, paste0('exp_cluster_',clust,'.csv')))
 }
 
-concs <- conc_base
 
-concs$conc_baseline %<>% lapply(function(r) r %>% subtract(1) %>% max(0))
-concs$conc_baseline %>% lapply(function(r) { r[]<-1; r}) -> concs$conc_perturbation
-pollutants_for_hia = conc_base$species# %>% c('tpm10')
-
-# 04: HIA Calculations:
-hia <-  wrappers.compute_hia_two_images(perturbation_rasters=conc_base$conc_perturbation,       # perturbation_rasters=raster::stack(perturbation_map)
-                                        baseline_rasters=conc_base$conc_baseline,  # baseline_rasters=raster::stack(who_map)
-                                        regions=regions,
-                                        scenario_name='1ug',
-                                        scale_base_year=2019,        # Population base year : reference year of INPUT data, for total epidemiological and total population
-                                        scale_target_year=2022,      #Population target year
-                                        crfs_version="C40",
-                                        epi_version="C40",       # epi_version="C40"
-                                        valuation_version="viscusi",
-                                        return_concentrations=T,
-                                        gbd_causes='default',
-                                        calc_causes=causes_to_include,
-                                        pm2.5_to_pm10_ratio=.7)
-
-
-saveRDS(hia, file.path(project_dir, 'HIA', paste0('hia_GEMM_1ug.RDS')))
-
-hia <- readRDS(file.path(project_dir, 'HIA', paste0('hia_GEMM_1ug.RDS')))
+hia <- readRDS(file.path(met_dir, 'HIA', paste0('hia_GEMM_1ug.RDS')))
 
 hia$hia %<>%
   mutate(number = number * case_when(Pollutant != 'NO2' | Cause != 'AllCause'~1,
@@ -133,182 +206,134 @@ hia$hia %<>%
 # 06: Compute and extract economic costs --------------------------------------------------------
 hia_cost <- get_hia_cost(hia$hia, valuation_version="viscusi")
 
-source('../CALPUFF/creapuff/project_workflows/read_IESR_emissions.R')
-
-targetyears = emis$year %>% unique
+targetyears = c(2020:2030, seq(2035, 2060, 5))
 hia_fut <- hia_cost %>% get_econ_forecast(years=targetyears, pop_targetyr=2019)
 
 hia_fut_indo <- hia_fut %>% filter(iso3=='IDN')
 
+read_csv(file.path(emissions_dir, 'emissions_by_cluster.csv')) %>%
+  dplyr::select(loc_cluster, emitted_species=pollutant, emissions_tpa_modeled=emissions_tpa) -> modeled_emissions
+
 #get costs and deaths per t emissions
 require(pbapply)
-scenarios_to_process %>%
+clusters_to_process %>%
   pblapply(function(run) {
     message(run)
-    paste0('exp_',run,'.csv') %>% file.path(output_dir, .) %>%
+    paste0('exp_cluster_',run,'.csv') %>% file.path(output_dir, .) %>%
       read_csv() %>%
       pivot_longer(-region_id, names_to='subspecies', values_to='exposure') %>%
+      separate(subspecies, c('subspecies', 'release_height')) %>%
       mutate(Pollutant=case_when(subspecies %in% c('so4', 'no3', 'ppm25')~'PM25',
                                T~toupper(subspecies)),
-             emitted_species=case_when(subspecies %in% c('so2', 'so4')~'SOx',
+             emitted_species=case_when(subspecies %in% c('so2', 'so4')~'SO2',
                                        subspecies %in% c('no2','no3')~'NOx',
-                                       subspecies=='ppm25'~'PM'),
-             cluster=run) %>%
+                                       subspecies=='ppm25'~'PM2.5'),
+             loc_cluster=run) %>%
       left_join(modeled_emissions) %>%
       left_join(hia_fut %>% select(region_id, iso3, pop, Pollutant, Outcome, Cause, double_counted, year, estimate, unit, number, cost_mn_currentUSD)) %>%
-      mutate(across(c(number, cost_mn_currentUSD), ~.x * exposure/pop/modeled_emissions)) %>%
-      group_by(cluster, year, Outcome, Cause, emitted_species, Pollutant, double_counted, estimate, unit) %>%
+      mutate(across(c(number, cost_mn_currentUSD), ~.x * exposure/pop/emissions_tpa_modeled)) %>%
+      group_by(loc_cluster, release_height, year, Outcome, Cause, emitted_species, Pollutant, double_counted, estimate, unit) %>%
       summarise(across(c(number, cost_mn_currentUSD), sum, na.rm=T))
-  }) %>% bind_rows %>% ungroup -> hia_per_t_region
+  }) %>% bind_rows %>% ungroup -> hia_per_t
 
 hia_per_t %>% saveRDS(file.path(output_dir, 'hia_per_t.RDS'))
 hia_per_t <- readRDS(file.path(output_dir, 'hia_per_t.RDS'))
 
 emis %>% ungroup %>%
-  filter(COD<=year, year_retire>=year,
-         Status=='operating' | year>2022,
-         year<=2040 | !grepl('1\\.5', scenario) | (Owner=='captive' & grepl('excluding captive', scenario))) %>%
+  full_join(tibble(year=targetyears), by = character()) %>%
   rename(emitted_species=pollutant) %>%
-  group_by(cluster, year) %>%
+  group_by(loc_cluster, release_height, year) %>%
   group_modify(function(df, group) {
     message(group)
     df %>%
-      inner_join(hia_per_t %>% filter(cluster==group$cluster, year==group$year)) %>%
-      group_by(CFPP.name, Owner, province, region, cluster, Latitude, Longitude, scenario, Outcome, Cause, Pollutant, double_counted, year, estimate, unit) %>%
-      mutate(across(c(number, cost_mn_currentUSD), ~.x*emissions_t)) %>%
-      summarise(across(c(number, cost_mn_currentUSD), sum),
-                across(c(MW, utilization), unique))
-  }) %>%
-  mutate(across(c(number_per_TWh=number, cost_mn_currentUSD_per_TWh=cost_mn_currentUSD), ~.x/(MW*8760*utilization)*1e6)) ->
-  hia_scenarios
+      inner_join(hia_per_t %>% inner_join(group)) %>% select(-all_of(names(group))) %>%
+      group_by(Tracker.ID, smelter_company, Commodity_broad, Province, Latitude, Longitude, Outcome, Cause, Pollutant, double_counted, estimate, unit) %>%
+      mutate(across(c(number, cost_mn_currentUSD), ~.x*emissions_tpa)) %>%
+      summarise(across(c(number, cost_mn_currentUSD), sum))
+  }) -> hia_scenarios
 
 
 
 hia_scenarios %>% saveRDS(file.path(output_dir, 'hia_scenarios.RDS'))
 hia_scenarios <- readRDS(file.path(output_dir, 'hia_scenarios.RDS'))
 
+hia_scenarios %<>% left_join(emis %>% distinct(Tracker.ID, smelter_company, Commodity_broad, MW, capacity_output_tpa, fuel, type, COD=Year))
+
 hia_scenarios %>%
-  group_by(scenario, Outcome, Cause, Pollutant, double_counted, year, estimate, unit) %>%
-  summarise(across(c(number, cost_mn_currentUSD), sum)) ->
+  group_by(type, Province, COD,
+           Outcome, Cause, Pollutant, double_counted, year, estimate, unit) %>%
+  summarise(across(c(number, cost_mn_currentUSD), ~sum(.x, na.rm=T))) ->
   hia_scenarios_totals
 
 hia_scenarios_totals %>% saveRDS(file.path(output_dir, 'hia_scenarios_totals.RDS'))
 hia_scenarios_totals <- readRDS(file.path(output_dir, 'hia_scenarios_totals.RDS'))
 
-hia_scenarios_totals %<>% filter(!double_counted, !grepl("economic costs", Outcome)) %>%
-  group_by(scenario, year, estimate) %>%
+hia_scenarios_totals %<>%
+  filter(!double_counted, !grepl("economic costs", Outcome)) %>%
+  group_by(type, Province, COD, year, estimate) %>%
   summarise(across(c(number=cost_mn_currentUSD), sum)) %>%
   mutate(Outcome = "economic costs", unit="million USD", double_counted = F) %>%
   bind_rows(hia_scenarios_totals %>% filter(!grepl("economic costs", Outcome)))
 
 hia_scenarios_totals %<>% filter(!double_counted, grepl("Death", Outcome)) %>%
-  group_by(scenario, year, estimate) %>%
+  group_by(type, Province, COD, year, estimate) %>%
   summarise(across(c(number), sum)) %>%
   mutate(Outcome = "deaths, total", Cause='AllCause', Pollutant='All', unit="death", double_counted = T) %>%
   bind_rows(hia_scenarios_totals %>% filter(Pollutant!='All'))
 
 hia_scenarios_totals %>% ungroup %>%
-  filter(estimate=='central', Outcome=='deaths, total',
-         grepl('1\\.5 degrees($| /w APC| excluding captive$)|PERPRES.*2022$', scenario)) %>%
-  group_by(scenario, year, estimate) %>% summarise(across(number, sum)) %>%
-  complete(scenario, year=2000:2056, estimate) %>% replace_na(list(number=0)) %>%
-  filter(year>=2010) %>%
+  filter(estimate=='central', Outcome=='deaths, total', COD<year) %>%
+  group_by(Province, year, estimate) %>% summarise(across(number, sum)) %>% ungroup %>%
   write_csv(file.path(output_dir, 'Air pollution-related deaths by scenario.csv')) %>%
-  ggplot(aes(year, number, col=scenario)) + geom_line(size=1) +
-  theme_crea() + scale_color_crea_d('dramatic', guide=guide_legend(nrow = 1)) +
-  theme(legend.position = 'top') +
-  labs(title='Air pollution-related deaths by scenario', y='cases per year', x='') +
-  x_at_zero() + snug_x -> plt
-quicksave(file.path(output_dir, 'Air pollution-related deaths by scenario.png'), plot=plt, scale=1)
+  ggplot(aes(year, number, fill=Province)) +
+  #facet_wrap(~type, scales='free_y') +
+  geom_area() +
+  theme_crea() + scale_fill_manual(values=unname(crea_palettes$dramatic), guide=guide_legend(nrow = 1)) +
+  theme(legend.position = 'top', plot.margin = unit(c(.25,.25,.1,.1), 'in')) +
+  labs(title='Air pollution-related deaths linked to smelters and captive power', y='cases per year', x='') +
+  x_at_zero(labels=scales::comma) + snug_x -> plt
+quicksave(file.path(output_dir, 'Air pollution-related deaths by scenario.png'), plot=plt, scale=1.1, footer_height=.03)
 
 hia_scenarios_totals %>% ungroup %>%
-  filter(estimate=='central', !double_counted,
-         grepl('1\\.5 degrees($| /w APC| excluding captive$)|PERPRES.*2022$', scenario), year>=2010) %>%
-  group_by(scenario, year, estimate) %>% summarise(across(cost_mn_currentUSD, sum, na.rm=T)) %>%
-  complete(scenario, year=2000:2056, estimate) %>% replace_na(list(cost_mn_currentUSD=0)) %>%
-  filter(year>=2010) %>%
+  filter(estimate=='central', !double_counted, COD<year) %>%
+  group_by(Province, year, estimate) %>% summarise(across(cost_mn_currentUSD, sum)) %>% ungroup %>%
   write_csv(file.path(output_dir, 'Air pollution-related costs by scenario.csv')) %>%
-  ggplot(aes(year, cost_mn_currentUSD, col=scenario)) + geom_line(size=1) +
-  theme_crea() + scale_color_crea_d('dramatic', guide=guide_legend(nrow = 1)) +
-  theme(legend.position = 'top') +
-  labs(title='Air pollution-related costs by scenario', y='mln USD/year', x='') +
-  x_at_zero() + snug_x -> plt
-quicksave(file.path(output_dir, 'Air pollution-related costs by scenario.png'), plot=plt, scale=1)
-
-hia_scenarios_totals %>% filter(year==2022, grepl("PERPRES.*2022$", scenario)) %>%
-  add_long_names() %>%
-  select(scenario, Outcome=Outcome_long, Cause=Cause_long, Pollutant, unit, double_counted, estimate, number) %>%
-  pivot_wider(names_from=estimate, values_from=number) %>%
-  relocate(high, .after = low) %>%
-  write_csv(file.path(output_dir, 'annual HIA 2022.csv'))
+  ggplot(aes(year, cost_mn_currentUSD, fill=Province)) +
+  geom_area() +
+  theme_crea() + scale_fill_manual(values=unname(crea_palettes$dramatic), guide=guide_legend(nrow = 1)) +
+  theme(legend.position = 'top', plot.margin = unit(c(.25,.25,.1,.1), 'in')) +
+  labs(title='Air pollution-related costs linked to smelters and captive power', y='mln USD/year', x='') +
+  x_at_zero(labels=scales::comma) + snug_x -> plt
+quicksave(file.path(output_dir, 'Air pollution-related costs by scenario.png'), plot=plt, scale=1.1, footer_height=.03)
 
 
-hia_scenarios_totals %>% filter(year>2023) %>%
-  group_by(scenario, estimate, Outcome, Cause, Pollutant, double_counted, unit) %>%
-  summarise(across(number, sum)) ->
-  hia_cum
-
-hia_cum %>% filter(estimate=='central', !double_counted, grepl('Death', Outcome)) %>%
-  group_by(scenario, estimate) %>% summarise(across(number, sum)) %>%
-  ggplot(aes(scenario, number)) + geom_col() +
-  theme_crea() + #scale_color_crea_d('dramatic', guide=guide_legend(nrow = 1)) +
-  theme(legend.position = 'top') + coord_flip()
 
 
-hia_cum %>% filter(!grepl("cofiring", scenario)) %>%
-  add_long_names() %>%
-  select(scenario, Outcome=Outcome_long, Cause=Cause_long, Pollutant, unit, double_counted, estimate, number) %>%
-  pivot_wider(names_from=estimate, values_from=number) %>%
-  relocate(high, .after = low) %>%
-  write_csv(file.path(output_dir, 'cumulative HIA 2024 to end-of-life.csv'))
-
-#results by plant
-hia_per_t %>%
-  mutate(number=number*ifelse(grepl('Death', Outcome), 1, 0)) %>%
-  filter(!double_counted) %>%
-  group_by(cluster, emitted_species, year, estimate) %>%
-  summarise(across(c(number, cost_mn_currentUSD), sum, na.rm=T)) ->
-  hia_per_t_total
-
-hia_per_t_total %>% write_csv(file.path(output_dir, 'hia_per_t_total.csv'))
-
-#totals of deaths and costs by plant (current), by province (current and cumulative total), by scenario (cumulative total)
-hia_scenarios_totals %>% filter((grepl("PERPRES.*2022$", scenario) & year==2022) | year>=2025,
-                                !grepl("cofiring", scenario),
-                                Outcome %in% c('deaths, total', 'economic costs')) %>%
-  pivot_wider(names_from=estimate, values_from=number) %>%
-  relocate(high, .after = low) %>%
-  write_csv(file.path(output_dir, 'deaths and total costs by year, all scenarios.csv'))
-
-hia_scenarios_totals %>% filter(year>=2024,
-                                !grepl("cofiring", scenario),
-                                Outcome %in% c('deaths, total', 'economic costs')) %>%
-  group_by(scenario, Outcome, unit, estimate) %>% summarise(across(number, sum)) %>%
-  pivot_wider(names_from=estimate, values_from=number) %>%
-  relocate(high, .after = low) %>%
-  write_csv(file.path(output_dir, 'deaths and total costs cumulative, all scenarios.csv'))
-
-
-emis %>% filter(scenario=='BAU', year==pmax(2022, COD)) %>%
-  distinct(CFPP.name, year) -> plant_cod
-
-
-hia_scenarios %>% ungroup %>%
-  filter(scenario=='BAU', !double_counted) %>%
-  inner_join(plant_cod) %>%
+hia_scenarios %>% ungroup %>% filter(year==2030, !double_counted) %>%
   mutate(across(matches('^deaths|^number'), ~.x * ifelse(grepl('Death', Outcome), 1, 0))) %>%
-  group_by(CFPP.name, Owner, province, cluster, Latitude, Longitude, MW, scenario, year, estimate) %>%
+  group_by(smelter_company, Tracker.ID, Province, loc_cluster, Commodity_broad, capacity_output_tpa, captive_MW=MW, fuel, type, COD,
+           Latitude, Longitude, year, estimate) %>%
   summarise(across(c(number, matches('^deaths|^cost|^number')), sum)) %>%
-  rename(deaths=number) %>% right_join(plant_names, .) ->
+  rename(deaths=number) ->
   hia_plants
 
-hia_plants %>% write_csv(file.path(output_dir, 'current hia by unit.csv'))
-hia_plants %>% group_by(plant_name, estimate) %>%
-  summarise(across(c(Latitude, Longitude), mean),
-            across(c(deaths, cost_mn_currentUSD), sum),
-            across(ends_with('per_TWh'), ~weighted.mean(.x, MW)),
-            across(MW, sum)) %>% arrange(estimate, desc(deaths)) %>%
-  write_csv(file.path(output_dir, 'current hia by plant.csv'))
+hia_plants %>% write_csv(file.path(output_dir, 'hia by plant, 2030.csv'))
+
+hia_plants %>% group_by(smelter_company, estimate) %>%
+  summarise(across(matches('^deaths|^cost'), ~sum(.x, na.rm=T))) %>%
+  arrange(-deaths) %>% filter(estimate=='central') ->
+  plant_ranking
+
+hia_plants %>% mutate(Commodity_broad=ifelse(type=='captive power', 'Captive power', Commodity_broad)) %>%
+  mutate(smelter_company=factor(smelter_company, levels=plant_ranking$smelter_company %>% rev)) %>%
+  filter(smelter_company %in% plant_ranking$smelter_company[1:15], estimate=='central') %>%
+  ggplot(aes(smelter_company, deaths, fill=Commodity_broad)) + geom_col() +
+  coord_flip() +
+  scale_fill_manual(values=unname(crea_palettes$dramatic[c(1,2,6)])) +
+  theme_crea() + x_at_zero() +
+  labs(title='Smelter companies with the largest projected health impact',
+       y='deaths per year linked to air pollution', x='', fill='Commodity') -> p
+quicksave(file.path(output_dir, 'Smelter companies with the largest projected health impact.png'), plot=p)
 
 hia_plants %>% to_spdf %>% raster::extract(pop, ., fun=mean, buffer=100) -> hia_plants$population_density_100km
 hia_plants %>% ggplot(aes(population_density_100km, deaths_per_TWh))+geom_point()
