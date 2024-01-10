@@ -27,10 +27,11 @@ input_dir <- file.path(project_dir,"calpuff_suite") # Where to read all CALPUFF 
 output_dir <- file.path(project_dir,"HIA") ; if (!dir.exists(output_dir)) dir.create(output_dir) # Where to write all HIA files
 emissions_dir <- file.path(project_dir,"emissions")
 
-emis <- read_xlsx(file.path(emissions_dir, "HIA_BantenSuralaya_2023.xlsx"), sheet="CALPUFF input")
+
+emis <- read_xlsx(file.path(emissions_dir, 'emission_NewLargo.xlsx'), sheet='CALPUFF input')
 
 #gis_dir <- "~/GIS"                    # The folder where we store general GIS data
-gis_dir <- "F:/gis"
+gis_dir <- "H:/gis"
 
 creahia::set_env('gis_dir',gis_dir)
 Sys.setenv(gis_dir=gis_dir)
@@ -40,9 +41,11 @@ system("gsutil rsync -r gs://crea-data/gis .")
 
 
 pollutants_to_process=c('NO2', 'PM2.5', 'PM10', 'SO2')
+pollutants_to_process=c('PM2.5')
 
 # Load CALMET parameters
-calmet_result <- readRDS(file.path(input_dir,"calmet_result.RDS" ))
+#calmet_result <- readRDS(file.path(input_dir,"calmet_result.RDS" ))
+calmet_result <- readRDS(file.path("H:/SouthAfrica/calpuff_suite/calmet_result.RDS" ))
 UTMZ <- calmet_result$params[[01]]$IUTMZN
 UTMH <- calmet_result$params[[01]]$UTMHEM
 
@@ -52,8 +55,13 @@ grids = get_grids_calpuff(calpuff_files, UTMZ, UTMH, map_res=1)
 grid_raster = grids$gridR
 
 #make tifs
-scenarios_to_process=c('base', 'complian', 'bat')
-calpuff_files %>% filter(scenario %in% scenarios_to_process, period=='annual', speciesName %in% pollutants_to_process) %>% make_tifs(grids = grids, overwrite = T)
+#scenarios_to_process=c('F1', 'F2', 'F3', 'D2', 'H2', 'F1.D2.H2')
+#scenarios_to_process=c('F1.D2.H2')
+#calpuff_files %>% filter(scenario %in% scenarios_to_process, period=='annual', speciesName %in% pollutants_to_process) %>% make_tifs(grids = grids, overwrite = T)
+
+calpuff_files <- get_calpuff_files(ext=".tif", gasunit = 'ug', dir=input_dir, hg_scaling=1e-3)
+grids = get_grids_calpuff(calpuff_files, UTMZ, UTMH, map_res=1)
+grid_raster = grids$gridR
 
 # 02: Get base concentration levels -------------------------------------------------------------
 conc_base <- get_conc_baseline(species=unique(calpuff_files$species), grid_raster=grid_raster, no2_targetyear = 2020) # 2020 # Target year of model simulations (CALPUFF and WRF)
@@ -73,12 +81,13 @@ shp=readRDS(file.path(gis_dir, 'boundaries', 'gadm36_2_low.RDS'))
 regions <- creahia::get_adm(grid_raster, shp=shp, admin_level=2)
 
 
-calpuff_files_all <- get_calpuff_files(ext=".tif", gasunit = 'ug', dir=input_dir, hg_scaling=1e-3) %>%
-  filter(scenario %in% scenarios_to_process)
-
+#calpuff_files_all <- get_calpuff_files(ext=".tif", gasunit = 'ug', dir=input_dir, hg_scaling=1e-3) %>%
+#    filter(scenario %in% scenarios_to_process)
+calpuff_files_all <- get_calpuff_files(ext=".tif", gasunit = 'ug', dir=input_dir, hg_scaling=1e-3)
 
 runs <- calpuff_files_all$scenario %>% unique
 queue <- T
+
 
 causes_to_include = get_calc_causes() %>% grep('Death|YLD', ., value=T)
 
@@ -126,7 +135,7 @@ for (scen in runs[queue]) {
   saveRDS(hia, file.path(project_dir, 'HIA', paste0('hia_GBD__',scen,'.RDS')))
 }
 
-
+# emis data has a lifetime collumn
 
 #read HIA data
 hia <- runs %>% lapply(function(scen) readRDS(file.path(project_dir, 'HIA', paste0('hia_GBD__',scen,'.RDS')))$hia) %>% bind_rows
@@ -147,19 +156,121 @@ hia %>%
                                      estimate=='high'~2/3)) ->
   hia_totals
 
-hia_totals %>% group_by(scenario, Pollutant) %>% filter(!double_counted, Outcome=='Deaths', estimate=='central') %>%
-  summarise(across(number, sum, na.rm=T))
+
+#regions <- hia_totals$iso3 %>% unique
+#regions
+#
+#
+#hia_totals %>% group_by(scenario, Pollutant) %>% filter(!double_counted, Outcome=='Deaths', estimate=='central') %>%
+#  summarise(across(number, sum, na.rm=T))
+#
+#hia_totals %>% filter(iso3!='ZWE')
+
+hia_totals  %>% group_by(scenario, Pollutant) %>% filter(!double_counted, Outcome=='Deaths', estimate=='central') %>%
+  #summarise(across(number, sum, na.rm=T))
+  summarise(across(number, ~sum(.x, na.rm=T), na.rm=T))
+
+
+
+# 06: Compute and extract economic costs --------------------------------------------------------
+# TODO : change name scale_target_year -> pop_target_year
+
+targetyears = c(seq(2020,2037,1))
+
+hia_cost <- get_hia_cost(hia=hia, valuation_version="viscusi")
+valuations <- get_valuation('viscusi')
+
+#usd_to_lcu=15447
+usd_to_lcu=14.7912
+
+hia_cost %>%
+  distinct(Outcome, valuation_world_2017, valuation_current_usd, iso3) %>%
+  left_join(valuations %>% select(Outcome, reference)) %>%
+  na.omit %>% add_long_names() %>%
+  select(-Outcome, Outcome=Outcome_long) %>%
+  mutate(valuation_current_lcu=valuation_current_usd*usd_to_lcu,
+         across(is.numeric, function(x) x %>% signif(4) %>% scales::comma(accuracy=1))) %>%
+  relocate(Outcome) %>%
+  relocate(reference, .after=everything()) %>%
+  write_csv(file.path(output_dir, 'valuations.csv'))
+
+hia_fut <- get_econ_forecast(hia_cost, years=targetyears, pop_targetyr=2019)
+
+
+
+# adm <- creahelpers::get_adm(level = 2, res='coarse')
+
+
+hia_fut %>%
+  left_join(hia_cost %>% distinct(Outcome, Cause, Pollutant, double_counted)) %>%
+  group_by(scenario, Outcome) %>%
+  #summarise(across(c(number, cost_mn_currentUSD), sum))
+  summarise(across(c(number, cost_mn_currentUSD), ~sum(.x, na.rm=T)))
+
+
+
+years = list('f1' = 2022:2037, 'f2' = 2022:2037, 'f3' = 2022:2037,
+                               'd2' = 2020:2024, 'd3' = 2020:2024,
+                               'h2' = 2023:2032, 'h3' = 2023:2032)
+
+#summarise(across(c(number, cost_mn_currentUSD), ~sum(.x, na.rm=T))) %>%
+
+# cumulative  integrated over time and space
+for(x in names(years)){
+  hia_fut %>% filter(scenario == x) %>%
+    filter(year %in% years[[x]], Pollutant != 'NO2' | Cause != 'AllCause') %>%
+    group_by(scenario, estimate, Outcome, Cause, Pollutant) %>%
+    summarise(across(c(number, cost_mn_currentUSD), sum)) %>%
+    left_join(hia %>% distinct(scenario, Outcome, Cause, Pollutant, double_counted)) %>%
+    mutate(double_counted = ifelse(Pollutant=='NO2', F, double_counted)) %>%
+    add_long_names %>% ungroup %>% select(-Outcome, -Cause) %>% rename(Cause=Cause_long, Outcome=Outcome_long) %>%
+    pivot_longer(c(number, cost_mn_currentUSD)) %>%
+    spread(estimate, value) %>%
+    arrange(desc(name), scenario, Outcome!='deaths', double_counted) %>%
+    select(scenario, Outcome, Cause, Pollutant,  central, low, high, variable=name, double_counted) %>%
+    write_csv(file.path(output_dir, glue::glue('{x}_Cumulative.csv')))
+}
+
+
+# for calulcting risk 7 integrated over time but not space
+for(x in names(years)){
+  hia_fut %>% filter(scenario == x) %>%
+    filter(year %in% years[[x]], Pollutant != 'NO2' | Cause != 'AllCause') %>%
+    group_by(scenario, estimate, Outcome, Cause, Pollutant) %>%
+    summarise(number = sum(number), pop = mean(pop), cost_mn_currentUSD=sum(cost_mn_currentUSD)) %>%
+    left_join(hia %>% distinct(scenario, Outcome, Cause, Pollutant, double_counted, pop, region_name, region_id)) %>%
+    mutate(double_counted = ifelse(Pollutant=='NO2', F, double_counted)) %>%
+    add_long_names %>% ungroup %>% select(-Outcome, -Cause) %>% rename(Cause=Cause_long, Outcome=Outcome_long) %>%
+    pivot_longer(c(number, cost_mn_currentUSD)) %>%
+    spread(estimate, value) %>%
+    arrange(desc(name), scenario, Outcome!='deaths', double_counted) %>%
+    select(scenario, Outcome, Cause, Pollutant, central, low, high, variable=name, double_counted, pop, region_name, region_id) %>%
+    write_csv(file.path(output_dir, glue::glue('{x}_Risk.csv')))
+}
+
+
+################################################################################################
+
+
+
+
+
+
+
+
 
 
 # 06: Compute and extract economic costs --------------------------------------------------------
 targetyears = 2022
+
 
 hia_cost <- get_hia_cost(hia=hia_totals, valuation_version="viscusi")
 
 #valuations <- read_csv('~/Rpackages/creahia/inst/extdata/valuation_viscusi.csv')
 valuations <- get_valuation('viscusi')
 
-usd_to_lcu=15447
+#usd_to_lcu=15447
+usd_to_lcu=14.7912
 
 hia_cost %>%
   distinct(Outcome, valuation_world_2017, valuation_current_usd, iso3) %>%
@@ -190,82 +301,28 @@ hia_totals %>% filter(!double_counted) %>% group_by(scenario, estimate) %>%
   pivot_wider(names_from = estimate, values_from = number) %>%
   write_csv(file.path(output_dir, 'HIA results.csv'))
 
+# 06: Compute and extract economic costs --------------------------------------------------------
+
+
+
+# 0stopped here -------------------------------------------------------
+
 hia_fut %>%
   filter(Outcome=='Deaths', !double_counted, estimate=='central') %>%
   group_by(scenario, province=NAME_1) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum)) ->
   plotdata
 
-plotdata %>% group_by(province, scenario) %>%
-  summarise(max_value=max(number),
-            line_start=number[year==2032]) %>%
-  arrange(line_start) %>% ungroup %>%
-  mutate(max_value=max(max_value)) %>%
-  group_by(province) %>%
-  mutate(line_end = max_value * (1.5+seq_along(scenario))/7.5) %>%
-  pivot_longer(starts_with('line'), values_to='number') %>%
-  mutate(year=ifelse(name=='line_start', 2032, 2050)) %>%
-  filter(province=='Gauteng') ->
-  label_pos
-
-plotdata %>%
-  ggplot(aes(year, number, col=scenario)) +
-  facet_wrap(~province) +
-  geom_line(size=1) +
-  geom_label(aes(label=scenario), data=label_pos %>% filter(name=='line_end'), hjust=0, size=3) +
-  geom_line(data=label_pos) +
-  theme_crea(legend.position='top') +
-  scale_color_manual(values=scenario_colors,
-                     guide=guide_legend(nrow=1, override.aes = list(label='', linewidth=1))) +
-  labs(title='Deaths attributed to Eskom emissions by province',
-       y='cases per year', x='') +
-  snug_x + x_at_zero() -> p
-quicksave(file.path(output_dir, 'deaths by province and scenario.png'), plot=p)
-
-hia_scen %>%
-  filter(Outcome=='Deaths', !double_counted, estimate=='central',
-         region_id %in% c('Mpumalanga', 'Gauteng', 'Limpopo') | T) %>%
-  group_by(year, scenario) %>%
-  summarise(across(c(number, cost_mn_currentUSD), sum)) ->
-  plotdata
-
-plotdata %>% group_by(scenario) %>%
-  summarise(max_value=max(number),
-            line_start=number[year==2032]) %>%
-  arrange(line_start) %>%
-  mutate(line_end = max_value * (1.5+seq_along(scenario))/7.5) %>%
-  pivot_longer(starts_with('line'), values_to='number') %>%
-  mutate(year=ifelse(name=='line_start', 2032, 2050)) ->
-  label_pos
-
-plotdata %>%
-  ggplot(aes(year, number, col=scenario)) +
-  geom_line(size=2) +
-  geom_label(aes(label=scenario), data=label_pos %>% filter(name=='line_end'), hjust=0, size=5) +
-  geom_line(data=label_pos, size=1) +
-  theme_crea(legend.position='top') +
-  scale_color_manual(values=scenario_colors,
-                     guide=guide_legend(nrow=1, override.aes = list(label='', linewidth=1))) +
-  labs(title='Deaths attributed to Eskom emissions',
-       y='cases per year', x='') +
-  snug_x + x_at_zero() -> p
-quicksave(file.path(output_dir, 'deaths by scenario.png'), plot=p)
 
 
-hia_scen %>%
-  filter(Outcome=='Deaths', !double_counted, estimate=='central',
-         region_id %in% c('Mpumalanga', 'Gauteng', 'Limpopo') | T,
-         year>=2025) %>%
-  group_by(scenario, province=region_id) %>%
-  summarise(across(c(number, cost_mn_currentUSD), sum)) %>%
-  ggplot(aes(scenario, number, fill=scenario)) + geom_col() + facet_wrap(~province) +
-  theme_crea(legend.position='top', axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
-  scale_fill_manual(values=scenario_colors, guide=guide_legend(nrow=1)) +
-  x_at_zero(labels=scales::comma) +
-  labs(title='Cumulative deaths attributed to Eskom emissions',
-       subtitle='2025 until end-of-life',
-       y='cases', x='') -> p
-quicksave(file.path(output_dir, 'cumulative deaths by province and scenario.png'), plot=p)
+# stop here maybe
+
+
+
+
+
+
+
 
 
 make_nice_numbers <- function(df, sigdigs=3, accuracy=1, columns=c('number', 'central', 'low', 'high')) {
