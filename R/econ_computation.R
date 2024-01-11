@@ -289,7 +289,8 @@ get_econ_forecast <- function(hia_cost,
                          iso3 %in% unique(hia_cost$iso3),
                          !iso3 %in% missing_iso3s_pop)) %>%
       mutate(GDPscaling = GDP.PC.PPP.2017USD / GDP.PC.PPP.2017USD[year == pop_targetyr] /
-               (1 + discount_rate)^(year - pop_targetyr))
+               (1 + discount_rate)^(year - pop_targetyr)) %>%
+      sel(-GDP.PC.PPP.2017USD)
 
     missing_iso3s_gdp <- setdiff(unique(hia_cost$iso3),
                                  c(unique(gdp_scaling[gdp_scaling$year %in% years,]$iso3)))
@@ -308,7 +309,7 @@ get_econ_forecast <- function(hia_cost,
 
   hia_by_year <- suppressMessages(hia_cost %>%
                                     select(-year) %>%
-                                    full_join(pop_scaling %>% sel(-GDP.PC.PPP.2017USD)))
+                                    full_join(pop_scaling))
 
   hia_by_year %>% mutate(number = number * scaling,
                          cost_mn_currentUSD = cost_mn_currentUSD * scaling * GDPscaling)

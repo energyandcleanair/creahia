@@ -108,12 +108,12 @@ get_gdp <- function(year = NULL) {
 #'
 #' @examples
 recreate_gdp <- function() {
-  gdp <- get_gdp_timeseries()
+  gdp <- get_gdp_timeseries(end_year=lubridate::year(lubridate::today()))
   write_csv(gdp, 'inst/extdata/gdp.csv')
 }
 
 
-get_gdp_timeseries <- function(start_year = 1980, end_year = 2021) {
+get_gdp_timeseries <- function(start_year = 1980, end_year = lubridate::year(lubridate::today())) {
 
   list(
       # GDP per capita
