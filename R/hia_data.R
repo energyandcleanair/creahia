@@ -6,13 +6,16 @@
 #' @export
 #'
 #' @examples
-get_hia_path <- function(filename) {
+get_hia_path <- function(filename, error_if_not_exists=F) {
   # We bundle HIA data with creahia package, in inst/extdata
   # Read here for more details:
   # https://r-pkgs.org/data.html#data-extdata
-  f <- system.file("extdata", filename, package = "creahia")
-  if(f == "") stop("Couldn't find file ", filename, " in HIA folder")
-  return(f)
+  file <- file.path(find.package("creahia"), "extdata", filename)
+  if(!file.exists(file)) {
+    if(error_if_not_exists) stop("Couldn't find file ", filename, " in HIA folder")
+    else warning("Couldn't find file ", filename, " in HIA folder")
+  }
+  return(file)
 }
 
 
@@ -105,33 +108,44 @@ get_gdp <- function(year = NULL) {
 #'
 #' @examples
 recreate_gdp <- function() {
-  gdp <- get_gdp_timeseries()
+  gdp <- get_gdp_timeseries(end_year=lubridate::year(lubridate::today()))
   write_csv(gdp, 'inst/extdata/gdp.csv')
 }
 
 
-get_gdp_timeseries <- function(start_year = 1980, end_year = 2021) {
-  list(GDP.PC.PPP.2017USD = 'NY.GDP.PCAP.PP.KD',
+get_gdp_timeseries <- function(start_year = 1980, end_year = lubridate::year(lubridate::today())) {
+
+  list(
+      # GDP per capita
+       GDP.PC.PPP.2017USD = 'NY.GDP.PCAP.PP.KD',
        GDP.PC.PPP.currUSD = 'NY.GDP.PCAP.PP.CD',
        GDP.PC.currLCU     = 'NY.GDP.PCAP.CN',
        GDP.PC.currUSD     = 'NY.GDP.PCAP.CD',
        GDP.PC.2015USD     = 'NY.GDP.PCAP.KD',
+
+       # GDP total
+       GDP.TOT.PPP.2017USD = 'NY.GDP.MKTP.PP.KD',
+       GDP.TOT.PPP.currUSD = 'NY.GDP.MKTP.PP.CD',
        GDP.TOT.currLCU    = 'NY.GDP.MKTP.CN',
        GDP.TOT.currUSD    = 'NY.GDP.MKTP.CD',
+       GDP.TOT.2015USD    = 'NY.GDP.MKTP.KD',
 
+       # GNI per capita
        GNI.PC.PPP.2017USD = 'NY.GNP.PCAP.PP.KD',
        GNI.PC.PPP.currUSD = 'NY.GNP.PCAP.PP.CD',
        GNI.PC.currLCU     = 'NY.GNP.PCAP.CN',
        GNI.PC.currUSD     = 'NY.GNP.PCAP.CD',
+
+       # GNI total
        PPP.convLCUUSD     = 'PA.NUS.PPP') %>%
-    lapply(readWB_online, start_date = start_year, end_date = end_year, latest.year.only = F) %>%
+    lapply(function(x, ...){print(x); readWB_online(x, ...)}, start_date = start_year, end_date = end_year, latest.year.only = F) %>%
     bind_rows(.id = 'valuename') %>%
     sel(country, iso3, year, valuename, Value) %>%
     spread(valuename, Value)
 }
 
 
-get_gdp_forecast <- function() {
+get_gdp_forecast <- function(pop_proj=NULL) {
   print("Getting GDP forecast")
   gdp_forecast_file <- get_hia_path('OECD_GDP_forecast.csv')
   if(!file.exists(gdp_forecast_file)) {
@@ -139,8 +153,52 @@ get_gdp_forecast <- function() {
                   gdp_forecast_file)
   }
 
-  read_csv(gdp_forecast_file, col_types = cols()) %>%
-    sel(iso3 = LOCATION, year = TIME, GDP.realUSD.tot = Value)
+  gdp_forecast <- read_csv(gdp_forecast_file, col_types = cols()) %>%
+    mutate(GDP.realUSD = Value * 1e6) %>%
+    sel(iso3 = LOCATION, year = TIME, GDP.realUSD)
+
+  # Add per capita
+  pop_proj <- creahelpers::default_if_null(pop_proj, get_pop_proj())
+
+  gdp_forecast %>%
+    left_join(pop_proj %>%
+                group_by(year, iso3) %>%
+                summarise(pop=sum(pop)*1000)) %>%
+    mutate(GDP.PC.realUSD = GDP.realUSD / pop) %>%
+    select(-c(pop))
+}
+
+get_gdp_scaling <- function(iso3){
+
+  gdp_historical <- get_gdp()
+  gdp_forecast <- get_gdp_forecast()
+
+  gdp_all <- suppressMessages(full_join(gdp_historical, gdp_forecast, by=c("iso3", "year"))) %>%
+    filter(iso3 %in% !!iso3)
+
+  suppressMessages(
+    gdp_all %>%
+      # mutate(GDP.realUSD = GDP.realUSD.tot * 1000 / pop) %>%
+      group_by(iso3) %>%
+      group_modify(function(df, ...) {
+
+        PPP.scaling <- df$GDP.PC.PPP.2017USD[df$year == 2019] / df$GDP.PC.realUSD[df$year == 2019]
+
+        past.scaling <- df %>% filter(!is.na(GDP.PC.PPP.2017USD + GDP.PC.realUSD)) %>% head(1)
+        ind <- df$year < past.scaling$year
+
+        df$GDP.PC.PPP.2017USD[ind] <- df$GDP.PC.PPP.2017USD[ind] %>%
+          na.cover(df$GDP.PC.realUSD[ind] * past.scaling$GDP.PC.PPP.2017USD / past.scaling$GDP.PC.realUSD)
+
+
+        future.scaling = df %>% filter(!is.na(GDP.PC.PPP.2017USD + GDP.PC.realUSD)) %>% tail(1)
+        ind <- df$year > future.scaling$year
+
+        df$GDP.PC.PPP.2017USD[ind] <- df$GDP.PC.PPP.2017USD[ind] %>%
+          na.cover(df$GDP.PC.realUSD[ind] * future.scaling$GDP.PC.PPP.2017USD / future.scaling$GDP.PC.realUSD)
+
+        return(df)
+      }))
 }
 
 
