@@ -269,17 +269,8 @@ hia_scenarios_totals %>% saveRDS(file.path(output_dir, 'hia_scenarios_totals.RDS
 hia_scenarios_totals <- readRDS(file.path(output_dir, 'hia_scenarios_totals.RDS'))
 
 hia_scenarios_totals %<>%
-  filter(!double_counted, !grepl("economic costs", Outcome)) %>%
   group_by(type, Province, COD, year, estimate) %>%
-  summarise(across(c(number=cost_mn_currentUSD), sum)) %>%
-  mutate(Outcome = "economic costs", unit="million USD", double_counted = F) %>%
-  bind_rows(hia_scenarios_totals %>% filter(!grepl("economic costs", Outcome)))
-
-hia_scenarios_totals %<>% filter(!double_counted, grepl("Death", Outcome)) %>%
-  group_by(type, Province, COD, year, estimate) %>%
-  summarise(across(c(number), sum)) %>%
-  mutate(Outcome = "deaths, total", Cause='AllCause', Pollutant='All', unit="death", double_counted = T) %>%
-  bind_rows(hia_scenarios_totals %>% filter(Pollutant!='All'))
+  add_total_deaths_and_costs()
 
 hia_scenarios_totals %>% ungroup %>%
   filter(estimate=='central', Outcome=='deaths, total', COD<year) %>%
@@ -307,7 +298,11 @@ hia_scenarios_totals %>% ungroup %>%
 quicksave(file.path(output_dir, 'Air pollution-related costs by scenario.png'), plot=plt, scale=1.1, footer_height=.03)
 
 
-
+hia_scenarios_totals %>% filter(COD<year) %>%
+  group_by(type, emitting_province=Province,
+           Outcome, Cause, Pollutant, double_counted, year, estimate, unit) %>%
+  summarise(across(c(number, cost_mn_currentUSD), ~sum(.x, na.rm=T))) %>%
+  write_csv(file.path(output_dir, 'all health impacts by year and emitting province.csv'))
 
 hia_scenarios %>% ungroup %>% filter(year==2030, !double_counted) %>%
   mutate(across(matches('^deaths|^number'), ~.x * ifelse(grepl('Death', Outcome), 1, 0))) %>%
