@@ -24,7 +24,7 @@ compute_econ_costs <- function(hia,
     write_csv(hia_cost, file.path(results_dir, sprintf('cost_detailed%s.csv', suffix)))
 
     # Ceate summary tables
-    dir.create(file.path(results_dir, 'formatted'))
+    dir.create(file.path(results_dir, 'formatted'), showWarnings = F, recursive = T)
     cost_by_outcome %>%
       write_csv(file.path(results_dir, sprintf('cost_by_outcome%s.csv', suffix)))
 
@@ -42,16 +42,17 @@ compute_econ_costs <- function(hia,
   }
   # cost_by_region_outcome <- get_total_cost_by_region_outcome(hia_cost) %T>% write_csv(file.path(results_dir, sprintf('cost_by_region_outcome%s.csv', suffix)))
 
-  #   # Forecast
-  #   if(length(projection_years)>0) {
-  #     cost_forecast <- get_econ_forecast(hia_cost, years=projection_years, ...) %T>%
-  #       write_csv(file.path(results_dir, sprintf('health_and_cost_by_year%s.csv', suffix)))
-  #   } else cost_forecast=NULL
-  #
+    # Forecast
+    if(length(projection_years)>0) {
+      cost_forecast <- get_econ_forecast(hia_cost, years=projection_years, ...) %T>%
+        write_csv(file.path(results_dir, sprintf('health_and_cost_by_year%s.csv', suffix)))
+    } else cost_forecast=NULL
+
 
   list("hia_cost" = hia_cost,
        "cost_by_outcome" = cost_by_outcome,
-       "cost_by_region" = cost_by_region) %>%
+       "cost_by_region" = cost_by_region,
+       "cost_forecast" = cost_forecast) %>%
     # "cost_by_region_outcome" = cost_by_region_outcome
     # "cost_forecast" = cost_forecast %>%
     # lapply(add_total_deaths) %>%
@@ -225,8 +226,11 @@ get_total_cost_by_region_outcome <- function(hia_cost, iso3, gdp = get_gdp(),
 }
 
 
-get_econ_forecast <- function(hia_cost, years, pop_targetyr = 2019,
-                              GDP_scaling = F, discount_rate = .03) {
+get_econ_forecast <- function(hia_cost,
+                              years,
+                              pop_targetyr = 2019,
+                              GDP_scaling = F,
+                              discount_rate = .03) {
 
   if(!is.data.frame(hia_cost)) {
     hia_cost <- hia_cost$hia_cost
@@ -271,75 +275,41 @@ get_econ_forecast <- function(hia_cost, years, pop_targetyr = 2019,
       distinct
   )
 
-  missing_iso3s <- setdiff(unique(hia_cost$iso3), c(unique(popproj_tot$iso3)))
+  missing_iso3s_pop <- setdiff(unique(hia_cost$iso3), c(unique(popproj_tot[popproj_tot$year %in% years,]$iso3)))
+  missing_iso3s_gdp <- c()
 
   if(GDP_scaling) {
-    # TODO NOT WORKING YET
-    stop("GDP SCALING NEEDS TO BE FIXED")
-    #gdp data
-    gdp_historical <- get_gdp()
-    gdp_forecast <- get_gdp_forecast()
 
-    gdp_all <- suppressMessages(full_join(gdp_historical, gdp_forecast)) %>%
-      filter(iso3 %in% unique(hia_cost$iso3))
-
-    gdp_all <- suppressMessages(
-      gdp_all %>%
-        left_join(popproj_tot) %>%
-        mutate(GDP.realUSD = GDP.realUSD.tot * 1000 / pop) %>% # HT: Seems to be wrong: pop is the age group population
-        group_by(iso3) %>%
-        group_modify(function(df, ...) {
-          PPP.scaling = df$GDP.PC.PPP.2017USD[df$year == 2019] / df$GDP.PC.currUSD[df$year == 2019]
-
-          if(length(PPP.scaling) > 0)
-            df <- df %>% mutate(GDP.realUSD = GDP.realUSD)
-
-          past.scaling <- df %>% filter(!is.na(GDP.PPP.2011USD + GDP.currUSD)) %>% head(1)
-          ind <- df$year < past.scaling$year
-          df$GDP.PPP.2011USD[ind] <- df$GDP.PPP.2011USD[ind] %>%
-            na.cover(df$GDP.currUSD[ind] * past.scaling$GDP.PPP.2011USD / past.scaling$GDP.currUSD)
-
-          future.scaling = df %>% filter(!is.na(GDP.PPP.2011USD+GDP.realUSD)) %>% tail(1)
-          ind <- df$year > future.scaling$year
-          df$GDP.PPP.2011USD[ind] <- df$GDP.PPP.2011USD[ind] %>%
-            na.cover(df$GDP.realUSD[ind] * past.scaling$GDP.PPP.2011USD / past.scaling$GDP.realUSD)
-
-          return(df)
-        })
-    )
-
-    # CHECK elast not used?
-    # elast <- gdp_all %>% group_by(iso3) %>%
-    #   group_map(function(df, iso3, ...) {
-    #     df %<>% select_if(is.numeric)
-    #     y1 = df %>% filter(year==2019) %>% distinct(GDP.PPP.tot, GDP.realUSD.tot)
-    #     y0 = df %>% filter(year==2010) %>% distinct(GDP.PPP.tot, GDP.realUSD.tot)
-    #     if(nrow(y0)==1 & nrow(y1)==1) { bind_cols(iso3, y1/y0)
-    #     } else NULL
-    #   })
-    #
-    # elast %>% subset(!is.null(.)) %>% bind_rows %>%
-    #   mutate(elast = (GDP.PPP.tot-1) / (GDP.realUSD.tot-1)) %>% summarise_at('elast', mean, na.rm=T)
+    gdp_scaling <- get_gdp_scaling(iso3=unique(hia_cost$iso3))
 
     pop_scaling <- pop_scaling %>%
-      full_join(gdp_all %>% sel(iso3, year, GDP.PPP.2011USD) %>%
-                  filter(year %in% years,
+      full_join(gdp_scaling %>%
+                  sel(iso3, year, GDP.PC.PPP.2017USD) %>%
+                  filter(year %in% c(pop_targetyr, years),
                          iso3 %in% unique(hia_cost$iso3),
-                         !iso3 %in% missing_iso3s)) %>%
-      mutate(GDPscaling = GDP.PPP.2011USD / GDP.PPP.2011USD[year == pop_targetyr] /
-               (1 + discount_rate)^(year - pop_targetyr))
+                         !iso3 %in% missing_iso3s_pop)) %>%
+      mutate(GDPscaling = GDP.PC.PPP.2017USD / GDP.PC.PPP.2017USD[year == pop_targetyr] /
+               (1 + discount_rate)^(year - pop_targetyr)) %>%
+      sel(-GDP.PC.PPP.2017USD)
 
-    missing_iso3s <- setdiff(unique(hia_cost$iso3),
-                             c(unique(popproj_tot$iso3), unique(gdp_forecast$iso3)))
+    missing_iso3s_gdp <- setdiff(unique(hia_cost$iso3),
+                                 c(unique(gdp_scaling[gdp_scaling$year %in% years,]$iso3)))
   }
 
   # Check if any country missing population information
-  if(length(missing_iso3s) > 0) {
-    warning("Missing population or GDP projection information of countries ",
-            missing_iso3s, ". These will be ignored")
+  if(length(missing_iso3s_pop) > 0) {
+    warning("Missing population projection information for the following countries: ",
+            paste(missing_iso3s_pop, collapse = ', '), ". Will be ignored.")
+  }
+  if(length(missing_iso3s_gdp) > 0) {
+    warning("Missing GDP information for the following countries: ",
+            paste(missing_iso3s_gdp, collapse = ', '), ". Will be ignored.")
   }
 
-  hia_by_year <- suppressMessages(hia_cost %>% select(-year) %>% full_join(pop_scaling))
+
+  hia_by_year <- suppressMessages(hia_cost %>%
+                                    select(-year) %>%
+                                    full_join(pop_scaling))
 
   hia_by_year %>% mutate(number = number * scaling,
                          cost_mn_currentUSD = cost_mn_currentUSD * scaling * GDPscaling)

@@ -43,6 +43,7 @@ system("gsutil rsync -r gs://crea-data/gis .")
 pollutants_to_process=c('NO2', 'PM2.5', 'PM10', 'SO2')
 
 
+
 # Load CALMET parameters
 #calmet_result <- readRDS(file.path(input_dir,"calmet_result.RDS" ))
 calmet_result <- readRDS(file.path(input_dir,"calmet_result.RDS" ))
@@ -171,13 +172,15 @@ hia_totals  %>% group_by(scenario, Pollutant) %>% filter(!double_counted, Outcom
 # 06: Compute and extract economic costs --------------------------------------------------------
 # TODO : change name scale_target_year -> pop_target_year
 
-targetyears = c(seq(2006,2023,1))
+targetyears = c(seq(1996,2023,1))
 
 hia_cost <- get_hia_cost(hia=hia, valuation_version="viscusi")
 valuations <- get_valuation('viscusi')
 
 #usd_to_lcu=15447
 usd_to_lcu=461.15
+
+
 
 hia_cost %>%
   distinct(Outcome, valuation_world_2017, valuation_current_usd, iso3) %>%
@@ -198,7 +201,19 @@ hia_fut %>%
   #summarise(across(c(number, cost_mn_currentUSD), sum))
   summarise(across(c(number, cost_mn_currentUSD), ~sum(.x, na.rm=T)))
 
-years = list('allstack' = 2006:2023)
+years = list('allstack' = 1996:2023)
+
+
+################################################################################################
+
+# Scale impacts based on steel production, normalised to year 2023
+Steel_Production = read_xlsx(file.path(output_dir, 'Temirtau_Proxies_for_AqQ.xlsx'), sheet='Clean')
+hia_fut <- merge(hia_fut, Steel_Production, by = "year", all.x = TRUE)
+hia_fut$number <- hia_fut$normalised * hia_fut$number
+hia_fut$cost_mn_currentUSD <- hia_fut$normalised * hia_fut$cost_mn_currentUSD
+hia_fut$cost_mn_currentLCU <- hia_fut$normalised * hia_fut$cost_mn_currentLCU
+
+
 
 # cumulative  integrated over time and space
 for(x in names(years)){
