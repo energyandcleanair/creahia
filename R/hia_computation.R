@@ -616,3 +616,17 @@ clean_cause_outcome <- function(hia) {
   return(hia)
 }
 
+add_total_deaths_and_costs <- function(df) {
+  df %<>% filter(!double_counted, !grepl("economic costs", Outcome)) %>%
+    summarise(across(c(number=cost_mn_currentUSD), sum), .groups = 'keep') %>%
+    mutate(Outcome = "economic costs", unit="million USD", double_counted = F) %>%
+    bind_rows(df %>% filter(!grepl("economic costs", Outcome)))
+
+  df %<>% filter(!double_counted, grepl("Death", Outcome)) %>%
+    summarise(across(c(number), sum), .groups = 'keep') %>%
+    mutate(Outcome = "deaths, total", Cause='AllCause', Pollutant='All', unit="death", double_counted = T) %>%
+    bind_rows(df %>% filter(!grepl("deaths, total", Outcome)))
+
+  return(df)
+}
+
