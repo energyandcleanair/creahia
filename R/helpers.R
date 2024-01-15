@@ -46,7 +46,7 @@ readWB_online <- function(indicator, start_date = 2010, end_date = 2019,
 
 # TODO test
 addiso <- function(df, ...) {
-  df %>% mutate(ISO3 = case_when(grepl('Kosovo', country) ~ 'XKX',
+  df %<>% mutate(ISO3 = case_when(grepl('Kosovo', country) ~ 'XKX',
                                  grepl('Aland$', country) ~ 'FIN',
                                  T ~ countrycode::countrycode(country, origin = 'country.name',
                                                               destination = 'iso3c', ...)))
