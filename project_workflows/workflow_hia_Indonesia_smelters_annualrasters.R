@@ -15,6 +15,7 @@ library(magrittr)
 library(lubridate)
 
 library(creahia)
+options(reticulate.conda_binary = "C:\\ProgramData\\anaconda3\\Scripts\\conda.exe")
 library(creapuff)
 require(rcrea)
 require(creahelpers)
@@ -198,5 +199,18 @@ quicksave(file.path(output_dir, 'Air pollution-related deaths by province.png'),
 
 
 hia_fut_totals %>% rename(affected_province=Province) %>% filter(country=='Indonesia') %>%
+  add_long_names() %>%
   write_csv(file.path(output_dir, 'hia by affected province.csv'))
 
+
+#comparison
+by_affected <- read_csv(file.path(output_dir, 'hia by affected province.csv')) %>% mutate(name='by_affected')
+by_emitting <- read_csv(file.path(output_dir, 'all health impacts by year and emitting province.csv')) %>% mutate(name='by_emitting')
+
+bind_rows(by_affected, by_emitting) %>%
+  filter(!double_counted) %>%
+  mutate(number=ifelse(grepl('Death', Outcome), number, 0)) %>%
+  group_by(name, year, estimate) %>%
+  summarise(across(c(deaths=number, cost_mn_currentUSD), ~sum(.x, na.rm=T))) %>%
+  pivot_longer(c(deaths, cost_mn_currentUSD), names_to='var') %>%
+  ggplot(aes(year, value, col=estimate, linetype=name)) + geom_line() + facet_wrap(~var)

@@ -287,7 +287,7 @@ quicksave(file.path(output_dir, 'Air pollution-related deaths by scenario.png'),
 
 hia_scenarios_totals %>% ungroup %>%
   filter(estimate=='central', !double_counted, COD<year) %>%
-  group_by(Province, year, estimate) %>% summarise(across(cost_mn_currentUSD, sum)) %>% ungroup %>%
+  group_by(Province, year, estimate) %>% summarise(across(cost_mn_currentUSD, ~sum(.x, na.rm=T))) %>% ungroup %>%
   write_csv(file.path(output_dir, 'Air pollution-related costs by scenario.csv')) %>%
   ggplot(aes(year, cost_mn_currentUSD, fill=Province)) +
   geom_area() +
@@ -302,6 +302,7 @@ hia_scenarios_totals %>% filter(COD<year) %>%
   group_by(type, emitting_province=Province,
            Outcome, Cause, Pollutant, double_counted, year, estimate, unit) %>%
   summarise(across(c(number, cost_mn_currentUSD), ~sum(.x, na.rm=T))) %>%
+  add_long_names() %>%
   write_csv(file.path(output_dir, 'all health impacts by year and emitting province.csv'))
 
 hia_scenarios %>% ungroup %>% filter(year==2030, !double_counted) %>%
