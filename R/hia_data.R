@@ -66,7 +66,8 @@ get_crfs <- function(version = "default") {
 get_epi_versions <- function() {
   list(
     "default" = "epi_for_hia.csv",
-    "C40" = "epi_for_hia_C40.csv"
+    "C40" = "epi_for_hia_C40.csv",
+    "gbd2019" = "epi_for_hia_gbd2019.csv"
   )
 }
 
