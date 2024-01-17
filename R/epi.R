@@ -10,12 +10,13 @@
 download_raw_epi <- function(){
 
   urls <- list(
-    "IHME-GBD_2019_DATA-TotCV,TotResp.csv" = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2019-permalink/850a0e4dd9a68940127c6b289b9caeff"
+    "IHME-GBD_2019_DATA-TotCV,TotResp.csv" = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2019-permalink/850a0e4dd9a68940127c6b289b9caeff",
+
+
+
+    "IHME-GBD_2017_DATA-TotCV,TotResp.csv" = "https://gbd2017.healthdata.org/gbd-results?params=gbd-api-2017-permalink/461e2102de5ca1d2e571dad42caf2aa7",
 
   )
-
-
-
 }
 
 
@@ -26,7 +27,7 @@ get_locations <- function(){
 }
 
 
-get_pop <- function(){
+get_pop <- function(level=3){
 
   locations <- get_locations()
 
@@ -36,7 +37,7 @@ get_pop <- function(){
 
   locations %>%
     right_join(pop) %>%
-    filter(level==3) %>%
+    filter(level %in% !!level) %>%
     distinct()
 }
 
@@ -83,8 +84,8 @@ get_asthma_erv <- function(pop.total=NULL){
 
 
 get_ptb <- function(){
-  PTB <- read_xlsx('data/epi_update/2014 National preterm birth rates.xlsx', skip=3, col_names = F, n_max=300)
-  nms <- read_xlsx('data/epi_update/2014 National preterm birth rates.xlsx', skip=1, col_names = F, n_max=2)
+  PTB <- readxl::read_xlsx('data/epi_update/2014 National preterm birth rates.xlsx', skip=3, col_names = F, n_max=300)
+  nms <- readxl::read_xlsx('data/epi_update/2014 National preterm birth rates.xlsx', skip=1, col_names = F, n_max=2)
   nms[2, ] <- ifelse(is.na(nms[2, ]), nms[1, ], nms[2, ])
   names(PTB) <- unlist(nms[2, ]) %>% make.names(unique=T)
   PTB %<>% filter(!is.na(PTB.rate)) %>% dplyr::rename(country=Country)
@@ -211,74 +212,19 @@ get_asthama_prev <- function(pop.total=NULL){
 }
 
 
-generate_epi <- function(){
-
-  library(readxl)
-
-  wb_ind <- get_wb_ind()
-  pop <- get_pop()
-  pop.total <- get_pop_total(pop)
-  asthma.new <- get_asthma_new()
-  asthma.erv <- get_asthma_erv(pop.total=pop.total)
-  ptb <- get_ptb()
+fill_and_add_missing_regions <- function(epi_wide){
 
 
-  LBW <- readWB_online('SH.STA.BRTW.ZS')
-  birth.rate <- readWB_online('SP.DYN.CBRT.IN')
-  labor.partic <- readWB_online('SL.TLF.ACTI.ZS')
-  labor.age.share <- readWB_online('SP.POP.1564.TO.ZS')
-  GDP <- readWB_online('NY.GDP.PCAP.PP.KD')
+  # add missing admin regions
+  epi_wide <- epi_wide %>% filter(ISO3 == 'CHN') %>%
+    mutate(ISO3 = 'HKG', pop = 7.392e6, country = 'Hong Kong',
+           IncomeGroup = "High income") %>%
+    bind_rows(epi_wide)
 
-
-  death.all.cause <- get_death_all_cause()
-  deaths.crude <- get_death_crude()
-  death.child.lri <- get_death_child_lri()
-  yld <- get_yld()
-
-  death.totcp <- get_death_totcp()
-  asthma.prev <- get_asthama_prev()
-
-
-  pop.total %<>% addiso
-  asthma.new %<>% addiso
-  asthma.erv %<>% addiso
-  asthma.prev %<>% addiso
-  PTB %<>% addiso
-  LBW %<>% addiso
-  birth.rate %<>% addiso
-  labor.partic %<>% addiso
-  labor.age.share %<>% addiso
-  GDP %<>% addiso
-
-  mort.morb <- bind_rows(death.all.cause, deaths.crude, death.child.lri, yld, death.totcp) %>% addiso
-
-  bind_rows(pop.total %>% sel(ISO3, val) %>% mutate(var='pop'),
-            mort.morb %>% sel(ISO3, var, estimate, val),
-            birth.rate %>% sel(ISO3, val=Value) %>% mutate(var='birth.rate'),
-            PTB %>% sel(ISO3, val=PTB.rate) %>% mutate(var='PTB.rate'),
-            LBW %>% sel(ISO3, val=Value) %>% mutate(var='LBW.rate'),
-            asthma.prev %>% sel(ISO3, var, estimate, val),
-            asthma.new %>% sel(ISO3, starts_with('X2ppb')) %>%
-              gather(estimate, val, -ISO3) %>%
-              mutate(estimate = estimate %>% gsub('.*_', '', .)) %>%
-              mutate(var = 'new.asthma_NO2'),
-            asthma.erv %>% sel(ISO3, starts_with('exac')) %>%
-              gather(var, val, -ISO3),
-            labor.partic %>% sel(ISO3, val=Value) %>% mutate(var='labor.partic'),
-            labor.age.share %>% sel(ISO3, val=Value) %>% mutate(var='working.age.share'),
-            GDP %>% sel(ISO3, val=Value) %>% mutate(var='GDP.PPP.2011USD')) %>%
-    filter(!is.na(ISO3), !is.na(val)) -> epi
-
-  epi$estimate %<>% na.fill('central')
-
-  #add region and income group data
-  wbstats::wb_countries() %>% sel(ISO3=iso3c, Region=region, IncomeGroup=income_level, country) %>%
-    filter(IncomeGroup != 'Aggregates') -> WBcountries
-
-  epi %<>% left_join(WBcountries %>% sel(ISO3, country, Region, IncomeGroup))
-  epi %>% distinct %>% pivot_wider(names_from = var, values_from = val) -> epi_wide
-  epi_wide$exac.0to17 %<>% divide_by(epi_wide$pop) %>% multiply_by(1e5)
-  epi_wide$exac.18to99 %<>% divide_by(epi_wide$pop) %>% multiply_by(1e5)
+  epi_wide <- epi_wide %>% filter(ISO3 == 'CHN') %>%
+    mutate(ISO3 = 'MAC', pop = 622567, country = 'Macau',
+           IncomeGroup = "High income") %>%
+    bind_rows(epi_wide)
 
   #fill in missing data for Taiwan, Kosovo
   epi_wide$pop[epi_wide$ISO3=='XKX'] <- 1831e3
@@ -303,7 +249,80 @@ generate_epi <- function(){
     epi_wide[epi_wide$ISO3=='ALB', asthma.cols] *
     epi_wide$pop[epi_wide$ISO3=='XKX'][1] / epi_wide$pop[epi_wide$ISO3=='ALB'][1]
 
+  return(epi_wide)
+}
 
+
+generate_epi <- function(){
+
+  wb_ind <- get_wb_ind()
+  pop <- get_pop()
+  pop.total <- get_pop_total(pop)
+  asthma.new <- get_asthma_new()
+  asthma.erv <- get_asthma_erv(pop.total=pop.total)
+  ptb <- get_ptb()
+
+
+  lbw <- readWB_online('SH.STA.BRTW.ZS')
+  birth.rate <- readWB_online('SP.DYN.CBRT.IN')
+  labor.partic <- readWB_online('SL.TLF.ACTI.ZS')
+  labor.age.share <- readWB_online('SP.POP.1564.TO.ZS')
+  GDP <- readWB_online('NY.GDP.PCAP.PP.KD')
+
+
+  death.all.cause <- get_death_all_cause()
+  deaths.crude <- get_death_crude()
+  death.child.lri <- get_death_child_lri()
+  yld <- get_yld()
+
+  death.totcp <- get_death_totcp()
+  asthma.prev <- get_asthama_prev()
+
+
+  pop.total %<>% addiso
+  asthma.new %<>% addiso
+  asthma.erv %<>% addiso
+  asthma.prev %<>% addiso
+  ptb %<>% addiso
+  lbw %<>% addiso
+  birth.rate %<>% addiso
+  labor.partic %<>% addiso
+  labor.age.share %<>% addiso
+  GDP %<>% addiso
+
+  mort.morb <- bind_rows(death.all.cause, deaths.crude, death.child.lri, yld, death.totcp) %>% addiso
+
+  epi <- bind_rows(pop.total %>% sel(ISO3, val) %>% mutate(var='pop'),
+            mort.morb %>% sel(ISO3, var, estimate, val),
+            birth.rate %>% sel(ISO3, val=Value) %>% mutate(var='birth.rate'),
+            ptb %>% sel(ISO3, val=PTB.rate) %>% mutate(var='PTB.rate'),
+            lbw %>% sel(ISO3, val=Value) %>% mutate(var='LBW.rate'),
+            asthma.prev %>% sel(ISO3, var, estimate, val),
+            asthma.new %>% sel(ISO3, starts_with('X2ppb')) %>%
+              gather(estimate, val, -ISO3) %>%
+              mutate(estimate = estimate %>% gsub('.*_', '', .)) %>%
+              mutate(var = 'new.asthma_NO2'),
+            asthma.erv %>% sel(ISO3, starts_with('exac')) %>%
+              gather(var, val, -ISO3),
+            labor.partic %>% sel(ISO3, val=Value) %>% mutate(var='labor.partic'),
+            labor.age.share %>% sel(ISO3, val=Value) %>% mutate(var='working.age.share'),
+            GDP %>% sel(ISO3, val=Value) %>% mutate(var='GDP.PPP.2011USD')) %>%
+    filter(!is.na(ISO3), !is.na(val))
+
+  epi$estimate %<>% na.fill('central')
+
+  #add region and income group data
+  wbstats::wb_countries() %>% sel(ISO3=iso3c, Region=region, IncomeGroup=income_level, country) %>%
+    filter(IncomeGroup != 'Aggregates') -> WBcountries
+
+  epi %<>% left_join(WBcountries %>% sel(ISO3, country, Region, IncomeGroup))
+  epi %>% distinct %>% pivot_wider(names_from = var, values_from = val) -> epi_wide
+
+
+  epi_wide$exac.0to17 %<>% divide_by(epi_wide$pop) %>% multiply_by(1e5)
+  epi_wide$exac.18to99 %<>% divide_by(epi_wide$pop) %>% multiply_by(1e5)
+
+  epi_wide <- fill_and_add_missing_regions(epi_wide)
 
   #add variables for health impact calculations
   epi_wide$Absences.per <- epi_wide$working.age.share/100 *
@@ -318,7 +337,13 @@ generate_epi <- function(){
   #export EPI data for HIA use
 
   #prepare vector of column names to output
-  read_csv('data/epi_update/CRFs.csv') -> CRFs
+  # read_csv('data/epi_update/CRFs.csv') -> CRFs
+  # read_csv('inst/extdata/CRFs.csv')
+  read_csv('inst/extdata/CRFs_C40.csv') %>%
+    mutate(Incidence = crf_recode_incidence(Incidence, Exposure))-> CRFs
+
+
+
   c('pop', CRFs$Incidence, names(epi_wide) %>% grep('Deaths|YLLs|YLDs|birth|labor', ., value=T)) -> inci.out
   CRFs$Incidence[CRFs$Exposure %in% c('SO2', 'NO2') & grepl('Deaths|YLLs', CRFs$Incidence)] %<>%
     gsub('NCD\\.LRI', 'AllCause', .)
@@ -336,9 +361,7 @@ generate_epi <- function(){
     filter(!is.na(pop)) %>% arrange(country) ->
     epi_hia
 
-  epi_hia %>% write_csv('epi_for_hia_C40.csv')
-
-
+  epi_hia %>% write_csv('inst/extdata/epi_for_hia_gbd2019.csv')
 
 }
 
