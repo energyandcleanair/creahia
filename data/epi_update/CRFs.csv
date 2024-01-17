@@ -1,0 +1,12 @@
+Incidence,Exposure,RR,Conc.change,Counterfact,Unit,Units.multiplier
+exac.0to17,pm.ff,"1.025 (1.013, 1.037)",10,6,ug,1
+exac.0to17,o3.ff,"1.018 (1.01, 1.024)",10,2,ppb,1
+exac.18to99,pm.ff,"1.023 (1.015, 1.031)",10,6,ug,1
+exac.18to99,o3.ff,"1.018 (1.012, 1.022)",10,2,ppb,1
+PTB,pm.ff,"1.15 (1.07, 1.16)",10,8.8,ug,1
+LBW,pm.ff,1.1 (1.03-1.18),10,4,ug,1
+COPD_Deaths,o3.ff.nrt,"1.12 (1.08, 1.16)",10,0,ppb,1
+COPD_YLLs,o3.ff.nrt,"1.12 (1.08, 1.16)",10,0,ppb,1
+NCD.LRI_Deaths,no2nrt,1.037 (1.021-1.080),10,0,ug,1
+NCD.LRI_YLLs,no2nrt,1.037 (1.021-1.080),10,0,ug,1
+Absences,pm.ff,1.046 (1.039-1.053),10,0,ug,1
