@@ -14,7 +14,8 @@ compute_hia <- function(conc_map,
                         scale_base_year = NULL,
                         scale_target_year = NULL,
                         diagnostic_folder = 'diagnostic',
-                        .mode = 'change') {
+                        .mode = 'change',
+                        ...){
   if(gbd_causes[1] == 'default' & calc_causes[1] == 'GBD only') gbd_causes <- 'all'
 
   if(grepl('GEMM|GBD', calc_causes[1])) calc_causes <- get_calc_causes(calc_causes[1])
@@ -153,8 +154,12 @@ get_nrt_conc <- function(region_ids, conc_name, nrt, conc_map,
 }
 
 
-compute_hia_epi <- function(species, paf, conc_map, regions,
-                            epi = get_epi(), crfs = get_crfs(),
+compute_hia_epi <- function(species,
+                            paf,
+                            conc_map,
+                            regions,
+                            epi = get_epi(),
+                            crfs = get_crfs(),
                             calc_causes = get_calc_causes(),
                             .mode = 'change') {
 
@@ -165,7 +170,8 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
   for(scenario in scenarios) {
     conc_scenario <- conc_map[[scenario]]
     # names(conc_adm) %<>% country.recode(merge_into)
-    conc_scenario <- conc_scenario %>% ldply(.id = 'region_id') %>%
+    conc_scenario <- conc_scenario %>%
+      ldply(.id = 'region_id') %>%
       dlply(.(region_id))
 
     # calculate health impacts
@@ -177,11 +183,13 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
                                             data.frame %>%
                                             mutate(pop = sum(df[,'pop'])), .id = 'region_id')
 
-    pop_domain$epi_iso3 <- pop_domain$region_id %>% substr(1,3) %>%
+    pop_domain$epi_iso3 <- pop_domain$region_id %>%
+      substr(1,3) %>%
       as.character %>%
       country_recode_iso3()
 
-    epi_loc <- epi %>% sel(-pop, -country) %>%
+    epi_loc <- epi %>%
+      sel(-pop, -country) %>%
       dplyr::rename(epi_iso3 = ISO3) %>%
       filter(epi_iso3 %in% pop_domain$epi_iso3) %>%
       full_join(pop_domain %>% sel(region_id, epi_iso3, pop),
@@ -240,7 +248,7 @@ compute_hia_epi <- function(species, paf, conc_map, regions,
 
     }
 
-    #calculate PM mortality
+    # Add PM mortality from PAF x EPI
     if(!is.null(paf[[scenario]]) && nrow(paf[[scenario]]) > 0) {
       paf_wide <- paf[[scenario]] %>%
         gather(estimate, val, low, central, high) %>%
@@ -296,10 +304,9 @@ crf_effectname_to_outcome <- function(effectname) {
 
 
 crf_recode_incidence <- function(Incidence, Exposure){
-  gsub('AllCauses', "AllCause", Incidence)
   case_when(
-    Exposure %in% c('SO2', 'NO2') & grepl('Deaths|YLLs', Incidence) ~ gsub('NCD\\.LRI', 'AllCause', Incidence),
-    T ~ Incidence
+    Exposure %in% c('SO2', 'NO2') & grepl('Deaths|YLLs', Incidence) & grepl('NCD\\.LRI', Incidence) ~ gsub('NCD\\.LRI', 'AllCause', Incidence),
+    T ~ gsub('AllCauses', "AllCause", Incidence)
   )
 }
 
@@ -318,7 +325,7 @@ to_long_hia <- function(hia) {
 
 
 # define a function to calculate the hazard ratio for a specific concentration, cause and age group
-hr <- function(pm, .age = '25+', .cause = 'NCD.LRI', .region = 'inc_China',
+get_hazard_ratio <- function(pm, .age = '25+', .cause = 'NCD.LRI', .region = 'inc_China',
                gemm = get_gemm(), gbd = get_gbd()) {
 
   gbd.causes <- gbd$cause_short %>% unique
@@ -328,7 +335,8 @@ hr <- function(pm, .age = '25+', .cause = 'NCD.LRI', .region = 'inc_China',
     hr.all %>% sel(low, central, high) %>%
       apply(2, function(y) approx(x = hr.all$exposure, y, xout = pm)$y)
   } else {
-    p <- gemm %>% dplyr::filter(age == .age, cause == .cause, region == .region) %>%
+    p <- gemm %>%
+      dplyr::filter(age == .age, cause == .cause, region == .region) %>%
       spread(param, value)
     z <- pmax(0, pm-2.4, na.rm = T)
     g <- log(1 + z / p$a) / (1 + exp((p$u-z) / p$p))
@@ -358,20 +366,20 @@ country_paf_perm <- function(pm.base,
 
   if(cause %in% age.specific) {
     ages <- adult_ages
-    w <- ihme %>%
+    age_weights <- ihme %>%
       dplyr::filter(ISO3 == cy, cause_short == cause, measure_name == measure,
                     age %in% ages, estimate == 'central')
   } else {
-    w <- data.frame(val = 1)
+    age_weights <- data.frame(val = 1)
     if(grepl('child', cause)) ages = 'Under 5' else ages = '25+'
   }
 
-  rr.base <- ages %>% sapply(function(.a) hr(pm.base, gbd = gbd, gemm = gemm,
+  rr.base <- ages %>% sapply(function(.a) get_hazard_ratio(pm.base, gbd = gbd, gemm = gemm,
                                              .cause = cause, .age = .a, .region = .region),
                              simplify = 'array')
 
   if(.mode == 'change') {
-    rr.perm <- ages %>% sapply(function(.a) hr(pm.perm, gbd = gbd, gemm = gemm,
+    rr.perm <- ages %>% sapply(function(.a) get_hazard_ratio(pm.perm, gbd = gbd, gemm = gemm,
                                                .cause = cause, .age = .a, .region = .region),
                                simplify = 'array')
     paf.perm <- rr.perm / rr.base - 1
@@ -382,11 +390,11 @@ country_paf_perm <- function(pm.base,
   if(length(dim(paf.perm)) == 2) {
     paf.perm %>% t %>%
       orderrows %>%
-      apply(2, weighted.mean, w$val) # in case the hr function didn't return an array
+      apply(2, weighted.mean, age_weights$val) # in case the get_hazard_ratio function didn't return an array
   } else {
     tryCatch({
       paf.perm %>%
-        apply(1:2, weighted.mean, w$val) %>%
+        apply(1:2, weighted.mean, age_weights$val) %>%
         orderrows %>%
         apply(2, weighted.mean, w = pop)
     }, error = function(e) {
