@@ -100,24 +100,27 @@ make_nothing <- function(x) {x}
 get_model_adm <- function(grid_raster, shp = NULL,
                           admin_level = 0, iso3s = NULL, ...) {
 
-  crs_to <- CRS(proj4string(grid_raster))
+  grid_raster <- grid_raster %>% terra::rast()
 
-  grid_4326 <- terra::rast(grid_raster) %>%
-    terra::extend(c(40, 40))
+  crs_to <- terra::crs(grid_raster)
+
+  grid_4326 <- grid_raster %>%
+    terra::extend(c(40, 40)) %>%
+    terra::project('epsg:4326')
 
   adm_4326 <- if(is.null(shp)) {
     creahelpers::get_adm(admin_level, ...)
   } else {
     shp
-  }
+  } %>% terra::vect()
 
   if(!is.null(iso3s)){
     adm_4326 <- adm_4326[adm_4326$GID_0 %in% iso3s,]
   }
 
   adm_utm <- adm_4326 %>%
-    crop(raster(grid_4326)) %>%
-    spTransform(crs_to)
+    terra::crop(grid_4326) %>%
+    terra::project(crs_to)
 
   maps <- adm_utm %>%
     sf::st_as_sf() %>%
