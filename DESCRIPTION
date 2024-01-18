@@ -36,7 +36,9 @@ Imports:
     foreach,
     priceR,
     glue,
-    terra
+    terra,
+    logger,
+    matrixStats
 Depends:
     tidyverse,
     creahelpers

@@ -41,6 +41,8 @@ importFrom(dplyr,vars)
 importFrom(foreach, foreach)
 importFrom(foreach, "%dopar%")
 
+importFrom(glue, glue)
+
 importFrom(ggspatial,annotation_spatial)
 importFrom(ggspatial,layer_spatial)
 

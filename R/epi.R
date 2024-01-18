@@ -8,26 +8,86 @@
 
 
 download_raw_epi <- function(){
-
+  # This does not download data for now... but gives you the links to do so
   urls <- list(
     "IHME-GBD_2019_DATA-TotCV,TotResp.csv" = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2019-permalink/850a0e4dd9a68940127c6b289b9caeff",
-
-
-
     "IHME-GBD_2017_DATA-TotCV,TotResp.csv" = "https://gbd2017.healthdata.org/gbd-results?params=gbd-api-2017-permalink/461e2102de5ca1d2e571dad42caf2aa7",
+    "IHME-GBD_2017_DATA_FORIHME" = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2019-permalink/c31361e1ee91454f2d5af7c081629977"
 
   )
 }
 
 
 get_locations <- function(){
-  read_xlsx('data/epi_update/IHME_GBD_2019_GBD_LOCATION_HIERARCHY_Y2020M10D15.XLSX', .name_repair = make.names) %>% #read_xlsx('2017 data/IHME_GBD_2017_ALL_LOCATIONS_HIERARCHIES.XLSX') %>%
+  raw <- read_xlsx('data/epi_update/IHME_GBD_2019_GBD_LOCATION_HIERARCHY_Y2020M10D15.XLSX', .name_repair = make.names) %>% #read_xlsx('2017 data/IHME_GBD_2017_ALL_LOCATIONS_HIERARCHIES.XLSX') %>%
     sel(location_id=matches('location.id', ignore.case = T),
-        level=matches('^level$', ignore.case = T))
+        level=matches('^level$', ignore.case = T),
+        location_name=matches('location.name', ignore.case = T),
+        parent_id=matches('Parent.ID', ignore.case = T)
+        )
+
+  # Add country_id to each of these locations
+  country_mapping <- list()
+  for(level in seq(3,6)){
+    raw_level <- raw %>% filter(level==!!level)
+    if(level==3){
+      country_mapping[[level]] <- raw_level %>%
+        distinct(location_id, country_id=location_id, country_name=location_name)
+    }
+    else{
+      country_mapping[[level]] <- raw_level %>%
+        distinct(location_id, parent_id) %>%
+        left_join(country_mapping[[level-1]],
+                  by=c('parent_id'='location_id')) %>%
+        select(location_id, country_id, country_name)
+    }
+  }
+  country_mapping %<>% bind_rows()
+
+
+  raw %>%
+    left_join(country_mapping) %>%
+    select(location_id, location_name, location_level=level, country_id, country_name) %>%
+    mutate(iso3=countrycode::countrycode(country_name, "country.name", "iso3c"))
 }
 
 
-get_pop <- function(level=3){
+attach_gadm_to_locations <- function(locations=get_locations()){
+
+  matching_files <- list.files('data/epi_update/location_matching/', ".csv", full.names = T)
+
+  matching_subnational <- lapply(matching_files, read_csv) %>%
+    bind_rows() %>%
+    select(iso3, ihme_level, ihme_location_name, gadm_level, gadm_id, gadm_name)
+
+  # Create a country matching
+  matching_countries <- creahelpers::get_adm(level=0, res='coarse') %>%
+    as.data.frame() %>%
+    select(iso3=GID_0,
+           gadm_id=GID_0,
+           gadm_name=COUNTRY) %>%
+    mutate(gadm_level=0) %>%
+    right_join(locations %>%
+                filter(location_level==3) %>%
+                distinct(iso3,
+                         ihme_location_name=location_name,
+                         ihme_level=location_level
+                         ))
+
+  matching <- bind_rows(matching_countries,
+                        matching_regions)
+
+  locations %>%
+    left_join(matching,
+              by=c('iso3'='iso3',
+                   'location_level'='ihme_level',
+                   'location_name'='ihme_location_name'))
+
+
+
+}
+
+get_pop <- function(level=c(3,4)){
 
   locations <- get_locations()
 
@@ -177,7 +237,7 @@ get_death_totcp <- function(){
 }
 
 
-get_asthama_prev <- function(pop.total=NULL){
+get_asthma_prev <- function(pop.total=NULL){
 
 
   asthma.prev <- read_csv('data/epi_update/IHME-GBD_2019_DATA-asthma.csv') %>%  #read.csv('2017 data/IHME-GBD_2017_Asthma.csv') %>%
@@ -276,7 +336,7 @@ generate_epi <- function(){
   yld <- get_yld()
 
   death.totcp <- get_death_totcp()
-  asthma.prev <- get_asthama_prev()
+  asthma.prev <- get_asthma_prev()
 
 
   pop.total %<>% addiso
@@ -365,4 +425,85 @@ generate_epi <- function(){
 
 }
 
+
+generate_ihme <- function(version='gbd2019'){
+
+  raw_filepath <- recode(version,
+                    gbd2017='data/epi_update/IHME-GBD_2017_DATA-ihme.csv',
+                    gbd2019='data/epi_update/IHME-GBD_2019_DATA-ihme.csv')
+
+  # read IHME mortality and morbidity data to enable country calculations
+  ihme <- read.csv(raw_filepath) %>%
+    dplyr::filter(metric_name == 'Number') %>%
+    gather_ihme
+
+  get_age_low <- function(age_name){
+    age_low = stringr::str_extract(ihme$age_name, "^\\d+") %>% as.numeric
+    age_low[age_name == 'Under 5'] <- 0 # In 2017 version
+    age_low[age_name == '<5 years'] <- 0 # In 2019 version
+    age_low[age_name == 'All Ages'] <- -1
+    age_low
+  }
+
+  homogenise_age_name <- function(age_name){
+    age_name %>%
+      gsub(' years', '', .) %>%
+      gsub(' to ', '-', .) %>%
+      gsub(' plus', '+', .)
+  }
+
+  ihme$age_low <- get_age_low(ihme$age_name)
+  ihme$age <- homogenise_age_name(ihme$age_name)
+
+  if(ihme %>% group_by(age_low) %>% dplyr::summarise(count=n_distinct(age_name)) %>% pull(count) %>% max() > 1){
+    stop("Two many age categories")
+  }
+
+  ihme <- ihme %>%
+    dplyr::filter(age_low >= 25) %>%
+    group_by_at(vars(-val, -starts_with('age'))) %>%
+    summarise_at('val', sum) %>%
+    mutate(age = '25+') %>%
+    bind_rows(ihme) %>%
+    ungroup
+
+  ihme <- ihme %>% addiso
+
+  ihme <- ihme %>%
+    mutate(cause_short = case_when(grepl('Diab', cause_name) ~ 'Diabetes',
+                                   grepl('Stroke', cause_name) ~ 'Stroke',
+                                   grepl('Lower resp', cause_name) ~ 'LRI',
+                                   grepl('Non-comm', cause_name) ~ 'NCD',
+                                   grepl('Isch', cause_name) ~ 'IHD',
+                                   grepl('obstr', cause_name) ~ 'COPD',
+                                   grepl('lung canc', cause_name) ~ 'LC',
+                                   T ~ NA))
+
+  ihme <- ihme %>%
+    dplyr::filter(grepl('Lower resp|Non-comm', cause_name)) %>%
+    group_by_at(vars(-val, -starts_with('cause'))) %>%
+    summarise_at('val', sum) %>%
+    mutate(cause_name = 'NCD+LRI', cause_short = 'NCD.LRI') %>%
+    bind_rows(ihme) %>%
+    ungroup
+
+
+  adult.ages <- ihme$age[ihme$age_low >= 25] %>% subset(!is.na(.)) %>%
+    unique
+
+  # For some reason, ISO3 is now missing
+  ihme <- ihme %>%
+    mutate(ISO3=countrycode::countrycode(country, "country.name", "iso3c"))
+
+  ihme <- ihme %>%
+    dplyr::filter(ISO3 == 'ALB') %>%
+    mutate(ISO3 = 'XKX', country = 'Kosovo') %>%
+    bind_rows(ihme)
+
+  # Generate a lighter version
+  ihme %>%
+    select(ISO3, age, measure_name, age_low, age_name, cause_short, cause_name, location_id, country, sex_name, metric_name, estimate, val) %>%
+    filter(estimate == 'central') %>%
+    write_csv(glue('inst/extdata/ihme_{version}.csv'))
+}
 
