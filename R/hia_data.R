@@ -315,65 +315,20 @@ get_gemm <- function() {
 }
 
 
-get_ihme <- function() {
-  print("Getting IHME")
+get_ihme <- function(version='gbd2017') {
 
-  # read IHME mortality and morbidity data to enable country calculations
-  ihme <- read.csv(get_hia_path('IHME-GBD_2017_DATA.csv')) %>%
-    dplyr::filter(metric_name == 'Number') %>%
-    gather_ihme
+  file_version <- recode(
+    version,
+    default='gbd2017',
+    C40='gbd2017',
+    gbd2019='gbd2019'
+  )
 
-  ihme <- ihme %>% mutate(age_low = age_name %>% gsub(" .*", "", .) %>% as.numeric)
-  ihme$age_low[ihme$age_name == 'Under 5'] <- 0
-  ihme$age_low[ihme$age_name == 'All Ages'] <- -1
-  ihme$age <- ihme$age_name %>% gsub(' to ', '-', .) %>%
-    gsub(' plus', '+', .)
-
-  ihme <- ihme %>%
-    dplyr::filter(age_low >= 25) %>%
-    group_by_at(vars(-val, -starts_with('age'))) %>%
-    summarise_at('val', sum) %>%
-    mutate(age = '25+') %>%
-    bind_rows(ihme) %>%
-    ungroup
-
-  ihme <- ihme %>% addiso
-
-  ihme <- ihme %>%
-    mutate(cause_short = case_when(grepl('Diab', cause_name) ~ 'Diabetes',
-                                   grepl('Stroke', cause_name) ~ 'Stroke',
-                                   grepl('Lower resp', cause_name) ~ 'LRI',
-                                   grepl('Non-comm', cause_name) ~ 'NCD',
-                                   grepl('Isch', cause_name) ~ 'IHD',
-                                   grepl('obstr', cause_name) ~ 'COPD',
-                                   grepl('lung canc', cause_name) ~ 'LC',
-                                   T ~ NA))
-
-  ihme <- ihme %>%
-    dplyr::filter(grepl('Lower resp|Non-comm', cause_name)) %>%
-    group_by_at(vars(-val, -starts_with('cause'))) %>%
-    summarise_at('val', sum) %>%
-    mutate(cause_name = 'NCD+LRI', cause_short = 'NCD.LRI') %>%
-    bind_rows(ihme) %>%
-    ungroup
-
-  adult.ages <- ihme$age[ihme$age_low >= 25] %>% subset(!is.na(.)) %>%
-    unique
-
-  # For some reason, ISO3 is now missing
-  ihme <- ihme %>%
-    mutate(ISO3=countrycode::countrycode(country, "country.name", "iso3c"))
-
-  ihme <- ihme %>%
-    dplyr::filter(ISO3 == 'ALB') %>%
-    mutate(ISO3 = 'XKX', country = 'Kosovo') %>%
-    bind_rows(ihme)
-
-  return(ihme)
+  read_csv(get_hia_path(glue("ihme_{file_version}.csv")), col_types = cols())
 }
 
 
-get_adult_ages <- function(ihme = get_ihme()) {
+get_adult_ages <- function(ihme) {
   print("Getting adult_ages")
 
   ihme$age[ihme$age_low >= 25] %>% subset(!is.na(.)) %>%
@@ -387,7 +342,7 @@ get_gbd <- function(gbd_causes = c('LRI.child', 'Diabetes')) {
   if(length(gbd_causes) == 0) gbd_causes <- 'none'
 
   # read GBD RR values
-  gbd <- read_csv(get_hia_path('ier_computed_table.csv')) %>% dplyr::select(-...1) %>%
+  gbd <- read_csv(get_hia_path('ier_computed_table.csv'), col_types = cols()) %>% dplyr::select(-...1) %>%
     dplyr::rename(cause_short = cause, central = rr_mean, low = rr_lower, high = rr_upper) %>%
     mutate(cause_short = recode(cause_short,
                                 lri = 'LRI',
