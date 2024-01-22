@@ -419,9 +419,17 @@ country_paf_perm <- function(pm.base,
       #   apply(2, weighted.mean, w = pop)
 
       # matrixStats two orders of magnitude faster
-      # also removed orderrows, seems unnecessary here
+      # also removed orderrows (though checking it is already ordered)
+      check_order <- function(x){
+        ok <- all(x[,'low'] <= x[,'central'])
+        ok <- ok & all(x[,'central'] <= x[,'high'])
+        if(!ok){stop("Failed at PAF. low > central or central > high")}
+        x
+      }
+
       new <- paf.perm %>%
         apply(2, matrixStats::rowWeightedMeans, w = age_weights$val) %>%
+        check_order() %>%
         apply(2, weighted.mean, w = pop)
 
       # if(any(round(old,6) != round(new,6))){
