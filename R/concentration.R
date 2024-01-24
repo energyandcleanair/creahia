@@ -142,7 +142,7 @@ extract_concs_at_regions <- function(concs, regions, species) {
       stack %>%
       rast
 
-    extracted <- terra::extract(concs_stack, regions)
+    extracted <- terra::extract(concs_stack, terra::vect(regions))
     conc_map[[scenario]] <- split(extracted %>% select(-c(ID)), extracted$ID)
     names(conc_map[[scenario]]) <- regions$region_id
   }
