@@ -31,7 +31,8 @@ fillcol <- function(df2, targetcols) {
 
 adddefos <- function(df, exl = 'pop') {
   targetcols <- names(df)[sapply(df, is.numeric) & (!names(df) %in% exl)]
-  df %>% ddply(.(estimate, Region, IncomeGroup), fillcol, targetcols) %>%
+  df %>%
+    ddply(.(estimate, region, income_group), fillcol, targetcols) %>%
     ddply(.(estimate), fillcol, targetcols)
 }
 
@@ -63,6 +64,26 @@ get_crfs <- function(version = "default") {
 }
 
 
+fix_epi_cols <- function(epi){
+
+  old_new_cols <- list(
+    Region='region',
+    Country='country',
+    ISO3='iso3',
+    IncomeGroup='income_group'
+  )
+
+  for(old_col in names(old_new_cols)) {
+    new_col <- old_new_cols[[old_col]]
+    # Rename if exists
+    if(old_col %in% names(epi)) {
+      epi <- epi %>% dplyr::rename(!!new_col := !!old_col)
+    }
+  }
+
+  epi
+}
+
 get_epi_versions <- function() {
   list(
     "default" = "epi_for_hia.csv",
@@ -77,20 +98,37 @@ get_epi <- function(version = "default") {
   filename <- get_epi_versions()[[version]]
   print(sprintf("Getting epi: %s", filename))
 
-  epi <- read_csv(get_hia_path(filename), col_types = cols()) %>% adddefos
+  epi <- read_csv(get_hia_path(filename), col_types = cols()) %>%
+    fix_epi_cols() %>%
+    adddefos %>%
+    add_location_details()
 
   # add missing admin regions
-  epi <- epi %>% filter(ISO3 == 'CHN') %>%
-    mutate(ISO3 = 'HKG', pop = 7.392e6, country = 'Hong Kong',
-           IncomeGroup = "High income") %>%
-    bind_rows(epi)
-  epi <- epi %>% filter(ISO3 == 'CHN') %>%
-    mutate(ISO3 = 'MAC', pop = 622567, country = 'Macau',
-           IncomeGroup = "High income") %>%
-    bind_rows(epi) %>%
-    distinct
+  if(!'HKG' %in% epi$iso3){
+     epi <- add_country_to_epi_wide(
+        epi,
+        base_iso3= 'CHN',
+        iso3 = 'HKG',
+        pop = 7.392e6,
+        name = 'Hong Kong',
+        income_group = "High income"
+    )
+  }
 
-  return(epi)
+  if(!'MAC' %in% epi$iso3){
+    epi <- add_country_to_epi_wide(
+      epi,
+      base_iso3= 'CHN',
+      iso3 = 'MAC',
+      pop = 622567,
+      name = 'Macau',
+      income_group = "High income"
+    )
+  }
+
+
+
+  return(epi %>% distinct())
 }
 
 
@@ -343,7 +381,14 @@ get_gbd <- function(gbd_causes = c('LRI.child', 'Diabetes')) {
 
   # read GBD RR values
   gbd <- read_csv(get_hia_path('ier_computed_table.csv'), col_types = cols()) %>% dplyr::select(-...1) %>%
-    dplyr::rename(cause_short = cause, central = rr_mean, low = rr_lower, high = rr_upper) %>%
+    # there's a weird one where rr_upper < rr_mean
+    mutate(
+      low = rr_lower,
+      central = pmin(rr_mean, rr_upper),
+      high = pmax(rr_mean, rr_upper)
+    ) %>%
+    dplyr::rename(cause_short = cause) %>%
+    select(-c(rr_lower, rr_mean, rr_upper)) %>%
     mutate(cause_short = recode(cause_short,
                                 lri = 'LRI',
                                 t2_dm = 'Diabetes',
