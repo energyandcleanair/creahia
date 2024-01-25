@@ -105,22 +105,28 @@ compute_hia_paf <- function(conc_map,
       dlply(.(region_id))
 
 
+    pg <- progress::progress_bar$new(
+      format = "Computing PAF [:bar] :percent :eta",
+      total = length(names(conc_scenario))
+    )
 
     paf[[scenario]] <- foreach(region_id = names(conc_scenario)) %dopar% {
       tryCatch({
+        pg$tick()
         paf_region <- list()
         non_na_cols <- c('conc_baseline_pm25', 'conc_scenario_pm25', 'pop')
         conc <- conc_scenario[[region_id]][complete.cases(conc_scenario[[region_id]][,non_na_cols]),]
+
 
         for(cs_ms in calc_causes) {
           logger::log_debug(cs_ms)
           cs.ms <- cs_ms %>% strsplit('_') %>%
             unlist
-          epi_country <- substr(region_id, 1, 3) %>% country.recode(c(use_as_proxy, merge_into))
+
           paf_region[[cs_ms]] <- country_paf_perm(pm.base = conc[, 'conc_baseline_pm25'],
                                                   pm.perm = conc[, 'conc_scenario_pm25'],
                                                   pop = conc[, 'pop'],
-                                                  cy = epi_country,
+                                                  region_id = region_id,
                                                   cause = cs.ms[1],
                                                   measure = cs.ms[2],
                                                   adult_ages = adult_ages,
@@ -190,18 +196,16 @@ compute_hia_epi <- function(species,
                                             data.frame %>%
                                             mutate(pop = sum(df[,'pop'])), .id = 'region_id')
 
-    pop_domain$epi_iso3 <- pop_domain$region_id %>%
-      substr(1,3) %>%
-      as.character %>%
-      country_recode_iso3()
+    pop_domain$epi_location_id <- get_epi_location_id(pop_domain$region_id)
 
     epi_loc <- epi %>%
       sel(-pop, -country) %>%
-      dplyr::rename(epi_iso3 = ISO3) %>%
-      filter(epi_iso3 %in% pop_domain$epi_iso3) %>%
-      full_join(pop_domain %>% sel(region_id, epi_iso3, pop),
-                multiple='all') %>%
-      sel(-epi_iso3)
+      # dplyr::rename(epi_iso3 = iso3) %>%
+      # filter(epi_iso3 %in% pop_domain$epi_iso3) %>%
+      right_join(pop_domain %>% sel(region_id, epi_location_id, pop),
+                # multiple='all',
+                by=c(location_id='epi_location_id'))
+      # sel(-epi_iso3)
 
     # Exclude unmatched countries
     na_iso3s <- epi_loc$region_id[is.na(epi_loc$estimate)]
@@ -363,7 +367,7 @@ get_hazard_ratio <- function(pm,
 country_paf_perm <- function(pm.base,
                              pm.perm,
                              pop,
-                             cy,
+                             region_id,
                              cause,
                              measure,
                              epi_version,
@@ -379,7 +383,8 @@ country_paf_perm <- function(pm.base,
   if(cause %in% age.specific) {
     ages <- adult_ages
     age_weights <- ihme %>%
-      dplyr::filter(ISO3 == cy,
+      dplyr::filter(location_id==get_epi_location_id(region_id),
+                    location_level == 3,
                     cause_short == cause,
                     measure_name == measure,
                     age %in% ages,
@@ -423,7 +428,9 @@ country_paf_perm <- function(pm.base,
       check_order <- function(x){
         ok <- all(x[,'low'] <= x[,'central'])
         ok <- ok & all(x[,'central'] <= x[,'high'])
-        if(!ok){stop("Failed at PAF. low > central or central > high")}
+        if(!ok){
+          stop("Failed at PAF. low > central or central > high")
+          }
         x
       }
 
@@ -438,7 +445,7 @@ country_paf_perm <- function(pm.base,
       #
       return(new)
     }, error = function(e) {
-      warning("Failed for region ", cy, cause, e)
+      warning("Failed for region ", region_id, cause, e)
       return(NULL)
     })
   }

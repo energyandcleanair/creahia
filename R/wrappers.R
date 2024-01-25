@@ -116,15 +116,19 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
 
   # For now, creahelpers work with raster package. To ensure transition,
   # we become format agnostic for now.
-  perturbation_rasters <- perturbation_rasters %>% creahelpers::to_raster()
-  baseline_rasters <- baseline_rasters %>% creahelpers::to_raster()
+  perturbation_rasters <- perturbation_rasters %>%
+    creahelpers::to_raster() %>%
+    creahelpers::unrasterstack()
 
+  baseline_rasters <- baseline_rasters %>%
+    creahelpers::to_raster() %>%
+    creahelpers::unrasterstack()
 
   species <- names(perturbation_rasters)
   grid_raster <- perturbation_rasters[[1]] %>% raster::raster()
 
   conc_perturbation <- tibble(species = species,
-                              conc_perturbation = raster::unstack(perturbation_rasters),
+                              conc_perturbation = perturbation_rasters,
                               scenario = scenario_name)
 
   # 02: Get base concentration levels --------------------------------------------------------

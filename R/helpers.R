@@ -60,8 +60,7 @@ addiso <- function(df, ...) {
 gather_ihme <- function(df) {
   df %>% dplyr::rename(central = val, low = lower, high = upper) %>%
     tidyr::gather(estimate, val, central, low, high) %>%
-    dplyr::mutate(measure_name = measure_name %>% gsub(' .*', '', .)) %>%
-    dplyr::rename(country = location_name)
+    dplyr::mutate(measure_name = measure_name %>% gsub(' .*', '', .))
 }
 
 
@@ -71,15 +70,6 @@ ihme_getrate <- function(df) {
     ungroup %>%
     distinct
 }
-
-
-addlowhigh <- function(indata) ddply(indata, .(ISO3),
-                                     function(df) {
-                                       for(col in names(df))
-                                         df[[col]] <- df[[col]] %>%
-                                           na.fill(df[[col]][df$estimate == 'central'])
-                                       return(df)
-                                     })
 
 
 make_ci <- function(df, rescols = c('low', 'central', 'high')) {
