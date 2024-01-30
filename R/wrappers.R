@@ -81,13 +81,13 @@ wrappers.get_conc_baseline <- function(species, grid_raster,
 #' @export
 #'
 #' @examples
-wrappers_compute_hia_two_images <- function(obj, ...) {
-  UseMethod('wrappers_compute_hia_two_images')
+wrappers.compute_hia_two_images <- function(obj, ...) {
+  UseMethod('wrappers.compute_hia_two_images')
 }
 
 
 #' @export
-wrappers_compute_hia_two_images.default <- function(perturbation_rasters,
+wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                                                     baseline_rasters = NULL,
                                                     regions = NULL,
                                                     administrative_level = 1,
@@ -189,7 +189,7 @@ wrappers_compute_hia_two_images.default <- function(perturbation_rasters,
 
 
 #' @export
-wrappers_compute_hia_two_images.character <- function(scenarios,
+wrappers.compute_hia_two_images.character <- function(scenarios,
                                                       perturbation_rasters_table,
                                                       baseline_rasters_table,
                                                       grid_raster,
