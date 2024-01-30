@@ -111,12 +111,13 @@ compute_hia_paf <- function(conc_map,
     )
 
     paf[[scenario]] <- foreach(region_id = names(conc_scenario)) %dopar% {
+
       tryCatch({
         pg$tick()
         paf_region <- list()
         non_na_cols <- c('conc_baseline_pm25', 'conc_scenario_pm25', 'pop')
         conc <- conc_scenario[[region_id]][complete.cases(conc_scenario[[region_id]][,non_na_cols]),]
-
+        if(nrow(conc)==0) return(NULL)
 
         for(cs_ms in calc_causes) {
           logger::log_debug(cs_ms)
@@ -384,7 +385,6 @@ country_paf_perm <- function(pm.base,
     ages <- adult_ages
     age_weights <- ihme %>%
       dplyr::filter(location_id==get_epi_location_id(region_id),
-                    location_level == 3,
                     cause_short == cause,
                     measure_name == measure,
                     age %in% ages,
