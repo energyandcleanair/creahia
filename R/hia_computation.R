@@ -195,7 +195,7 @@ compute_hia_epi <- function(species,
                                             apply(2, weighted.mean, w = df[,'pop']) %>%
                                             t %>%
                                             data.frame %>%
-                                            mutate(pop = sum(df[,'pop'])), .id = 'region_id')
+                                            mutate(pop = sum(df[,'pop']), na.rm=T), .id = 'region_id')
 
     pop_domain$epi_location_id <- get_epi_location_id(pop_domain$region_id)
 

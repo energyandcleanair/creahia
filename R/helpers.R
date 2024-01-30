@@ -119,11 +119,11 @@ get_model_adm <- function(grid_raster, shp = NULL,
   }
 
   adm_utm <- adm_4326 %>%
-    terra::project(crs_to) %>%
-    terra::crop(grid_4326)
+    terra::crop(grid_4326) %>%
+    terra::project(crs_to)
 
   if(nrow(adm_utm)==0){
-    warning("No overlap between GADM and grid raster. Will likely fail.")
+    stop("No overlap between GADM and grid raster. Are you sure you selected the right countries?")
   }
 
   maps <- adm_utm %>%

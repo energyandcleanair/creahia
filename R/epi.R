@@ -95,8 +95,7 @@ get_locations <- function(){
 
 attach_gadm_to_locations <- function(locations=get_locations()){
 
-  matching_files <- list.files(file.path(find.package("creahia"), "extdata", "location_matching"), ".csv", full.names = T)
-
+  matching_files <- get_hia_paths(pattern = "*.csv", path="location_matching")
   matching_subnational <- lapply(matching_files, read_csv, col_types = cols()) %>%
     bind_rows() %>%
     sel(iso3, ihme_level, ihme_location_name, gadm_level, gadm_id, gadm_name)
