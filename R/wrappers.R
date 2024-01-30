@@ -86,18 +86,7 @@ wrappers.compute_hia_two_images <- function(obj, ...) {
 }
 
 
-#' Compute HIA wrapper: given a list of rasters that represent perturbation in one or several pollutants.
-#'
-#' @param perturbation_rasters
-#' @param baseline_rasters
-#' @param crfs_version
-#' @param return_concentrations include the population-weighted concentrations by admin area in the results. In this case, the function returns a list.
-#' @param pm2.5_to_pm10_ratio if the PM2.5 input data should be used to assess PM10 exposure, provide a ratio to use for calculation of baseline concentrations
-#'
-#' @return
 #' @export
-#'
-#' @examples
 wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                                                     baseline_rasters = NULL,
                                                     regions = NULL,
@@ -199,19 +188,7 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
 }
 
 
-#' Compute HIA wrapper: given the scenarios and a data frame that represent perturbation in one or several pollutants.
-#'
-#' @param scenarios different scenarios to process.
-#' @param perturbation_rasters_table the table from creapuff::get_calpuff_files function.
-#' @param baseline_rasters_table the table from wrapper.get_conc_baseline function.
-#' @param grid_raster grid raster for the model.
-#' @param crfs_version
-#' @param return_concentrations include the population-weighted concentrations by admin area in the results. In this case, the function returns a list.
-#'
-#' @return
 #' @export
-#'
-#' @examples
 wrappers.compute_hia_two_images.character <- function(scenarios,
                                                       perturbation_rasters_table,
                                                       baseline_rasters_table,
