@@ -108,19 +108,23 @@ get_model_adm <- function(grid_raster, shp = NULL,
     terra::extend(c(40, 40)) %>%
     terra::project('epsg:4326')
 
-  adm_4326 <- if(is.null(shp)) {
+  adm_4326 <- (if(is.null(shp)) {
     creahelpers::get_adm(admin_level, ...)
   } else {
     shp
-  } %>% terra::vect()
+  }) %>% terra::vect()
 
   if(!is.null(iso3s)){
     adm_4326 <- adm_4326[adm_4326$GID_0 %in% iso3s,]
   }
 
   adm_utm <- adm_4326 %>%
-    terra::crop(grid_4326) %>%
-    terra::project(crs_to)
+    terra::project(crs_to) %>%
+    terra::crop(grid_4326)
+
+  if(nrow(adm_utm)==0){
+    warning("No overlap between GADM and grid raster. Will likely fail.")
+  }
 
   maps <- adm_utm %>%
     sf::st_as_sf() %>%
