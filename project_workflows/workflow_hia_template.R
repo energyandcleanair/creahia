@@ -79,8 +79,8 @@ creahia::wrappers.compute_hia_two_images.character(scenarios = scenarios_to_proc
                                                    calc_causes = causes_to_include)
 
 # read the HIA data
-hia <- runs %>% lapply(function(scen) readRDS(file.path(project_dir, 'hia',
-                                                        glue('hia_GBD__{scen}.RDS')))$hia) %>%
+hia <- scenarios_to_process %>% lapply(function(scen) readRDS(file.path(project_dir, 'hia',
+                                                              glue('hia_GBD__{scen}.RDS')))$hia) %>%
   bind_rows
 
 hia_totals <- hia %>%
