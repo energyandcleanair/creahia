@@ -288,9 +288,11 @@ get_econ_forecast <- function(hia_cost,
                   filter(year %in% c(pop_targetyr, years),
                          iso3 %in% unique(hia_cost$iso3),
                          !iso3 %in% missing_iso3s_pop)) %>%
+      group_by(iso3) %>%
       mutate(GDPscaling = GDP.PC.PPP.2017USD / GDP.PC.PPP.2017USD[year == pop_targetyr] /
                (1 + discount_rate)^(year - pop_targetyr)) %>%
-      sel(-GDP.PC.PPP.2017USD)
+      sel(-GDP.PC.PPP.2017USD) %>%
+      ungroup()
 
     missing_iso3s_gdp <- setdiff(unique(hia_cost$iso3),
                                  c(unique(gdp_scaling[gdp_scaling$year %in% years,]$iso3)))
