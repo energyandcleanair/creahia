@@ -10,12 +10,38 @@ get_hia_path <- function(filename, error_if_not_exists=F) {
   # We bundle HIA data with creahia package, in inst/extdata
   # Read here for more details:
   # https://r-pkgs.org/data.html#data-extdata
-  file <- file.path(find.package("creahia"), "extdata", filename)
-  if(!file.exists(file)) {
+
+  file1 <- file.path(find.package("creahia"), "extdata", filename)
+  file2 <- file.path(find.package("creahia"), "inst", "extdata", filename)
+
+  if(!file.exists(file1) && !file.exists(file2)) {
     if(error_if_not_exists) stop("Couldn't find file ", filename, " in HIA folder")
     else warning("Couldn't find file ", filename, " in HIA folder")
   }
-  return(file)
+
+  if(file.exists(file1)) return(file1)
+  else return(file2)
+}
+
+
+get_hia_paths <- function(pattern, path="", error_if_not_exists=F) {
+  # We bundle HIA data with creahia package, in inst/extdata
+  # Read here for more details:
+  # https://r-pkgs.org/data.html#data-extdata
+  dirs <- c(
+    file.path(find.package("creahia"), "extdata"),
+    file.path(find.package("creahia"), "inst", "extdata")
+  )
+
+  dir <- dirs[which(dir.exists(dirs))]
+  if(length(dir) == 0){
+    warning("Could not find extdata directory")
+    return(c())
+  }
+
+  list.files(path = file.path(dir, path),
+             pattern = pattern,
+             full.names = T)
 }
 
 
