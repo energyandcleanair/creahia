@@ -1,3 +1,7 @@
+testthat::source_test_helpers("tests", env = globalenv())
+testthat::source_test_helpers("../", env = globalenv())
+
+
 test_that("Test GDP scaling for several countries", {
 
 
