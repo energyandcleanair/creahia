@@ -6,8 +6,9 @@ compute_hia <- function(conc_map,
                         gbd_causes = "default", # which causes to use GDB risk functions for; 'all' for all available, default: only when GEMM not available
                         gemm = get_gemm(),
                         gbd = NULL,
-                        ihme = get_ihme(),
+                        ihme = get_ihme(version = ihme_version),
                         epi_version = "default",
+                        ihme_version = epi_version,
                         epi = get_epi(version = epi_version),
                         crfs_version = "default",
                         crfs = get_crfs(version = crfs_version),
@@ -32,9 +33,9 @@ compute_hia <- function(conc_map,
     subset(. %in% calc_causes_wo_outcome)
   gemm_causes <- calc_causes_wo_outcome %>% subset(!(. %in% gbd_causes))
 
-  if(length(gemm_causes) > 0) message('Using GEMM risk functions for ', paste(gemm_causes, collapse = ", "))
+  if(length(gemm_causes) > 0) logger::log_info('Using GEMM risk functions for ', paste(gemm_causes, collapse = ", "))
   if(length(gbd_causes) > 0) message('Using GBD risk functions for ', paste(gbd_causes, collapse = ", "))
-  if(length(calc_causes_wo_outcome) == 0) message('Not using GBD or GEMM risk functions')
+  if(length(calc_causes_wo_outcome) == 0) logger::log_info('Not using GBD or GEMM risk functions')
 
   paf <- list()
   if(length(calc_causes) > 0) {
@@ -42,6 +43,8 @@ compute_hia <- function(conc_map,
     paf <- compute_hia_paf(conc_map = conc_map,
                            scenarios = scenarios,
                            calc_causes = calc_causes,
+                           epi_version = epi_version,
+                           ihme_version = ihme_version,
                            gemm = gemm,
                            gbd = gbd,
                            ihme = ihme,
@@ -82,11 +85,13 @@ compute_hia <- function(conc_map,
 #'
 #' @examples
 compute_hia_paf <- function(conc_map,
+                            epi_version,
+                            ihme_version = ihme_version,
                             scenarios = names(conc_map),
                             calc_causes = get_calc_causes(),
                             gemm = get_gemm(),
                             gbd = get_gbd(),
-                            ihme = get_ihme(),
+                            ihme = get_ihme(ihme_version),
                             .mode = 'change') {
 
   paf <- list()
@@ -95,29 +100,41 @@ compute_hia_paf <- function(conc_map,
   for(scenario in scenarios) {
     message(paste('processing', scenario))
 
-    conc_scenario <- conc_map[[scenario]] %>% subset(!is.null(.)) %>%
-      subset(!is.na(unique(.))) %>% # sum(., na.rm=T) %>%
+    conc_scenario <- conc_map[[scenario]] %>%
+      subset(!is.null(.)) %>%
+      subset(!is.na(unique(.))) %>%
       lapply(data.frame) %>%
       bind_rows(.id = 'region_id') %>%
       dlply(.(region_id))
 
+
+    pg <- progress::progress_bar$new(
+      format = "Computing PAF [:bar] :percent :eta",
+      total = length(names(conc_scenario))
+    )
+
     paf[[scenario]] <- foreach(region_id = names(conc_scenario)) %dopar% {
+
       tryCatch({
+        pg$tick()
         paf_region <- list()
         non_na_cols <- c('conc_baseline_pm25', 'conc_scenario_pm25', 'pop')
         conc <- conc_scenario[[region_id]][complete.cases(conc_scenario[[region_id]][,non_na_cols]),]
+        if(nrow(conc)==0) return(NULL)
 
         for(cs_ms in calc_causes) {
+          logger::log_debug(cs_ms)
           cs.ms <- cs_ms %>% strsplit('_') %>%
             unlist
-          epi_country <- substr(region_id, 1, 3) %>% country.recode(c(use_as_proxy, merge_into))
+
           paf_region[[cs_ms]] <- country_paf_perm(pm.base = conc[, 'conc_baseline_pm25'],
                                                   pm.perm = conc[, 'conc_scenario_pm25'],
                                                   pop = conc[, 'pop'],
-                                                  cy = epi_country,
+                                                  region_id = region_id,
                                                   cause = cs.ms[1],
                                                   measure = cs.ms[2],
                                                   adult_ages = adult_ages,
+                                                  epi_version = epi_version,
                                                   gemm = gemm,
                                                   gbd = gbd,
                                                   ihme = ihme,
@@ -129,7 +146,7 @@ compute_hia_paf <- function(conc_map,
           mutate(region_id = region_id)
       }, error = function(e) {
         # For instance if country iso3 not in ihme$ISO3
-        warning("Failed for region ", region_id)
+        logger::log_warn("Failed for region ", region_id)
         paf_region <- NULL
       })
       return(paf_region)
@@ -181,20 +198,18 @@ compute_hia_epi <- function(species,
                                             apply(2, weighted.mean, w = df[,'pop']) %>%
                                             t %>%
                                             data.frame %>%
-                                            mutate(pop = sum(df[,'pop'])), .id = 'region_id')
+                                            mutate(pop = sum(df[,'pop']), na.rm=T), .id = 'region_id')
 
-    pop_domain$epi_iso3 <- pop_domain$region_id %>%
-      substr(1,3) %>%
-      as.character %>%
-      country_recode_iso3()
+    pop_domain$epi_location_id <- get_epi_location_id(pop_domain$region_id)
 
     epi_loc <- epi %>%
       sel(-pop, -country) %>%
-      dplyr::rename(epi_iso3 = ISO3) %>%
-      filter(epi_iso3 %in% pop_domain$epi_iso3) %>%
-      full_join(pop_domain %>% sel(region_id, epi_iso3, pop),
-                multiple='all') %>%
-      sel(-epi_iso3)
+      # dplyr::rename(epi_iso3 = iso3) %>%
+      # filter(epi_iso3 %in% pop_domain$epi_iso3) %>%
+      right_join(pop_domain %>% sel(region_id, epi_location_id, pop),
+                # multiple='all',
+                by=c(location_id='epi_location_id'))
+      # sel(-epi_iso3)
 
     # Exclude unmatched countries
     na_iso3s <- epi_loc$region_id[is.na(epi_loc$estimate)]
@@ -325,8 +340,12 @@ to_long_hia <- function(hia) {
 
 
 # define a function to calculate the hazard ratio for a specific concentration, cause and age group
-get_hazard_ratio <- function(pm, .age = '25+', .cause = 'NCD.LRI', .region = 'inc_China',
-               gemm = get_gemm(), gbd = get_gbd()) {
+get_hazard_ratio <- function(pm,
+                             .age = '25+',
+                             .cause = 'NCD.LRI',
+                             .region = 'inc_China',
+                             gemm = get_gemm(),
+                             gbd = get_gbd()) {
 
   gbd.causes <- gbd$cause_short %>% unique
 
@@ -352,13 +371,14 @@ get_hazard_ratio <- function(pm, .age = '25+', .cause = 'NCD.LRI', .region = 'in
 country_paf_perm <- function(pm.base,
                              pm.perm,
                              pop,
-                             cy,
+                             region_id,
                              cause,
                              measure,
-                             adult_ages = get_adult_ages(),
+                             epi_version,
                              gemm = get_gemm(),
                              gbd = get_gbd(),
-                             ihme = get_ihme(),
+                             ihme = get_ihme(version = epi_version),
+                             adult_ages = get_adult_ages(ihme),
                              .region = "inc_China",
                              .mode = 'change') { # change or attribution?
 
@@ -367,8 +387,13 @@ country_paf_perm <- function(pm.base,
   if(cause %in% age.specific) {
     ages <- adult_ages
     age_weights <- ihme %>%
-      dplyr::filter(ISO3 == cy, cause_short == cause, measure_name == measure,
-                    age %in% ages, estimate == 'central')
+      dplyr::filter(location_id==get_epi_location_id(region_id),
+                    cause_short == cause,
+                    measure_name == measure,
+                    age %in% ages,
+                    estimate == 'central')
+    # Ensuring ages and age_weights$age are in the same order
+    age_weights <- age_weights[match(ages, age_weights$age),]
   } else {
     age_weights <- data.frame(val = 1)
     if(grepl('child', cause)) ages = 'Under 5' else ages = '25+'
@@ -388,48 +413,73 @@ country_paf_perm <- function(pm.base,
   }
 
   if(length(dim(paf.perm)) == 2) {
-    paf.perm %>% t %>%
+    # in case the get_hazard_ratio function didn't return an array
+    paf.perm %>%
+      t %>%
       orderrows %>%
-      apply(2, weighted.mean, age_weights$val) # in case the get_hazard_ratio function didn't return an array
+      apply(2, weighted.mean, age_weights$val)
   } else {
     tryCatch({
-      paf.perm %>%
-        apply(1:2, weighted.mean, age_weights$val) %>%
-        orderrows %>%
+
+      # old <- paf.perm %>%
+      #   apply(1:2, stats::weighted.mean, age_weights$val) %>%
+      #   orderrows %>%
+      #   apply(2, weighted.mean, w = pop)
+
+      # matrixStats two orders of magnitude faster
+      # also removed orderrows (though checking it is already ordered)
+      check_order <- function(x){
+        ok <- all(x[,'low'] <= x[,'central'])
+        ok <- ok & all(x[,'central'] <= x[,'high'])
+        if(!ok){
+          stop("Failed at PAF. low > central or central > high")
+          }
+        x
+      }
+
+      new <- paf.perm %>%
+        apply(2, matrixStats::rowWeightedMeans, w = age_weights$val) %>%
+        check_order() %>%
         apply(2, weighted.mean, w = pop)
+
+      # if(any(round(old,6) != round(new,6))){
+      #   stop("Broke something")
+      # }
+      #
+      return(new)
     }, error = function(e) {
-      warning("Failed for region ", cy, cause, e)
+      warning("Failed for region ", region_id, cause, e)
       return(NULL)
     })
   }
 }
 
 
-country_paf <- function(pm, pop, cy, cs, ms, adult_ages = get_adult_ages(),
-                        .region = "inc_China", gemm = get_gemm(), gbd = get_gbd()) {
-
-  if(grepl('child', cs)) {
-    ages <- 'Under 5'
-    w <- data.frame(val = 1)
-  } else {
-    ages <- adult_ages
-    w <- ihme %>% dplyr::filter(ISO3 == cy, cause_short == cs, measure_name == ms,
-                                age %in% ages, estimate == 'central')
-  }
-
-  rr <- ages %>% sapply(function(.a) hr(pm, .cause = cs, .age = .a,
-                                        .region = .region, gemm = gemm, gbd = gbd),
-                  simplify = 'array')
-  paf <- 1 - 1 / rr
-
-  if(length(dim(paf)) == 2) {
-    paf %>% t %>%
-      apply(2, weighted.mean, w$val) # in case the hr function didn't return an array
-  } else {
-    paf %>% apply(1:2, weighted.mean, w$val, na.rm = T) %>%
-      apply(2, weighted.mean, w = pop, na.rm = T)
-  }
-}
+# country_paf <- function(pm, pop, cy, cs, ms, adult_ages = get_adult_ages(),
+#                         .region = "inc_China", gemm = get_gemm(), gbd = get_gbd()) {
+#
+#   if(grepl('child', cs)) {
+#     ages <- 'Under 5'
+#     w <- data.frame(val = 1)
+#   } else {
+#     ages <- adult_ages
+#     w <- ihme %>% dplyr::filter(ISO3 == cy, cause_short == cs, measure_name == ms,
+#                                 age %in% ages, estimate == 'central')
+#   }
+#
+#   rr <- ages %>% sapply(function(.a) hr(pm, .cause = cs, .age = .a,
+#                                         .region = .region, gemm = gemm, gbd = gbd),
+#                   simplify = 'array')
+#   paf <- 1 - 1 / rr
+#
+#   if(length(dim(paf)) == 2) {
+#     paf %>% t %>%
+#       apply(2, weighted.mean, w$val) # in case the hr function didn't return an array
+#   } else {
+#     paf %>% apply(1:2, weighted.mean, w$val, na.rm = T) %>%
+#       apply(2, weighted.mean, w = pop, na.rm = T)
+#   }
+# }
 
 
 scale_hia_pop <- function(hia, base_year = 2015, target_year = 2019) {

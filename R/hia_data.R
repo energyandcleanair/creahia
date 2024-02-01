@@ -10,12 +10,38 @@ get_hia_path <- function(filename, error_if_not_exists=F) {
   # We bundle HIA data with creahia package, in inst/extdata
   # Read here for more details:
   # https://r-pkgs.org/data.html#data-extdata
-  file <- file.path(find.package("creahia"), "extdata", filename)
-  if(!file.exists(file)) {
+
+  file1 <- file.path(find.package("creahia"), "extdata", filename)
+  file2 <- file.path(find.package("creahia"), "inst", "extdata", filename)
+
+  if(!file.exists(file1) && !file.exists(file2)) {
     if(error_if_not_exists) stop("Couldn't find file ", filename, " in HIA folder")
     else warning("Couldn't find file ", filename, " in HIA folder")
   }
-  return(file)
+
+  if(file.exists(file1)) return(file1)
+  else return(file2)
+}
+
+
+get_hia_paths <- function(pattern, path="", error_if_not_exists=F) {
+  # We bundle HIA data with creahia package, in inst/extdata
+  # Read here for more details:
+  # https://r-pkgs.org/data.html#data-extdata
+  dirs <- c(
+    file.path(find.package("creahia"), "extdata"),
+    file.path(find.package("creahia"), "inst", "extdata")
+  )
+
+  dir <- dirs[which(dir.exists(dirs))]
+  if(length(dir) == 0){
+    warning("Could not find extdata directory")
+    return(c())
+  }
+
+  list.files(path = file.path(dir, path),
+             pattern = pattern,
+             full.names = T)
 }
 
 
@@ -29,9 +55,10 @@ fillcol <- function(df2, targetcols) {
 }
 
 
-adddefos <- function(df, exl = 'pop') {
+adddefos <- function(df, exl = c('pop', 'location_id', 'location_level')) {
   targetcols <- names(df)[sapply(df, is.numeric) & (!names(df) %in% exl)]
-  df %>% ddply(.(estimate, Region, IncomeGroup), fillcol, targetcols) %>%
+  df %>%
+    ddply(.(estimate, region, income_group), fillcol, targetcols) %>%
     ddply(.(estimate), fillcol, targetcols)
 }
 
@@ -63,10 +90,31 @@ get_crfs <- function(version = "default") {
 }
 
 
+fix_epi_cols <- function(epi){
+
+  old_new_cols <- list(
+    Region='region',
+    Country='country',
+    ISO3='iso3',
+    IncomeGroup='income_group'
+  )
+
+  for(old_col in names(old_new_cols)) {
+    new_col <- old_new_cols[[old_col]]
+    # Rename if exists
+    if(old_col %in% names(epi)) {
+      epi <- epi %>% dplyr::rename(!!new_col := !!old_col)
+    }
+  }
+
+  epi
+}
+
 get_epi_versions <- function() {
   list(
     "default" = "epi_for_hia.csv",
     "C40" = "epi_for_hia_C40.csv",
+    "gbd2017" = "epi_for_hia_gbd2017.csv",
     "gbd2019" = "epi_for_hia_gbd2019.csv"
   )
 }
@@ -77,20 +125,37 @@ get_epi <- function(version = "default") {
   filename <- get_epi_versions()[[version]]
   print(sprintf("Getting epi: %s", filename))
 
-  epi <- read_csv(get_hia_path(filename), col_types = cols()) %>% adddefos
+  epi <- read_csv(get_hia_path(filename), col_types = cols()) %>%
+    fix_epi_cols() %>%
+    adddefos %>%
+    add_location_details()
 
   # add missing admin regions
-  epi <- epi %>% filter(ISO3 == 'CHN') %>%
-    mutate(ISO3 = 'HKG', pop = 7.392e6, country = 'Hong Kong',
-           IncomeGroup = "High income") %>%
-    bind_rows(epi)
-  epi <- epi %>% filter(ISO3 == 'CHN') %>%
-    mutate(ISO3 = 'MAC', pop = 622567, country = 'Macau',
-           IncomeGroup = "High income") %>%
-    bind_rows(epi) %>%
-    distinct
+  if(!'HKG' %in% epi$iso3){
+     epi <- add_country_to_epi_wide(
+        epi,
+        base_iso3= 'CHN',
+        iso3 = 'HKG',
+        pop = 7.392e6,
+        name = 'Hong Kong',
+        income_group = "High income"
+    )
+  }
 
-  return(epi)
+  if(!'MAC' %in% epi$iso3){
+    epi <- add_country_to_epi_wide(
+      epi,
+      base_iso3= 'CHN',
+      iso3 = 'MAC',
+      pop = 622567,
+      name = 'Macau',
+      income_group = "High income"
+    )
+  }
+
+
+
+  return(epi %>% distinct())
 }
 
 
@@ -315,65 +380,20 @@ get_gemm <- function() {
 }
 
 
-get_ihme <- function() {
-  print("Getting IHME")
+get_ihme <- function(version='gbd2017') {
 
-  # read IHME mortality and morbidity data to enable country calculations
-  ihme <- read.csv(get_hia_path('IHME-GBD_2017_DATA.csv')) %>%
-    dplyr::filter(metric_name == 'Number') %>%
-    gather_ihme
+  file_version <- recode(
+    version,
+    default='gbd2017',
+    C40='gbd2017',
+    gbd2019='gbd2019'
+  )
 
-  ihme <- ihme %>% mutate(age_low = age_name %>% gsub(" .*", "", .) %>% as.numeric)
-  ihme$age_low[ihme$age_name == 'Under 5'] <- 0
-  ihme$age_low[ihme$age_name == 'All Ages'] <- -1
-  ihme$age <- ihme$age_name %>% gsub(' to ', '-', .) %>%
-    gsub(' plus', '+', .)
-
-  ihme <- ihme %>%
-    dplyr::filter(age_low >= 25) %>%
-    group_by_at(vars(-val, -starts_with('age'))) %>%
-    summarise_at('val', sum) %>%
-    mutate(age = '25+') %>%
-    bind_rows(ihme) %>%
-    ungroup
-
-  ihme <- ihme %>% addiso
-
-  ihme <- ihme %>%
-    mutate(cause_short = case_when(grepl('Diab', cause_name) ~ 'Diabetes',
-                                   grepl('Stroke', cause_name) ~ 'Stroke',
-                                   grepl('Lower resp', cause_name) ~ 'LRI',
-                                   grepl('Non-comm', cause_name) ~ 'NCD',
-                                   grepl('Isch', cause_name) ~ 'IHD',
-                                   grepl('obstr', cause_name) ~ 'COPD',
-                                   grepl('lung canc', cause_name) ~ 'LC',
-                                   T ~ NA))
-
-  ihme <- ihme %>%
-    dplyr::filter(grepl('Lower resp|Non-comm', cause_name)) %>%
-    group_by_at(vars(-val, -starts_with('cause'))) %>%
-    summarise_at('val', sum) %>%
-    mutate(cause_name = 'NCD+LRI', cause_short = 'NCD.LRI') %>%
-    bind_rows(ihme) %>%
-    ungroup
-
-  adult.ages <- ihme$age[ihme$age_low >= 25] %>% subset(!is.na(.)) %>%
-    unique
-
-  # For some reason, ISO3 is now missing
-  ihme <- ihme %>%
-    mutate(ISO3=countrycode::countrycode(country, "country.name", "iso3c"))
-
-  ihme <- ihme %>%
-    dplyr::filter(ISO3 == 'ALB') %>%
-    mutate(ISO3 = 'XKX', country = 'Kosovo') %>%
-    bind_rows(ihme)
-
-  return(ihme)
+  read_csv(get_hia_path(glue("ihme_{file_version}.csv")), col_types = cols())
 }
 
 
-get_adult_ages <- function(ihme = get_ihme()) {
+get_adult_ages <- function(ihme) {
   print("Getting adult_ages")
 
   ihme$age[ihme$age_low >= 25] %>% subset(!is.na(.)) %>%
@@ -387,8 +407,15 @@ get_gbd <- function(gbd_causes = c('LRI.child', 'Diabetes')) {
   if(length(gbd_causes) == 0) gbd_causes <- 'none'
 
   # read GBD RR values
-  gbd <- read_csv(get_hia_path('ier_computed_table.csv')) %>% dplyr::select(-...1) %>%
-    dplyr::rename(cause_short = cause, central = rr_mean, low = rr_lower, high = rr_upper) %>%
+  gbd <- read_csv(get_hia_path('ier_computed_table.csv'), col_types = cols()) %>% dplyr::select(-...1) %>%
+    # there's a weird one where rr_upper < rr_mean
+    mutate(
+      low = rr_lower,
+      central = pmin(rr_mean, rr_upper),
+      high = pmax(rr_mean, rr_upper)
+    ) %>%
+    dplyr::rename(cause_short = cause) %>%
+    select(-c(rr_lower, rr_mean, rr_upper)) %>%
     mutate(cause_short = recode(cause_short,
                                 lri = 'LRI',
                                 t2_dm = 'Diabetes',

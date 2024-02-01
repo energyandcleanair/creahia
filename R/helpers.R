@@ -23,11 +23,26 @@ getWBCountries <- function() {
 }
 
 
-readWB_online <- function(indicator, start_date = 2010, end_date = 2019,
-                          valuename = 'Value', latest.year.only = T, ...) {
+readWB_online <- function(indicator,
+                          start_date = 2010,
+                          end_date = 2019,
+                          valuename = 'Value',
+                          var = NULL,
+                          latest.year.only = T,
+                          use_cache=T,
+                          ...) {
+
+  filepath <- file.path(glue("cache/{indicator}_{start_date}_{end_date}.RDS"))
+  d <- (if(use_cache & file.exists(filepath)){
+    readRDS(filepath)
+  }else{
+    d <- wbstats::wb_data(indicator, start_date = start_date, end_date = end_date, ...)
+    dir.create(dirname(filepath))
+    saveRDS(d, filepath)
+    d
+  })
 
   wb_indicators <- getWBIndicators()
-  d <- wbstats::wb_data(indicator, start_date = start_date, end_date = end_date, ...)
   names(d)[names(d) == indicator] <- 'Value'
   d <- d %>%
     sel(iso3 = iso3c, country, year = date, Value) %>%
@@ -39,6 +54,8 @@ readWB_online <- function(indicator, start_date = 2010, end_date = 2019,
     d <- d %>% arrange(-year) %>% distinct(iso3, .keep_all = T)
 
   names(d)[names(d) == 'Value'] <- valuename
+
+  if(!is.null(var)) d$var <- var
   if(nrow(d) == 0) stop('no data!')
   return(d)
 }
@@ -60,26 +77,16 @@ addiso <- function(df, ...) {
 gather_ihme <- function(df) {
   df %>% dplyr::rename(central = val, low = lower, high = upper) %>%
     tidyr::gather(estimate, val, central, low, high) %>%
-    dplyr::mutate(measure_name = measure_name %>% gsub(' .*', '', .)) %>%
-    dplyr::rename(country = location_name)
+    dplyr::mutate(measure_name = measure_name %>% gsub(' .*', '', .))
 }
 
 
-ihme_getrate <- function(df) {
+ihme_getrate <- function(df, pop.total) {
   df %>% left_join(pop.total %>% sel(location_id, pop = val)) %>%
     mutate(val = val / pop * 1e5) %>% sel(-pop) %>%
     ungroup %>%
     distinct
 }
-
-
-addlowhigh <- function(indata) ddply(indata, .(ISO3),
-                                     function(df) {
-                                       for(col in names(df))
-                                         df[[col]] <- df[[col]] %>%
-                                           na.fill(df[[col]][df$estimate == 'central'])
-                                       return(df)
-                                     })
 
 
 make_ci <- function(df, rescols = c('low', 'central', 'high')) {
@@ -131,6 +138,10 @@ get_model_adm <- function(grid_raster, shp = NULL,
   adm_utm <- adm_4326 %>%
     terra::crop(grid_4326) %>%
     terra::project(crs_to)
+
+  if(nrow(adm_utm)==0){
+    stop("No overlap between GADM and grid raster. Are you sure you selected the right countries?")
+  }
 
   maps <- adm_utm %>%
     sf::st_as_sf() %>%
