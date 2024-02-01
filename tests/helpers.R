@@ -18,3 +18,13 @@ get_test_file <- function(filename){
   }
   return(filepath)
 }
+
+copy_epi_data_update <- function(){
+  # Copy data/epi_update
+  dir_dest <- "data/epi_update"
+  dir_org <- file.path("../../", dir_dest)
+  dir.create(dir_dest, showWarnings = F, recursive = T)
+  list.files(dir_org, "*.csv") %>%
+    lapply(function(x){file.copy(file.path(dir_org, x), file.path(dir_dest, x))})
+
+}
