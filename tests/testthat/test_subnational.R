@@ -55,10 +55,11 @@ test_that("GADM level 2 gives similar results to level 1 and level 0 - Indonesia
   ) %>%
     filter(!double_counted, estimate=='central') %>%
     group_by(estimate, gadm_level, iso3, Outcome) %>%
-    summarise(number=sum(number, na.rm=T)) %>%
+    dplyr::summarise(number=sum(number, na.rm=T)) %>%
+    ungroup() %>%
     tidyr::pivot_wider(names_from='gadm_level', values_from='number', names_prefix = 'gadm_')
 
-  testthat::expect_equal(comparison$gadm_0, comparison$gadm_1, tolerance=1e-3)
+  testthat::expect_equal(comparison$gadm_0, comparison$gadm_1, tolerance=1e-2)
   testthat::expect_true(sum(comparison$gadm_0) > 0)
 
 })

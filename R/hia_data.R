@@ -55,7 +55,7 @@ fillcol <- function(df2, targetcols) {
 }
 
 
-adddefos <- function(df, exl = 'pop') {
+adddefos <- function(df, exl = c('pop', 'location_id', 'location_level')) {
   targetcols <- names(df)[sapply(df, is.numeric) & (!names(df) %in% exl)]
   df %>%
     ddply(.(estimate, region, income_group), fillcol, targetcols) %>%
@@ -114,6 +114,7 @@ get_epi_versions <- function() {
   list(
     "default" = "epi_for_hia.csv",
     "C40" = "epi_for_hia_C40.csv",
+    "gbd2017" = "epi_for_hia_gbd2017.csv",
     "gbd2019" = "epi_for_hia_gbd2019.csv"
   )
 }
