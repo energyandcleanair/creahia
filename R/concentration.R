@@ -126,7 +126,7 @@ get_conc_baseline_pm25 <- function(target_year = lubridate::year(lubridate::toda
   basemap_year <- get_baseline_pm25_year(target_year)
 
   pm25_nc <- glue("V5GL03.HybridPM25.Global.{basemap_year}01-{basemap_year}12.nc")
-  creahelpers::get_concentration_path(f_pm25_nc) %>% rast %>%
+  creahelpers::get_concentration_path(pm25_nc) %>% rast %>%
     cropProj(grid_raster)
 }
 
