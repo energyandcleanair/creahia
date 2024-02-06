@@ -59,10 +59,8 @@ wrappers.get_conc_baseline <- function(species, grid_raster,
         raster %>%
         creahelpers::cropProj(grid_raster) %>%
         multiply_by(1 / pm25_to_pm10_ratio)
-    } else {
-      creahelpers::get_concentration_path(file_list[[spec]]) %>%
-        raster %>%
-        creahelpers::cropProj(grid_raster)
+    } else if(spec == 'pm25'){
+      get_conc_baseline_pm25(target_year = no2_targetyear, grid_raster = grid_raster)
     }
 
   }) %>% `names<-`(species)
