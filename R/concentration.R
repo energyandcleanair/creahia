@@ -112,6 +112,30 @@ get_conc_baseline <- function(species,
 }
 
 
+#' Get PM2.5 baseline concentration for a given year and grid
+#'
+#' @param target_year
+#' @param grid_raster
+#'
+#' @return SpatRaster
+#' @export
+#'
+#' @examples
+get_conc_baseline_pm25 <- function(target_year = lubridate::year(lubridate::today()),
+                                   grid_raster){
+  basemap_year <- get_baseline_pm25_year(target_year)
+
+  pm25_nc <- glue("V5GL03.HybridPM25.Global.{basemap_year}01-{basemap_year}12.nc")
+  creahelpers::get_concentration_path(f_pm25_nc) %>% rast %>%
+    cropProj(grid_raster)
+}
+
+
+get_baseline_pm25_year <- function(year){
+  basemap_years <- seq(2018, 2021)
+  max(basemap_years[basemap_years<=year])
+}
+
 
 #' Extract concentration values and population at specified spatial features
 #'
