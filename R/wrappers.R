@@ -15,7 +15,6 @@ wrappers.get_conc_baseline <- function(species, grid_raster,
                                       pm25_to_pm10_ratio = .7) {
   avail_species <- c('no2', 'so2', 'pm25', 'tpm10', 'o3') # pollutants with available baseline
   file_list <- list(
-    'pm25' = 'GlobalGWRcwUni_PM25_GL_201601_201612-RH35_Median.nc',
     'o3' = 'O3_77e3b7-xmessy_mmd_kk.nc'
   )
 
@@ -55,9 +54,7 @@ wrappers.get_conc_baseline <- function(species, grid_raster,
     } else if(spec == 'so2') {
       grid_raster %>% setValues(10)
     } else if(spec == 'tpm10') {
-      creahelpers::get_concentration_path(file_list[['pm25']]) %>%
-        raster %>%
-        creahelpers::cropProj(grid_raster) %>%
+      get_conc_baseline_pm25(target_year = no2_targetyear, grid_raster = grid_raster) %>%
         multiply_by(1 / pm25_to_pm10_ratio)
     } else if(spec == 'pm25'){
       get_conc_baseline_pm25(target_year = no2_targetyear, grid_raster = grid_raster)
@@ -74,7 +71,6 @@ wrappers.get_conc_baseline <- function(species, grid_raster,
 #' Compute HIA wrapper: given a list of rasters that represent perturbation in one or several pollutants.
 #'
 #' @param obj generic object
-#'
 #' @return
 #' @export
 #'
@@ -212,11 +208,12 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
 #' Compute HIA wrapper: given the scenarios and a data frame that represent perturbation in one or several pollutants.
 #'
 #' @param scenarios different scenarios to process.
-#' @param perturbation_rasters_table the table from creapuff::get_calpuff_files function.
+#' @param perturbation_rasters_table the table from creapuff::get_calpuff_files function or similar.
 #' @param baseline_rasters_table the table from wrapper.get_conc_baseline function.
 #' @param grid_raster grid raster for the model.
-#' @param crfs_version
+#' @param crfs_version version of the CRFs to use.
 #' @param return_concentrations include the population-weighted concentrations by admin area in the results. In this case, the function returns a list.
+#' @param output_dir directory to save the results.
 #'
 #' @return
 #' @export
@@ -234,12 +231,14 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
                                                       ihme_version = epi_version,
                                                       # valuation_version = "default",
                                                       return_concentrations = F,
+                                                      output_dir = '.',
                                                       ...){
 
   pollutants_for_hia <- intersect(perturbation_rasters_table$species,
                                   baseline_rasters_table$species)
 
-  sapply(scenarios, function(scen) {
+  # custom_glue: to provide custom name for HIA .RDS files
+  sapply(scenarios, function(scen, custom_glue = NULL, ...) {
     message(glue('Processing scenario: "{scen}"'))
 
     # 01: Get perturbation concentration levels for the scenario ----
@@ -284,7 +283,10 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
       hia <- list(hia = hia, concentrations = conc_regions_mean)
     }
 
-    saveRDS(hia, file.path(project_dir, 'hia', glue('hia_GBD__{scen}.RDS')))
-  })
+    dir.create(file.path(output_dir, 'hia'), showWarnings = F)
+    saveRDS(hia,
+            file.path(file.path(output_dir, 'hia'),
+                      glue(if(!is.null(custom_glue)) custom_glue else 'hia_GBD__{scen}.RDS')))
+  }, ...)
 }
 
