@@ -213,7 +213,7 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
 #' @param grid_raster grid raster for the model.
 #' @param crfs_version version of the CRFs to use.
 #' @param return_concentrations include the population-weighted concentrations by admin area in the results. In this case, the function returns a list.
-#' @param output_dir directory to save the results.
+#' @param output_folder folder to save the results.
 #'
 #' @return
 #' @export
@@ -231,7 +231,7 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
                                                       ihme_version = epi_version,
                                                       # valuation_version = "default",
                                                       return_concentrations = F,
-                                                      output_dir = '.',
+                                                      output_folder = '.',
                                                       ...){
 
   pollutants_for_hia <- intersect(perturbation_rasters_table$species,
@@ -283,9 +283,9 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
       hia <- list(hia = hia, concentrations = conc_regions_mean)
     }
 
-    dir.create(file.path(output_dir, 'hia'), showWarnings = F)
+    dir.create(file.path(output_folder, 'hia'), showWarnings = F)
     saveRDS(hia,
-            file.path(file.path(output_dir, 'hia'),
+            file.path(output_folder, 'hia',
                       glue(if(!is.null(custom_glue)) custom_glue else 'hia_GBD__{scen}.RDS')))
   }, ...)
 }
