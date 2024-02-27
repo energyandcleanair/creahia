@@ -73,16 +73,15 @@ concs <- creahia::combine_concs(conc_perturbation, conc_baseline) %>%
 ## Select regions of interest
 We select regions of interest from GADM dataset, at the administrative level 1.
 ```{r, message=FALSE, cache=TRUE}
-regions <- creahia::get_adm(grid_raster, admin_level=1)
-# regions <- regions[1:5,] # For example purposes, we only keep a subset
+regions <- creahia::get_adm(grid_raster, admin_level=1, res='coarse')
 ```
 and extract concentrations there:
-```{r, cache=TRUE}
-conc_regions <- creahia::extract_concs_at_regions(concs, regions)
+```{r, cache=FALSE}
+conc_regions <- creahia::extract_concs_at_regions(concs, regions, species)
 ```
 
 # Health Impact Assessment
-```{r, cache=TRUE, message=FALSE}
+```{r, cache=FALSE, message=FALSE}
 hia <- compute_hia(conc_map=conc_regions,
                    species=species,
                    regions=regions)
@@ -90,8 +89,15 @@ hia
 ```
 
 Summarise HIA:
-```
+```{r}
 hia_table <- hia %>% totalise_hia() %>% make_hia_table()
 hia_table
+```
+
+Plotting results:
+```{r}
+ggplot(hia_table) +
+     geom_bar(aes(central, Pollutant, fill=scenario), stat="identity", position="dodge") +
+     facet_wrap(Outcome_long ~ region_name)
 ```
 

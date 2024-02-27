@@ -13,26 +13,28 @@
 #' @export
 #'
 #' @examples
-get_conc_calpuff <- function(calpuff_dir=NULL, calpuff_files=NULL, utm_zone, utm_hem, map_res, ...){
+get_conc_calpuff <- function(calpuff_dir = NULL, calpuff_files = NULL, utm_zone,
+                             utm_hem, map_res, ...) {
 
-  if(is.null(calpuff_files)){
-    calpuff_files <- creapuff::get_calpuff_files(dir=calpuff_dir)
+  if(is.null(calpuff_files)) {
+    calpuff_files <- creapuff::get_calpuff_files(dir = calpuff_dir)
   }
 
-  grids <- creapuff::get_grids_calpuff(calpuff_files=calpuff_files, utm_zone=utm_zone, utm_hem=utm_hem, map_res=map_res)
+  grids <- creapuff::get_grids_calpuff(calpuff_files = calpuff_files, utm_zone = utm_zone,
+                                       utm_hem = utm_hem, map_res = map_res)
 
   # Create tifs from csv results
-  creapuff::make_tifs(calpuff_files, grids=grids, ...)
+  creapuff::make_tifs(calpuff_files, grids = grids, ...)
 
   # Specify function that returns the concentration grid for a specific scenario and pollutant
-  calpuff_files = creapuff::get_calpuff_files(ext='\\.tif', dir = unique(dirname(calpuff_files$path)))
+  calpuff_files = creapuff::get_calpuff_files(ext='\\.tif$', dir = unique(dirname(calpuff_files$path)))
 
   calpuff_files %>%
-    filter(period=='annual') %>%
+    filter(period == 'annual') %>%
     sel(scenario, species) %>%
     rowwise() %>%
     dplyr::mutate(
-      conc_perturbation=list(creapuff::get_conc_raster(calpuff_files, scenario, species))
+      conc_perturbation = list(creapuff::get_conc_raster(calpuff_files, scenario, species))
     )
 }
 
@@ -44,67 +46,92 @@ get_conc_calpuff <- function(calpuff_dir=NULL, calpuff_files=NULL, utm_zone, utm
 #' @param no2_min_incr
 #' @param no2_targetyear
 #'
-#' @return
-#' @export a tibble with `species` (chr) and `conc_baseline` (RasterLayer) columns
+#' @return a tibble with `species` (chr) and named `conc_baseline` (RasterLayer) columns
+#' @export
 #'
 #' @examples
 get_conc_baseline <- function(species,
-                          grid_raster,
-                          no2_min_incr=NULL,
-                          no2_targetyear=2019){
+                              grid_raster,
+                              no2_min_incr = NULL,
+                              no2_targetyear = 2019,
+                              pm25_to_pm10_ratio = .7) {
+  avail_species <- c('no2', 'so2', 'pm25', 'tpm10', 'o3') # pollutants with available baseline
+  file_list <- list(
+    'o3' = 'O3_77e3b7-xmessy_mmd_kk.nc'
+  )
 
-  conc = list()
+  species <- species[tolower(species) %in% avail_species]
 
-  if("pm25" %in% species){
-    #source of PM2.5 data: http://fizz.phys.dal.ca/~atmos/martin/?page_id=140
-    conc[["pm25"]] <- creahelpers::get_concentration_path('GlobalGWRcwUni_PM25_GL_201601_201612-RH35_Median.nc') %>%
-      raster %>%
-      cropProj(grid_raster)
+  conc <- lapply(species, function(spec) {
+    if(spec == 'no2') {
+      conc_no2 <- creahelpers::get_concentration_path('no2_agg8.grd') %>%
+        raster %>%
+        creahelpers::cropProj(grid_raster) %>%
+        multiply_by(1.88)
 
-  }
+      if(!is.null(no2_targetyear)) {
+        no2_11 <- creahelpers::get_concentration_path("no2_omi_2011.tif") %>%
+          raster %>%
+          creahelpers::cropProj(grid_raster)
+        no2_targetyr <- creahelpers::get_concentration_path(glue("no2_omi_{no2_targetyear}.tif")) %>%
+          raster %>%
+          creahelpers::cropProj(grid_raster)
 
-  if("no2" %in% species){
-    #source of NO2 data: https://data.world/datasets/no2
-    conc_no2 <- creahelpers::get_concentration_path('no2_agg8.grd') %>%
-      raster %>%
-      cropProj(grid_raster) %>%
-      multiply_by(1.88)
+        no2_11_smooth <- no2_11 %>%
+          focal(focalWeight(., 100, "circle"), mean, na.rm = T, pad = T, padValue = NA)
+        no2_targetyr_smooth <- no2_targetyr %>%
+          focal(focalWeight(., 100, "circle"), mean, na.rm = T, pad = T, padValue = NA)
 
-    #adjust NO2 concentrations using OMI data for 2011 and the target year
-    if(!is.null(no2_targetyear)) {
-      creahelpers::get_concentration_path("no2_omi_2011.tif") %>% raster %>% cropProj(grid_raster) -> no2_11
-      creahelpers::get_concentration_path(paste0("no2_omi_",no2_targetyear,".tif")) %>%
-        raster %>% cropProj(grid_raster) -> no2_targetyr
-      no2_11 %>% focal(focalWeight(., 100, "circle"), mean, na.rm=T, pad=T, padValue=NA) -> no2_11_smooth
-      no2_targetyr %>% focal(focalWeight(., 100, "circle"), mean, na.rm=T, pad=T, padValue=NA) -> no2_targetyr_smooth
-      no2_ratio <- no2_targetyr_smooth/no2_11_smooth
+        no2_ratio <- no2_targetyr_smooth / no2_11_smooth
 
-      if(!is.null(no2_min_incr)){
-        no2_ratio %<>% max(no2_min_incr)
+        if(!is.null(no2_min_incr)) {
+          no2_ratio <- no2_ratio %>% max(no2_min_incr)
+        }
+
+        conc_no2 <- conc_no2 %>% multiply_by(no2_ratio)
       }
 
-      conc_no2 %<>% multiply_by(no2_ratio)
+      conc_no2[] <- conc_no2[] %>% na.approx(maxgap = 5, na.rm = F)
+      conc_no2
+    } else if(spec == 'so2') {
+      grid_raster %>% setValues(10)
+    } else if(spec == 'tpm10') {
+      get_conc_baseline_pm25(target_year = no2_targetyear, grid_raster = grid_raster) %>%
+        multiply_by(1 / pm25_to_pm10_ratio)
+    } else if(spec == 'pm25'){
+      get_conc_baseline_pm25(target_year = no2_targetyear, grid_raster = grid_raster)
     }
 
-    conc_no2[] %<>% na.approx(maxgap=5, na.rm=F)
-    conc[["no2"]] <- conc_no2
-  }
+  }) %>% `names<-`(species)
 
-  if("o3" %in% species){
-    #source of NO2 data: https://data.world/datasets/no2
-    conc[["o3"]] <- creahelpers::get_concentration_path('O3_77e3b7-xmessy_mmd_kk.nc') %>%
-      raster %>%
-      cropProj(grid_raster)
-  }
-
-  if("so2" %in% species){
-    conc[["so2"]] <- grid_raster %>% `values<-`(10)
-  }
-
-  tibble(species=names(conc),
-         conc_baseline=conc)
+  tibble(species = names(conc),
+         conc_baseline = conc)
 }
 
+
+#' Get PM2.5 baseline concentration for a given year and grid
+#'
+#' @param target_year
+#' @param grid_raster
+#'
+#' @return SpatRaster
+#' @export
+#'
+#' @examples
+get_conc_baseline_pm25 <- function(target_year = lubridate::year(lubridate::today()),
+                                   grid_raster){
+  basemap_year <- get_baseline_pm25_year(target_year) # get latest available basemap year
+
+  pm25_nc <- glue("V5GL03.HybridPM25.Global.{basemap_year}01-{basemap_year}12.nc")
+  creahelpers::get_concentration_path(pm25_nc) %>% rast %>%
+    cropProj(grid_raster)
+}
+
+
+get_baseline_pm25_year <- function(year){
+  basemap_years <- seq(2018, 2021)
+  max(basemap_years[basemap_years<=year])
+}
 
 
 #' Extract concentration values and population at specified spatial features
@@ -116,12 +143,12 @@ get_conc_baseline <- function(species,
 #' @export
 #'
 #' @examples
-extract_concs_at_regions <- function(concs, regions, species){
+extract_concs_at_regions <- function(concs, regions, species) {
 
   conc_map <- list()
 
   # One row per scenario
-  for(i in seq(nrow(concs))){
+  for(i in seq(nrow(concs))) {
 
     scenario <- concs$scenario[i]
 
@@ -130,12 +157,14 @@ extract_concs_at_regions <- function(concs, regions, species){
                          "pop") %>%
       intersect(names(concs))
 
-    concs[i,cols_to_extract] %>%
+    concs_stack <- concs[i, cols_to_extract] %>%
       purrr::transpose() %>%
       `[[`(1) %>%
-      stack -> concs_stack
+      stack %>%
+      rast
 
-    raster::extract(concs_stack, regions) -> conc_map[[scenario]]
+    extracted <- terra::extract(concs_stack, terra::vect(regions))
+    conc_map[[scenario]] <- split(extracted %>% select(-c(ID)), extracted$ID)
     names(conc_map[[scenario]]) <- regions$region_id
   }
 
@@ -143,29 +172,29 @@ extract_concs_at_regions <- function(concs, regions, species){
 }
 
 
-sum_raster_columns = function(x,y) { list(raster::stack(unlist(x)) + raster::stack(unlist(y))) }
+sum_raster_columns <- function(x,y) {list(raster::stack(unlist(x)) + raster::stack(unlist(y)))}
 
-combine_concs <- function(conc_perturbation, conc_baseline){
+combine_concs <- function(conc_perturbation, conc_baseline) {
   conc_perturbation %>%
-    left_join(conc_baseline, by=c("species")) %>%
+    left_join(conc_baseline, by = c("species")) %>%
     filter(!is.null(conc_baseline)) %>%
     rowwise() %>%
-    mutate(conc_scenario=sum_raster_columns(conc_perturbation, conc_baseline))
+    mutate(conc_scenario = sum_raster_columns(conc_perturbation, conc_baseline))
 }
 
-flatten_concs <- function(concs){
+flatten_concs <- function(concs) {
   concs %>%
     ungroup() %>%
-    tidyr::pivot_wider(names_from=species, values_from=-c(scenario, species))
+    tidyr::pivot_wider(names_from = species, values_from = -c(scenario, species))
 }
 
-add_pop <- function(concs, grid_raster){
+add_pop <- function(concs, grid_raster) {
   concs$pop <- list(get_pop(grid_raster))
   return(concs)
 }
 
 
-get_conc_at_locations <- function(){
+get_conc_at_locations <- function() {
 
   #TODO
   #
