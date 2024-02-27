@@ -1,0 +1,35 @@
+iso3,ihme_level,ihme_location_name,gadm_name,gadm_id,gadm_level
+IDN,4,Aceh,Aceh,IDN.1_1,1
+IDN,4,Bali,Bali,IDN.2_1,1
+IDN,4,Bangka-Belitung Islands,Bangka Belitung,IDN.3_1,1
+IDN,4,Banten,Banten,IDN.4_1,1
+IDN,4,Bengkulu,Bengkulu,IDN.5_1,1
+IDN,4,Gorontalo,Gorontalo,IDN.6_1,1
+IDN,4,Jakarta,Jakarta Raya,IDN.7_1,1
+IDN,4,Jambi,Jambi,IDN.8_1,1
+IDN,4,West Java,Jawa Barat,IDN.9_1,1
+IDN,4,Central Java,Jawa Tengah,IDN.10_1,1
+IDN,4,East Java,Jawa Timur,IDN.11_1,1
+IDN,4,West Kalimantan,Kalimantan Barat,IDN.12_1,1
+IDN,4,South Kalimantan,Kalimantan Selatan,IDN.13_1,1
+IDN,4,Central Kalimantan,Kalimantan Tengah,IDN.14_1,1
+IDN,4,East Kalimantan,Kalimantan Timur,IDN.34_1,1
+IDN,4,North Kalimantan,Kalimantan Utara,IDN.35_1,1
+IDN,4,Riau Islands,Kepulauan Riau,IDN.16_1,1
+IDN,4,Lampung,Lampung,IDN.17_1,1
+IDN,4,Maluku,Maluku,IDN.19_1,1
+IDN,4,North Maluku,Maluku Utara,IDN.18_1,1
+IDN,4,West Nusa Tenggara,Nusa Tenggara Barat,IDN.20_1,1
+IDN,4,East Nusa Tenggara,Nusa Tenggara Timur,IDN.21_1,1
+IDN,4,Papua,Papua,IDN.23_1,1
+IDN,4,West Papua,Papua Barat,IDN.22_1,1
+IDN,4,Riau,Riau,IDN.24_1,1
+IDN,4,West Sulawesi,Sulawesi Barat,IDN.25_1,1
+IDN,4,South Sulawesi,Sulawesi Selatan,IDN.26_1,1
+IDN,4,Central Sulawesi,Sulawesi Tengah,IDN.27_1,1
+IDN,4,Southeast Sulawesi,Sulawesi Tenggara,IDN.28_1,1
+IDN,4,North Sulawesi,Sulawesi Utara,IDN.29_1,1
+IDN,4,West Sumatra,Sumatera Barat,IDN.30_1,1
+IDN,4,South Sumatra,Sumatera Selatan,IDN.31_1,1
+IDN,4,North Sumatra,Sumatera Utara,IDN.32_1,1
+IDN,4,Yogyakarta,Yogyakarta,IDN.33_1,1

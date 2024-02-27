@@ -1,6 +1,10 @@
 export("%<>%")
 export("%>%")
 
+export(`wrappers.compute_hia_two_images`)
+S3method(`wrappers.compute_hia_two_images`, default)
+S3method(`wrappers.compute_hia_two_images`, character)
+
 exportPattern("^[[:alpha:]]|\\%+") # For now...
 
 importFrom(RColorBrewer,brewer.pal)
@@ -27,6 +31,7 @@ importFrom(dplyr,mutate_all)
 importFrom(dplyr,mutate_at)
 importFrom(dplyr,mutate_if)
 importFrom(dplyr,pull)
+importFrom(dplyr,relocate)
 importFrom(dplyr,rename)
 importFrom(dplyr,rowwise)
 importFrom(dplyr,select)
@@ -39,6 +44,8 @@ importFrom(dplyr,vars)
 
 importFrom(foreach, foreach)
 importFrom(foreach, "%dopar%")
+
+importFrom(glue, glue)
 
 importFrom(ggspatial,annotation_spatial)
 importFrom(ggspatial,layer_spatial)
@@ -104,6 +111,11 @@ importFrom(sp,SpatialPointsDataFrame)
 importFrom(sp,coordinates)
 importFrom(sp,spTransform)
 importFrom(sp,proj4string)
+
+importFrom(terra,rast)
+importFrom(terra,extract)
+importFrom(terra,extend)
+importFrom(terra,project)
 
 importFrom(tidyr,gather)
 importFrom(tidyr,separate)
