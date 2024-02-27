@@ -431,3 +431,19 @@ blame_matrix %>% group_by(province=affected_province) %>%
 quicksave(file.path(output_dir, 'Provinces most affected by coal power emissions.png'), plot=plt)
 
 
+blame_matrix %>% group_by(province=affected_province) %>%
+  summarise(across(matches('number|cost_'), sum, na.rm=T)) %>%
+  slice_max(number_central, n=10) %>% arrange(-number_central) %>%
+  mutate(province=factor(province, province)) %>%
+  ggplot(aes(province, number_central)) + geom_col(aes(fill=number_central)) +
+  geom_errorbar(aes(ymin=number_low, ymax=number_high), width=.2) +
+  theme_crea() +
+  theme(axis.text.x = element_text(angle=15, hjust=1),
+        #plot.title = element_text(size=rel(1.5)),
+        plot.subtitle = element_text(size=rel(.8))) +
+  scale_fill_gradientn(colors=crea_palettes$change[5:7], guide='none') +
+  x_at_zero() +
+  labs(title='Provinsi yang paling terkena dampak emisi PLTU',
+       subtitle='10 provinsi teratas: Kematian akibat polusi udara terkait dengan polusi PLTU batubara terjadi di masing-masing provinsi',
+       y='kasus/tahun', x='') -> plt
+quicksave(file.path(output_dir, 'Provinces most affected by coal power emissions, ID.png'), plot=plt)
