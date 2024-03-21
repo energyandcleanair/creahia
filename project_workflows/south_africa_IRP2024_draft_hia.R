@@ -144,25 +144,11 @@ hia_scen %<>% mutate(across(c(number, cost_mn_currentUSD), multiply_by, emission
 hia_scen %>%
   filter(Outcome=='Deaths', !double_counted, estimate=='central') %>%
   group_by(year, scenario) %>%
-  summarise(across(c(number, cost_mn_currentUSD), sum)) ->
-  plotdata
-
-plotdata %>% group_by(scenario) %>%
-  summarise(max_value=max(number),
-            line_start=number[year==2032]) %>%
-  arrange(line_start) %>%
-  mutate(line_end = max_value * (1.5+seq_along(scenario))/7.5) %>%
-  pivot_longer(starts_with('line'), values_to='number') %>%
-  mutate(year=ifelse(name=='line_start', 2032, 2050)) ->
-  label_pos
-
-plotdata %>%
+  summarise(across(c(number, cost_mn_currentUSD), sum)) %>%
   ggplot(aes(year, number, col=scenario)) +
   geom_line(linewidth=2) +
-  geom_label(aes(label=scenario), data=label_pos %>% filter(name=='line_end'), hjust=0, size=5) +
-  geom_line(data=label_pos, size=1) +
   theme_crea(legend.position='top') +
-  scale_color_crea_d('dramatic', col.index = c(1:4)) +
+  scenario_colors() +
   labs(title='Deaths attributed to Eskom emissions',
        y='cases per year', x='') +
   snug_x + x_at_zero() -> p
