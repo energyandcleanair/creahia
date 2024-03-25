@@ -103,6 +103,10 @@ scenario_colors = function(guide=T) {
        theme(legend.position = 'top'))
 }
 
+cap_by_month %>% spread(scenario, MW) %>%
+  write_csv(file.path(output_dir, 'operating coal power capacity by month.csv'))
+
+cap_by_month %>% spread(scenario, MW) %>% filter(month(date) == 12, year(date) %in% c(2045, 2050))
 
 cap_by_month %>%
   ggplot(aes(date, MW, col=scenario)) + geom_line(linewidth=1) +
