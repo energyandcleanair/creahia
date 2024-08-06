@@ -18,6 +18,17 @@ wrappers.get_conc_baseline <- function(species, grid_raster,
     'o3' = 'O3_77e3b7-xmessy_mmd_kk.nc'
   )
 
+  # change focal diameter depending on grid_raster crs unit
+  units <- grid_raster %>% crs(proj = T) %>%
+    as.character() %>%
+    str_extract('\\+units=([^ ]+)') %>%
+    str_remove('\\+units=')
+  if(units == 'm'){
+    focal_d <- 100000
+  } else if(units == 'km'){
+    focal_d <- 100
+  }
+
   species <- species[tolower(species) %in% avail_species]
 
   conc <- lapply(species, function(spec) {
@@ -36,9 +47,9 @@ wrappers.get_conc_baseline <- function(species, grid_raster,
           creahelpers::cropProj(grid_raster)
 
         no2_11_smooth <- no2_11 %>%
-          focal(focalWeight(., 100, "circle"), mean, na.rm = T, pad = T, padValue = NA)
+          focal(focalWeight(., focal_d, "circle"), mean, na.rm = T, pad = T, padValue = NA)
         no2_targetyr_smooth <- no2_targetyr %>%
-          focal(focalWeight(., 100, "circle"), mean, na.rm = T, pad = T, padValue = NA)
+          focal(focalWeight(., focal_d, "circle"), mean, na.rm = T, pad = T, padValue = NA)
 
         no2_ratio <- no2_targetyr_smooth / no2_11_smooth
 
