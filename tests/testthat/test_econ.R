@@ -40,3 +40,5 @@ test_that("Test GDP scaling for several countries", {
   testthat::expect_true(any(comparison$scaled!=comparison$unscaled))
 
 })
+
+
