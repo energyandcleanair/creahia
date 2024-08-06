@@ -271,7 +271,7 @@ get_econ_forecast <- function(hia_cost,
                     GDPscaling = 1) %>%
       mutate(fatal = name == 'deaths') %>%
       ungroup %>%
-      sel(iso3, AgeGrp, year, fatal, scaling, GDPscaling) %>%
+      sel(iso3, AgeGrp, year, fatal, pop_scaling, GDPscaling) %>%
       distinct
   )
 
@@ -313,6 +313,6 @@ get_econ_forecast <- function(hia_cost,
                                     select(-year) %>%
                                     full_join(pop_scaling))
 
-  hia_by_year %>% mutate(number = number * scaling,
-                         cost_mn_currentUSD = cost_mn_currentUSD * scaling * GDPscaling)
+  hia_by_year %>% mutate(number = number * pop_scaling,
+                         cost_mn_currentUSD = cost_mn_currentUSD * pop_scaling * GDPscaling)
 }
