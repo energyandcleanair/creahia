@@ -106,7 +106,7 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                                                     administrative_iso3s = NULL,
                                                     scenario_name = "scenario",
                                                     scale_base_year = 2019,
-                                                    scale_target_year = 2025,
+                                                    scale_target_year = NULL, # No scaling by default
                                                     crfs_version = "default",
                                                     epi_version = "default",
                                                     ihme_version = epi_version,
@@ -167,7 +167,7 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   # 03: Combine and flatten: one row per scenario --------------------------------------------
   concs <- creahia::combine_concs(conc_perturbation, conc_baseline) %>% # combine table
     creahia::flatten_concs() %>% # long to wide
-    creahia::add_pop(grid_raster)
+    creahia::add_pop(grid_raster, year_desired=scale_base_year)
 
   # 04: Create support maps (e.g. countries, provinces, cities ) -----------------------------
   if(is.null(regions)) {
@@ -178,7 +178,7 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   }
 
   # 05: Extract concentrations ---------------------------------------------------------------
-  conc_regions <- creahia::extract_concs_at_regions(concs, regions, species)
+  conc_regions <- creahia::extract_concs_and_pop(concs, regions, species)
 
   # 06: Compute hia --------------------------------------------------------------------------
   hia <- creahia::compute_hia(conc_map = conc_regions,
@@ -230,7 +230,7 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
                                                       grid_raster,
                                                       regions = NULL,
                                                       scale_base_year = 2019,
-                                                      scale_target_year = 2025,
+                                                      scale_target_year = NULL, # No scaling by default
                                                       crfs_version = "default",
                                                       epi_version = "default",
                                                       ihme_version = epi_version,
@@ -255,10 +255,10 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
     # 02: Combine perturbation and baseline, then flatten: one row per scenario ----
     concs <- creahia::combine_concs(conc_perturbation, baseline_rasters_table) %>% # combine table
       creahia::flatten_concs() %>% # long to wide
-      creahia::add_pop(grid_raster)
+      creahia::add_pop(grid_raster, year_desired=scale_base_year)
 
     # 03: Extract concentrations ----
-    conc_regions <- creahia::extract_concs_at_regions(concs, regions, pollutants_for_hia)
+    conc_regions <- creahia::extract_concs_and_pop(concs, regions, pollutants_for_hia)
 
     # 04: Compute hia ----
     hia <- creahia::compute_hia(conc_map = conc_regions,

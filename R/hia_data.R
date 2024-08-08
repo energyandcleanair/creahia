@@ -326,14 +326,6 @@ get_calc_causes <- function(causes_set = 'GEMM and GBD', filter = NULL) {
 }
 
 
-get_pop_proj <- function() {
-  creahelpers::get_population_path('WPP2019_population-death_rate-birth_rate.csv') %>%
-    read_csv(., col_types = cols()) %>%
-    mutate(deaths = pop * death_rate) %>%
-    dplyr::rename(iso3 = ISO3, year = Yr)
-}
-
-
 get_gemm <- function() {
   print("Getting GEMM")
 
