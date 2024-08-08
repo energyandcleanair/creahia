@@ -208,3 +208,17 @@ debug_and_stop <- function(e) {
 debug_and_warning <- function(e) {
   warning(e)
 }
+
+
+get_focal_d <- function(grid_raster){
+  # change focal diameter depending on grid_raster crs unit
+  units <- grid_raster %>% crs(proj = T) %>%
+    as.character() %>%
+    str_extract('\\+units=([^ ]+)') %>%
+    str_remove('\\+units=')
+  if(units == 'm'){
+    focal_d <- 100000
+  } else if(units == 'km'){
+    focal_d <- 100
+  }
+}
