@@ -15,7 +15,7 @@ wrappers.get_conc_baseline <- function(species, grid_raster,
                                        pm25_to_pm10_ratio = .7) {
   avail_species <- c('no2', 'so2', 'pm25', 'tpm10', 'o3') # pollutants with available baseline
 
-  species <- species[tolower(species) %in% avail_species]
+  species <- species %>% tolower() %>% subset(. %in% avail_species)
 
   conc <- lapply(species, function(spec) {
     if(spec == 'no2') {
