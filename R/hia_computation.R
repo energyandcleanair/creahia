@@ -17,6 +17,7 @@ compute_hia <- function(conc_map,
                         diagnostic_folder = 'diagnostic',
                         .mode = 'change',
                         ...){
+
   if(gbd_causes[1] == 'default' & calc_causes[1] == 'GBD only') gbd_causes <- 'all'
 
   if(grepl('GEMM|GBD', calc_causes[1])) calc_causes <- get_calc_causes(calc_causes[1])
@@ -60,9 +61,11 @@ compute_hia <- function(conc_map,
                          crfs = crfs,
                          calc_causes = calc_causes)
 
-  if(!any(is.null(c(scale_base_year, scale_target_year)))) {
-    print("Scaling")
-    hia <- scale_hia_pop(hia, base_year = scale_base_year, target_year = scale_target_year)
+  if(!is.null(scale_base_year) & !is.null(scale_target_year)) {
+    print("Scaling population")
+    # We assume population raster has been obtained using get_pop
+    pop_year <- get_pop_year(year_desired = scale_base_year)
+    hia <- scale_hia_pop(hia, base_year = pop_year, target_year = scale_target_year)
   }
 
   return(hia)
@@ -198,26 +201,30 @@ compute_hia_epi <- function(species,
                                             apply(2, weighted.mean, w = df[,'pop']) %>%
                                             t %>%
                                             data.frame %>%
-                                            mutate(pop = sum(df[,'pop']), na.rm=T), .id = 'region_id')
+                                            mutate(pop = sum(df[,'pop'], na.rm=T)), .id = 'region_id')
 
     pop_domain$epi_location_id <- get_epi_location_id(pop_domain$region_id)
 
+
     epi_loc <- epi %>%
       sel(-pop, -country) %>%
-      # dplyr::rename(epi_iso3 = iso3) %>%
-      # filter(epi_iso3 %in% pop_domain$epi_iso3) %>%
       right_join(pop_domain %>% sel(region_id, epi_location_id, pop),
                 # multiple='all',
                 by=c(location_id='epi_location_id'))
       # sel(-epi_iso3)
 
     # Exclude unmatched countries
-    na_iso3s <- epi_loc$region_id[is.na(epi_loc$estimate)]
+    na_iso3s <- epi_loc$region_id[is.na(epi_loc$location_id)]
     if(length(na_iso3s) > 0) {
       warning("Couldn't find epidemiological data for regions ", na_iso3s, ". Excluding them.")
     }
 
-    epi_loc <- epi_loc %>% filter(!is.na(estimate))
+    epi_loc <- epi_loc %>% filter(!is.na(location_id))
+
+    # Check that there are exactly three estimates per region_id
+    if(any(epi_loc %>% group_by(region_id, estimate) %>% summarise(n=n()) %>% pull(n) != 1)){
+      stop("Duplicated values in epidemiological data")
+    }
 
     hia_scenario <- epi_loc %>% sel(region_id, estimate, pop)
 
@@ -497,7 +504,8 @@ scale_hia_pop <- function(hia, base_year = 2015, target_year = 2019) {
     mutate(year = case_when(year == base_year ~ 'base',
                             year == target_year ~ 'target'))
 
-  hia_scaled <- pop_scaling %>% spread(year, pop) %>%
+  hia_scaled <- pop_scaling %>%
+    spread(year, pop) %>%
     mutate(scaling=target/base) %>%
     sel(iso3, scaling) %>%
     left_join(hia, .) %>%
