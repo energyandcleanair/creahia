@@ -3,15 +3,16 @@ library(tidyverse)
 library(testthat)
 
 local_test_data <- function(env = parent.frame()) {
+
   ages <- c("25-29")
   cause <- "NCD.LRI"
   iso3 <- "CHN"
-  z <- 40
+  z <- 40 #µg/m3
 
   # Get data
   gemm <- get_gemm() %>% filter(region=="inc_China",
-                                 age %in% ages,
-                                 cause==!!cause)
+                                age %in% ages,
+                                cause==!!cause)
 
   gbd <- get_gbd()
 
@@ -34,18 +35,18 @@ local_test_data <- function(env = parent.frame()) {
 
 test_that("GEMM hazards ratios are properly computed", {
 
+  # Load data
   data <- local_test_data()
   list2env(data, envir = environment())
 
   # Hazard ratios should be 1 under the counterfactual, set at 2.4µg/m3
-  #
-  # It should be 0 below counterfactual (estimated at 2.4µg/m3 by Burnett)
   hr_0 <- get_hazard_ratio(pm=0, .age=ages, .cause=cause, .region="inc_China", gemm=gemm, gbd=gbd)
   expect_true(all(hr_0==1))
 
   hr_cf <- get_hazard_ratio(pm=2.4, .age=ages, .cause=cause, .region="inc_China", gemm=gemm, gbd=gbd)
   expect_true(all(hr_cf==1))
 
+  # Now compute hazard ratio and compare with manually computed one
   hr <- get_hazard_ratio(pm=z, .age=ages, .cause=cause, .region="inc_China", gemm=gemm, gbd=gbd)
   expect_equal(unname(hr[,"central"]), hr_validated)
 
@@ -54,10 +55,11 @@ test_that("GEMM hazards ratios are properly computed", {
 
 test_that("GEMM PAF is properly computed", {
 
+  # Load data
   data <- local_test_data()
   list2env(data, envir = environment())
 
-  # Now check that our PAF is properly computed
+  # Check that our PAF is properly computed
   conc <- data.frame(
     region_id="CHN",
     conc_scenario_pm25=z,
