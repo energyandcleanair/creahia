@@ -414,7 +414,8 @@ country_paf_perm <- function(pm.base,
     rr.perm <- ages %>% sapply(function(.a) get_hazard_ratio(pm.perm, gbd = gbd, gemm = gemm,
                                                .cause = cause, .age = .a, .region = .region),
                                simplify = 'array')
-    paf.perm <- rr.perm / rr.base - 1
+
+    paf.perm <- 1 - rr.base / rr.perm
   } else {
     paf.perm <- (1 - (1 / rr.base)) * (1 - pm.perm / pm.base)
   }
@@ -436,6 +437,10 @@ country_paf_perm <- function(pm.base,
       # matrixStats two orders of magnitude faster
       # also removed orderrows (though checking it is already ordered)
       check_order <- function(x){
+        if(!is.matrix(x)){
+          # just for the edge case when you only have one row
+          x <- t(as.matrix(x))
+        }
         ok <- all(x[,'low'] <= x[,'central'])
         ok <- ok & all(x[,'central'] <= x[,'high'])
         if(!ok){
