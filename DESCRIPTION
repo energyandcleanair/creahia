@@ -30,7 +30,6 @@ Imports:
     crayon,
     wbstats,
     creahelpers,
-    creapuff,
     gstat,
     rasterVis,
     foreach,
@@ -44,7 +43,6 @@ Depends:
     creahelpers
 Remotes:
     energyandcleanair/creahelpers,
-    energyandcleanair/creapuff,
     laurimyllyvirta/lauR,
     nset-ornl/wbstats
 RoxygenNote: 7.2.3
