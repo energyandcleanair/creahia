@@ -432,7 +432,10 @@ country_paf_perm <- function(pm.base,
         ok <- all(x[,'low'] <= x[,'central'])
         ok <- ok & all(x[,'central'] <= x[,'high'])
         if(!ok){
-          stop("Failed at PAF. low > central or central > high")
+          warning("Failed to satisfy low > central or central > high. Ordering manually")
+          #Note: I (Hubert) think the whole low, central, high isn't correct. Taking the
+          # ratio of low, ratio of central and ratio of high doesn't necessarily lead to low, central, high...
+          x <- orderrows(x)
           }
         x
       }
