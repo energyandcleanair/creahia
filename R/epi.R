@@ -650,6 +650,13 @@ generate_epi <- function(version = "gbd2019") {
     sel(iso3 = iso3c, region = region, income_group = income_level, country) %>%
     filter(income_group != "Aggregates") -> wb_countries
 
+  # Ensure no duplicated row
+  duplicated <- any(duplicated(epi[c('location_id', 'var', 'estimate')]))
+  if(duplicated) {
+    stop("Duplicate rows in epi data")
+  }
+
+
   epi %<>% left_join(wb_countries %>% sel(iso3, country, region, income_group))
   epi %<>% fill_subnational()
   epi %>%
