@@ -62,8 +62,8 @@ test_that("GEMM PAF is properly computed", {
   # Check that our PAF is properly computed
   conc <- data.frame(
     region_id="CHN",
-    conc_scenario_pm25=z,
-    conc_baseline_pm25=0,
+    conc_scenario_pm25=0,
+    conc_baseline_pm25=z,
     pop=1000
   )
 
@@ -88,7 +88,8 @@ test_that("GEMM PAF is properly computed", {
                           .region = "inc_China",
                           .mode = "change")
 
-  paf_validated <- (1 - 1/hr_validated)
+  # This is not exactly traditional PAF (opposite)
+  paf_validated <- (1/hr_validated - 1)
   testthat::expect_equal(paf[["central"]], paf_validated)
 
 })
