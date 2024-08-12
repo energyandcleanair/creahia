@@ -1,3 +1,29 @@
+#' Compute HIA
+#'
+#' @param conc_map
+#' @param species
+#' @param regions
+#' @param scenarios
+#' @param calc_causes
+#' @param gbd_causes
+#' @param gemm
+#' @param gbd
+#' @param ihme
+#' @param epi_version
+#' @param ihme_version
+#' @param epi
+#' @param crfs_version
+#' @param crfs
+#' @param diagnostic_folder
+#' @param .mode
+#' @param scale_base_year DEPRECATED
+#' @param scale_target_year
+#' @param ...
+#'
+#' @return
+#' @export
+#'
+#' @examples
 compute_hia <- function(conc_map,
                         species,
                         regions,
@@ -12,11 +38,28 @@ compute_hia <- function(conc_map,
                         epi = get_epi(version = epi_version),
                         crfs_version = "default",
                         crfs = get_crfs(version = crfs_version),
-                        scale_base_year = NULL,
-                        scale_target_year = NULL,
                         diagnostic_folder = 'diagnostic',
                         .mode = 'change',
+
+                        pop_year = NULL,
+                        scale_base_year = NULL,
+                        scale_target_year = NULL,
+
                         ...){
+
+
+  # Fix inputs: if scale_base_year or scale_target_year is not null,
+  # warn user
+  if(!is.null(scale_base_year) | !is.null(scale_target_year)){
+    pop_year <- ifelse(is.null(pop_year), scale_target_year, pop_year)
+    messages <- c(
+      "scale_base_year and scale_target_year are deprecated. Use pop_year instead, as the year you",
+      "want to scale the population to. The base year is now determined automatically based on available data.",
+      "\npop_year set to", pop_year
+    )
+    warning(paste(messages, collapse = " "))
+  }
+
   if(gbd_causes[1] == 'default' & calc_causes[1] == 'GBD only') gbd_causes <- 'all'
 
   if(grepl('GEMM|GBD', calc_causes[1])) calc_causes <- get_calc_causes(calc_causes[1])
@@ -60,9 +103,16 @@ compute_hia <- function(conc_map,
                          crfs = crfs,
                          calc_causes = calc_causes)
 
-  if(!any(is.null(c(scale_base_year, scale_target_year)))) {
-    print("Scaling")
-    hia <- scale_hia_pop(hia, base_year = scale_base_year, target_year = scale_target_year)
+
+
+  # Population scaling
+  # Get the actual population year
+  # Ideally it would be in an attribute of hia somewhere
+  pop_year_actual <- get_pop_year(year_desired = pop_year)
+  pop_year_desired <- pop_year
+  if(pop_year_actual != pop_year_desired){
+    print(glue("Scaling population from {pop_year_actual} to {pop_year_desired}"))
+    hia <- scale_hia_pop(hia, base_year = pop_year_actual, target_year = pop_year_desired)
   }
 
   return(hia)
@@ -198,26 +248,30 @@ compute_hia_epi <- function(species,
                                             apply(2, weighted.mean, w = df[,'pop']) %>%
                                             t %>%
                                             data.frame %>%
-                                            mutate(pop = sum(df[,'pop']), na.rm=T), .id = 'region_id')
+                                            mutate(pop = sum(df[,'pop'], na.rm=T)), .id = 'region_id')
 
     pop_domain$epi_location_id <- get_epi_location_id(pop_domain$region_id)
 
+
     epi_loc <- epi %>%
       sel(-pop, -country) %>%
-      # dplyr::rename(epi_iso3 = iso3) %>%
-      # filter(epi_iso3 %in% pop_domain$epi_iso3) %>%
       right_join(pop_domain %>% sel(region_id, epi_location_id, pop),
                 # multiple='all',
                 by=c(location_id='epi_location_id'))
       # sel(-epi_iso3)
 
     # Exclude unmatched countries
-    na_iso3s <- epi_loc$region_id[is.na(epi_loc$estimate)]
+    na_iso3s <- epi_loc$region_id[is.na(epi_loc$location_id)]
     if(length(na_iso3s) > 0) {
       warning("Couldn't find epidemiological data for regions ", na_iso3s, ". Excluding them.")
     }
 
-    epi_loc <- epi_loc %>% filter(!is.na(estimate))
+    epi_loc <- epi_loc %>% filter(!is.na(location_id))
+
+    # Check that there are exactly three estimates per region_id
+    if(any(epi_loc %>% group_by(region_id, estimate) %>% summarise(n=n()) %>% pull(n) != 1)){
+      stop("Duplicated values in epidemiological data")
+    }
 
     hia_scenario <- epi_loc %>% sel(region_id, estimate, pop)
 
@@ -407,7 +461,13 @@ country_paf_perm <- function(pm.base,
     rr.perm <- ages %>% sapply(function(.a) get_hazard_ratio(pm.perm, gbd = gbd, gemm = gemm,
                                                .cause = cause, .age = .a, .region = .region),
                                simplify = 'array')
+
+
     paf.perm <- rr.perm / rr.base - 1
+
+    # IMPORTANT: should be paf.perm <- 1 - rr.base / rr.perm
+    # Will fix in a new branch
+
   } else {
     paf.perm <- (1 - (1 / rr.base)) * (1 - pm.perm / pm.base)
   }
@@ -429,6 +489,10 @@ country_paf_perm <- function(pm.base,
       # matrixStats two orders of magnitude faster
       # also removed orderrows (though checking it is already ordered)
       check_order <- function(x){
+        if(!is.matrix(x)){
+          # just for the edge case when you only have one row
+          x <- t(as.matrix(x))
+        }
         ok <- all(x[,'low'] <= x[,'central'])
         ok <- ok & all(x[,'central'] <= x[,'high'])
         if(!ok){
@@ -497,7 +561,8 @@ scale_hia_pop <- function(hia, base_year = 2015, target_year = 2019) {
     mutate(year = case_when(year == base_year ~ 'base',
                             year == target_year ~ 'target'))
 
-  hia_scaled <- pop_scaling %>% spread(year, pop) %>%
+  hia_scaled <- pop_scaling %>%
+    spread(year, pop) %>%
     mutate(scaling=target/base) %>%
     sel(iso3, scaling) %>%
     left_join(hia, .) %>%
