@@ -207,7 +207,7 @@ get_conc_baseline_no2 <- function(grid_raster, no2_targetyear, no2_min_incr){
 #' @export
 #'
 #' @examples
-extract_concs_at_regions <- function(concs, regions, species) {
+extract_concs_and_pop <- function(concs, regions, species) {
 
   conc_map <- list()
 
@@ -224,12 +224,18 @@ extract_concs_at_regions <- function(concs, regions, species) {
     concs_stack <- concs[i, cols_to_extract] %>%
       purrr::transpose() %>%
       `[[`(1) %>%
-      stack %>%
-      rast
+      creahelpers::to_rast() %>%
+      terra::rast()
 
-    extracted <- terra::extract(concs_stack, terra::vect(regions))
+
+    extracted <- terra::extract(concs_stack, terra::vect(regions), weights = T)
+    # IMPORTANT: scale population to account for only partially covered pixels
+    extracted$pop <- extracted$pop * extracted$weight
+    extracted <- extracted %>% select(-weight)
+
     conc_map[[scenario]] <- split(extracted %>% select(-c(ID)), extracted$ID)
-    names(conc_map[[scenario]]) <- regions$region_id
+    ids <- names(conc_map[[scenario]]) %>% as.numeric()
+    names(conc_map[[scenario]]) <- regions$region_id[ids]
   }
 
   return(conc_map)
@@ -252,8 +258,8 @@ flatten_concs <- function(concs) {
     tidyr::pivot_wider(names_from = species, values_from = -c(scenario, species))
 }
 
-add_pop <- function(concs, grid_raster) {
-  concs$pop <- list(get_pop(grid_raster))
+add_pop <- function(concs, grid_raster, year_desired=2020) {
+  concs$pop <- list(get_pop_count(grid_raster, year_desired = year_desired))
   return(concs)
 }
 
