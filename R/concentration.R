@@ -149,7 +149,7 @@ get_baseline_pm25_year <- function(year){
 get_conc_baseline_o3 <- function(grid_raster){
   creahelpers::get_concentration_path('O3_77e3b7-xmessy_mmd_kk.nc') %>%
     rast %>%
-    `[[`('M3M_lev31_31=31') %>%
+    `[[`(if(species == 'o3') 'M3M_lev31_31=31' else 'SM8h_lev31_31=31') %>%
     creahelpers::cropProj(grid_raster)
 }
 

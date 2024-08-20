@@ -13,7 +13,7 @@ wrappers.get_conc_baseline <- function(species, grid_raster,
                                        no2_min_incr = NULL,
                                        no2_targetyear = 2019,
                                        pm25_to_pm10_ratio = .7) {
-  avail_species <- c('no2', 'so2', 'pm25', 'tpm10', 'o3') # pollutants with available baseline
+  avail_species <- c('no2', 'so2', 'pm25', 'tpm10', 'o3', 'o3_8h') # pollutants with available baseline
 
   species <- species %>% tolower() %>% subset(. %in% avail_species)
 
@@ -29,8 +29,8 @@ wrappers.get_conc_baseline <- function(species, grid_raster,
         multiply_by(1 / pm25_to_pm10_ratio)
     } else if(spec == 'pm25'){
       get_conc_baseline_pm25(target_year = no2_targetyear, grid_raster = grid_raster)
-    } else if(spec == 'o3'){
-      get_conc_baseline_o3(grid_raster = grid_raster)
+    } else if(spec %in% c('o3', 'o3_8h')){
+      get_conc_baseline_o3(grid_raster = grid_raster, species = spec)
     }
   }) %>% `names<-`(species)
 
