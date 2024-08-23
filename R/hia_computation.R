@@ -389,7 +389,9 @@ to_long_hia <- function(hia) {
            Cause = Outcome %>% gsub('_.*', '', .)) %>%
     mutate(Outcome = Outcome %>% gsub('_[A-Za-z0-9]*$', '', .) %>%
              gsub('\\.[0-9]*to[0-9]*$', '', .) %>%
-             gsub('.*_', '', .))
+             gsub('.*_', '', .),
+           Pollutant = case_when(Pollutant == 'O3' ~ 'O3_8h',
+                                 TRUE ~ Pollutant))
 }
 
 
@@ -666,7 +668,7 @@ hiapoll_species_corr <- function() {
   list(
     "PM25" = "pm25",
     "NO2" = "no2",
-    "O3_8h" = "o3",
+    "O3_8h" = "o3_8h",
     "SO2" = "so2",
     'PM10' = 'tpm10')
 }
