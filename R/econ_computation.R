@@ -267,7 +267,7 @@ get_econ_forecast <- function(hia_cost,
              year %in% c(pop_targetyr, years)) %>%
       pivot_longer(c(pop, deaths)) %>%
       group_by(iso3, AgeGrp, name) %>%
-      dplyr::mutate(scaling = value / value[year == pop_targetyr],
+      dplyr::mutate(pop_scaling = value / value[year == pop_targetyr],
                     GDPscaling = 1) %>%
       mutate(fatal = name == 'deaths') %>%
       ungroup %>%
