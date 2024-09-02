@@ -2,13 +2,13 @@ Incidence,Exposure,Double.Counted,Age_group,Age_low,Age_high,RR_central,RR_low,R
 Asthma.Inci.1to18,NO2,FALSE,18-Jan,1,18,1.26,1.1,1.37,10,2,ppb,0.532,
 Asthma.Prev.1to18,NO2,FALSE,18-Jan,1,18,1.26,1.1,1.37,10,2,ppb,0.532,
 exac.0to17,PM2.5,FALSE,0-18,0,18,1.025,1.013,1.037,10,6,ug,1,
-exac.0to17,O3_8h,FALSE,0-18,0,18,1.018,1.01,1.024,10,2,ppb,0.5,
+exac.0to17,O3_8h,FALSE,0-18,0,18,1.018,1.01,1.024,10,2,ppb,0.51,
 exac.18to99,PM2.5,FALSE,18-99,18,99,1.023,1.015,1.031,10,6,ug,1,
-exac.18to99,O3_8h,FALSE,18-99,18,99,1.018,1.012,1.022,10,2,ppb,1,
+exac.18to99,O3_8h,FALSE,18-99,18,99,1.018,1.012,1.022,10,2,ppb,0.51,
 PTB,PM2.5,FALSE,Newborn,0,0,1.15,1.07,1.16,10,8.8,ug,1,
 LBW,PM2.5,FALSE,Newborn,0,0,1.1,1.03,1.18,10,4,ug,1,
-COPD_Deaths,O3_8h,FALSE,25-99,25,99,1.12,1.08,1.16,10,35,ppb,0.5,
-COPD_YLLs,O3_8h,FALSE,25-99,25,99,1.12,1.08,1.16,10,35,ppb,0.5,
+COPD_Deaths,O3_8h,FALSE,25-99,25,99,1.12,1.08,1.16,10,35,ppb,0.51,
+COPD_YLLs,O3_8h,FALSE,25-99,25,99,1.12,1.08,1.16,10,35,ppb,0.51,
 AllCauses_Deaths,NO2,FALSE,25-99,25,99,1.04,1.02,1.06,10,4.5,ug,1,Faustini et al 2014
 AllCauses_YLLs,NO2,FALSE,25-99,25,99,1.04,1.02,1.06,10,4.5,ug,1,Faustini et al 2014
 Absences,PM2.5,FALSE,20-65,20,65,1.046,1.039,1.053,10,0,ug,1,
