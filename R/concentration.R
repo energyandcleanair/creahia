@@ -42,66 +42,20 @@ get_conc_calpuff <- function(calpuff_dir = NULL, calpuff_files = NULL, utm_zone,
 #' Get baseline concentrations for various species
 #'
 #' @param species
-#' @param grid_raster
-#' @param no2_min_incr
-#' @param no2_targetyear
+#' @param folder
 #'
 #' @return a tibble with `species` (chr) and named `conc_baseline` (RasterLayer) columns
 #' @export
 #'
 #' @examples
-get_conc_baseline <- function(species,
-                              grid_raster,
-                              no2_min_incr = NULL,
-                              no2_targetyear = 2019,
-                              pm25_to_pm10_ratio = .7) {
-  avail_species <- c('no2', 'so2', 'pm25', 'tpm10', 'o3') # pollutants with available baseline
-  file_list <- list(
-    'o3' = 'O3_77e3b7-xmessy_mmd_kk.nc'
-  )
+get_conc_baseline_manual <- function(species, folder) {
+  species <- pollutants_to_process %>% tolower()
 
-  species <- species[tolower(species) %in% avail_species]
+  files <- list.files(folder, full.names = T)
 
-  conc <- lapply(species, function(spec) {
-    if(spec == 'no2') {
-      conc_no2 <- creahelpers::get_concentration_path('no2_agg8.grd') %>%
-        raster %>%
-        creahelpers::cropProj(grid_raster) %>%
-        multiply_by(1.88)
-
-      if(!is.null(no2_targetyear)) {
-        no2_11 <- creahelpers::get_concentration_path("no2_omi_2011.tif") %>%
-          raster %>%
-          creahelpers::cropProj(grid_raster)
-        no2_targetyr <- creahelpers::get_concentration_path(glue("no2_omi_{no2_targetyear}.tif")) %>%
-          raster %>%
-          creahelpers::cropProj(grid_raster)
-
-        no2_11_smooth <- no2_11 %>%
-          focal(focalWeight(., 100, "circle"), mean, na.rm = T, pad = T, padValue = NA)
-        no2_targetyr_smooth <- no2_targetyr %>%
-          focal(focalWeight(., 100, "circle"), mean, na.rm = T, pad = T, padValue = NA)
-
-        no2_ratio <- no2_targetyr_smooth / no2_11_smooth
-
-        if(!is.null(no2_min_incr)) {
-          no2_ratio <- no2_ratio %>% max(no2_min_incr)
-        }
-
-        conc_no2 <- conc_no2 %>% multiply_by(no2_ratio)
-      }
-
-      conc_no2[] <- conc_no2[] %>% na.approx(maxgap = 5, na.rm = F)
-      conc_no2
-    } else if(spec == 'so2') {
-      grid_raster %>% setValues(10)
-    } else if(spec == 'tpm10') {
-      get_conc_baseline_pm25(target_year = no2_targetyear, grid_raster = grid_raster) %>%
-        multiply_by(1 / pm25_to_pm10_ratio)
-    } else if(spec == 'pm25'){
-      get_conc_baseline_pm25(target_year = no2_targetyear, grid_raster = grid_raster)
-    }
-
+  conc <- lapply(species, function(spec){
+    file <- files[files %>% tolower() %>% str_detect(spec)]
+    rast(file)
   }) %>% `names<-`(species)
 
   tibble(species = names(conc),
