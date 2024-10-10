@@ -433,8 +433,10 @@ get_gbd <- function(gbd_causes = c('LRI.child', 'Diabetes')) {
 }
 
 
-get_dict <- function() {
-  get_hia_path('dict.csv') %>% read_csv(col_types = cols())
+get_dict <- function(cols=c("Code", "Long.name")) {
+  get_hia_path('dict.csv') %>%
+    read_csv(col_types = cols()) %>%
+    select_at(cols)
 }
 
 
