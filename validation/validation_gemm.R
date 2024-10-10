@@ -201,7 +201,7 @@ lapply(creahia_versions, function(creahia_version){
   lapply(years, function(year){
     tryCatch({
       hia <- get_hia_deaths_pm_memo(year, res, grid, adm, adm_res, suffix, creahia_version)
-      saveRDS(hia, glue("validation/hias_{year}_{creahia_version}.RDS"))
+      saveRDS(hia, glue("validation/hias_{year}_{creahia_version}_permuted.RDS"))
     }, error=function(e){
       message(glue("Error for {year} and {creahia_version}: {e$message}"))
     })
@@ -217,7 +217,7 @@ version <- packageVersion("creahia")
 
 
 # List all files with a year and a version (four digits then d.d.d)
-hias_files <- list.files("validation", "hias_\\d{4}_\\d+\\.\\d+\\.\\d+\\.RDS", full.names=T)
+hias_files <- list.files("validation", "hias_\\d{4}_\\d+\\.\\d+\\.\\d+_permuted\\.RDS", full.names=T)
 
 all_deaths <- lapply(hias_files, function(filepath){
   # extrqct version from filepath
@@ -240,7 +240,7 @@ comparison_long <- all_deaths %>%
 comparison_long %>%
   mutate(source = factor(source, levels=c("CREA (GBD 2019)", setdiff(unique(source), "CREA (GBD 2019)"))),
          deaths = deaths / 1e6) %>%
-  ggplot(aes(x=region_id, y=deaths, group=source)) +
+  ggplot(aes(x=region_id, y=abs(deaths), group=source)) +
   geom_col(aes(fill=source), position="dodge") +
   geom_text(aes(label=scales::comma(deaths, 0.01)), vjust=-0.5, position = position_dodge(width=.9), size=3) +
   facet_wrap(~year) +
