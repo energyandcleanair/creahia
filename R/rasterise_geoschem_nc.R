@@ -29,7 +29,7 @@ rasterise_geoschem_nc <- function(nc_file, var_name, lat_name = 'lat', lon_name 
                              ncols = length(lon), nrows = length(lat),
                              lat_name = lat_name, lon_name = lon_name)
 
-  plot(x)
+  terra::plot(x)
   return(x)
 }
 
@@ -41,7 +41,7 @@ enforce_regular_dim <- function(nc, dim_name){
 
   for(i in 1:5){
     if(!all(dim_diff == dim_diff[1])){
-      print(glue('removing {i}th edges'))
+      print(glue('"{dim_name}" not regular, removing {i}th edges'))
       dim <- try_trim_edges(dim)
       dim_diff <- diff(dim)
     } else {
