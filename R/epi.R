@@ -77,7 +77,7 @@ get_epi_location_id <- function(region_id) {
     mutate(location_id = coalesce(
       location_id, location_id_iso3
     )) %>%
-    pull(location_id)
+    pull(location_id_iso3)
 
   if (length(location_id) != length(region_id)) stop(glue("Failed to get epi location_id for region: {region_id}"))
 

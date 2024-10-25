@@ -273,7 +273,7 @@ compute_hia_epi <- function(species,
       stop("Duplicated values in epidemiological data")
     }
 
-    hia_scenario <- epi_loc %>% sel(region_id, estimate, pop)
+    hia_scenario <- epi_loc %>% sel(region_id, estimate, pop) %>% filter(!is.na(estimate))
 
     for(i in which(crfs$Exposure %in% hia_polls)) {
 
