@@ -266,7 +266,7 @@ compute_hia_epi <- function(species,
       warning("Couldn't find epidemiological data for regions ", na_iso3s, ". Excluding them.")
     }
 
-    epi_loc <- epi_loc %>% filter(!is.na(location_id))
+    epi_loc <- epi_loc %>% filter(!is.na(location_id), iso3 != 'COK')
 
     # Check that there are exactly three estimates per region_id
     if(any(epi_loc %>% group_by(region_id, estimate) %>% summarise(n=n()) %>% pull(n) != 1)){
