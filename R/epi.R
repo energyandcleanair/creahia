@@ -9,8 +9,8 @@ download_raw_epi <- function(version, dataset) {
       asthma = "https://gbd2017.healthdata.org/gbd-results?params=gbd-api-2017-permalink/ad187e50445a73d6227f8dc8df6e8430"
     ),
     gbd2019 = list(
-      raw = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2019-permalink/6f02caa76aecc32bb8e07912521ac45e",
-      asthma = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2019-permalink/81716ae90083a4c6e7f88ac16a0d0094"
+      raw = "https://gbd2019.healthdata.org/gbd-results?params=gbd-api-2019-permalink/6f02caa76aecc32bb8e07912521ac45e",
+      asthma = "https://gbd2019.healthdata.org/gbd-results?params=gbd-api-2019-permalink/81716ae90083a4c6e7f88ac16a0d0094"
     )
   )
 
@@ -38,6 +38,8 @@ get_gbd_raw <- function(version) {
 
 
 get_gbd_asthma_raw <- function(version) {
+
+
   list(
     gbd2019 = c("data/epi_update/IHME-GBD_2019_DATA-asthma.csv"),
     gbd2017 = c("data/epi_update/IHME-GBD_2017_DATA-asthma.csv")
@@ -307,8 +309,9 @@ get_death_child_lri <- function(pop.total, version = "gbd2019") {
 }
 
 
-get_yld <- function(pop.total, version = "gbd2019") {
-  get_gbd_raw(version) %>% # read.csv('2017 data/IHME-GBD_2017_DATA.csv') %>%
+get_yld_old <- function(pop.total, version = "gbd2019") {
+
+  get_gbd_raw(version) %>%
     add_location_details() %>%
     filter(
       metric_name == "Number",
@@ -328,53 +331,169 @@ get_yld <- function(pop.total, version = "gbd2019") {
       "Diabetes mellitus type 2" = "Diabetes",
       "All causes" = "AllCause",
       "Stroke" = "Stroke",
+
+      # Add totals to deduct from
+      "Cardiovascular diseases" = "TotCV",
+      "Chronic respiratory diseases" = "TotResp",
+
       .default = NA_character_
     )) %>%
     filter(!is.na(cause_name)) %>%
     mutate(var = paste0(cause_name, "_", measure_name))
+
+
+
+
+
 }
 
 
-get_death_totcp <- function(yld, pop.total, version = "gbd2019") {
-  get_gbd_raw(version) %>%
+get_yld <- function(pop.total, version = "gbd2019") {
+
+  yld <- get_gbd_raw(version) %>%
     add_location_details() %>%
     filter(
       metric_name == "Number",
-      cause_name %in% c("Cardiovascular diseases", "Chronic respiratory diseases")
+      grepl("YLD|Death|YLL", measure_name)
     ) %>%
-    mutate(age_low = age_name %>% gsub("[^0-9].*", "", .) %>% as.numeric()) %>%
+    mutate(age_low = get_age_low(age_name)) %>%
     filter(!is.na(age_low), age_low >= 25) %>%
     gather_ihme() %>%
-    group_by(location_id, location_name, location_level, iso3, metric_name, measure_name, cause_name, estimate) %>%
+    group_by(location_id, location_name, location_level, iso3, cause_name, metric_name, measure_name, estimate, year) %>%
     summarise_at("val", sum) %>%
     ihme_getrate(pop.total = pop.total) %>%
-    mutate(var = recode(cause_name, "Cardiovascular diseases" = "TotCV", "Chronic respiratory diseases" = "TotResp")) %>%
-    ddply(.(measure_name, location_id, location_name, location_level, iso3, estimate),
-      function(df) {
-        df.out <- df %>% filter(var %in% c("TotCV", "TotResp"))
-        df.out$var %<>% gsub("Tot", "Oth", .)
+    mutate(cause_name = recode(cause_name,
+                               "Ischemic heart disease" = "IHD",
+                               "Lower respiratory infections" = "LRI",
+                               "Tracheal, bronchus, and lung cancer" = "LC",
+                               "Chronic obstructive pulmonary disease" = "COPD",
+                               "Diabetes mellitus type 2" = "Diabetes",
+                               "All causes" = "AllCause",
+                               "Stroke" = "Stroke",
 
-        yld %>% filter(
-          location_id == df$location_id[1],
-          measure_name == df$measure_name[1],
-          estimate == df$estimate[1]
-        ) -> bycause
-        bycause %>% filter(grepl("IHD|Stroke", var)) -> cv
-        bycause %>% filter(grepl("COPD", var)) -> copd
+                               # Add totals to deduct from
+                               "Cardiovascular diseases" = "TotCV",
+                               "Chronic respiratory diseases" = "TotResp",
 
-        if (!(nrow(cv) == 2 & nrow(copd) == 1)) stop("you done messed up!")
-        df.out$val[df.out$var == "OthCV"] %<>% subtract(sum(cv$val))
-        df.out$val[df.out$var == "OthResp"] %<>% subtract(copd$val)
-        bind_rows(df, df.out)
-      },
-      .progress = "text"
-    ) %>%
-    unite(var, var, measure_name)
+                               .default = NA_character_
+    )) %>%
+    filter(!is.na(cause_name)) %>%
+    mutate(var = paste0(cause_name, "_", measure_name))
+
+
+
+  # Compute others
+  other_cv <- compute_others(yld, "TotCV", "IHD|Stroke", "OthCV")
+  other_resp <- compute_others(yld, "TotResp", "COPD", "OthResp")
+
+
+  yld %>%
+    # Remove total to avoid double counting
+    filter(!grepl("TotCV|TotResp", cause_name)) %>%
+    # And add the others
+    bind_rows(other_cv) %>%
+    bind_rows(other_resp)
 }
 
 
+compute_others <- function(yld, total, grep, newname, metric_name="Number") {
+
+  yld %>%
+    filter(cause_name == total | grepl(grep, cause_name)) %>%
+    filter(metric_name == !!metric_name) %>%
+    group_by(measure_name, location_id, location_name, location_level, iso3, metric_name) %>%
+    dplyr::group_modify(function(df, group){
+
+      # Here we assume:
+      # 1- independence between causes
+      # 2- that the Total variance was computed by simply summing variances
+      # Extract estimates for Total deaths
+
+      total_estimates <- df %>%
+        filter(cause_name == total) %>%
+        select(estimate, val) %>%
+        spread(estimate, val)
+
+      # Extract estimates for causes of interest
+      causes_estimates <- df %>%
+        filter(cause_name != total) %>%  # Exclude total
+        group_by(cause_name) %>%
+        select(cause_name, estimate, val) %>%
+        spread(estimate, val)
+
+      # Ensure that estimates are available
+      if (nrow(total_estimates) == 0 || nrow(causes_estimates) == 0) {
+        stop("Estimates for Total or Causes of Interest are missing.")
+      }
+
+      # Calculate standard deviation for Total deaths
+      total_sd <- (total_estimates$high - total_estimates$low) / (2 * 1.96)
+      var_T <- total_sd^2
+
+      # Initialize sums for causes of interest
+      sum_values_C <- 0
+      sum_vars_C <- 0
+
+      # Loop through each cause of interest to calculate variances and sum values
+      for (i in 1:nrow(causes_estimates)) {
+        central <- causes_estimates$central[i]
+        low <- causes_estimates$low[i]
+        high <- causes_estimates$high[i]
+
+        # Calculate standard deviation
+        sd_Ci <- (high - low) / (2 * 1.96)
+        var_Ci <- sd_Ci^2
+
+        # Sum central values and variances
+        sum_values_C <- sum_values_C + central
+        sum_vars_C <- sum_vars_C + var_Ci
+      }
+
+      # Reverse engineer variance of Other Deaths
+      var_O <- var_T - sum_vars_C
+
+      if(is.na(var_O)) {
+        warning(glue("NA sum for group {group$location_name} {group$measure_name} {group$metric_name}"))
+        return(tibble())
+      }
+
+      # Check for negative variance
+      if (var_O < 0) {
+        warning("Calculated variance for Other Deaths is negative. This may indicate that the assumption does not hold.")
+        var_O <- 0
+      }
+
+      # Standard deviation of Other Deaths
+      sigma_O <- sqrt(var_O)
+
+      # Central Value of Other Deaths
+      value_O <- total_estimates$central - sum_values_C
+
+      # Confidence Interval for Other Deaths
+      lower_O <- value_O - 1.96 * sigma_O
+      upper_O <- value_O + 1.96 * sigma_O
+
+      # Ensure non-negative lower bound
+      if (lower_O < 0){
+        warning(glue("{group$location_name} {group$measure_name} {group$metric_name} is negative. Setting it to 0"))
+        lower_O <- 0
+      }
+
+      # Create data frame with results for Other Deaths
+      other_df <- data.frame(
+        cause_name = newname,
+        var = paste0(newname, "_", unique(group$measure_name)),
+        estimate = c("central", "low", "high"),
+        val = c(value_O, lower_O, upper_O)
+      )
+
+      return(other_df)
+    })
+}
+
 get_asthma_prev <- function(pop.total, version = "gbd2019") {
-  asthma_raw_data <- get_gbd_asthma_raw(version = version) %>%
+
+    asthma_raw_data <- get_gbd_asthma_raw(version = version) %>%
     mutate(age_low = get_age_low(age_name))
 
   asthma.prev <- asthma_raw_data %>% # read.csv('2017 data/IHME-GBD_2017_Asthma.csv') %>%
@@ -594,6 +713,13 @@ add_location_details <- function(x, locations = get_locations()) {
 
 
 generate_epi <- function(version = "gbd2019") {
+
+
+  library(readxl)
+  library(magrittr)
+  library(plyr)
+  library(zoo)
+
   # Get data from various soruces
   wb_ind <- get_wb_ind()
   pop <- get_epi_pop()
@@ -615,7 +741,7 @@ generate_epi <- function(version = "gbd2019") {
   deaths.crude <- get_death_crude(version = version)
   death.child.lri <- get_death_child_lri(pop.total = pop.total, version = version)
   yld <- get_yld(pop.total = pop.total, version = version)
-  death.totcp <- get_death_totcp(yld = yld, pop.total = pop.total, version = version)
+  # death.totcp <- get_death_totcp(yld = yld, pop.total = pop.total, version = version)
   asthma.prev <- get_asthma_prev(pop.total = pop.total, version = version)
 
 
@@ -624,7 +750,7 @@ generate_epi <- function(version = "gbd2019") {
     deaths.crude,
     death.child.lri,
     yld,
-    death.totcp,
+    # death.totcp,
     pop.total %>% mutate(var = "pop"),
     birth.rate,
     ptb,
@@ -645,6 +771,17 @@ generate_epi <- function(version = "gbd2019") {
     filter(!is.na(location_id), !is.na(val)) %>%
     # To have a single location_name per location_id (which is not necessarily the case otherwise)
     add_location_details()
+
+
+  # Check that low <= central <= high
+  bad <- epi %>%
+    spread(estimate, val) %>%
+    filter(low>central | low>high | central>high) %>%
+    distinct(var)
+  if(nrow(bad) > 0) {
+    stop(glue("Bad values in {bad$var}"))
+  }
+
 
   wbstats::wb_countries() %>%
     sel(iso3 = iso3c, region = region, income_group = income_level, country) %>%
