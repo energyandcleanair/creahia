@@ -9,7 +9,7 @@ download_raw_epi <- function(version, dataset) {
       asthma = "https://gbd2017.healthdata.org/gbd-results?params=gbd-api-2017-permalink/ad187e50445a73d6227f8dc8df6e8430"
     ),
     gbd2019 = list(
-      raw = "https://gbd2019.healthdata.org/gbd-results?params=gbd-api-2019-permalink/6f02caa76aecc32bb8e07912521ac45e",
+      raw = "https://gbd2019.healthdata.org/gbd-results?params=gbd-api-2019-permalink/90031eb3993f063423bd348aaad4a7da",
       asthma = "https://gbd2019.healthdata.org/gbd-results?params=gbd-api-2019-permalink/81716ae90083a4c6e7f88ac16a0d0094"
     )
   )
@@ -21,10 +21,11 @@ download_raw_epi <- function(version, dataset) {
   stop("Missing data")
 }
 
+
 get_gbd_raw <- function(version) {
   filepaths <- list(
-    gbd2019 = c("data/epi_update/IHME-GBD_2019_DATA-1.csv", "data/epi_update/IHME-GBD_2019_DATA-2.csv"),
-    gbd2017 = c("data/epi_update/IHME-GBD_2017_DATA-1.csv", "data/epi_update/IHME-GBD_2017_DATA-2.csv")
+    gbd2019 = list.files("data/epi_update", pattern = "IHME-GBD_2019_DATA-\\d.csv", full.names = T),
+    gbd2017 = list.files("data/epi_update", pattern = "IHME-GBD_2017_DATA-\\d.csv", full.names = T)
   )[[version]]
 
   if(!all(file.exists(filepaths))){
@@ -32,14 +33,12 @@ get_gbd_raw <- function(version) {
   }
 
   filepaths %>%
-  lapply(read_csv) %>%
+  lapply(function(f) read_csv(f, col_types = cols())) %>%
     bind_rows()
 }
 
 
 get_gbd_asthma_raw <- function(version) {
-
-
   list(
     gbd2019 = c("data/epi_update/IHME-GBD_2019_DATA-asthma.csv"),
     gbd2017 = c("data/epi_update/IHME-GBD_2017_DATA-asthma.csv")
@@ -309,7 +308,56 @@ get_death_child_lri <- function(pop.total, version = "gbd2019") {
 }
 
 
-get_yld_old <- function(pop.total, version = "gbd2019") {
+recode_gbd_cause <- function(cause_name){
+
+  new_cause_names <- case_when(
+
+    # General
+    cause_name == "All causes" ~ "AllCause",
+    cause_name == "Lower respiratory infections" ~ "LRI",
+    cause_name == "Tracheal, bronchus, and lung cancer" ~ "LC",
+    cause_name == "Diabetes mellitus type 2" ~ "Diabetes",
+
+    # Cardiovascular diseases
+    cause_name == "Ischemic heart disease" ~ "IHD",
+    cause_name == "Stroke" ~ "Stroke",
+    cause_name == "Cardiovascular diseases" ~ "TotCV",
+    cause_name %in% c("Rheumatic heart disease",
+                      "Hypertensive heart disease",
+                      "Cardiomyopathy and myocarditis",
+                      "Atrial fibrillation and flutter",
+                      "Aortic aneurysm",
+                      "Lower extremity peripheral arterial disease",
+                      "Endocarditis",
+                      "Non-rheumatic valvular heart disease",
+                      "Peripheral artery disease",
+                      "Other cardiovascular and circulatory diseases") ~ "OthCV",
+
+    # Respiratory diseases
+    cause_name == "Chronic obstructive pulmonary disease" ~ "COPD",
+    cause_name == "Chronic respiratory diseases" ~ "TotResp",
+    cause_name %in% c("Pneumoconiosis",
+                      "Asthma",
+                      "Interstitial lung disease and pulmonary sarcoidosis",
+                      "Other chronic respiratory diseases") ~ "OthResp",
+
+    TRUE ~ NA_character_
+  )
+
+  # Print those that weren't matched
+  if(any(is.na(new_cause_names))) {
+    warning(glue("Some causes were not matched:", unique(cause_name[is.na(new_cause_names)])))
+  }
+
+  return(new_cause_names)
+}
+
+
+get_yld <- function(pop.total, version = "gbd2019") {
+
+  if(version == "gbd2017"){
+    return(get_yld_gbd2017(pop.total=pop.total, version=version))
+  }
 
   get_gbd_raw(version) %>%
     add_location_details() %>%
@@ -317,38 +365,55 @@ get_yld_old <- function(pop.total, version = "gbd2019") {
       metric_name == "Number",
       grepl("YLD|Death|YLL", measure_name)
     ) %>%
-    mutate(age_low = get_age_low(age_name)) %>%
-    filter(!is.na(age_low), age_low >= 25) %>%
+    filter(age_name=="25+ years") %>%
     gather_ihme() %>%
-    group_by(location_id, location_name, location_level, iso3, cause_name, metric_name, measure_name, estimate, year) %>%
-    summarise_at("val", sum) %>%
     ihme_getrate(pop.total = pop.total) %>%
-    mutate(cause_name = recode(cause_name,
-      "Ischemic heart disease" = "IHD",
-      "Lower respiratory infections" = "LRI",
-      "Tracheal, bronchus, and lung cancer" = "LC",
-      "Chronic obstructive pulmonary disease" = "COPD",
-      "Diabetes mellitus type 2" = "Diabetes",
-      "All causes" = "AllCause",
-      "Stroke" = "Stroke",
+    mutate(cause_name = recode_gbd_cause(cause_name)) %>%
+    filter(!is.na(cause_name)) %>%
+    filter(!is.na(val)) %>%
+    group_by(location_id, location_name, location_level, iso3, cause_name, metric_name, measure_name, year) %>%
+    group_modify(function(df, group){
 
-      # Add totals to deduct from
-      "Cardiovascular diseases" = "TotCV",
-      "Chronic respiratory diseases" = "TotResp",
+      # If there's only one original cause (i.e. 3 estimates) return it
+      if(nrow(df) == 3) return(df)
 
-      .default = NA_character_
-    )) %>%
+      df_sum <- df %>%
+        spread(estimate, val) %>%
+        group_by() %>%
+        dplyr::summarise(
+          central = sum(central, na.rm = TRUE),
+          sigma = sqrt(sum(((high - low) / (2 * 1.96))^2))
+        )
+
+      low <- df_sum$central - 1.96 * df_sum$sigma
+      high <- df_sum$central + 1.96 * df_sum$sigma
+
+      # Ensure that the lower bound is not negative
+      if(low < 0) {
+        warning("Negative lower bound. Setting to 0.")
+        low <- 0
+      }
+
+      # Create a new data frame with aggregated estimates
+      data.frame(
+        estimate = c("central", "low", "high"),
+        val = c(df_sum$central, low, high)
+      )
+    }) %>%
     filter(!is.na(cause_name)) %>%
     mutate(var = paste0(cause_name, "_", measure_name))
-
-
-
-
-
 }
 
 
-get_yld <- function(pop.total, version = "gbd2019") {
+#' Because we didn't download all respiratory and cardiovascular diseases,
+#' we use another approach to determine OthCV and OthResp, by substracting
+#' those we have from the total
+#'
+#' @return
+#' @export
+#'
+#' @examples
+get_yld_gbd2017 <- function(pop.total, version){
 
   yld <- get_gbd_raw(version) %>%
     add_location_details() %>%
@@ -388,20 +453,17 @@ get_yld <- function(pop.total, version = "gbd2019") {
 
 
   yld %>%
-    # Remove total to avoid double counting
-    filter(!grepl("TotCV|TotResp", cause_name)) %>%
     # And add the others
     bind_rows(other_cv) %>%
     bind_rows(other_resp)
 }
-
 
 compute_others <- function(yld, total, grep, newname, metric_name="Number") {
 
   yld %>%
     filter(cause_name == total | grepl(grep, cause_name)) %>%
     filter(metric_name == !!metric_name) %>%
-    group_by(measure_name, location_id, location_name, location_level, iso3, metric_name) %>%
+    group_by(measure_name, location_id, location_name, location_level, iso3, metric_name, year) %>%
     dplyr::group_modify(function(df, group){
 
       # Here we assume:
@@ -782,7 +844,6 @@ generate_epi <- function(version = "gbd2019") {
     stop(glue("Bad values in {bad$var}"))
   }
 
-
   wbstats::wb_countries() %>%
     sel(iso3 = iso3c, region = region, income_group = income_level, country) %>%
     filter(income_group != "Aggregates") -> wb_countries
@@ -842,6 +903,7 @@ generate_epi <- function(version = "gbd2019") {
   epi_hia
 
   epi_hia %>%
+    filter(!is.na(location_id)) %>%
     write_csv(glue("inst/extdata/epi_for_hia_{version}.csv"))
 }
 
@@ -884,7 +946,8 @@ generate_ihme <- function(version = "gbd2019") {
     add_location_details() %>%
     filter(location_level %in% c(3, 4)) %>%
     dplyr::filter(metric_name == "Number") %>%
-    dplyr::filter(!grepl("95+", age_name)) %>%
+    # 25+ is redundant with all the various age groups
+    dplyr::filter(!grepl("95+|25+", age_name)) %>%
     gather_ihme()
 
   homogenise_age_name <- function(age_name) {
