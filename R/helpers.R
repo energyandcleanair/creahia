@@ -186,7 +186,8 @@ country_recode_iso3 <- function(iso3s, replacements = NULL) {
 
 
 orderrows <- function(df) {
-  rr.out <- df %>% apply(1, sort) %>% t
+  decreasing <- all(df)<=0
+  rr.out <- df %>% apply(1, sort, decreasing=decreasing) %>% t
   colnames(rr.out) <- c('low', 'central', 'high')
   rr.out
 }
