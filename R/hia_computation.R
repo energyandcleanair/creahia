@@ -495,10 +495,13 @@ country_paf_perm <- function(pm.base,
           # just for the edge case when you only have one row
           x <- t(as.matrix(x))
         }
-        ok <- all(x[,'low'] <= x[,'central'])
-        ok <- ok & all(x[,'central'] <= x[,'high'])
+        ok <- all(abs(x[,'low']) <= abs(x[,'central']))
+        ok <- ok & all(abs(x[,'central']) <= abs(x[,'high']))
+        ok <- ok & all(sign(x[,'low']) == sign(x[,'central']))
+        ok <- ok & all(sign(x[,'central']) == sign(x[,'high']))
+        # Should all have the same sign
         if(!ok){
-          warning("Failed to satisfy low > central or central > high. Ordering manually")
+          warning("Failed to satisfy low > central or central > high (or opposite if negative sign). Ordering manually")
           #Note: I (Hubert) think the whole low, central, high isn't correct. Taking the
           # ratio of low, ratio of central and ratio of high doesn't necessarily lead to low, central, high...
           x <- orderrows(x)
