@@ -36,9 +36,9 @@ The **Delta Method** is an analytical approach that approximates the variance of
 - **Log Transformation:** Utilize the log-transformed RRs (`log(RR_base)` and `log(RR_perm)`) to stabilize variance and get closer to normality.
 - **Variance Estimation:** Calculate the variances of the log-transformed RRs based on their confidence intervals.
 - **PAF Formula:** Apply the PAF formula in terms of log-transformed RRs:
-  ```math
+  $$
   \text{PAF} = e^{\log(\text{RR}_{\text{perm}}) - \log(\text{RR}_{\text{base}})} - 1
-  ```
+  $$
 - **Variance Propagation:** Use the Delta Method to approximate the variance of PAF by propagating the variances of the log-transformed RRs:
   ```math
   \text{Var}(\text{PAF}) \approx e^{2(X - Y)} \left( \text{Var}(X) + \text{Var}(Y) \right) + e^{2(X - Y)} \left( e^{\text{Var}(X) + \text{Var}(Y)} - 1 - \left( \text{Var}(X) + \text{Var}(Y) \right) \right)
