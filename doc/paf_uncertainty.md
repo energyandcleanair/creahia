@@ -21,9 +21,7 @@ Both methods rely assume that the RRs are log-normally distributed (See [Burnett
 The resulting confidence intervals are then aggregated across age groups and pixels to obtain population-weighted PAF estimates.
 
 
-By default, the Delta Method is used to propagate uncertainty from RRs to PAF. The bootstrapping method can quickly run out of memory when the number of bootstrap samples is large or the number of pixels is high.
-
-[Lee et al. 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11471335/)) have shown that both methods provide similar results.
+By default, the Delta Method is used to propagate uncertainty from RRs to PAF. The bootstrapping method can quickly run out of memory when the number of bootstrap samples is large or the number of pixels is high. [Lee et al. 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11471335/) have shown that both methods provide similar results.
 
 
 ## Methodologies
@@ -38,16 +36,16 @@ The **Delta Method** is an analytical approach that approximates the variance of
 - **Log Transformation:** Utilize the log-transformed RRs (`log(RR_base)` and `log(RR_perm)`) to stabilize variance and get closer to normality.
 - **Variance Estimation:** Calculate the variances of the log-transformed RRs based on their confidence intervals.
 - **PAF Formula:** Apply the PAF formula in terms of log-transformed RRs:
-  ```math
-  \text{PAF} = e^{\log(\text{RR}_{\text{perm}}) - \log(\text{RR}_{\text{base}})} - 1
-  ```
+    ```math
+    \text{PAF} = e^{\log(\text{RR}_{\text{perm}}) - \log(\text{RR}_{\text{base}})} - 1
+    ```
 - **Variance Propagation:** Use the Delta Method to approximate the variance of PAF by propagating the variances of the log-transformed RRs:
-  ```math
-   \text{Var}(\text{PAF}) \approx e^{2(X - Y)} \left( \text{Var}(X) + \text{Var}(Y) \right) + e^{2(X - Y)} \left( e^{\text{Var}(X) + \text{Var}(Y)} - 1 - \left( \text{Var}(X) + \text{Var}(Y) \right) \right )
-  ```
+    ```math
+    \text{Var}(\text{PAF}) \approx e^{2(X - Y)} \left( \text{Var}(X) + \text{Var}(Y) \right) + e^{2(X - Y)} \left( e^{\text{Var}(X) + \text{Var}(Y)} - 1 - \left( \text{Var}(X) + \text{Var}(Y) \right) \right )
+    ```
   where:
-  - $ X = \log(\text{RR}_{\text{perm}}) $
-  - $ Y = \log(\text{RR}_{\text{base}}) $
+  - $X = \log(\text{RR}_{\text{perm}})$
+  - $Y = \log(\text{RR}_{\text{base}})$
 
   
   *This approximation assumes independence between `RR_base` and `RR_perm` and relies on a second-order Taylor series expansion to linearize the relationship.*
