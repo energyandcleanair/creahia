@@ -465,66 +465,23 @@ country_paf_perm <- function(pm.base,
                                simplify = 'array')
 
 
-    paf.perm <- rr.perm / rr.base - 1
-
-    # IMPORTANT: should be paf.perm <- 1 - rr.base / rr.perm
-    # Will fix in a new branch
+    paf <- get_paf_from_rr_delta(
+      rr_base = rr.base,
+      rr_perm = rr.perm,
+      age_weights = age_weights$val,
+      pop = pop
+    )
 
   } else {
-    paf.perm <- (1 - (1 / rr.base)) * (1 - pm.perm / pm.base)
+    stop("Attribution mode not implemented yet")
+    #TODO implement the method with this formula
+    # paf.perm <- (1 - (1 / rr.base)) * (1 - pm.perm / pm.base)
   }
 
-  if(length(dim(paf.perm)) == 2) {
-    # in case the get_hazard_ratio function didn't return an array
-    paf.perm %>%
-      t %>%
-      orderrows %>%
-      apply(2, weighted.mean, age_weights$val)
-  } else {
-    tryCatch({
-
-      # old <- paf.perm %>%
-      #   apply(1:2, stats::weighted.mean, age_weights$val) %>%
-      #   orderrows %>%
-      #   apply(2, weighted.mean, w = pop)
-
-      # matrixStats two orders of magnitude faster
-      # also removed orderrows (though checking it is already ordered)
-      check_order <- function(x){
-        if(!is.matrix(x)){
-          # just for the edge case when you only have one row
-          x <- t(as.matrix(x))
-        }
-        ok <- all(abs(x[,'low']) <= abs(x[,'central']))
-        ok <- ok & all(abs(x[,'central']) <= abs(x[,'high']))
-        ok <- ok & all(sign(x[,'low']) == sign(x[,'central']))
-        ok <- ok & all(sign(x[,'central']) == sign(x[,'high']))
-        # Should all have the same sign
-        if(!ok){
-          warning("Failed to satisfy low > central or central > high (or opposite if negative sign). Ordering manually")
-          #Note: I (Hubert) think the whole low, central, high isn't correct. Taking the
-          # ratio of low, ratio of central and ratio of high doesn't necessarily lead to low, central, high...
-          x <- orderrows(x)
-          }
-        x
-      }
-
-      new <- paf.perm %>%
-        apply(2, matrixStats::rowWeightedMeans, w = age_weights$val) %>%
-        check_order() %>%
-        apply(2, weighted.mean, w = pop)
-
-      # if(any(round(old,6) != round(new,6))){
-      #   stop("Broke something")
-      # }
-      #
-      return(new)
-    }, error = function(e) {
-      warning("Failed for region ", region_id, cause, e)
-      return(NULL)
-    })
-  }
+  return(paf)
 }
+
+
 
 
 # country_paf <- function(pm, pop, cy, cs, ms, adult_ages = get_adult_ages(),
