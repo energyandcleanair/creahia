@@ -8,13 +8,17 @@ test_that("Confidence interval makes sense when comparing two scenarios", {
   library(creahia)
   library(creaexposure)
 
-  # Get PM2.5 exposure
-  m <- terra::rast(get_hia_path("tests/pm25_bangladesh.tiff"))
+  # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
+  res <- 0.01
+  m <- terra::rast(
+    xmin=88,
+    xmax=92,
+    ymin=20,
+    ymax=27,
+    res=res,
+    crs="+proj=longlat +datum=WGS84")
+
   m[] <- 60
-  stopifnot(all(m[]>=0, na.rm=T))
-
-
-
 
   # Build two perturbations:
   # p1: bring it down to 0
