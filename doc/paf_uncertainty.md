@@ -39,6 +39,9 @@ The **Delta Method** is an analytical approach that approximates the variance of
   ```math
   \text{PAF} = e^{\log(\text{RR}_{\text{perm}}) - \log(\text{RR}_{\text{base}})} - 1
   ```
+  ```math
+  \text{PAF} = \frac{\text{RR}_{\text{perm}}}{\text{RR}_{\text{base}}} - 1
+  ```
 - **Variance Propagation:** Use the Delta Method to approximate the variance of PAF by propagating the variances of the log-transformed RRs:
   ```math
   \text{Var}(\text{PAF}) \approx e^{2(X - Y)} \left( \text{Var}(X) + \text{Var}(Y) \right) + e^{2(X - Y)} \left( e^{\text{Var}(X) + \text{Var}(Y)} - 1 - \left( \text{Var}(X) + \text{Var}(Y) \right) \right )
