@@ -1,9 +1,11 @@
 # Propagating Uncertainty from Risk Ratios (RR) to Population Attributable Fraction (PAF)
 
 For a single exposure level, Risk ratios (RRs) are retrieved with a 90% confidence interval. In our implementation, the Population Attributable Fraction (PAF) is calculated using the formula:
-$$
+$$\text{PAF} = \frac{\text{RR}_{\text{perm}}}{\text{RR}_{\text{base}}} - 1$$
+
+```math
 \text{PAF} = \frac{\text{RR}_{\text{perm}}}{\text{RR}_{\text{base}}} - 1
-$$
+```
 
 where `RR_base` is the baseline RR and `RR_perm` is the permutation RR. This is done for multiple age groups and pixels, before aggregating the PAF across age groups and averaging across pixels using population density rasters to obtain population-weighted estimates.
 
