@@ -1,7 +1,6 @@
 # Propagating Uncertainty from Risk Ratios (RR) to Population Attributable Fraction (PAF)
 
 For a single exposure level, Risk ratios (RRs) are retrieved with a 90% confidence interval. In our implementation, the Population Attributable Fraction (PAF) is calculated using the formula:
-$$\text{PAF} = \frac{\text{RR}_{\text{perm}}}{\text{RR}_{\text{base}}} - 1$$
 
 ```math
 \text{PAF} = \frac{\text{RR}_{\text{perm}}}{\text{RR}_{\text{base}}} - 1
@@ -39,11 +38,24 @@ The **Delta Method** is an analytical approach that approximates the variance of
 - **Log Transformation:** Utilize the log-transformed RRs (`log(RR_base)` and `log(RR_perm)`) to stabilize variance and get closer to normality.
 - **Variance Estimation:** Calculate the variances of the log-transformed RRs based on their confidence intervals.
 - **PAF Formula:** Apply the PAF formula in terms of log-transformed RRs:
-  $$
+  ```math
   \text{PAF} = e^{\log(\text{RR}_{\text{perm}}) - \log(\text{RR}_{\text{base}})} - 1
-  $$
-- **Variance Propagation:** Use the Delta Method to approximate the variance of PAF by propagating the variances of the log-transformed RRs.
-- **Confidence Intervals:** Derive confidence intervals for PAF using the estimated variance and standard normal distribution.
+  ```
+- **Variance Propagation:** Use the Delta Method to approximate the variance of PAF by propagating the variances of the log-transformed RRs:
+  ```math
+   \text{Var}(\text{PAF}) \approx e^{2(X - Y)} \left( \text{Var}(X) + \text{Var}(Y) \right) + e^{2(X - Y)} \left( e^{\text{Var}(X) + \text{Var}(Y)} - 1 - \left( \text{Var}(X) + \text{Var}(Y) \right) \right )
+  ```
+  where:
+  - $ X = \log(\text{RR}_{\text{perm}}) $
+  - $ Y = \log(\text{RR}_{\text{base}}) $
+
+  
+  *This approximation assumes independence between `RR_base` and `RR_perm` and relies on a second-order Taylor series expansion to linearize the relationship.*
+  
+- **Confidence Intervals:** Derive confidence intervals for PAF using the estimated variance and standard normal distribution:
+  ```math
+  \text{CI} = \text{PAF} \pm z \times \text{SE}_{\text{PAF}}
+  ```
 - **Population Weighting:** Aggregate the PAF estimates across age groups and pixels using population weights to obtain population-weighted PAF estimates.
 
 
@@ -55,9 +67,9 @@ The **Delta Method** is an analytical approach that approximates the variance of
 - **Log Transformation:** Utilize the log-transformed RRs (`log(RR_base)` and `log(RR_perm)`) to stabilize variance and get closer to normality.
 - **Resampling:** Generate a large number of bootstrap samples from the transformed data and the associated confidence intervals.
 - **PAF Calculation:** For each bootstrap sample, compute the PAF using the formula:
-  $$
+  ```math
   \text{PAF} = \frac{\text{RR}_{\text{perm}}}{\text{RR}_{\text{base}}} - 1
-  $$
+  ```
 - **Aggregation:** Aggregate the PAF estimates across all bootstraps to derive confidence intervals.
 - **Population Weighting:** Combine the pixel-level PAF estimates using population density rasters to obtain population-weighted PAF estimates.
 

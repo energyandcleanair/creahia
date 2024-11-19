@@ -21,6 +21,8 @@
 #' The function uses the Delta Method to approximate the variance of the PAF based on the variances
 #' of the log-transformed Risk Ratios (RR). It assumes that the log(RR) are normally distributed.
 #'
+#' See doc/paf_uncertainty.md for more details
+#'
 #' @export
 get_paf_from_rr_delta <- function(rr_base, rr_perm, age_weights, pop, ci_level = 0.95, seed = 123){
 
@@ -78,8 +80,20 @@ get_paf_from_rr_delta <- function(rr_base, rr_perm, age_weights, pop, ci_level =
   var_log_rr_perm <- SE_perm^2
 
   # Assuming independence between RR_base and RR_perm
-  var_paf <- (exp(2 * log_rr_perm_central) * var_log_rr_perm) / (exp(2 * log_rr_base_central)) +
-    (exp(2 * log_rr_perm_central) * (exp(var_log_rr_base) - 1) * (exp(2 * log_rr_base_central)) / (exp(2 * log_rr_base_central)^2))
+  X <- log_rr_perm_central
+  var_X <- var_log_rr_perm
+
+  Y <- log_rr_base_central
+  var_Y <- var_log_rr_base
+
+  # Compute the variance of PAF
+  # 1-st order
+  var_paf_1 <- exp(2 * (X - Y)) * (var_X + var_Y)
+
+  # 2-nd order
+  var_paf_2 <- exp(2 * (X - Y)) * (exp(var_X + var_Y) - 1 - var_X - var_Y)
+
+  var_paf <- var_paf_1 + var_paf_2
 
   # Compute standard error of PAF
   SE_paf <- sqrt(var_paf)
@@ -101,9 +115,6 @@ get_paf_from_rr_delta <- function(rr_base, rr_perm, age_weights, pop, ci_level =
     colSums(na.rm = TRUE) / sum(pop)
 
   # Some sanity checks
-  if (any(paf < 0)) {
-    stop("Some PAF estimates are negative. This may be due to the Delta Method approximation.")
-  }
   if(all(sort(paf) != paf)){
     stop("PAF estimates are not properly ordered.")
   }
