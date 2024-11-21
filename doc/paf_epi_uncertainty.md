@@ -25,9 +25,9 @@ The variance of $A$ is approximated as:
 \text{Var}(A) = \left( EPI \right)^2 \cdot \text{Var}(PAF) + \left( PAF \right)^2 \cdot \text{Var}(EPI)
 ```
    
-where
-  - $\text{Var}(PAF) = \left( \frac{\text{PAF}_{\text{upper}} - \text{PAF}_{\text{lower}}}{2  z} \right)^2$
-  - $\text{Var}(EPI) = \left( \frac{\text{EPI}_{\text{upper}} - \text{EPI}_{\text{lower}}}{2  z} \right)^2$
+where:
+    - $\text{Var}(PAF) = \left( \frac{\text{PAF}_{\text{upper}} - \text{PAF}_{\text{lower}}}{2  z} \right)^2$
+    - $\text{Var}(EPI) = \left( \frac{\text{EPI}_{\text{upper}} - \text{EPI}_{\text{lower}}}{2  z} \right)^2$
 
 3. **Calculating Standard Error and Confidence Intervals:**
 
