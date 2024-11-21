@@ -11,7 +11,7 @@ The attributable burden ($A$) is calculated as:
 A = PAF \times EPI
 ```
 
-#### **Propagating Uncertainty**
+#### Propagating Uncertainty
 
 To propagate the uncertainty from both $PAF$ and $EPI$ to $A$, we employ the **Delta Method**, which uses first-order Taylor series approximations to estimate the variance of a function of random variables.
 
@@ -29,7 +29,7 @@ where:
 - $`\text{Var}(PAF) = \left( \frac{\text{PAF}_{\text{upper}} - \text{PAF}_{\text{lower}}}{2  z} \right)^2`$
 - $`\text{Var}(EPI) = \left( \frac{\text{EPI}_{\text{upper}} - \text{EPI}_{\text{lower}}}{2  z} \right)^2`$
 
-3. **Calculating Standard Error and Confidence Intervals:**
+### Calculating Standard Error and Confidence Intervals
 
   - **Standard Error $\text{SE}_A$:**
 ```math
