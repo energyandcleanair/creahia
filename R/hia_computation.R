@@ -163,7 +163,7 @@ compute_hia_paf <- function(conc_map,
       total = length(names(conc_scenario))
     )
 
-    paf[[scenario]] <- foreach(region_id = names(conc_scenario)) %dopar% {
+    paf[[scenario]] <- lapply(names(conc_scenario), function(region_id) {
 
       tryCatch({
         pg$tick()
@@ -194,14 +194,17 @@ compute_hia_paf <- function(conc_map,
 
         paf_region <- paf_region %>% bind_rows(.id = 'var') %>%
           mutate(region_id = region_id)
+
+        return(paf_region)
       }, error = function(e) {
         # For instance if country iso3 not in ihme$ISO3
-        logger::log_warn("Failed for region ", region_id)
-        paf_region <- NULL
+        logger::log_warn(paste("Failed for region ", region_id, ": ", e$message))
+        return(NULL)
       })
-      return(paf_region)
-    }
+    })
   }
+
+  # Combine all scenarios
   paf %>% lapply(bind_rows)
 }
 
