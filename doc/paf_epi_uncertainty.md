@@ -7,37 +7,37 @@ To combine the associated uncertainty from both PAF and GBD estimates, we employ
 
 
 The attributable burden (\( A \)) is calculated as:
-$$
+```math
 A = PAF \times EPI
-$$
+```
 
 #### **Propagating Uncertainty**
 
-To propagate the uncertainty from both \( PAF \) and \( EPI \) to \( A \), we employ the **Delta Method**, which uses first-order Taylor series approximations to estimate the variance of a function of random variables.
+To propagate the uncertainty from both $PAF$ and $EPI$ to $A$, we employ the **Delta Method**, which uses first-order Taylor series approximations to estimate the variance of a function of random variables.
 
 The Delta Method assumes the following:
 - **Independence**: PAF and GBD estimates are independent.
 - **Normality**: PAF and GBD estimates are approximately normally distributed.
 
 
-The variance of \( A \) is approximated as:
-   $$
-   \text{Var}(A) = \left( EPI \right)^2 \cdot \text{Var}(PAF) + \left( PAF \right)^2 \cdot \text{Var}(EPI)
-   $$
+The variance of $A$ is approximated as:
+    ```math
+    \text{Var}(A) = \left( EPI \right)^2 \cdot \text{Var}(PAF) + \left( PAF \right)^2 \cdot \text{Var}(EPI)
+    ```
    
    - **Where:**
-     - $ \text{Var}(PAF) = \left( \frac{\text{PAF}_{\text{upper}} - \text{PAF}_{\text{lower}}}{2  z} \right)^2 $
-     - $ \text{Var}(EPI) = \left( \frac{\text{EPI}_{\text{upper}} - \text{EPI}_{\text{lower}}}{2  z} \right)^2 $
+     - $\text{Var}(PAF) = \left( \frac{\text{PAF}_{\text{upper}} - \text{PAF}_{\text{lower}}}{2  z} \right)^2$
+     - $\text{Var}(EPI) = \left( \frac{\text{EPI}_{\text{upper}} - \text{EPI}_{\text{lower}}}{2  z} \right)^2$
 
 3. **Calculating Standard Error and Confidence Intervals:**
 
    - **Standard Error (\( \text{SE}_A \)):**
-     $$
+     ```math
      \text{SE}_A = \sqrt{\text{Var}(A)}
-     $$
+     ```
      
    - **Confidence Interval:**
-     $$
+     ```math
      \text{CI}_A = A \pm z \times \text{SE}_A
-     $$
+     ```
      -$z$  = Z-score corresponding to the desired confidence level (e.g., 1.96 for 95% confidence interval)
