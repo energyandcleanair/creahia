@@ -319,24 +319,13 @@ compute_hia_epi <- function(species,
 
     # Add PM mortality from PAF x EPI
     if(!is.null(paf[[scenario]]) && nrow(paf[[scenario]]) > 0) {
-      paf_wide <- paf[[scenario]] %>%
-        gather(estimate, val, low, central, high) %>%
-        mutate(var = paste0('paf_', var)) %>%
-        spread(var, val)
 
-      paf_wide <- epi_loc %>% left_join(paf_wide)
-
-      pm_mort <- paf_wide %>% sel(region_id, estimate)
-
-      available_causes <- intersect(unique(paf[[scenario]]$var), names(epi_loc))
-
-      for(cs in intersect(available_causes, calc_causes)) {
-        pm_mort[[cs]] <- paf_wide[[cs]] / 1e5 * paf_wide[[paste0('paf_', cs)]] * paf_wide$pop
-      }
-
-      names(pm_mort)[sapply(pm_mort, is.numeric)] <- names(pm_mort)[sapply(pm_mort, is.numeric)] %>%
-        paste0('_PM25')
-      hia_scenario <- full_join(pm_mort, hia_scenario)
+      pm_mortality <- get_pm_mortality(
+        paf_scenario = paf[[scenario]],
+        epi_loc = epi_loc,
+        calc_causes = calc_causes
+      )
+      hia_scenario <- full_join(pm_mortality, hia_scenario)
     }
 
     hia_scenario <- hia_scenario %>%
@@ -480,35 +469,6 @@ country_paf_perm <- function(pm.base,
 
   return(paf)
 }
-
-
-
-
-# country_paf <- function(pm, pop, cy, cs, ms, adult_ages = get_adult_ages(),
-#                         .region = "inc_China", gemm = get_gemm(), gbd = get_gbd()) {
-#
-#   if(grepl('child', cs)) {
-#     ages <- 'Under 5'
-#     w <- data.frame(val = 1)
-#   } else {
-#     ages <- adult_ages
-#     w <- ihme %>% dplyr::filter(ISO3 == cy, cause_short == cs, measure_name == ms,
-#                                 age %in% ages, estimate == 'central')
-#   }
-#
-#   rr <- ages %>% sapply(function(.a) hr(pm, .cause = cs, .age = .a,
-#                                         .region = .region, gemm = gemm, gbd = gbd),
-#                   simplify = 'array')
-#   paf <- 1 - 1 / rr
-#
-#   if(length(dim(paf)) == 2) {
-#     paf %>% t %>%
-#       apply(2, weighted.mean, w$val) # in case the hr function didn't return an array
-#   } else {
-#     paf %>% apply(1:2, weighted.mean, w$val, na.rm = T) %>%
-#       apply(2, weighted.mean, w = pop, na.rm = T)
-#   }
-# }
 
 
 scale_hia_pop <- function(hia, base_year = 2015, target_year = 2019) {
