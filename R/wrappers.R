@@ -85,7 +85,9 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   # Fix inputs: if scale_base_year or scale_target_year is not null,
   # warn user
   if(!is.null(scale_base_year) | !is.null(scale_target_year)){
-    pop_year <- ifelse(is.null(pop_year), scale_target_year, pop_year)
+    if(is.null(pop_year)){
+      pop_year <- coalesce(scale_target_year, scale_base_year)
+    }
     messages <- c(
       "scale_base_year and scale_target_year are deprecated. Use pop_year instead, as the year you",
       "want to scale the population to. The base year is now determined automatically based on available data.",
