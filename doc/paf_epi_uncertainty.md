@@ -6,7 +6,7 @@ To combine the associated uncertainty from both PAF and GBD estimates, we employ
 
 
 
-The attributable burden (\( A \)) is calculated as:
+The attributable burden ($A$) is calculated as:
 ```math
 A = PAF \times EPI
 ```
@@ -21,13 +21,13 @@ The Delta Method assumes the following:
 
 
 The variance of $A$ is approximated as:
-    ```math
-    \text{Var}(A) = \left( EPI \right)^2 \cdot \text{Var}(PAF) + \left( PAF \right)^2 \cdot \text{Var}(EPI)
-    ```
+```math
+\text{Var}(A) = \left( EPI \right)^2 \cdot \text{Var}(PAF) + \left( PAF \right)^2 \cdot \text{Var}(EPI)
+```
    
-   - **Where:**
-     - $\text{Var}(PAF) = \left( \frac{\text{PAF}_{\text{upper}} - \text{PAF}_{\text{lower}}}{2  z} \right)^2$
-     - $\text{Var}(EPI) = \left( \frac{\text{EPI}_{\text{upper}} - \text{EPI}_{\text{lower}}}{2  z} \right)^2$
+where
+  - $\text{Var}(PAF) = \left( \frac{\text{PAF}_{\text{upper}} - \text{PAF}_{\text{lower}}}{2  z} \right)^2$
+  - $\text{Var}(EPI) = \left( \frac{\text{EPI}_{\text{upper}} - \text{EPI}_{\text{lower}}}{2  z} \right)^2$
 
 3. **Calculating Standard Error and Confidence Intervals:**
 
