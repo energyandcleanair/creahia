@@ -31,13 +31,13 @@ The variance of $A$ is approximated as:
 
 3. **Calculating Standard Error and Confidence Intervals:**
 
-   - **Standard Error (\( \text{SE}_A \)):**
-     ```math
-     \text{SE}_A = \sqrt{\text{Var}(A)}
-     ```
+  - **Standard Error $\text{SE}_A$:**
+```math
+\text{SE}_A = \sqrt{\text{Var}(A)}
+```
      
-   - **Confidence Interval:**
-     ```math
-     \text{CI}_A = A \pm z \times \text{SE}_A
-     ```
-     -$z$  = Z-score corresponding to the desired confidence level (e.g., 1.96 for 95% confidence interval)
+  - **Confidence Interval:**
+```math
+\text{CI}_A = A \pm z \times \text{SE}_A
+```
+  - $z$ = Z-score corresponding to the desired confidence level (e.g., 1.96 for 95% confidence interval)
