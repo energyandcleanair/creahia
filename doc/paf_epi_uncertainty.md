@@ -41,3 +41,7 @@ where:
 \text{CI}_A = A \pm z \times \text{SE}_A
 ```
   - $z$ = Z-score corresponding to the desired confidence level (e.g., 1.96 for 95% confidence interval)
+
+#### Adjusting confidence intervals crossing zero
+To ensure consistency in our analysis, we adjust the confidence intervals of the Population Attributable Fraction (PAF) and the associated effects when they span both negative and positive values.
+Specifically, if the central PAF estimate is positive, we set the lower bound of the confidence interval to zero, effectively removing any negative values. Conversely, if the central estimate is negative, we set the upper bound to zero, excluding positive values. This approach ensures that the confidence intervals align with the direction of the exposure effect, preventing the inclusion of implausible PAF values.
