@@ -1,6 +1,7 @@
-# For certain versions, we want overall numbers to remain the same
-# This really depends on the modifications brought up
-
+# Unless otherwise specified, we want central estimates of health impacts numbers to remain the same
+# across versions.
+# This is an initial test. As new versions come up, it might be beneficial to include more cases
+# and allow for estimates to vary in certain version changes.
 
 get_fingerprint_bgd <- function(){
 
@@ -69,6 +70,7 @@ test_that("Estimates are compatible with previous versions", {
   library(creahia)
   library(creaexposure)
   library(glue)
+  library(tidyr)
 
 
   # Get fingerprint(s)
@@ -85,5 +87,16 @@ test_that("Estimates are compatible with previous versions", {
   # Compare fingerprints
   fingerprints <- get_fingerprints()
 
+
+  # Test that all central values are equal
+  different_central <- fingerprints %>%
+    filter(estimate=="central") %>%
+    group_by(case, scenario, region_id, Pollutant, Outcome, Cause, AgeGrp, epi_version, calc_causes, pop_year) %>%
+    filter(n_distinct(number) > 1) %>%
+    ungroup() %>%
+    distinct(Cause, Outcome)
+
+  # Test that it is empty
+  testthat::expect_equal(nrow(different_central), 0, info = glue("Different central values: {different_central$Cause} - {different_central$Outcome}"))
 
 })

@@ -52,7 +52,7 @@ test_that("paf bootstrap computation from rr is correct", {
 
 
   # Define age_weights and population per pixel
-  age_weights <- c(0.5, 0.5) # Equal weights for two age groups
+  age_weights <- c(0.2, 0.8) # Weights for two age groups
   pop <- c(1000, 2000, 1500, 2500) # Population for 4 pixels
 
   # Compute expected PAF per pixel
@@ -64,22 +64,22 @@ test_that("paf bootstrap computation from rr is correct", {
   # Pixel 1
   paf1_age1 <- (1.5 / 2.0) - 1 # -0.25
   paf1_age2 <- (2.5 / 3.0) - 1 # -0.1666667
-  paf1 <- 0.5 * paf1_age1 + 0.5 * paf1_age2 # -0.2166667
+  paf1 <- age_weights[1] * paf1_age1 + age_weights[2] * paf1_age2 # -0.2166667
 
   # Pixel 2
   paf2_age1 <- (1.2 / 1.8) - 1 # -0.3333333
   paf2_age2 <- (1.6 / 2.2) - 1 # -0.2727273
-  paf2 <- 0.5 * paf2_age1 + 0.5 * paf2_age2 # -0.3030303
+  paf2 <- age_weights[1] * paf2_age1 + age_weights[2] * paf2_age2 # -0.3030303
 
   # Pixel 3
   paf3_age1 <- (1.0 / 1.5) - 1 # -0.3333333
   paf3_age2 <- (2.0 / 2.5) - 1 # -0.2
-  paf3 <- 0.5 * paf3_age1 + 0.5 * paf3_age2 # -0.2666667
+  paf3 <- age_weights[1] * paf3_age1 + age_weights[2] * paf3_age2 # -0.2666667
 
   # Pixel 4
   paf4_age1 <- (1.7 / 2.2) - 1 # ≈ -0.2272727
   paf4_age2 <- (2.8 / 3.3) - 1 # ≈ -0.1515152
-  paf4 <- 0.5 * paf4_age1 + 0.5 * paf4_age2 # ≈ -0.1893939
+  paf4 <- age_weights[1] * paf4_age1 + age_weights[2] * paf4_age2 # ≈ -0.1893939
 
   # Compute overall expected PAF as population-weighted average
   total_pop <- sum(pop)
