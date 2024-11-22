@@ -3,6 +3,7 @@
 # This is an initial test. As new versions come up, it might be beneficial to include more cases
 # and allow for estimates to vary in certain version changes.
 
+
 get_fingerprint_bgd <- function(){
 
   # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
