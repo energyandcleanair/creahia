@@ -51,7 +51,7 @@ get_pm_mortality <- function(paf_scenario, epi_loc, calc_causes){
 
       # In PAF, we have included a saturation at 0, meaning the confidence interval might be artificially truncated
       # We ensure we are using the largest side of the confidence interval when computing standard deviation.
-      SE_PAF = max(P_high - P_central, P_central - P_low) / (z_paf),
+      SE_PAF = pmax(P_high - P_central, P_central - P_low) / (z_paf),
 
       # In GBD metrics, we do not have a saturation at 0, so we can use the standard formula
       SE_E = (E_high - E_low) / (2 * z_epi),
