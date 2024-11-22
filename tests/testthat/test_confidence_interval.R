@@ -61,4 +61,31 @@ test_that("Confidence interval makes sense when comparing two scenarios", {
 
   testthat::expect_true(nrow(error) == 0)
 
+
+
+  hia_3 <- creahia::wrappers.compute_hia_two_images.default(
+    perturbation_rasters = list(pm25 = p2),
+    baseline_rasters = list(pm25 = m),
+    scale_base_year = 2020,
+    scale_target_year = 2020,
+    administrative_level = 0,
+    administrative_res = "low",
+    administrative_iso3s = "BGD",
+    epi_version = "gbd2019",
+    calc_causes = "GEMM and GBD"
+  )
+
+
+  # Expect the order low < central < high to be consistent
+  inconsistent_order <- hia_3 %>%
+    spread(estimate, number) %>%
+    mutate(order=case_when(
+      low <= central & central <= high ~ "increasing",
+      low >= central & central >= high ~ "decreasing",
+      T ~ "inconsistent"
+    )) %>%
+    summarise(ok = n_distinct(order) == 1 & !("inconsistent" %in% order))
+
+  testthat::expect_true(inconsistent_order$ok)
+
 })
