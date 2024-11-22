@@ -23,6 +23,10 @@ The resulting confidence intervals are then aggregated across age groups and pix
 
 By default, the Delta Method is used to propagate uncertainty from RRs to PAF. The bootstrapping method can quickly run out of memory when the number of bootstrap samples is large or the number of pixels is high. [Lee et al. 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11471335/) have shown that both methods provide similar results.
 
+#### Adjusting confidence intervals crossing zero
+To ensure consistency in our analysis, we adjust the confidence intervals of the Population Attributable Fraction (PAF) and the associated effects when they span both negative and positive values.
+Specifically, if the central PAF estimate is positive, we set the lower bound of the confidence interval to zero, effectively removing any negative values. Conversely, if the central estimate is negative, we set the upper bound to zero, excluding positive values. This approach ensures that the confidence intervals align with the direction of the exposure effect, preventing the inclusion of implausible PAF values.
+
 
 ## Methodologies
 
