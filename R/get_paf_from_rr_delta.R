@@ -105,6 +105,15 @@ get_paf_from_rr_delta <- function(rr_base, rr_perm, age_weights, pop, ci_level =
   paf_low <- paf_central - qnorm(upper_prob) * SE_paf
   paf_high <- paf_central + qnorm(upper_prob) * SE_paf
 
+
+  # In certain cases, where the perturbation is small, the PAF estimates can be of the opposite sign
+  # which is not possible. In such cases, we set the PAF that is the opposite sign of central estimate to 0.
+  # This could affect the confidence interval calculations at later stage. We'll need to ensure we're taking
+  # the largest side of the confidence interval when computing standard deviation.
+  paf_low[paf_low * paf_central < 0] <- 0
+  paf_high[paf_high * paf_central < 0] <- 0
+
+
   # Weight by age group, then by population
   paf_low <- rowSums(paf_low %*% age_weights_norm, na.rm = TRUE)
   paf_central <- rowSums(paf_central %*% age_weights_norm, na.rm = TRUE)
@@ -117,6 +126,11 @@ get_paf_from_rr_delta <- function(rr_base, rr_perm, age_weights, pop, ci_level =
   # Some sanity checks
   if(all(sort(paf) != paf)){
     stop("PAF estimates are not properly ordered.")
+  }
+
+  # If not all of the same sign, stop
+  if(n_distinct(setdiff(sign(paf),0)) > 1){
+    stop("PAF estimates are not all of the same sign.")
   }
 
   return(paf)

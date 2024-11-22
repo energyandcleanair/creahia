@@ -46,8 +46,14 @@ get_pm_mortality <- function(paf_scenario, epi_loc, calc_causes){
     # Calculate variances from confidence intervals
     # using Delta method
     mutate(
+
       # Standard Error for PAF and GBD metrics
-      SE_PAF = (P_high - P_low) / (2 * z_paf),
+
+      # In PAF, we have included a saturation at 0, meaning the confidence interval might be artificially truncated
+      # We ensure we are using the largest side of the confidence interval when computing standard deviation.
+      SE_PAF = max(P_high - P_central, P_central - P_low) / (z_paf),
+
+      # In GBD metrics, we do not have a saturation at 0, so we can use the standard formula
       SE_E = (E_high - E_low) / (2 * z_epi),
 
       # Variance of PAF and GBD metrics
@@ -70,19 +76,30 @@ get_pm_mortality <- function(paf_scenario, epi_loc, calc_causes){
     )  %>%
     mutate(var = paste0(var, '_PM25')) %>%
     select(region_id, pop, var, central, low, high) %>%
-    # central, low, high to a estimate column
+
+    # In certain cases, where the perturbation is small, the mortality estimates can be of the opposite sign
+    # which is not possible. In such cases, we set the mortality that is the opposite sign of central estimate to 0.
+    mutate(
+      low = ifelse(low * central < 0, 0, low),
+      high = ifelse(high * central < 0, 0, high)
+    ) %>%
+
+    # Pivot
     pivot_longer(
       cols = c(central, low, high),
       names_to = "estimate",
       values_to = "value"
     ) %>%
-    # scale
+
+    # Scale
     mutate(value = value / 1e5 * pop) %>%
     pivot_wider(
       names_from = var,
       values_from = value
     ) %>%
     as.data.frame()
+
+
 
   return(pm_mort)
 }
