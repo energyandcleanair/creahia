@@ -19,7 +19,7 @@ get_pm_mortality <- function(paf_scenario, epi_loc, calc_causes){
 
   epi_long <- epi_loc %>%
     filter(estimate %in% c("low", "central", "high")) %>%
-    select(iso3, estimate, pop, all_of(available_causes)) %>%
+    select(iso3, region_id, estimate, pop, all_of(available_causes)) %>%
     pivot_longer(
       cols = all_of(available_causes),
       names_to = "var",
@@ -34,7 +34,7 @@ get_pm_mortality <- function(paf_scenario, epi_loc, calc_causes){
   # Merge paf_scenario with epi_long on var and region_id = iso3
   merged_df <- paf_scenario %>%
     rename_at(c("low", "central", "high"), ~ paste0("P_", .)) %>%
-    inner_join(epi_long, by = c("var", "region_id" = "iso3"))
+    inner_join(epi_long, by = c("var", "region_id"))
 
   # Check for missing values after merge
   if(any(is.na(merged_df$E_central))) {

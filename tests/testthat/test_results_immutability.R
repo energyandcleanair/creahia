@@ -28,7 +28,7 @@ get_fingerprint_bgd <- function(){
     perturbation_rasters = list(pm25 = p1),
     baseline_rasters = list(pm25 = m),
     pop_year = 2020,
-    administrative_level = 0,
+    administrative_level = 1,
     administrative_res = "low",
     administrative_iso3s = "BGD",
     epi_version = "gbd2019",
@@ -82,8 +82,6 @@ test_that("Estimates are compatible with previous versions", {
   dir.create(dirname(filepath), showWarnings = FALSE, recursive = TRUE)
   write.csv(hia, filepath, row.names = FALSE)
 
-
-
   # Compare fingerprints
   fingerprints <- get_fingerprints()
 
@@ -92,8 +90,9 @@ test_that("Estimates are compatible with previous versions", {
   different_central <- fingerprints %>%
     filter(estimate=="central") %>%
     group_by(case, scenario, region_id, Pollutant, Outcome, Cause, AgeGrp, epi_version, calc_causes, pop_year) %>%
-    filter(n_distinct(number) > 1) %>%
+    summarise(number = n(), unique = n_distinct(number)) %>%
     ungroup() %>%
+    filter(number < max(number) | unique > 1) %>%
     distinct(Cause, Outcome)
 
   # Test that it is empty
