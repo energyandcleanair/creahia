@@ -5,6 +5,7 @@
 get_fingerprint_bgd <- function(){
 
   # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
+  current_version <- as.character(packageVersion("creahia"))
   res <- 0.01
   m <- terra::rast(
     xmin=88,
@@ -50,8 +51,10 @@ get_fingerprints <- function(){
       # version already in hia
       # version = str_remove(basename(filepath), "_hia_bgd.csv"),
       # case after _hia_
-      case = str_extract(filepath, "(?<=_hia_).+(?=\\.csv)"),
-      hia = list(read_csv(filepath))) %>%
+      case = str_extract(filepath, "(?<=_hia_).+(?=\\.csv)")
+    ) %>%
+    rowwise() %>%
+    mutate(hia = list(read_csv(filepath))) %>%
     select(-filepath) %>%
     unnest(hia)
 }
