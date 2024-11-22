@@ -106,9 +106,9 @@ get_paf_from_rr_delta <- function(rr_base, rr_perm, age_weights, pop, ci_level =
   paf_high <- paf_central + qnorm(upper_prob) * SE_paf
 
   # Weight by age group, then by population
-  paf_low <- rowSums(paf_low * age_weights_norm, na.rm = TRUE)
-  paf_central <- rowSums(paf_central * age_weights_norm, na.rm = TRUE)
-  paf_high <- rowSums(paf_high * age_weights_norm, na.rm = TRUE)
+  paf_low <- rowSums(paf_low %*% age_weights_norm, na.rm = TRUE)
+  paf_central <- rowSums(paf_central %*% age_weights_norm, na.rm = TRUE)
+  paf_high <- rowSums(paf_high %*% age_weights_norm, na.rm = TRUE)
 
   paf <- cbind(low=paf_low, central=paf_central, high=paf_high) %>%
     sweep(1, pop, "*") %>%
