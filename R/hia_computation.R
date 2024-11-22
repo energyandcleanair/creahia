@@ -276,7 +276,11 @@ compute_hia_epi <- function(species,
       stop("Duplicated values in epidemiological data")
     }
 
-    hia_scenario <- epi_loc %>% sel(region_id, estimate, pop)
+    hia_scenario <- epi_loc %>%
+      sel(region_id, estimate, pop) %>%
+      # Order estimate: low, central, high
+      mutate(estimate = factor(estimate, levels = c('low', 'central', 'high'))) %>%
+      arrange(estimate)
 
     for(i in which(crfs$Exposure %in% hia_polls)) {
 
@@ -315,8 +319,10 @@ compute_hia_epi <- function(species,
       RR.ind <- match(hia_scenario$estimate, names(crfs))
       RRs <- crfs[i, RR.ind] %>% unlist %>% unname
 
-      hia_scenario[[crfs$effectname[i]]] <- epi_loc[[crfs$Incidence[i]]] / 1e5 * epi_loc$pop *
-        (1 - exp(-log(RRs)*source_concs / crfs$Conc.change[i]))
+      # PM Mortality is always low < central < high, regardless of the direction
+      # For consistency, we impose the same direction for other outcomes
+      hia_scenario[[crfs$effectname[i]]] <- sort(epi_loc[[crfs$Incidence[i]]] / 1e5 * epi_loc$pop *
+        (1 - exp(-log(RRs)*source_concs / crfs$Conc.change[i])))
 
     }
 
