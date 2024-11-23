@@ -261,7 +261,6 @@ compute_hia_epi <- function(species,
       right_join(pop_domain %>% sel(region_id, epi_location_id, pop),
                 # multiple='all',
                 by=c(location_id='epi_location_id'))
-      # sel(-epi_iso3)
 
     # Exclude unmatched countries
     na_iso3s <- epi_loc$region_id[is.na(epi_loc$location_id)]
@@ -277,10 +276,7 @@ compute_hia_epi <- function(species,
     }
 
     hia_scenario <- epi_loc %>%
-      sel(region_id, estimate, pop) %>%
-      # Order estimate: low, central, high
-      mutate(estimate = factor(estimate, levels = c('low', 'central', 'high'))) %>%
-      arrange(estimate)
+      sel(region_id, estimate, pop)
 
     for(i in which(crfs$Exposure %in% hia_polls)) {
 
@@ -319,12 +315,26 @@ compute_hia_epi <- function(species,
       RR.ind <- match(hia_scenario$estimate, names(crfs))
       RRs <- crfs[i, RR.ind] %>% unlist %>% unname
 
-      # PM Mortality is always low < central < high, regardless of the direction
-      # For consistency, we impose the same direction for other outcomes
-      hia_scenario[[crfs$effectname[i]]] <- sort(epi_loc[[crfs$Incidence[i]]] / 1e5 * epi_loc$pop *
-        (1 - exp(-log(RRs)*source_concs / crfs$Conc.change[i])))
 
+      hia_scenario[[crfs$effectname[i]]] <- epi_loc[[crfs$Incidence[i]]] / 1e5 * epi_loc$pop *
+        (1 - exp(-log(RRs)*source_concs / crfs$Conc.change[i]))
     }
+
+    # PM Mortality is always low < central < high, regardless of the direction
+    # For consistency, we impose the same direction for other outcomes
+    # Hack for now, would need to clean it a bit
+    hia_scenario <- hia_scenario %>%
+      pivot_longer(-c(region_id, estimate, pop),
+                   names_to = 'Outcome', values_to = 'number') %>%
+      group_by(region_id, Outcome) %>%
+      arrange(number) %>%
+      mutate(
+        estimate=c('low', 'central', 'high'),
+      ) %>%
+      ungroup() %>%
+      pivot_wider(names_from = Outcome, values_from = number)
+
+
 
     # Add PM mortality from PAF x EPI
     if(!is.null(paf[[scenario]]) && nrow(paf[[scenario]]) > 0) {
