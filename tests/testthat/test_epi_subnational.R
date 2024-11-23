@@ -1,3 +1,5 @@
+skip("Only need to be run when creating new epi.")
+
 testthat::source_test_helpers("tests", env = globalenv())
 testthat::source_test_helpers("../", env = globalenv())
 
