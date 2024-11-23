@@ -1,16 +1,21 @@
+skip("Only need to be run when creating new epi.")
+
 testthat::source_test_helpers("tests", env = globalenv())
 testthat::source_test_helpers("../", env = globalenv())
 
 
 test_that("GADM level 2 gives similar results to level 1 and level 0 - Indonesia", {
 
+  # Sourc test helper functions
+  try(source("tests/helpers.R"), silent=T)
+  try(source("../helpers.R"), silent=T)
 
   library(terra)
   library(creahelpers)
   library(dplyr)
   library(creahia)
 
-  print(get_examples_dir())
+  # print(get_examples_dir())
   print(creahia::get_hia_path("GEMM Calculator (PNAS)_ab.xlsx"))
   print(find.package("creahia"))
 

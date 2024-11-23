@@ -163,7 +163,7 @@ compute_hia_paf <- function(conc_map,
       total = length(names(conc_scenario))
     )
 
-    paf[[scenario]] <- foreach(region_id = names(conc_scenario)) %dopar% {
+    paf[[scenario]] <- lapply(names(conc_scenario), function(region_id) {
 
       tryCatch({
         pg$tick()
@@ -194,14 +194,17 @@ compute_hia_paf <- function(conc_map,
 
         paf_region <- paf_region %>% bind_rows(.id = 'var') %>%
           mutate(region_id = region_id)
+
+        return(paf_region)
       }, error = function(e) {
         # For instance if country iso3 not in ihme$ISO3
-        logger::log_warn("Failed for region ", region_id)
-        paf_region <- NULL
+        logger::log_warn(paste("Failed for region ", region_id, ": ", e$message))
+        return(NULL)
       })
-      return(paf_region)
-    }
+    })
   }
+
+  # Combine all scenarios
   paf %>% lapply(bind_rows)
 }
 
@@ -258,7 +261,6 @@ compute_hia_epi <- function(species,
       right_join(pop_domain %>% sel(region_id, epi_location_id, pop),
                 # multiple='all',
                 by=c(location_id='epi_location_id'))
-      # sel(-epi_iso3)
 
     # Exclude unmatched countries
     na_iso3s <- epi_loc$region_id[is.na(epi_loc$location_id)]
@@ -273,7 +275,8 @@ compute_hia_epi <- function(species,
       stop("Duplicated values in epidemiological data")
     }
 
-    hia_scenario <- epi_loc %>% sel(region_id, estimate, pop)
+    hia_scenario <- epi_loc %>%
+      sel(region_id, estimate, pop)
 
     for(i in which(crfs$Exposure %in% hia_polls)) {
 
@@ -312,31 +315,36 @@ compute_hia_epi <- function(species,
       RR.ind <- match(hia_scenario$estimate, names(crfs))
       RRs <- crfs[i, RR.ind] %>% unlist %>% unname
 
+
       hia_scenario[[crfs$effectname[i]]] <- epi_loc[[crfs$Incidence[i]]] / 1e5 * epi_loc$pop *
         (1 - exp(-log(RRs)*source_concs / crfs$Conc.change[i]))
-
     }
+
+    # PM Mortality is always low < central < high, regardless of the direction
+    # For consistency, we impose the same direction for other outcomes
+    # Hack for now, would need to clean it a bit
+    hia_scenario <- hia_scenario %>%
+      pivot_longer(-c(region_id, estimate, pop),
+                   names_to = 'Outcome', values_to = 'number') %>%
+      group_by(region_id, Outcome) %>%
+      arrange(number) %>%
+      mutate(
+        estimate=c('low', 'central', 'high'),
+      ) %>%
+      ungroup() %>%
+      pivot_wider(names_from = Outcome, values_from = number)
+
+
 
     # Add PM mortality from PAF x EPI
     if(!is.null(paf[[scenario]]) && nrow(paf[[scenario]]) > 0) {
-      paf_wide <- paf[[scenario]] %>%
-        gather(estimate, val, low, central, high) %>%
-        mutate(var = paste0('paf_', var)) %>%
-        spread(var, val)
 
-      paf_wide <- epi_loc %>% left_join(paf_wide)
-
-      pm_mort <- paf_wide %>% sel(region_id, estimate)
-
-      available_causes <- intersect(unique(paf[[scenario]]$var), names(epi_loc))
-
-      for(cs in intersect(available_causes, calc_causes)) {
-        pm_mort[[cs]] <- paf_wide[[cs]] / 1e5 * paf_wide[[paste0('paf_', cs)]] * paf_wide$pop
-      }
-
-      names(pm_mort)[sapply(pm_mort, is.numeric)] <- names(pm_mort)[sapply(pm_mort, is.numeric)] %>%
-        paste0('_PM25')
-      hia_scenario <- full_join(pm_mort, hia_scenario)
+      pm_mortality <- get_pm_mortality(
+        paf_scenario = paf[[scenario]],
+        epi_loc = epi_loc,
+        calc_causes = calc_causes
+      )
+      hia_scenario <- full_join(pm_mortality, hia_scenario)
     }
 
     hia_scenario <- hia_scenario %>%
@@ -465,93 +473,21 @@ country_paf_perm <- function(pm.base,
                                simplify = 'array')
 
 
-    paf.perm <- rr.perm / rr.base - 1
-
-    # IMPORTANT: should be paf.perm <- 1 - rr.base / rr.perm
-    # Will fix in a new branch
+    paf <- get_paf_from_rr_delta(
+      rr_base = rr.base,
+      rr_perm = rr.perm,
+      age_weights = age_weights$val,
+      pop = pop
+    )
 
   } else {
-    paf.perm <- (1 - (1 / rr.base)) * (1 - pm.perm / pm.base)
+    stop("Attribution mode not implemented yet")
+    #TODO implement the method with this formula
+    # paf.perm <- (1 - (1 / rr.base)) * (1 - pm.perm / pm.base)
   }
 
-  if(length(dim(paf.perm)) == 2) {
-    # in case the get_hazard_ratio function didn't return an array
-    paf.perm %>%
-      t %>%
-      orderrows %>%
-      apply(2, weighted.mean, age_weights$val)
-  } else {
-    tryCatch({
-
-      # old <- paf.perm %>%
-      #   apply(1:2, stats::weighted.mean, age_weights$val) %>%
-      #   orderrows %>%
-      #   apply(2, weighted.mean, w = pop)
-
-      # matrixStats two orders of magnitude faster
-      # also removed orderrows (though checking it is already ordered)
-      check_order <- function(x){
-        if(!is.matrix(x)){
-          # just for the edge case when you only have one row
-          x <- t(as.matrix(x))
-        }
-        ok <- all(abs(x[,'low']) <= abs(x[,'central']))
-        ok <- ok & all(abs(x[,'central']) <= abs(x[,'high']))
-        ok <- ok & all(sign(x[,'low']) == sign(x[,'central']))
-        ok <- ok & all(sign(x[,'central']) == sign(x[,'high']))
-        # Should all have the same sign
-        if(!ok){
-          warning("Failed to satisfy low > central or central > high (or opposite if negative sign). Ordering manually")
-          #Note: I (Hubert) think the whole low, central, high isn't correct. Taking the
-          # ratio of low, ratio of central and ratio of high doesn't necessarily lead to low, central, high...
-          x <- orderrows(x)
-          }
-        x
-      }
-
-      new <- paf.perm %>%
-        apply(2, matrixStats::rowWeightedMeans, w = age_weights$val) %>%
-        check_order() %>%
-        apply(2, weighted.mean, w = pop)
-
-      # if(any(round(old,6) != round(new,6))){
-      #   stop("Broke something")
-      # }
-      #
-      return(new)
-    }, error = function(e) {
-      warning("Failed for region ", region_id, cause, e)
-      return(NULL)
-    })
-  }
+  return(paf)
 }
-
-
-# country_paf <- function(pm, pop, cy, cs, ms, adult_ages = get_adult_ages(),
-#                         .region = "inc_China", gemm = get_gemm(), gbd = get_gbd()) {
-#
-#   if(grepl('child', cs)) {
-#     ages <- 'Under 5'
-#     w <- data.frame(val = 1)
-#   } else {
-#     ages <- adult_ages
-#     w <- ihme %>% dplyr::filter(ISO3 == cy, cause_short == cs, measure_name == ms,
-#                                 age %in% ages, estimate == 'central')
-#   }
-#
-#   rr <- ages %>% sapply(function(.a) hr(pm, .cause = cs, .age = .a,
-#                                         .region = .region, gemm = gemm, gbd = gbd),
-#                   simplify = 'array')
-#   paf <- 1 - 1 / rr
-#
-#   if(length(dim(paf)) == 2) {
-#     paf %>% t %>%
-#       apply(2, weighted.mean, w$val) # in case the hr function didn't return an array
-#   } else {
-#     paf %>% apply(1:2, weighted.mean, w$val, na.rm = T) %>%
-#       apply(2, weighted.mean, w = pop, na.rm = T)
-#   }
-# }
 
 
 scale_hia_pop <- function(hia, base_year = 2015, target_year = 2019) {
