@@ -259,7 +259,7 @@ compute_hia_epi <- function(species,
     epi_loc <- epi %>%
       sel(-pop, -country) %>%
       right_join(pop_domain %>% sel(region_id, epi_location_id, pop),
-                # multiple='all',
+                relationship = 'many-to-many',
                 by=c(location_id='epi_location_id'))
 
     # Exclude unmatched countries
