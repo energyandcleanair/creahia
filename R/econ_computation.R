@@ -311,7 +311,9 @@ get_econ_forecast <- function(hia_cost,
 
   hia_by_year <- suppressMessages(hia_cost %>%
                                     select(-year) %>%
-                                    full_join(pop_scaling))
+                                    full_join(pop_scaling,
+                                              relationship = "many-to-many"
+                                              ))
 
   hia_by_year %>% mutate(number = number * pop_scaling,
                          cost_mn_currentUSD = cost_mn_currentUSD * pop_scaling * GDPscaling)
