@@ -1,0 +1,140 @@
+#' Generate random exposure raster
+#'
+#' @param min
+#' @param max
+#'
+#' @return
+#' @export
+#'
+#' @examples
+generate_random_exposure <- function(min, max){
+  res <- 0.01
+  pm25 <- terra::rast(
+    xmin=88,
+    xmax=92,
+    ymin=20,
+    ymax=27,
+    res=res,
+    crs="+proj=longlat +datum=WGS84")
+
+  pm25[] <- runif(prod(dim(pm25)), min, max)
+  return(pm25)
+}
+
+
+
+#' Generate a HIA for a uniform exposure perturbation in Bangladesh
+#'
+#' @param baseline
+#' @param target
+#' @param calc_causes
+#'
+#' @return
+#' @export
+#'
+#' @examples
+generate_uniform_exposure_hia <- function(baseline, target, calc_causes = "GEMM and GBD"){
+
+  library(terra)
+  library(creahelpers)
+  library(dplyr)
+  library(creahia)
+  library(creaexposure)
+
+  # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
+  res <- 0.01
+  baseline_rast <- terra::rast(
+    xmin=88,
+    xmax=92,
+    ymin=20,
+    ymax=27,
+    res=res,
+    crs="+proj=longlat +datum=WGS84")
+
+  baseline_rast[] <- baseline
+
+  # Build two perturbations:
+  # p1: bring it down to 0
+  # p2: bring it down to WHO2021
+  perturbation_rast <- target-baseline_rast
+
+  creahia::wrappers.compute_hia_two_images.default(
+    perturbation_rasters = list(pm25 = perturbation_rast),
+    baseline_rasters = list(pm25 = baseline_rast),
+    scale_base_year = NULL, # Just to avoid unnecessary warning
+    scale_target_year = NULL,  # Just to avoid unnecessary warning
+    pop_year=2020,
+    administrative_level = 0,
+    administrative_res = "low",
+    administrative_iso3s = "BGD",
+    epi_version = "gbd2019",
+    calc_causes = calc_causes
+  )
+
+}
+
+
+
+#' Generate a HIA for a random exposure perturbation in Bangladesh
+#' at multiple levels
+#'
+#' @param levels
+#' @param min
+#' @param max
+#' @param target
+#' @param calc_causes
+#'
+#' @return
+#' @export
+#'
+#' @examples
+generate_random_exposure_hias <- function(levels,
+                                          min=20,
+                                          max=60,
+                                          target=0,
+                                          calc_causes = "GEMM and GBD",
+                                          epi_version = "gbd2019",
+                                          administrative_res = "low"
+){
+
+  library(terra)
+  library(creahelpers)
+  library(dplyr)
+  library(creahia)
+  library(creaexposure)
+
+  # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
+  res <- 0.01
+  baseline_rast <- terra::rast(
+    xmin=88,
+    xmax=92,
+    ymin=20,
+    ymax=27,
+    res=res,
+    crs="+proj=longlat +datum=WGS84")
+
+  baseline_rast[] <- runif(prod(dim(baseline_rast)), min, max)
+
+  # Build two perturbations:
+  # p1: bring it down to 0
+  # p2: bring it down to WHO2021
+  perturbation_rast <- target-baseline_rast
+
+  # Compute HIAs
+  lapply(levels, function(level){
+    creahia::wrappers.compute_hia_two_images.default(
+      perturbation_rasters = list(pm25 = perturbation_rast),
+      baseline_rasters = list(pm25 = baseline_rast),
+      scale_base_year = NULL, # Just to avoid unnecessary warning
+      scale_target_year = NULL,  # Just to avoid unnecessary warning
+      pop_year=2020,
+      administrative_level = level,
+      administrative_res = administrative_res,
+      administrative_iso3s = "BGD",
+      epi_version = epi_version,
+      calc_causes = calc_causes
+    ) %>%
+      mutate(level=level)
+  }) %>%
+    bind_rows()
+}

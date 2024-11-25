@@ -1,49 +1,7 @@
-get_random_exposure_hia <- function(levels, min=20, max=60, target=0, calc_causes = "GEMM and GBD"){
+testthat::source_test_helpers("tests", env = globalenv())
+testthat::source_test_helpers("../", env = globalenv())
 
-  library(terra)
-  library(creahelpers)
-  library(dplyr)
-  library(creahia)
-  library(creaexposure)
-
-  # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
-  res <- 0.01
-  baseline_rast <- terra::rast(
-    xmin=88,
-    xmax=92,
-    ymin=20,
-    ymax=27,
-    res=res,
-    crs="+proj=longlat +datum=WGS84")
-
-  baseline_rast[] <- runif(prod(dim(baseline_rast)), min, max)
-
-  # Build two perturbations:
-  # p1: bring it down to 0
-  # p2: bring it down to WHO2021
-  perturbation_rast <- target-baseline_rast
-
-  # Compute HIAs
-  lapply(levels, function(level){
-    creahia::wrappers.compute_hia_two_images.default(
-      perturbation_rasters = list(pm25 = perturbation_rast),
-      baseline_rasters = list(pm25 = baseline_rast),
-      scale_base_year = NULL, # Just to avoid unnecessary warning
-      scale_target_year = NULL,  # Just to avoid unnecessary warning
-      pop_year=2020,
-      administrative_level = level,
-      administrative_res = "low",
-      administrative_iso3s = "BGD",
-      epi_version = "gbd2019",
-      calc_causes = calc_causes
-    ) %>%
-      mutate(level=level)
-  }) %>%
-    bind_rows()
-}
-
-
-test_that("Regions extraction works and doesn't have any double counting", {
+test_that("Regions extraction works", {
 
 
   library(terra)
@@ -53,27 +11,7 @@ test_that("Regions extraction works and doesn't have any double counting", {
   library(creaexposure)
 
   # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
-  res <- 0.01
-  pm25 <- terra::rast(
-    xmin=88,
-    xmax=92,
-    ymin=20,
-    ymax=27,
-    res=res,
-    crs="+proj=longlat +datum=WGS84")
-
-  pm25[] <- runif(prod(dim(pm25)), min, max)
-
-  # Build two perturbations:
-  # p1: bring it down to 0
-  # p2: bring it down to WHO2021
-  # perturbation_rast <- target-pm25
-
-  # res <- creaexposure::RES_30_SEC
-  # bbox <- creaexposure::get_bbox("BD")
-  # pop <- creaexposure::data.pop(res=res, bbox=bbox)
-  # pm25 <- creaexposure::data.basemap_pm25(pop=pop, res=res, year=2019)
-  pop_year <- 2020
+  pm25 <- generate_random_exposure(20, 60)
 
   # Build required data ---------------------------------------------------------------------
   baseline_rasters <- list(pm25=pm25)
@@ -100,7 +38,7 @@ test_that("Regions extraction works and doesn't have any double counting", {
   # 03: Combine and flatten: one row per scenario --------------------------------------------
   concs <- creahia::combine_concs(conc_perturbation, conc_baseline) %>% # combine table
     creahia::flatten_concs() %>% # long to wide
-    creahia::add_pop(grid_raster, year_desired=pop_year)
+    creahia::add_pop(grid_raster, year_desired=2020)
 
 
   regions_0 <- creahia::get_model_adm(grid_raster,

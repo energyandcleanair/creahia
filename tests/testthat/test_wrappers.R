@@ -32,9 +32,8 @@ test_that("wrapper 2 images works", {
   hia <- creahia::wrappers.compute_hia_two_images(perturbation_rasters = perturbation_rasters,
                                            baseline_rasters = baseline_rasters,
                                            administrative_iso3s = "PHL",
-                                           # crfs_version = "C40",
-                                           # epi_version="C40"
-  )
+                                           pop_year=2020
+                                           )
 
   dir.create("tmp")
   cost <- creahia::compute_econ_costs(hia=hia,

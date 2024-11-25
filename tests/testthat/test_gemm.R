@@ -1,3 +1,5 @@
+testthat::skip("Needs exposure data that is not (yet?) available on GitHub actions")
+
 # This is a comparison with a literature article that also uses GEMM with von Donkelar
 
 
@@ -26,7 +28,7 @@ test_that("Our GEMM-derived deaths are similar to literature", {
   # India average population-weighted average: 74 μg/m3
   # India premature deaths: 2,219,000
 
-  creahelpers::reload_packages("creaexposure")
+  # creahelpers::reload_packages("creaexposure")
 
   library(testthat)
   library(terra)

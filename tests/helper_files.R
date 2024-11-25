@@ -28,3 +28,7 @@ copy_epi_data_update <- function(){
     lapply(function(x){file.copy(file.path(dir_org, x), file.path(dir_dest, x))})
 
 }
+
+
+
+
