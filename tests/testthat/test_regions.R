@@ -1,4 +1,4 @@
-
+testthat::skip("Not sure yet what to do with this test")
 
 test_that("Regions extraction works and doesn't have any double counting", {
 

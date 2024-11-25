@@ -1,3 +1,7 @@
+testthat::source_test_helpers("tests", env = globalenv())
+testthat::source_test_helpers("../", env = globalenv())
+
+
 test_that("get_pm_mortality computes attributable burden correctly", {
 
   # Sample PAF data
@@ -7,7 +11,7 @@ test_that("get_pm_mortality computes attributable burden correctly", {
 
     # Create paf_scenario dataframe
     paf_scenario <- tibble::tibble(
-      var = vars,
+      var = var,
       low = central_paf - z * se_paf,
       central = central_paf,
       high = central_paf + z * se_paf,
@@ -17,6 +21,7 @@ test_that("get_pm_mortality computes attributable burden correctly", {
     # Create epi_loc dataframe
     epi_loc <- tibble::tibble(
       iso3 = region_id,
+      region_id = region_id,
       estimate = rep(c("low", "central", "high"), each = length(vars)),
       pop = rep(pop, 3 * length(vars)),
       value = c(
