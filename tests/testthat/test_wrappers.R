@@ -35,7 +35,7 @@ test_that("wrapper 2 images works", {
                                            pop_year=2020
                                            )
 
-  dir.create("tmp")
+  dir.create("tmp", showWarnings = F)
   cost <- creahia::compute_econ_costs(hia=hia,
                                       results_dir = "tmp",
                                       valuation_version="viscusi",
