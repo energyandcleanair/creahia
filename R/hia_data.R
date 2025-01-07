@@ -386,8 +386,6 @@ get_ihme <- function(version='gbd2017') {
 
 
 get_adult_ages <- function(ihme) {
-  print("Getting adult_ages")
-
   ihme$age[ihme$age_low >= 25] %>% subset(!is.na(.)) %>%
     unique
 }
