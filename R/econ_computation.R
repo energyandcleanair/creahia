@@ -103,7 +103,7 @@ get_hia_cost <- function(hia,
   missing_outcome <- hia_cost %>% filter(is.na(valuation_current_usd)) %>%
     distinct(Outcome) %>% pull()
   if(length(missing_outcome) > 0) {
-    warning('The following outome(s) do not have valuations: ',
+    message('The following outome(s) do not have valuations: ',
             paste(missing_outcome, collapse = ', '))
   }
   return(hia_cost)
@@ -167,7 +167,8 @@ format_hia_table <- function(table, CI_underneath = F) {
         grepl('cost_mn', indicator) ~ scales::comma(central, 1),
         T ~ scales::comma(central, 1))
     ) %>%
-    select(-c(low, high))
+    # remove low and high columns
+    select(-any_of(c("low", "high")))
 
   if(CI_underneath) {
     formatted <- formatted %>%
