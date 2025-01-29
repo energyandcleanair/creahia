@@ -1,3 +1,5 @@
+skip("Only need to be run when creating new epi.")
+
 testthat::source_test_helpers("tests", env = globalenv())
 testthat::source_test_helpers("../", env = globalenv())
 
@@ -18,8 +20,8 @@ test_that("GBD2019 and GBD2017 have comparable data - input", {
   yld2017 <- get_yld(pop.total, version='gbd2017')
   yld2019 <- get_yld(pop.total, version='gbd2019')
 
-  totcp2017 <- get_death_totcp(yld=yld2017, pop.total=pop.total, version='gbd2017')
-  totcp2019 <- get_death_totcp(yld=yld2019, pop.total=pop.total, version='gbd2019')
+  # totcp2017 <- get_death_totcp(yld=yld2017, pop.total=pop.total, version='gbd2017')
+  # totcp2019 <- get_death_totcp(yld=yld2019, pop.total=pop.total, version='gbd2019')
 
   asthma2017 <- get_asthma_prev(pop.total, version='gbd2017')
   asthma2019 <- get_asthma_prev(pop.total, version='gbd2019')
@@ -183,11 +185,12 @@ test_that("GBD2019 and GBD2017 yield roughly similar results - Philipines", {
     filter(!double_counted,
            estimate=='central') %>%
     group_by(Outcome, epi_version) %>%
-    summarise(value=sum(number, na.rm=T))
+    dplyr::summarise(value=sum(number, na.rm=T))
 
 
   # Test that deaths close to 65000
   comparison_outcome <- comparison %>%
+    filter(!double_counted) %>%
     tidyr::spread(Outcome, value)
   comparison_outcome$Death_target <- 65000
   testthat::expect_equal(comparison_outcome$Deaths, comparison_outcome$Death_target , tolerance = 1e-1)
@@ -206,4 +209,57 @@ test_that("GBD2019 and GBD2017 yield roughly similar results - Philipines", {
   testthat::expect_equal(comparison_epi$gbd2017[idx_gbd], comparison_epi$gbd2019[idx_gbd], tolerance=1e-1)
   testthat::expect_true(all(comparison_epi$gbd2017[idx_gbd]!=comparison_epi$gbd2019[idx_gbd]))
 
+
 })
+
+
+test_that("New epi doesn't differ too much from old one", {
+
+
+  version <- "gbd2019"
+
+  new <- read_csv(glue("inst/extdata/epi_for_hia_{version}.csv"))
+  old <- read_csv(glue("https://raw.githubusercontent.com/energyandcleanair/creahia/7966ab8f14bda553e4cfbb1eb59dd872d3217c84/inst/extdata/epi_for_hia_{version}.csv"))
+
+  # It should not have changed central
+  comparison <- bind_rows(
+    new %>% mutate(source="new"),
+    old %>% mutate(source="old")
+  ) %>%
+    filter(!is.na(location_id)) %>%
+    tidyr::pivot_longer(cols = -c(location_id, location_level, iso3, estimate, location_name, country, region, income_group, pop, source),
+                        names_to="var", values_to="value") %>%
+    select(location_id, estimate, source, var, value) %>%
+  spread(source, value) %>%
+    mutate(diff_rel=(new/old)-1)
+
+  # Should be perfectly matching
+  # i.d. no NA in new or old
+  missing <- comparison %>%
+    filter(is.na(new) != is.na(old)) %>%
+    nrow()
+
+  testthat::expect_equal(missing, 0)
+
+
+  different_central <- comparison %>%
+    filter(estimate=='central') %>%
+    filter(abs(diff_rel) > 0.001) %>%
+    nrow()
+
+  testthat::expect_equal(different_central, 0)
+
+
+  # No low > central or high < central
+  inversed <- new %>%
+    filter(!is.na(location_id)) %>%
+    tidyr::pivot_longer(cols = -c(location_id, location_level, iso3, estimate, location_name, country, region, income_group, pop),
+                        names_to="var", values_to="value") %>%
+    select(location_id, estimate, var, value) %>%
+    spread(estimate, value) %>%
+    filter(low > central | high < central | low > high) %>%
+    nrow()
+
+  testthat::expect_equal(inversed, 0)
+})
+

@@ -186,7 +186,8 @@ country_recode_iso3 <- function(iso3s, replacements = NULL) {
 
 
 orderrows <- function(df) {
-  rr.out <- df %>% apply(1, sort) %>% t
+  decreasing <- all(df)<=0
+  rr.out <- df %>% apply(1, sort, decreasing=decreasing) %>% t
   colnames(rr.out) <- c('low', 'central', 'high')
   rr.out
 }
@@ -207,4 +208,18 @@ debug_and_stop <- function(e) {
 
 debug_and_warning <- function(e) {
   warning(e)
+}
+
+
+get_focal_d <- function(grid_raster){
+  # change focal diameter depending on grid_raster crs unit
+  units <- grid_raster %>% crs(proj = T) %>%
+    as.character() %>%
+    str_extract('\\+units=([^ ]+)') %>%
+    str_remove('\\+units=')
+  if(units == 'm'){
+    focal_d <- 100000
+  } else if(units == 'km'){
+    focal_d <- 100
+  }
 }
