@@ -10,61 +10,28 @@
 #'
 #' @examples
 wrappers.get_conc_baseline <- function(species, grid_raster,
-                                      no2_min_incr = NULL,
-                                      no2_targetyear = 2019,
-                                      pm25_to_pm10_ratio = .7) {
-  avail_species <- c('no2', 'so2', 'pm25', 'tpm10', 'o3') # pollutants with available baseline
-  file_list <- list(
-    'pm25' = 'GlobalGWRcwUni_PM25_GL_201601_201612-RH35_Median.nc',
-    'o3' = 'O3_77e3b7-xmessy_mmd_kk.nc'
-  )
+                                       no2_min_incr = NULL,
+                                       no2_targetyear = 2019,
+                                       pm25_to_pm10_ratio = .7) {
+  avail_species <- c('no2', 'so2', 'pm25', 'tpm10', 'o3', 'o3_8h') # pollutants with available baseline
 
-  species <- species[tolower(species) %in% avail_species]
+  species <- species %>% tolower() %>% subset(. %in% avail_species)
 
   conc <- lapply(species, function(spec) {
     if(spec == 'no2') {
-      conc_no2 <- creahelpers::get_concentration_path('no2_agg8.grd') %>%
-        raster %>%
-        creahelpers::cropProj(grid_raster) %>%
-        multiply_by(1.88)
-
-      if(!is.null(no2_targetyear)) {
-        no2_11 <- creahelpers::get_concentration_path("no2_omi_2011.tif") %>%
-          raster %>%
-          creahelpers::cropProj(grid_raster)
-        no2_targetyr <- creahelpers::get_concentration_path(glue("no2_omi_{no2_targetyear}.tif")) %>%
-          raster %>%
-          creahelpers::cropProj(grid_raster)
-
-        no2_11_smooth <- no2_11 %>%
-          focal(focalWeight(., 100, "circle"), mean, na.rm = T, pad = T, padValue = NA)
-        no2_targetyr_smooth <- no2_targetyr %>%
-          focal(focalWeight(., 100, "circle"), mean, na.rm = T, pad = T, padValue = NA)
-
-        no2_ratio <- no2_targetyr_smooth / no2_11_smooth
-
-        if(!is.null(no2_min_incr)) {
-          no2_ratio <- no2_ratio %>% max(no2_min_incr)
-        }
-
-        conc_no2 <- conc_no2 %>% multiply_by(no2_ratio)
-      }
-
-      conc_no2[] <- conc_no2[] %>% na.approx(maxgap = 5, na.rm = F)
-      conc_no2
-    } else if(spec == 'so2') {
+      get_conc_baseline_no2(grid_raster = grid_raster,
+                            no2_targetyear = no2_targetyear,
+                            no2_min_incr = no2_min_incr)
+    } else if(spec == 'so2'){
       grid_raster %>% setValues(10)
-    } else if(spec == 'tpm10') {
-      creahelpers::get_concentration_path(file_list[['pm25']]) %>%
-        raster %>%
-        creahelpers::cropProj(grid_raster) %>%
+    } else if(spec == 'tpm10'){
+      get_conc_baseline_pm25(target_year = no2_targetyear, grid_raster = grid_raster) %>%
         multiply_by(1 / pm25_to_pm10_ratio)
-    } else {
-      creahelpers::get_concentration_path(file_list[[spec]]) %>%
-        raster %>%
-        creahelpers::cropProj(grid_raster)
+    } else if(spec == 'pm25'){
+      get_conc_baseline_pm25(target_year = no2_targetyear, grid_raster = grid_raster)
+    } else if(spec %in% c('o3', 'o3_8h')){
+      get_conc_baseline_o3(grid_raster = grid_raster, species = spec)
     }
-
   }) %>% `names<-`(species)
 
   tibble(species = names(conc),
@@ -76,7 +43,6 @@ wrappers.get_conc_baseline <- function(species, grid_raster,
 #' Compute HIA wrapper: given a list of rasters that represent perturbation in one or several pollutants.
 #'
 #' @param obj generic object
-#'
 #' @return
 #' @export
 #'
@@ -105,26 +71,46 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                                                     administrative_res = "low",
                                                     administrative_iso3s = NULL,
                                                     scenario_name = "scenario",
-                                                    scale_base_year = 2019,
-                                                    scale_target_year = 2025,
+                                                    pop_year = NULL,
+                                                    scale_base_year = 2019, # Deprecated
+                                                    scale_target_year = NULL, # Deprecated
                                                     crfs_version = "default",
                                                     epi_version = "default",
+                                                    ihme_version = epi_version,
                                                     # valuation_version = "default",
                                                     return_concentrations = F,
                                                     pm2.5_to_pm10_ratio = NULL,
                                                     ...){
 
+  # Fix inputs: if scale_base_year or scale_target_year is not null,
+  # warn user
+  if(!is.null(scale_base_year) | !is.null(scale_target_year)){
+    if(is.null(pop_year)){
+      pop_year <- coalesce(scale_target_year, scale_base_year)
+    }
+    messages <- c(
+      "scale_base_year and scale_target_year are deprecated. Use pop_year instead, as the year you",
+      "want to scale the population to. The base year is now determined automatically based on available data.",
+      "\npop_year set to", pop_year
+    )
+    warning(paste(messages, collapse = " "))
+  }
+
   # For now, creahelpers work with raster package. To ensure transition,
   # we become format agnostic for now.
-  perturbation_rasters <- perturbation_rasters %>% creahelpers::to_raster()
-  baseline_rasters <- baseline_rasters %>% creahelpers::to_raster()
+  perturbation_rasters <- perturbation_rasters %>%
+    creahelpers::to_raster() %>%
+    creahelpers::unrasterstack()
 
+  baseline_rasters <- baseline_rasters %>%
+    creahelpers::to_raster() %>%
+    creahelpers::unrasterstack()
 
   species <- names(perturbation_rasters)
   grid_raster <- perturbation_rasters[[1]] %>% raster::raster()
 
   conc_perturbation <- tibble(species = species,
-                              conc_perturbation = raster::unstack(perturbation_rasters),
+                              conc_perturbation = perturbation_rasters,
                               scenario = scenario_name)
 
   # 02: Get base concentration levels --------------------------------------------------------
@@ -162,7 +148,7 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   # 03: Combine and flatten: one row per scenario --------------------------------------------
   concs <- creahia::combine_concs(conc_perturbation, conc_baseline) %>% # combine table
     creahia::flatten_concs() %>% # long to wide
-    creahia::add_pop(grid_raster)
+    creahia::add_pop(grid_raster, year_desired=pop_year)
 
   # 04: Create support maps (e.g. countries, provinces, cities ) -----------------------------
   if(is.null(regions)) {
@@ -173,15 +159,15 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   }
 
   # 05: Extract concentrations ---------------------------------------------------------------
-  conc_regions <- creahia::extract_concs_at_regions(concs, regions, species)
+  conc_regions <- creahia::extract_concs_and_pop(concs, regions, species)
 
   # 06: Compute hia --------------------------------------------------------------------------
   hia <- creahia::compute_hia(conc_map = conc_regions,
                               species = species,
                               regions = regions,
-                              scale_base_year = scale_base_year,
-                              scale_target_year = scale_target_year,
+                              pop_year = pop_year,
                               epi_version = epi_version,
+                              ihme_version = ihme_version,
                               crfs_version = crfs_version,
                               ...)
 
@@ -208,11 +194,12 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
 #' Compute HIA wrapper: given the scenarios and a data frame that represent perturbation in one or several pollutants.
 #'
 #' @param scenarios different scenarios to process.
-#' @param perturbation_rasters_table the table from creapuff::get_calpuff_files function.
+#' @param perturbation_rasters_table the table from creapuff::get_calpuff_files function or similar.
 #' @param baseline_rasters_table the table from wrapper.get_conc_baseline function.
 #' @param grid_raster grid raster for the model.
-#' @param crfs_version
+#' @param crfs_version version of the CRFs to use.
 #' @param return_concentrations include the population-weighted concentrations by admin area in the results. In this case, the function returns a list.
+#' @param output_folder folder to save the results.
 #'
 #' @return
 #' @export
@@ -223,18 +210,34 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
                                                       baseline_rasters_table,
                                                       grid_raster,
                                                       regions = NULL,
+                                                      pop_year = NULL,
                                                       scale_base_year = 2019,
-                                                      scale_target_year = 2025,
+                                                      scale_target_year = NULL, # No scaling by default
                                                       crfs_version = "default",
                                                       epi_version = "default",
+                                                      ihme_version = epi_version,
                                                       # valuation_version = "default",
                                                       return_concentrations = F,
+                                                      output_folder = '.',
                                                       ...){
+
+  # Fix inputs: if scale_base_year or scale_target_year is not null,
+  # warn user
+  if(!is.null(scale_base_year) | !is.null(scale_target_year)){
+    pop_year <- ifelse(is.null(pop_year), scale_target_year, pop_year)
+    messages <- c(
+      "scale_base_year and scale_target_year are deprecated. Use pop_year instead, as the year you",
+      "want to scale the population to. The base year is now determined automatically based on available data.",
+      "\npop_year set to", pop_year
+    )
+    warning(paste(messages, collapse = " "))
+  }
 
   pollutants_for_hia <- intersect(perturbation_rasters_table$species,
                                   baseline_rasters_table$species)
 
-  sapply(scenarios, function(scen) {
+  # custom_glue: to provide custom name for HIA .RDS files
+  sapply(scenarios, function(scen, custom_glue = NULL, ...) {
     message(glue('Processing scenario: "{scen}"'))
 
     # 01: Get perturbation concentration levels for the scenario ----
@@ -248,18 +251,18 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
     # 02: Combine perturbation and baseline, then flatten: one row per scenario ----
     concs <- creahia::combine_concs(conc_perturbation, baseline_rasters_table) %>% # combine table
       creahia::flatten_concs() %>% # long to wide
-      creahia::add_pop(grid_raster)
+      creahia::add_pop(grid_raster, year_desired=pop_year)
 
     # 03: Extract concentrations ----
-    conc_regions <- creahia::extract_concs_at_regions(concs, regions, pollutants_for_hia)
+    conc_regions <- creahia::extract_concs_and_pop(concs, regions, pollutants_for_hia)
 
     # 04: Compute hia ----
     hia <- creahia::compute_hia(conc_map = conc_regions,
                                 species = pollutants_for_hia,
                                 regions = regions,
-                                scale_base_year = scale_base_year,
-                                scale_target_year = scale_target_year,
+                                pop_year = pop_year,
                                 epi_version = epi_version,
+                                ihme_version = ihme_version,
                                 crfs_version = crfs_version,
                                 ...)
 
@@ -278,7 +281,10 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
       hia <- list(hia = hia, concentrations = conc_regions_mean)
     }
 
-    saveRDS(hia, file.path(project_dir, 'hia', glue('hia_GBD__{scen}.RDS')))
-  })
+    dir.create(file.path(output_folder, 'hia'), showWarnings = F)
+    saveRDS(hia,
+            file.path(output_folder, 'hia',
+                      glue(if(!is.null(custom_glue)) custom_glue else 'hia_GBD__{scen}.RDS')))
+  }, ...)
 }
 

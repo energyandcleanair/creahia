@@ -45,6 +45,8 @@ importFrom(dplyr,vars)
 importFrom(foreach, foreach)
 importFrom(foreach, "%dopar%")
 
+importFrom(glue, glue)
+
 importFrom(ggspatial,annotation_spatial)
 importFrom(ggspatial,layer_spatial)
 
@@ -118,6 +120,8 @@ importFrom(terra,project)
 importFrom(tidyr,gather)
 importFrom(tidyr,separate)
 importFrom(tidyr,spread)
+importFrom(tidyr,pivot_longer)
+importFrom(tidyr,pivot_wider)
 
 importFrom(zoo,na.approx)
 importFrom(zoo,na.fill)

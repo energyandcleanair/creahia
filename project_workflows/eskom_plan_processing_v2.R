@@ -6,7 +6,7 @@ read_wide_xlsx(path=infile, sheet='Eskom plan', header_row_names=c('variable', '
   emission_reductions
 
 emission_reductions %<>%
-  mutate(period_start=force.numeric(variable),
+  mutate(period_start=force_numeric(variable),
          variable = variable %>% gsub('( in )?[0-9]*', '', .)) %>%
   mutate(variable = case_when(variable=='Emission limits'~'limit_mes',
                               grepl('Eskom', variable)~'limit_eskom',

@@ -1,17 +1,11 @@
-library(testthat)
-
-get_examples_dir <- function(){
-  if(dir.exists("../../../examples")) "../../../examples" else "examples"
-}
-
 test_that("wrapper 2 images works", {
 
   dir <- get_examples_dir()
   perturbation_rasters <- list(
-    "no2"=raster::raster(file.path(dir, "example_ph", "rank(0)_no2_8760hr_conc_opr_all.tif")),
-    "pm25"=raster::raster(file.path(dir, "example_ph", "rank(0)_pm25_8760hr_conc_opr_all.tif")),
-    "so2"=raster::raster(file.path(dir, "example_ph", "rank(0)_pm25_8760hr_conc_opr_all.tif")),
-    "o3"=raster::raster(file.path(dir, "example_ph", "rank(0)_pm25_8760hr_conc_opr_all.tif"))
+    "no2"=raster::raster(get_test_file(file.path("example_ph", "rank(0)_no2_8760hr_conc_opr_all.tif"))),
+    "pm25"=raster::raster(get_test_file(file.path("example_ph", "rank(0)_pm25_8760hr_conc_opr_all.tif"))),
+    "so2"=raster::raster(get_test_file(file.path("example_ph", "rank(0)_pm25_8760hr_conc_opr_all.tif"))),
+    "o3"=raster::raster(get_test_file(file.path("example_ph", "rank(0)_pm25_8760hr_conc_opr_all.tif")))
   )
 
 
@@ -38,36 +32,18 @@ test_that("wrapper 2 images works", {
   hia <- creahia::wrappers.compute_hia_two_images(perturbation_rasters = perturbation_rasters,
                                            baseline_rasters = baseline_rasters,
                                            administrative_iso3s = "PHL",
-                                           # crfs_version = "C40",
-                                           # epi_version="C40",
-                                           valuation_version="viscusi")
+                                           pop_year=2020
+                                           )
 
   dir.create("tmp")
-  cost <- creahia::compute_econ_costs(hia=hia, results_dir = "tmp", crfs_version = "C40")
+  cost <- creahia::compute_econ_costs(hia=hia,
+                                      results_dir = "tmp",
+                                      valuation_version="viscusi",
+                                      projection_years=c(2020),
+                                      GDP_scaling=T
+                                      )
 
-  future <-  creahia::fu(hia=hia, results_dir = "tmp", crfs_version = "C40")
+  # Really a minimal test...
+  testthat::expect_gt(sum(cost$hia_cost$cost_mn_currentUSD, na.rm=T), 0)
 
 })
-
-
-plot_rasters <- function(rs,
-                         add_adm=T,
-                         adm_level=2){
-
-  if(is.list(rs)){
-    rs <- raster::stack(rs)
-  }
-
-  grid <- rs[[1]] %>% raster::raster()
-
-  adm <- creahelpers::get_adm(adm_level, res="low") %>%
-    creahelpers::cropProj(grid)
-
-
-  pl <- rasterVis::levelplot(rs) +
-    latticeExtra::layer(sp::sp.lines(adm, lwd=2, col='darkgray'),
-          data=list(adm=adm))
-
-  print(pl)
-  return(pl)
-}
