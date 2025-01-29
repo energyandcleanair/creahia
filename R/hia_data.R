@@ -326,14 +326,6 @@ get_calc_causes <- function(causes_set = 'GEMM and GBD', filter = NULL) {
 }
 
 
-get_pop_proj <- function() {
-  creahelpers::get_population_path('WPP2019_population-death_rate-birth_rate.csv') %>%
-    read_csv(., col_types = cols()) %>%
-    mutate(deaths = pop * death_rate) %>%
-    dplyr::rename(iso3 = ISO3, year = Yr)
-}
-
-
 get_gemm <- function() {
   print("Getting GEMM")
 
@@ -441,8 +433,10 @@ get_gbd <- function(gbd_causes = c('LRI.child', 'Diabetes')) {
 }
 
 
-get_dict <- function() {
-  get_hia_path('dict.csv') %>% read_csv(col_types = cols())
+get_dict <- function(cols=c("Code", "Long.name")) {
+  get_hia_path('dict.csv') %>%
+    read_csv(col_types = cols()) %>%
+    select_at(cols)
 }
 
 
