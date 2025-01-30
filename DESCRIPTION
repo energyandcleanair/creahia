@@ -18,7 +18,6 @@ Imports:
     readxl,
     readr,
     plyr,
-    rgdal,
     sp,
     rgeos,
     reshape2,

@@ -492,10 +492,12 @@ country_paf_perm <- function(pm.base,
 
 scale_hia_pop <- function(hia, base_year = 2015, target_year = 2019) {
 
+  message(glue("Scaling population from {base_year} to {target_year}"))
   pop_proj <- get_pop_proj()
 
   # scale population from year of population data to target year of estimates
-  pop_scaling <- pop_proj %>% filter(year %in% c(base_year, target_year), AgeGrp != 'Newborn', !is.na(iso3)) %>%
+  pop_scaling <- pop_proj %>%
+    filter(year %in% c(base_year, target_year), AgeGrp != 'Newborn', !is.na(iso3)) %>%
     sel(-AgeGrp) %>%
     group_by(iso3, year) %>%
     summarise_at('pop', sum) %>%
