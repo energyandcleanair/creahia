@@ -94,7 +94,10 @@ generate_random_exposure_hias <- function(levels,
                                           target=0,
                                           calc_causes = "GEMM and GBD",
                                           epi_version = "gbd2019",
-                                          administrative_res = "low"
+                                          administrative_res = "full",
+                                          iso3 = "BGD",
+                                          res = 0.01,
+                                          baseline_rast = NULL
 ){
 
   library(terra)
@@ -104,16 +107,18 @@ generate_random_exposure_hias <- function(levels,
   library(creaexposure)
 
   # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
-  res <- 0.01
-  baseline_rast <- terra::rast(
-    xmin=88,
-    xmax=92,
-    ymin=20,
-    ymax=27,
-    res=res,
-    crs="+proj=longlat +datum=WGS84")
-
-  baseline_rast[] <- runif(prod(dim(baseline_rast)), min, max)
+  if(is.null(baseline_rast)){
+    iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')
+    bbox <- creahelpers::get_adm(level=0, res="full", iso2s=iso2) %>% sf::st_bbox()
+    baseline_rast <- terra::rast(
+      xmin=bbox$xmin,
+      xmax=bbox$xmax,
+      ymin=bbox$ymin,
+      ymax=bbox$ymax,
+      res=res,
+      crs="+proj=longlat +datum=WGS84")
+    baseline_rast[] <- runif(prod(dim(baseline_rast)), min, max)
+  }
 
   # Build two perturbations:
   # p1: bring it down to 0
@@ -130,7 +135,7 @@ generate_random_exposure_hias <- function(levels,
       pop_year=2020,
       administrative_level = level,
       administrative_res = administrative_res,
-      administrative_iso3s = "BGD",
+      administrative_iso3s = iso3,
       epi_version = epi_version,
       calc_causes = calc_causes
     ) %>%
