@@ -73,7 +73,13 @@ test_that("Population is properly calculated", {
 })
 
 
-get_random_exposure_hia <- function(levels, min=20, max=60, target=0, calc_causes = "GEMM and GBD"){
+get_random_exposure_hia <- function(levels,
+                                    min=20,
+                                    max=60,
+                                    target=0,
+                                    pop_year=2020,
+                                    calc_causes="GEMM and GBD",
+                                    iso3="BGD"){
 
   library(terra)
   library(creahelpers)
@@ -83,11 +89,13 @@ get_random_exposure_hia <- function(levels, min=20, max=60, target=0, calc_cause
 
   # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
   res <- 0.01
+  iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')
+  bbox <- creahelpers::get_adm(level=0, res="full", iso2s=iso2) %>% sf::st_bbox()
   baseline_rast <- terra::rast(
-    xmin=88,
-    xmax=92,
-    ymin=20,
-    ymax=27,
+    xmin=bbox$xmin,
+    xmax=bbox$xmax,
+    ymin=bbox$ymin,
+    ymax=bbox$ymax,
     res=res,
     crs="+proj=longlat +datum=WGS84")
 
@@ -105,10 +113,10 @@ get_random_exposure_hia <- function(levels, min=20, max=60, target=0, calc_cause
       baseline_rasters = list(pm25 = baseline_rast),
       scale_base_year = NULL, # Just to avoid unnecessary warning
       scale_target_year = NULL,  # Just to avoid unnecessary warning
-      pop_year=2020,
+      pop_year=pop_year,
       administrative_level = level,
       administrative_res = "low",
-      administrative_iso3s = "BGD",
+      administrative_iso3s = iso3,
       epi_version = "gbd2019",
       calc_causes = calc_causes
     ) %>%
@@ -118,28 +126,47 @@ get_random_exposure_hia <- function(levels, min=20, max=60, target=0, calc_cause
 }
 
 
-test_that("Population is properly calculated - using HIA", {
+test_that("Population is properly calculated and scaled- using HIA", {
 
   library(terra)
   library(creahelpers)
   library(dplyr)
   library(creahia)
   library(creaexposure)
+  iso3 <- "ZAF"
 
-  hias <- get_random_exposure_hia(levels=c(0,1,2))
+  hia_2020 <- get_random_exposure_hia(levels=c(0,1,2),
+                                       pop_year=2020,
+                                       iso3=iso3
+                                       ) %>%
+    mutate(year=2020)
 
-  pop <- hias %>%
-    distinct(level, region_id, pop) %>%
-    group_by(level) %>%
-    summarise(pop_actual=sum(pop))
 
-  pop_expected <- wb_pop <- wbstats::wb_data(indicator="SP.POP.TOTL",
-                                             country="BGD",
-                                             start_date=2020,
-                                             end_date=2020) %>%
-    pull(SP.POP.TOTL)
+  hia_2023 <- get_random_exposure_hia(levels=c(0,1,2),
+                                      pop_year=2023,
+                                      iso3=iso3) %>%
+    mutate(year=2023)
 
-  pop$pop_expected <- as.numeric(pop_expected)
 
-  testthat::expect_equal(pop$pop_actual, pop$pop_expected, tolerance=2e-2)
+  hias <- bind_rows(hia_2020, hia_2023)
+
+  pop_hia <- hias %>%
+    distinct(iso3, year, level, pop) %>%
+    group_by(iso3, year, level) %>%
+    summarise(pop_hia=sum(pop))
+
+  pop_wb <- wbstats::wb_data(indicator="SP.POP.TOTL",
+                                             country=iso3,
+                                             start_date=min(hias$year),
+                                             end_date=max(hias$year)) %>%
+    select(iso3=iso3c,
+           year=date,
+           pop_wb=`SP.POP.TOTL`)
+
+  comparison <- pop_hia %>%
+    left_join(pop_wb, by=c("iso3", "year")) %>%
+    mutate(pop_diff=(pop_hia-pop_wb)/pop_wb)
+
+  expect_equal(max(abs(comparison$pop_diff)), 0, tolerance=0.01)
+
 })

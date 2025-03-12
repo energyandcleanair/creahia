@@ -87,13 +87,14 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   if(!is.null(scale_base_year) | !is.null(scale_target_year)){
     if(is.null(pop_year)){
       pop_year <- coalesce(scale_target_year, scale_base_year)
+
+      messages <- c(
+        "scale_base_year and scale_target_year are deprecated. Use pop_year instead, as the year you",
+        "want to scale the population to. The base year is now determined automatically based on available data.",
+        "\npop_year set to", pop_year
+      )
+      warning(paste(messages, collapse = " "))
     }
-    messages <- c(
-      "scale_base_year and scale_target_year are deprecated. Use pop_year instead, as the year you",
-      "want to scale the population to. The base year is now determined automatically based on available data.",
-      "\npop_year set to", pop_year
-    )
-    warning(paste(messages, collapse = " "))
   }
 
   # For now, creahelpers work with raster package. To ensure transition,
