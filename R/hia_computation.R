@@ -240,9 +240,15 @@ compute_hia_epi <- function(species,
   for(scenario in scenarios) {
     conc_scenario <- conc_map[[scenario]]
     # names(conc_adm) %<>% country.recode(merge_into)
-    conc_scenario <- conc_scenario %>%
-      ldply(.id = 'region_id') %>%
-      dlply(.(region_id))
+
+    conc_scenario %>% ldply(.id = 'region_id') -> conc_df
+
+    if(!all(complete.cases(conc_df))) {
+      warning('missing values in concentration or population data')
+      conc_df %<>% na.omit
+    }
+
+    conc_scenario <- conc_df %>% dlply(.(region_id))
 
     # calculate health impacts
     pop_domain <- conc_scenario %>% ldply(function(df) df %>%
@@ -265,7 +271,7 @@ compute_hia_epi <- function(species,
     # Exclude unmatched countries
     na_iso3s <- epi_loc$region_id[is.na(epi_loc$location_id)]
     if(length(na_iso3s) > 0) {
-      warning("Couldn't find epidemiological data for regions ", na_iso3s, ". Excluding them.")
+      warning("Couldn't find epidemiological data for regions ", paste(unique(na_iso3s), collapse=' '), ". Excluding them.")
     }
 
     epi_loc <- epi_loc %>% filter(!is.na(location_id))
@@ -477,7 +483,8 @@ country_paf_perm <- function(pm.base,
       rr_base = rr.base,
       rr_perm = rr.perm,
       age_weights = age_weights$val,
-      pop = pop
+      pop = pop,
+      cause=cause,measure=measure
     )
 
   } else {
