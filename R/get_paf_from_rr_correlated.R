@@ -78,7 +78,7 @@ get_paf_from_rr_correlated <- function(rr_base, rr_perm, age_weights, pop, rho=1
 
   # Compute the variance using covariance
   var_log_rr_base <- SE_base^2
-  var_log_rr_perm <- SE_perm^2 
+  var_log_rr_perm <- SE_perm^2
   var_paf <- var_log_rr_base + var_log_rr_perm - 2 * rho * SE_base * SE_perm
 
   # Compute standard error of PAF
@@ -88,17 +88,10 @@ get_paf_from_rr_correlated <- function(rr_base, rr_perm, age_weights, pop, rho=1
   lower_prob <- (1 - ci_level) / 2
   upper_prob <- 1 - lower_prob
 
-  paf_low <- paf_central - qnorm(upper_prob) * SE_paf
-  paf_high <- paf_central + qnorm(upper_prob) * SE_paf
-
-
-  # In certain cases, where the perturbation is small, the PAF estimates can be of the opposite sign
-  # which is not possible. In such cases, we set the PAF that is the opposite sign of central estimate to 0.
-  # This could affect the confidence interval calculations at later stage. We'll need to ensure we're taking
-  # the largest side of the confidence interval when computing standard deviation.
-  paf_low[paf_low * paf_central < 0] <- 0
-  paf_high[paf_high * paf_central < 0] <- 0
-
+  # The low-central-high for RR refers to uncertainty about the magnitude of the impact
+  # so the estimates should be ordered abs(low)<abs(central)<abs(high) not low<central even if central<0
+  paf_low <- paf_central - sign(paf_central) * qnorm(upper_prob) * SE_paf
+  paf_high <- paf_central + sign(paf_central) * qnorm(upper_prob) * SE_paf
 
   # Weight by age group, then by population
   paf_low <- rowSums(paf_low %*% age_weights_norm, na.rm = TRUE)
@@ -108,6 +101,11 @@ get_paf_from_rr_correlated <- function(rr_base, rr_perm, age_weights, pop, rho=1
   paf <- cbind(low=paf_low, central=paf_central, high=paf_high) %>%
     sweep(1, pop, "*") %>%
     colSums(na.rm = TRUE) / sum(pop)
+
+  # In certain cases, where the perturbation is small, the PAF estimates can be of the opposite sign
+  # which is not possible. In such cases, we set the PAF that is the opposite sign of central estimate to 0.
+  paf["low"][paf["low"] * paf["central"] < 0] <- 0
+  paf["high"][paf["high"] * paf["central"] < 0] <- 0
 
   # Some sanity checks
   if(all(sort(paf) != paf)){
