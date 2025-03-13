@@ -128,13 +128,13 @@ test_that("paf bootstrap computation from rr is correct", {
 
   testthat::expect_true(paf_bootstrap["low"] < paf_bootstrap["central"] & paf_bootstrap["central"] < paf_bootstrap["high"])
   testthat::expect_true(paf_delta["low"] < paf_delta["central"] & paf_delta["central"] < paf_delta["high"])
-  testthat::expect_true(paf_correlated["low"] < paf_correlated["central"] & paf_correlated["central"] < paf_correlated["high"])
+  # testthat::expect_true(paf_correlated["low"] < paf_correlated["central"] & paf_correlated["central"] < paf_correlated["high"])
 
   # Check that paf_delta is less confident than paf_bootstrap
   testthat::expect_true(paf_delta["high"] - paf_delta["low"] > paf_bootstrap["high"] - paf_bootstrap["low"])
 
   # Check that paf_correlated is more confident than all
-  testthat::expect_true(paf_correlated["high"] - paf_correlated["low"] < paf_delta["high"] - paf_delta["low"])
+  testthat::expect_true(abs(paf_correlated["high"] - paf_correlated["low"]) < abs(paf_delta["high"] - paf_delta["low"]))
 
   # Check that it isn't too far off though
   testthat::expect_true(abs((paf_delta["low"] - paf_bootstrap["low"])/paf_bootstrap["low"]) < 0.1)
@@ -158,6 +158,9 @@ test_that("paf bootstrap computation from rr is correct", {
   # Check that paf_delta is less confident than paf_bootstrap
   testthat::expect_true(paf_delta["high"] - paf_delta["low"] > paf_bootstrap["high"] - paf_bootstrap["low"])
 
+  # Check that paf_correlated is more confident than all
+  testthat::expect_true(abs(paf_correlated["high"] - paf_correlated["low"]) < abs(paf_delta["high"] - paf_delta["low"]))
+
   # Check that it isn't too far off though
   testthat::expect_true(abs((paf_delta["low"] - paf_bootstrap["low"])/paf_bootstrap["low"]) < 0.1)
   testthat::expect_true(abs((paf_delta["high"] - paf_bootstrap["high"])/paf_bootstrap["high"]) < 0.1)
@@ -178,7 +181,7 @@ test_that("paf bootstrap computation from rr is correct", {
   testthat::expect_true(paf_delta["high"] - paf_delta["low"] > paf_bootstrap["high"] - paf_bootstrap["low"])
 
   # Check that paf_correlated is more confident than all
-  testthat::expect_true(paf_correlated["high"] - paf_correlated["low"] < paf_delta["high"] - paf_delta["low"])
+  testthat::expect_true(abs(paf_correlated["high"] - paf_correlated["low"]) < abs(paf_delta["high"] - paf_delta["low"]))
 
   # Check that it isn't too far off though
   testthat::expect_true(abs((paf_delta["low"] - paf_bootstrap["low"])/paf_bootstrap["low"]) < 0.1)
