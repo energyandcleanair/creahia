@@ -79,8 +79,8 @@ get_paf_from_rr_lauri <- function(rr_base, rr_perm, age_weights, pop, ci_level =
     colSums(na.rm = TRUE) / sum(pop)
 
   # Some sanity checks
-  if(any(paf[order(abs(paf))] != paf)){
-    warning("PAF estimates are not properly ordered for ", cause, " ", measure)
+  if(any(paf[order(abs(paf))] != paf) | n_distinct(setdiff(sign(paf),0)) > 1){
+    warning("PAF estimates are not properly ordered or of the same sign for ", cause, " ", measure)
 
 
     rr <- cbind(low=rr_low, central=rr_central, high=rr_high) %>%
@@ -93,13 +93,9 @@ get_paf_from_rr_lauri <- function(rr_base, rr_perm, age_weights, pop, ci_level =
   }
 
   # If not all of the same sign, stop
-  if(n_distinct(setdiff(sign(paf),0)) > 1){
-    warning("PAF estimates are not all of the same sign for ", cause, " ", measure)
+  if(any(paf[order(abs(paf))] != paf) | n_distinct(setdiff(sign(paf),0)) > 1){
+    stop("PAF estimates are not properly ordered or of the same sign for ", cause, " ", measure)
   }
-
-  #force the estimates into the "right" order instead
-  paf <- sort(paf)
-  names(paf) <- c('low', 'central', 'high')
 
   return(paf)
 }
