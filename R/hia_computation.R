@@ -478,7 +478,6 @@ country_paf_perm <- function(pm.base,
                                                .cause = cause, .age = .a, .region = .region),
                                simplify = 'array')
 
-
     paf <- get_paf_from_rr_correlated(
       rr_base = rr.base,
       rr_perm = rr.perm,
