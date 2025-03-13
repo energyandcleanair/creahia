@@ -23,9 +23,19 @@
 #'
 #' See doc/paf_uncertainty.md for more details
 #'
+#'
+#'
+#' LAURI 2025-01-13:  The delta methods needs to be fixed before deploying -Lauri
+#  issues:
+#Rows 105-106 (new rows 119-120) apply the standard error of the absolute RRs to the difference between the perm and base RRs
+#I guess this has to do with the comment "Assuming independence between RR_base and RR_perm". This assumption is definitely not valid -- in most cases they are very closely correlated.
+#This leads to extremely wide confidence intervals -- in the case that I'm looking at, RR_base - RR_perm is mostly in the order of 1e-7 or less, whereas qnorm(upper_prob) * SE_paf is to the tune of 0.1 - 0.3, so you're getting confidence intervals that are like 7+ orders of magnitude, not the about +/- 50% we would expect
+#the signs are also wrong -- qnorm(upper_prob) * SE_paf is >0 so in this case when paf_central has both positive and negative values, the negative ones are adjusted in the wrong direction
+#row 76 (new row 90) should be paf_central <- 1 - (exp(log_rr_base_central) / exp(log_rr_perm_central))
+#'
+#'
 #' @export
-get_paf_from_rr_delta <- function(rr_base, rr_perm, age_weights, pop, ci_level = 0.95, seed = 123,
-                                  cause=NA, measure=NA){
+get_paf_from_rr_delta <- function(rr_base, rr_perm, age_weights, pop, ci_level = 0.95, seed = 123){
 
   # rr_base and rr_perm are 3D arrays: [pixel, estimate, agegroup]
   # estimates are "low", "central", "high"
@@ -35,154 +45,104 @@ get_paf_from_rr_delta <- function(rr_base, rr_perm, age_weights, pop, ci_level =
 
   age_weights <- unlist(unname(age_weights))
 
+  # Extract dimensions
+  n_pixels <- dim(rr_base)[1]
+  n_agegroups <- dim(rr_base)[3]
+
+  # Extract log RR and compute standard errors
+  log_rr_base_central <- matrix(0, nrow = n_pixels, ncol = n_agegroups)
+  log_rr_base_low <- matrix(0, nrow = n_pixels, ncol = n_agegroups)
+  log_rr_base_high <- matrix(0, nrow = n_pixels, ncol = n_agegroups)
+
+  log_rr_perm_central <- matrix(0, nrow = n_pixels, ncol = n_agegroups)
+  log_rr_perm_low <- matrix(0, nrow = n_pixels, ncol = n_agegroups)
+  log_rr_perm_high <- matrix(0, nrow = n_pixels, ncol = n_agegroups)
+
+  # Fill the matrices
+  #TODO vectorize all this
+  for (ag in 1:n_agegroups) {
+    log_rr_base_central[, ag] <- log(rr_base[, "central", ag])
+    log_rr_base_low[, ag] <- log(rr_base[, "low", ag])
+    log_rr_base_high[, ag] <- log(rr_base[, "high", ag])
+
+    log_rr_perm_central[, ag] <- log(rr_perm[, "central", ag])
+    log_rr_perm_low[, ag] <- log(rr_perm[, "low", ag])
+    log_rr_perm_high[, ag] <- log(rr_perm[, "high", ag])
+  }
+
+  # Compute standard errors based on CI
+  z_score <- qnorm(1 - (1 - ci_level) / 2) # e.g., 1.645 for 90% CI
+  SE_base <- (log_rr_base_high - log_rr_base_low) / (2 * z_score)
+  SE_perm <- (log_rr_perm_high - log_rr_perm_low) / (2 * z_score)
+
   # Normalize age_weights to sum to 1
   age_weights_norm <- age_weights / sum(age_weights)
 
-  paf <- 1 - rr_base/rr_perm
+  # Calculate PAF using the Delta Method
+  # PAF = (RR_perm / RR_base) - 1
+  # log(RR_perm / RR_base) = log(RR_perm) - log(RR_base)
+  # Approximate variance using Delta Method
 
-  if(length(dim(paf))==3) {
-    paf_low <- paf[,'low',]
-    paf_central <- paf[,'central',]
-    paf_high <- paf[,'high',]
+  # Compute the central estimate of PAF
+  paf_central <- (exp(log_rr_perm_central) / exp(log_rr_base_central)) - 1
 
-    rr_low <- rr_base[,'low',]
-    rr_central <- rr_base[,'central',]
-    rr_high <- rr_base[,'high',]
-  } else {
-    paf_low <- paf['low',]
-    paf_central <- paf['central',]
-    paf_high <- paf['high',]
+  # Compute the variance of log(RR_perm) and log(RR_base)
+  var_log_rr_base <- SE_base^2
+  var_log_rr_perm <- SE_perm^2
 
-    rr_low <- rr_base['low',]
-    rr_central <- rr_base['central',]
-    rr_high <- rr_base['high',]
-  }
+  # Assuming independence between RR_base and RR_perm
+  X <- log_rr_perm_central
+  var_X <- var_log_rr_perm
 
+  Y <- log_rr_base_central
+  var_Y <- var_log_rr_base
 
-  #This needs to be fixed before deploying -Lauri
-  #issues:
-  #Rows 105-106 (new rows 119-120) apply the standard error of the absolute RRs to the difference between the perm and base RRs
-  #I guess this has to do with the comment "Assuming independence between RR_base and RR_perm". This assumption is definitely not valid -- in most cases they are very closely correlated.
-  #This leads to extremely wide confidence intervals -- in the case that I'm looking at, RR_base - RR_perm is mostly in the order of 1e-7 or less, whereas qnorm(upper_prob) * SE_paf is to the tune of 0.1 - 0.3, so you're getting confidence intervals that are like 7+ orders of magnitude, not the about +/- 50% we would expect
-  #the signs are also wrong -- qnorm(upper_prob) * SE_paf is >0 so in this case when paf_central has both positive and negative values, the negative ones are adjusted in the wrong direction
-  #row 76 (new row 90) should be paf_central <- 1 - (exp(log_rr_base_central) / exp(log_rr_perm_central))
-  if(F) {
-    # Extract dimensions
-    n_pixels <- dim(rr_base)[1]
-    n_agegroups <- dim(rr_base)[3]
+  # Compute the variance of PAF
+  # 1-st order
+  var_paf_1 <- exp(2 * (X - Y)) * (var_X + var_Y)
 
-    # Extract log RR and compute standard errors
-    log_rr_base_central <- matrix(0, nrow = n_pixels, ncol = n_agegroups)
-    log_rr_base_low <- matrix(0, nrow = n_pixels, ncol = n_agegroups)
-    log_rr_base_high <- matrix(0, nrow = n_pixels, ncol = n_agegroups)
+  # 2-nd order
+  var_paf_2 <- exp(2 * (X - Y)) * (exp(var_X + var_Y) - 1 - var_X - var_Y)
 
-    log_rr_perm_central <- matrix(0, nrow = n_pixels, ncol = n_agegroups)
-    log_rr_perm_low <- matrix(0, nrow = n_pixels, ncol = n_agegroups)
-    log_rr_perm_high <- matrix(0, nrow = n_pixels, ncol = n_agegroups)
+  var_paf <- var_paf_1 + var_paf_2
 
-    # Fill the matrices
-    #TODO vectorize all this
-    for (ag in 1:n_agegroups) {
-      log_rr_base_central[, ag] <- log(rr_base[, "central", ag])
-      log_rr_base_low[, ag] <- log(rr_base[, "low", ag])
-      log_rr_base_high[, ag] <- log(rr_base[, "high", ag])
+  # Compute standard error of PAF
+  SE_paf <- sqrt(var_paf)
 
-      log_rr_perm_central[, ag] <- log(rr_perm[, "central", ag])
-      log_rr_perm_low[, ag] <- log(rr_perm[, "low", ag])
-      log_rr_perm_high[, ag] <- log(rr_perm[, "high", ag])
-    }
+  # Calculate confidence intervals
+  lower_prob <- (1 - ci_level) / 2
+  upper_prob <- 1 - lower_prob
 
-    # Compute standard errors based on CI
-    z_score <- qnorm(1 - (1 - ci_level) / 2) # e.g., 1.645 for 90% CI
-    SE_base <- (log_rr_base_high - log_rr_base_low) / (2 * z_score)
-    SE_perm <- (log_rr_perm_high - log_rr_perm_low) / (2 * z_score)
-
-    # Calculate PAF using the Delta Method
-    # PAF = (RR_perm / RR_base) - 1
-    # log(RR_perm / RR_base) = log(RR_perm) - log(RR_base)
-    # Approximate variance using Delta Method
-
-    # Compute the central estimate of PAF
-    paf_central <- (exp(log_rr_perm_central) / exp(log_rr_base_central)) - 1
-
-    # Compute the variance of log(RR_perm) and log(RR_base)
-    var_log_rr_base <- SE_base^2
-    var_log_rr_perm <- SE_perm^2
-
-    # Assuming independence between RR_base and RR_perm
-    X <- log_rr_perm_central
-    var_X <- var_log_rr_perm
-
-    Y <- log_rr_base_central
-    var_Y <- var_log_rr_base
-
-    # Compute the variance of PAF
-    # 1-st order
-    var_paf_1 <- exp(2 * (X - Y)) * (var_X + var_Y)
-
-    # 2-nd order
-    var_paf_2 <- exp(2 * (X - Y)) * (exp(var_X + var_Y) - 1 - var_X - var_Y)
-
-    var_paf <- var_paf_1 + var_paf_2
-
-    # Compute standard error of PAF
-    SE_paf <- sqrt(var_paf)
-
-    # Calculate confidence intervals
-    lower_prob <- (1 - ci_level) / 2
-    upper_prob <- 1 - lower_prob
-
-    paf_low <- paf_central - qnorm(upper_prob) * SE_paf
-    paf_high <- paf_central + qnorm(upper_prob) * SE_paf
+  paf_low <- paf_central - qnorm(upper_prob) * SE_paf
+  paf_high <- paf_central + qnorm(upper_prob) * SE_paf
 
 
-    # In certain cases, where the perturbation is small, the PAF estimates can be of the opposite sign
-    # which is not possible. In such cases, we set the PAF that is the opposite sign of central estimate to 0.
-    # This could affect the confidence interval calculations at later stage. We'll need to ensure we're taking
-    # the largest side of the confidence interval when computing standard deviation.
-    paf_low[paf_low * paf_central < 0] <- 0
-    paf_high[paf_high * paf_central < 0] <- 0
-  }
+  # In certain cases, where the perturbation is small, the PAF estimates can be of the opposite sign
+  # which is not possible. In such cases, we set the PAF that is the opposite sign of central estimate to 0.
+  # This could affect the confidence interval calculations at later stage. We'll need to ensure we're taking
+  # the largest side of the confidence interval when computing standard deviation.
+  paf_low[paf_low * paf_central < 0] <- 0
+  paf_high[paf_high * paf_central < 0] <- 0
+
 
   # Weight by age group, then by population
-  if(length(age_weights_norm)>1) {
-    paf_low <- rowSums(paf_low %*% age_weights_norm, na.rm = TRUE)
-    paf_central <- rowSums(paf_central %*% age_weights_norm, na.rm = TRUE)
-    paf_high <- rowSums(paf_high %*% age_weights_norm, na.rm = TRUE)
-
-    rr_low <- rowSums(rr_low %*% age_weights_norm, na.rm = TRUE)
-    rr_central <- rowSums(rr_central %*% age_weights_norm, na.rm = TRUE)
-    rr_high <- rowSums(rr_high %*% age_weights_norm, na.rm = TRUE)
-  }
-
-  if(all(pop==0)) pop[] <- 1
+  paf_low <- rowSums(paf_low %*% age_weights_norm, na.rm = TRUE)
+  paf_central <- rowSums(paf_central %*% age_weights_norm, na.rm = TRUE)
+  paf_high <- rowSums(paf_high %*% age_weights_norm, na.rm = TRUE)
 
   paf <- cbind(low=paf_low, central=paf_central, high=paf_high) %>%
     sweep(1, pop, "*") %>%
     colSums(na.rm = TRUE) / sum(pop)
 
   # Some sanity checks
-  if(any(paf[order(abs(paf))] != paf)){
-    warning("PAF estimates are not properly ordered for ", cause, " ", measure)
-
-
-    rr <- cbind(low=rr_low, central=rr_central, high=rr_high) %>%
-      sweep(1, pop, "*") %>%
-      colSums(na.rm = TRUE) / sum(pop)
-
-
-    paf['low'] <- paf['central'] * rr['low']/rr['central']
-    paf['high'] <- paf['central'] * rr['high']/rr['central']
+  if(all(sort(paf) != paf)){
+    stop("PAF estimates are not properly ordered.")
   }
 
   # If not all of the same sign, stop
   if(n_distinct(setdiff(sign(paf),0)) > 1){
-    warning("PAF estimates are not all of the same sign for ", cause, " ", measure)
+    stop("PAF estimates are not all of the same sign.")
   }
-
-  #force the estimates into the "right" order instead
-  paf <- sort(paf)
-  names(paf) <- c('low', 'central', 'high')
 
   return(paf)
 }
