@@ -70,8 +70,10 @@ get_pm_mortality <- function(paf_scenario, epi_loc, calc_causes){
       # Confidence Intervals
       # Attributable Burden
       central = P_central * E_central,
-      low = central - z_mort * SE_A,
-      high = central + z_mort * SE_A
+      low = P_low * E_low,
+      high = P_high * E_high
+      #low = central - z_mort * SE_A,
+      #high = central + z_mort * SE_A
 
     )  %>%
     mutate(var = paste0(var, '_PM25')) %>%
