@@ -161,21 +161,65 @@ get_epi <- function(version = "default") {
 
 get_gdp <- function(year = NULL) {
 
-  print("Getting GDP")
-  read_csv(get_hia_path('gdp.csv'), col_types = cols()) %>%
-    filter(is.null(!!year) | year %in% !!year)
+  gdp <- read_csv(get_hia_path('gdp.csv'), col_types = cols())
+
+  if (!is.null(year)) {
+    gdp <- gdp %>% filter(year %in% !!year)
+  }
+
+  if (nrow(gdp) == 0) {
+    logger::log_info(glue("No GDP data found for requested year(s). Attempting to download... Consider using recreate_gdp and rebuild the package."))
+    end_year <- if(is.null(year)) lubridate::year(lubridate::today()) else max(year)
+    start_year <- if(is.null(year)) 1980 else min(year)
+
+    gdp <- download_gdp(start_year = start_year, end_year = end_year)
+
+    if (is.null(gdp) || nrow(gdp) == 0) {
+      logger::log_error("Failed to download GDP data")
+      return(NULL)
+    }
+
+    if (!is.null(year)) {
+      gdp <- gdp %>% filter(year %in% !!year)
+    }
+  }
+
+  return(gdp)
 }
 
+#' Download GDP data from World Bank API
+#'
+download_gdp <- function(start_year = 1980, end_year = lubridate::year(lubridate::today()), save_file = FALSE) {
+  logger::log_info(glue("Downloading GDP data from {start_year} to {end_year}"))
 
-#' Every time new data is available, we want to build a new gdp.csv file
+  tryCatch({
+    gdp <- get_gdp_timeseries(start_year = start_year, end_year = end_year)
+
+    if (save_file) {
+      output_path <- get_hia_path('gdp.csv')
+      write_csv(gdp, output_path)
+      logger::log_info(glue("GDP data saved to {output_path}"))
+    }
+
+    return(gdp)
+  }, error = function(e) {
+    logger::log_error(glue("Error downloading GDP data: {e$message}"))
+    return(NULL)
+  })
+}
+
+#' Update the GDP data file bundled with the package
 #'
-#' @return
-#' @export
+#' This function downloads the latest GDP data and saves it to the package's extdata folder.
+#' It should be run by package maintainers when updating the package.
+#' Data will then be available offline using get_gdp
 #'
-#' @examples
-recreate_gdp <- function() {
-  gdp <- get_gdp_timeseries(end_year=lubridate::year(lubridate::today()))
-  write_csv(gdp, 'inst/extdata/gdp.csv')
+recreate_gdp <- function(start_year = 1980, end_year = lubridate::year(lubridate::today()),
+                         output_path = "inst/extdata/gdp.csv") {
+
+  gdp <- download_gdp(start_year = start_year, end_year = end_year, save_file = FALSE)
+  dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
+  write_csv(gdp, output_path)
 }
 
 
