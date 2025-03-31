@@ -1,6 +1,3 @@
-
-
-
 generate_rrs <- function(){
 
 
@@ -23,13 +20,16 @@ generate_rrs <- function(){
 
     raw %>%
       check_rr() %>%
-      mutate(version=version)
+      mutate(version=version) %>%
+      keep_historical_causes() %>%
+      write_csv(file.path('inst','extdata', paste0('gbd_rr_', version, '.csv')))
 
   }) %>%
     bind_rows()
 
 
   ggplot(rrs %>%
+           filter(exposure < 100) %>%
            pivot_longer(cols=c(low, central, high), names_to='rr_type', values_to='rr') %>%
            filter(rr_type=='central')
            ,
@@ -38,10 +38,21 @@ generate_rrs <- function(){
              )) +
     geom_line() +
     facet_grid(cause_short~age, scales='free_y')
+}
 
 
-
-
+#' As we transition to newer GBD,
+#' let's first keep causes that existed before to avoid double counting with other CRFs
+#'
+#' @param x
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+keep_historical_causes <- function(x){
+  causes <- c('LRI','LRI.child', 'COPD', 'IHD', 'Stroke', 'LC', 'Diabetes')
+  x %>% filter(cause_short %in% causes)
 }
 
 #' Check format and data
@@ -82,10 +93,8 @@ recode_gbd_causes <- function(cause){
          lung_cancer = 'LC',
          resp_copd = 'COPD',
          copd = 'COPD',
-         bw = 'LBW',
-         birth_weight = 'LBW',
+         lbw = 'LBW',
          ptb = 'PTB',
-         ga = 'GA',
          gestational_age_shift = 'GA'
   )
 }
@@ -132,12 +141,15 @@ generate_gbd_rr_gbd2019 <- function(){
 
   tibble(file = list.files(folder)) %>%
     mutate(
-      cause = tolower(str_extract(file, 'LRI|RESP_COPD|BW|CVD_STROKE|CVD_IHD|GA|NEO_LUNG|PTB|COPD|T2_DM')),
+      cause = tolower(str_extract(file, 'LRI|RESP_COPD|LBW|BW|CVD_STROKE|CVD_IHD|GA|NEO_LUNG|PTB|COPD|T2_DM')),
       age = as.numeric(str_extract(file, '(?<=_)[0-9]{2}(?=_)')),
       full_path = file.path(folder, file)
     ) %>%
     # Replace NA age_group with 99 (or another value) for files without age in name
     mutate(age = ifelse(is.na(age), 99, age)) %>%
+    filter(cause != 'bw',
+           cause != 'ga'
+           ) %>%
     mutate(age = recode_age(age)) %>%
     mutate(data = map(full_path, read_csv)) %>%
     select(cause, age, data) %>%
@@ -178,6 +190,8 @@ generate_gbd_rr_gbd2021 <- function(){
     select(age, data) %>%
     unnest(data) %>%
     filter(exposure <= 300,
+           cause != 'bw',
+           cause != 'ga',
            !is.na(age)) %>%
     mutate(cause_short = recode_gbd_causes(cause)) %>%
     select(cause_short,

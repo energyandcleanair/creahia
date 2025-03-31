@@ -434,48 +434,13 @@ get_adult_ages <- function(ihme) {
     unique
 }
 
-get_gbd_rr <- function(version="original", gbd_causes){
-  get_gbd_rr_original(gbd_causes)
-}
+get_gbd_rr <- function(version="original", gbd_causes=c('LRI.child', 'Diabetes')){
 
-
-get_gbd_rr_original <- function(gbd_causes = c('LRI.child', 'Diabetes')) {
-  print("Getting GBD")
+  gbd_rr <-read_csv(get_hia_path(glue("gbd_rr_{version}.csv")), col_types = cols())
 
   if(length(gbd_causes) == 0) gbd_causes <- 'none'
-
-  # read GBD RR values
-  gbd <- read_csv(get_hia_path('ier_computed_table.csv'), col_types = cols()) %>% dplyr::select(-...1) %>%
-    # there's a weird one where rr_upper < rr_mean
-    mutate(
-      low = rr_lower,
-      central = pmin(rr_mean, rr_upper),
-      high = pmax(rr_mean, rr_upper)
-    ) %>%
-    dplyr::rename(cause_short = cause) %>%
-    select(-c(rr_lower, rr_mean, rr_upper)) %>%
-    mutate(cause_short = recode(cause_short,
-                                lri = 'LRI',
-                                t2_dm = 'Diabetes',
-                                cvd_ihd = 'IHD',
-                                cvd_stroke = 'Stroke',
-                                neo_lung = 'LC',
-                                resp_copd = 'COPD'),
-           age = case_when(age == 99 ~ '25+',
-                           age == 80 ~ '80+',
-                           age < 80 ~ paste0(age, '-', age + 4))) %>%
-    dplyr::filter(exposure <= 300, !is.na(age))
-
-  # add the LRI risk function to be used for children if needed
-  if(any(c('LRI.child', 'all') %in% gbd_causes)) {
-    gbd <- gbd %>% filter(cause_short == 'LRI') %>%
-      mutate(cause_short = 'LRI.child', age = 'Under 5') %>%
-      bind_rows(gbd)
-  }
-
-  if(gbd_causes[1] != 'all') gbd <- gbd %>% dplyr::filter(cause_short %in% gbd_causes)
-
-  return(gbd)
+  if(gbd_causes[1] != 'all') gbd_rr <- gbd_rr %>% dplyr::filter(cause_short %in% gbd_causes)
+  gbd_rr
 }
 
 

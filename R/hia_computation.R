@@ -7,7 +7,6 @@
 #' @param calc_causes
 #' @param gbd_causes
 #' @param gemm
-#' @param gbd
 #' @param ihme
 #' @param epi_version
 #' @param ihme_version
@@ -19,6 +18,9 @@
 #' @param scale_base_year DEPRECATED
 #' @param scale_target_year
 #' @param ...
+#' @param rr_version
+#' @param pop_year
+#' @param gbd_rr
 #'
 #' @return
 #' @export
@@ -31,9 +33,10 @@ compute_hia <- function(conc_map,
                         calc_causes = 'GEMM and GBD',
                         gbd_causes = "default", # which causes to use GDB risk functions for; 'all' for all available, default: only when GEMM not available
                         gemm = get_gemm(),
-                        gbd = NULL,
+                        gbd_rr = NULL,
                         ihme = get_ihme(version = ihme_version),
                         epi_version = "default",
+                        rr_version = "original", # original, gbd2019, gbd2021
                         ihme_version = epi_version,
                         epi = get_epi(version = epi_version),
                         crfs_version = "default",
@@ -70,9 +73,9 @@ compute_hia <- function(conc_map,
   if(gbd_causes[1] == 'default')
     gbd_causes <- calc_causes_wo_outcome %>% subset(!(. %in% unique(gemm$cause)))
 
-  if(is.null(gbd)) gbd <- get_gbd_rr(gbd_causes)
+  if(is.null(gbd_rr)) gbd_rr <- get_gbd_rr(version=rr_version, gbd_causes=gbd_causes)
 
-  gbd_causes <- gbd$cause_short %>% unique %>%
+  gbd_causes <- gbd_rr$cause_short %>% unique %>%
     subset(. %in% calc_causes_wo_outcome)
   gemm_causes <- calc_causes_wo_outcome %>% subset(!(. %in% gbd_causes))
 
@@ -89,7 +92,7 @@ compute_hia <- function(conc_map,
                            epi_version = epi_version,
                            ihme_version = ihme_version,
                            gemm = gemm,
-                           gbd = gbd,
+                           gbd_rr = gbd_rr,
                            ihme = ihme,
                            .mode = .mode)
   }
@@ -136,11 +139,12 @@ compute_hia <- function(conc_map,
 #' @examples
 compute_hia_paf <- function(conc_map,
                             epi_version,
-                            ihme_version = ihme_version,
+                            rr_version,
+                            ihme_version,
+                            gbd_rr,
                             scenarios = names(conc_map),
                             calc_causes = get_calc_causes(),
                             gemm = get_gemm(),
-                            gbd = get_gbd_rr(),
                             ihme = get_ihme(ihme_version),
                             .mode = 'change') {
 
@@ -186,7 +190,7 @@ compute_hia_paf <- function(conc_map,
                                                   adult_ages = adult_ages,
                                                   epi_version = epi_version,
                                                   gemm = gemm,
-                                                  gbd = gbd,
+                                                  gbd_rr = gbd_rr,
                                                   ihme = ihme,
                                                   .region = "inc_China",
                                                   .mode = .mode)
@@ -411,16 +415,17 @@ to_long_hia <- function(hia) {
 
 # define a function to calculate the hazard ratio for a specific concentration, cause and age group
 get_hazard_ratio <- function(pm,
+                             gemm,
+                             gbd_rr,
                              .age = '25+',
                              .cause = 'NCD.LRI',
-                             .region = 'inc_China',
-                             gemm = get_gemm(),
-                             gbd = get_gbd_rr()) {
+                             .region = 'inc_China'
+                             ) {
 
-  gbd.causes <- gbd$cause_short %>% unique
+  gbd.causes <- gbd_rr$cause_short %>% unique
 
   if(.cause %in% gbd.causes) {
-    hr.all <- gbd %>% dplyr::filter(cause_short == .cause, age == .age)
+    hr.all <- gbd_rr %>% dplyr::filter(cause_short == .cause, age == .age)
     hr.all %>% sel(low, central, high) %>%
       apply(2, function(y) approx(x = hr.all$exposure, y, xout = pm)$y)
   } else {
@@ -444,9 +449,9 @@ country_paf_perm <- function(pm.base,
                              region_id,
                              cause,
                              measure,
+                             gbd_rr,
                              epi_version,
                              gemm = get_gemm(),
-                             gbd = get_gbd_rr(),
                              ihme = get_ihme(version = epi_version),
                              adult_ages = get_adult_ages(ihme),
                              .region = "inc_China",
@@ -469,12 +474,12 @@ country_paf_perm <- function(pm.base,
     if(grepl('child', cause)) ages = 'Under 5' else ages = '25+'
   }
 
-  rr.base <- ages %>% sapply(function(.a) get_hazard_ratio(pm.base, gbd = gbd, gemm = gemm,
+  rr.base <- ages %>% sapply(function(.a) get_hazard_ratio(pm.base, gbd_rr = gbd_rr, gemm = gemm,
                                              .cause = cause, .age = .a, .region = .region),
                              simplify = 'array')
 
   if(.mode == 'change') {
-    rr.perm <- ages %>% sapply(function(.a) get_hazard_ratio(pm.perm, gbd = gbd, gemm = gemm,
+    rr.perm <- ages %>% sapply(function(.a) get_hazard_ratio(pm.perm, gbd_rr = gbd_rr, gemm = gemm,
                                                .cause = cause, .age = .a, .region = .region),
                                simplify = 'array')
 

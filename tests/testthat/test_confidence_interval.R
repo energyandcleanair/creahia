@@ -27,7 +27,7 @@ test_that("Order of estimates is consistent", {
 
   hia <- generate_uniform_exposure_hia(60, 0)
 
-  # Expect the order low < central < high to be consistent
+  # Expect the order low <= central <= high to be consistent
   inconsistent_order <- hia %>%
     spread(estimate, number) %>%
     mutate(order=case_when(

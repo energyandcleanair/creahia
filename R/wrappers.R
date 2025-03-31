@@ -76,6 +76,7 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                                                     scale_target_year = NULL, # Deprecated
                                                     crfs_version = "default",
                                                     epi_version = "default",
+                                                    rr_version = "original",
                                                     ihme_version = epi_version,
                                                     # valuation_version = "default",
                                                     return_concentrations = F,
@@ -170,6 +171,7 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                               epi_version = epi_version,
                               ihme_version = ihme_version,
                               crfs_version = crfs_version,
+                              rr_version = rr_version,
                               ...)
 
   if(return_concentrations) {
