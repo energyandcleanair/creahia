@@ -14,7 +14,8 @@ local_test_data <- function(env = parent.frame()) {
                                 age %in% ages,
                                 cause==!!cause)
 
-  gbd <- get_gbd_rr()
+  gbd_rr <- get_gbd_rr(version='original')
+  gbd_rr <- get_gbd_rr(version='original')
 
   gemm_params <<- gemm %>%
     spread(param, value)
@@ -28,7 +29,7 @@ local_test_data <- function(env = parent.frame()) {
   # See https://www.mdpi.com/2073-4433/11/6/589 for formula
   hr_validated <- exp(theta * log((z-2.4)/alpha + 1) / (1+exp(-((z-2.4)-mu)/tau_r)))
 
-  return(list(ages=ages, cause=cause, iso3=iso3, z=z, hr_validated=hr_validated, gemm=gemm, gbd=gbd))
+  return(list(ages=ages, cause=cause, iso3=iso3, z=z, hr_validated=hr_validated, gemm=gemm, gbd_rr=gbd_rr))
 }
 
 
@@ -40,14 +41,14 @@ test_that("GEMM hazards ratios are properly computed", {
   list2env(data, envir = environment())
 
   # Hazard ratios should be 1 under the counterfactual, set at 2.4µg/m3
-  hr_0 <- get_hazard_ratio(pm=0, .age=ages, .cause=cause, .region="inc_China", gemm=gemm, gbd=gbd)
+  hr_0 <- get_hazard_ratio(pm=0, .age=ages, .cause=cause, .region="inc_China", gemm=gemm, gbd_rr=gbd_rr)
   expect_true(all(hr_0==1))
 
-  hr_cf <- get_hazard_ratio(pm=2.4, .age=ages, .cause=cause, .region="inc_China", gemm=gemm, gbd=gbd)
+  hr_cf <- get_hazard_ratio(pm=2.4, .age=ages, .cause=cause, .region="inc_China", gemm=gemm, gbd_rr=gbd_rr)
   expect_true(all(hr_cf==1))
 
   # Now compute hazard ratio and compare with manually computed one
-  hr <- get_hazard_ratio(pm=z, .age=ages, .cause=cause, .region="inc_China", gemm=gemm, gbd=gbd)
+  hr <- get_hazard_ratio(pm=z, .age=ages, .cause=cause, .region="inc_China", gemm=gemm, gbd_rr=gbd_rr)
   expect_equal(unname(hr[,"central"]), hr_validated)
 
 })
@@ -83,7 +84,7 @@ test_that("GEMM PAF is properly computed", {
                           adult_ages = ages,
                           epi_version = "gbd2019",
                           gemm = gemm,
-                          gbd = NULL,
+                          gbd_rr = NULL,
                           ihme = ihme,
                           .region = "inc_China",
                           .mode = "change")
