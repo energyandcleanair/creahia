@@ -70,7 +70,7 @@ compute_hia <- function(conc_map,
   if(gbd_causes[1] == 'default')
     gbd_causes <- calc_causes_wo_outcome %>% subset(!(. %in% unique(gemm$cause)))
 
-  if(is.null(gbd)) gbd <- get_gbd(gbd_causes)
+  if(is.null(gbd)) gbd <- get_gbd_rr(gbd_causes)
 
   gbd_causes <- gbd$cause_short %>% unique %>%
     subset(. %in% calc_causes_wo_outcome)
@@ -140,7 +140,7 @@ compute_hia_paf <- function(conc_map,
                             scenarios = names(conc_map),
                             calc_causes = get_calc_causes(),
                             gemm = get_gemm(),
-                            gbd = get_gbd(),
+                            gbd = get_gbd_rr(),
                             ihme = get_ihme(ihme_version),
                             .mode = 'change') {
 
@@ -415,7 +415,7 @@ get_hazard_ratio <- function(pm,
                              .cause = 'NCD.LRI',
                              .region = 'inc_China',
                              gemm = get_gemm(),
-                             gbd = get_gbd()) {
+                             gbd = get_gbd_rr()) {
 
   gbd.causes <- gbd$cause_short %>% unique
 
@@ -446,7 +446,7 @@ country_paf_perm <- function(pm.base,
                              measure,
                              epi_version,
                              gemm = get_gemm(),
-                             gbd = get_gbd(),
+                             gbd = get_gbd_rr(),
                              ihme = get_ihme(version = epi_version),
                              adult_ages = get_adult_ages(ihme),
                              .region = "inc_China",

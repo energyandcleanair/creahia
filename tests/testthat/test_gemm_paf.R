@@ -14,7 +14,7 @@ local_test_data <- function(env = parent.frame()) {
                                 age %in% ages,
                                 cause==!!cause)
 
-  gbd <- get_gbd()
+  gbd <- get_gbd_rr()
 
   gemm_params <<- gemm %>%
     spread(param, value)
