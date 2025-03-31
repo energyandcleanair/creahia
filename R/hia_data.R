@@ -434,8 +434,12 @@ get_adult_ages <- function(ihme) {
     unique
 }
 
+get_gbd_rr <- function(version="original", gbd_causes){
+  get_gbd_rr_original(gbd_causes)
+}
 
-get_gbd <- function(gbd_causes = c('LRI.child', 'Diabetes')) {
+
+get_gbd_rr_original <- function(gbd_causes = c('LRI.child', 'Diabetes')) {
   print("Getting GBD")
 
   if(length(gbd_causes) == 0) gbd_causes <- 'none'
