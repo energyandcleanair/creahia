@@ -1,5 +1,5 @@
 CALC_GEMM = "gemm"
-CALC_GBD = "gbd only"
+CALC_GBD = "GBD only"
 CALC_FUSION = "fusion"
 
 
