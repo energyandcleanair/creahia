@@ -36,7 +36,8 @@ Imports:
     glue,
     terra,
     logger,
-    matrixStats
+    matrixStats,
+    rlang
 Depends:
     tidyverse,
     creahelpers

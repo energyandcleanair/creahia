@@ -30,23 +30,23 @@ compute_hia <- function(conc_map,
                         species,
                         regions,
                         scenarios = names(conc_map),
-                        calc_causes = 'GEMM and GBD',
-                        gbd_causes = "default", # which causes to use GDB risk functions for; 'all' for all available, default: only when GEMM not available
                         gemm = get_gemm(),
-                        gbd_rr = NULL,
+                        rr_sources = c(RR_GEMM, RR_ORIGINAL),
                         ihme = get_ihme(version = ihme_version),
                         epi_version = "default",
-                        rr_version = "original", # original, gbd2019, gbd2021
                         ihme_version = epi_version,
                         epi = get_epi(version = epi_version),
                         crfs_version = "default",
                         crfs = get_crfs(version = crfs_version),
                         diagnostic_folder = 'diagnostic',
                         .mode = 'change',
-
+                        # Years
                         pop_year = NULL,
                         scale_base_year = NULL,
                         scale_target_year = NULL,
+                        # Old parameters
+                        calc_causes = NULL,
+                        gbd_causes = NULL,
 
                         ...){
 
@@ -63,36 +63,23 @@ compute_hia <- function(conc_map,
     warning(paste(messages, collapse = " "))
   }
 
-  if(gbd_causes[1] == 'default' & calc_causes[1] == CALC_GBD) gbd_causes <- 'all'
 
-  if(grepl('GEMM|GBD', calc_causes[1])) calc_causes <- get_calc_causes(calc_causes[1])
-  if(calc_causes[1] == 'none') calc_causes <- character(0)
-  calc_causes_wo_outcome <- calc_causes %>% gsub('_.*', '', .) %>%
-    unique()
+  if(!is.null(calc_causes) | !is.null(gbd_causes)) {
+    log_info("Using old parameters for calc_causes and gbd_causes. Erasing rr_sources.")
+    rr_sources <- convert_old_parameters_to_rr_sources(calc_causes = calc_causes, gbd_causes = gbd_causes)
+  }
 
-  if(gbd_causes[1] == 'default')
-    gbd_causes <- calc_causes_wo_outcome %>% subset(!(. %in% unique(gemm$cause)))
-
-  if(is.null(gbd_rr)) gbd_rr <- get_gbd_rr(version=rr_version, gbd_causes=gbd_causes)
-
-  gbd_causes <- gbd_rr$cause_short %>% unique %>%
-    subset(. %in% calc_causes_wo_outcome)
-  gemm_causes <- calc_causes_wo_outcome %>% subset(!(. %in% gbd_causes))
-
-  if(length(gemm_causes) > 0) logger::log_info('Using GEMM risk functions for ', paste(gemm_causes, collapse = ", "))
-  if(length(gbd_causes) > 0) message('Using GBD risk functions for ', paste(gbd_causes, collapse = ", "))
-  if(length(calc_causes_wo_outcome) == 0) logger::log_info('Not using GBD or GEMM risk functions')
+  # Parse sources of relative risk
+  rr_sources <- parse_rr_sources(rr_sources)
 
   paf <- list()
-  if(length(calc_causes) > 0) {
+  if(length(rr_sources) > 0) {
     print("Computing paf")
     paf <- compute_hia_paf(conc_map = conc_map,
                            scenarios = scenarios,
-                           calc_causes = calc_causes,
                            epi_version = epi_version,
                            ihme_version = ihme_version,
-                           gemm = gemm,
-                           gbd_rr = gbd_rr,
+                           rr_sources = rr_sources,
                            ihme = ihme,
                            .mode = .mode)
   }
@@ -103,8 +90,7 @@ compute_hia <- function(conc_map,
                          paf = paf,
                          conc_map = conc_map,
                          epi = epi,
-                         crfs = crfs,
-                         calc_causes = calc_causes)
+                         crfs = crfs)
 
 
 
@@ -139,17 +125,18 @@ compute_hia <- function(conc_map,
 #' @examples
 compute_hia_paf <- function(conc_map,
                             epi_version,
-                            rr_version,
                             ihme_version,
-                            gbd_rr,
+                            rr_sources,
                             scenarios = names(conc_map),
-                            calc_causes = get_calc_causes(),
-                            gemm = get_gemm(),
                             ihme = get_ihme(ihme_version),
                             .mode = 'change') {
 
   paf <- list()
   adult_ages <- get_adult_ages(ihme)
+
+
+  cause_measure_source <- get_cause_source(rr_sources=rr_sources,
+                                            add_measure=T)
 
   for(scenario in scenarios) {
     message(paste('processing', scenario))
@@ -176,21 +163,23 @@ compute_hia_paf <- function(conc_map,
         conc <- conc_scenario[[region_id]][complete.cases(conc_scenario[[region_id]][,non_na_cols]),]
         if(nrow(conc)==0) return(NULL)
 
-        for(cs_ms in calc_causes) {
-          logger::log_debug(cs_ms)
-          cs.ms <- cs_ms %>% strsplit('_') %>%
-            unlist
+
+        for(i in 1:nrow(cause_measure_source)) {
+          measure_ <- cause_measure_source$measure[i]
+          cause_ <- cause_measure_source$cause[i]
+          cs_ms <- paste(cause_, measure_, sep = '_')
+          rr_source_ <- cause_measure_source$source[i]
+          logger::log_debug(glue("Computing PAF for {cause_} and {measure_} from {source_}"))
 
           paf_region[[cs_ms]] <- country_paf_perm(pm.base = conc[, 'conc_baseline_pm25'],
                                                   pm.perm = conc[, 'conc_scenario_pm25'],
                                                   pop = conc[, 'pop'],
                                                   region_id = region_id,
-                                                  cause = cs.ms[1],
-                                                  measure = cs.ms[2],
+                                                  cause = cause_,
+                                                  measure = measure_,
+                                                  rr_source = rr_source_,
                                                   adult_ages = adult_ages,
                                                   epi_version = epi_version,
-                                                  gemm = gemm,
-                                                  gbd_rr = gbd_rr,
                                                   ihme = ihme,
                                                   .region = "inc_China",
                                                   .mode = .mode)
@@ -234,7 +223,6 @@ compute_hia_epi <- function(species,
                             regions,
                             epi = get_epi(),
                             crfs = get_crfs(),
-                            calc_causes = get_calc_causes(),
                             .mode = 'change') {
 
   hia_polls <- species_to_hiapoll(species)
@@ -351,8 +339,7 @@ compute_hia_epi <- function(species,
 
       pm_mortality <- get_pm_mortality(
         paf_scenario = paf[[scenario]],
-        epi_loc = epi_loc,
-        calc_causes = calc_causes
+        epi_loc = epi_loc
       )
       hia_scenario <- full_join(pm_mortality, hia_scenario)
     }
@@ -415,30 +402,17 @@ to_long_hia <- function(hia) {
 
 # define a function to calculate the hazard ratio for a specific concentration, cause and age group
 get_hazard_ratio <- function(pm,
-                             gemm,
-                             gbd_rr,
-                             .age = '25+',
-                             .cause = 'NCD.LRI',
-                             .region = 'inc_China'
+                             rr,
+                             .age,
+                             .cause
                              ) {
 
-  gbd.causes <- gbd_rr$cause_short %>% unique
+  rr_filtered <- rr %>%
+    dplyr::filter(cause == .cause, age == .age)
 
-  if(.cause %in% gbd.causes) {
-    hr.all <- gbd_rr %>% dplyr::filter(cause_short == .cause, age == .age)
-    hr.all %>% sel(low, central, high) %>%
-      apply(2, function(y) approx(x = hr.all$exposure, y, xout = pm)$y)
-  } else {
-    p <- gemm %>%
-      dplyr::filter(age == .age, cause == .cause, region == .region) %>%
-      spread(param, value)
-    z <- pmax(0, pm-2.4, na.rm = T)
-    g <- log(1 + z / p$a) / (1 + exp((p$u-z) / p$p))
-    se <- c(-p$se, 0, p$se)
-    hr.out <- (matrix(g) %*% (p$t + 2 * se)) %>% exp
-    colnames(hr.out) <- c('low', 'central', 'high')
-    return(hr.out)
-  }
+  rr_filtered %>% sel(low, central, high) %>%
+    apply(2, function(y) approx(x = rr_filtered$exposure, y, xout = pm)$y)
+
 }
 
 
@@ -449,38 +423,70 @@ country_paf_perm <- function(pm.base,
                              region_id,
                              cause,
                              measure,
-                             gbd_rr,
+                             rr_source,
                              epi_version,
-                             gemm = get_gemm(),
                              ihme = get_ihme(version = epi_version),
                              adult_ages = get_adult_ages(ihme),
                              .region = "inc_China",
                              .mode = 'change') { # change or attribution?
 
-  age.specific <- c('NCD.LRI', 'Stroke', 'IHD')
 
-  if(cause %in% age.specific) {
-    ages <- adult_ages
-    age_weights <- ihme %>%
-      dplyr::filter(location_id==get_epi_location_id(region_id),
-                    cause_short == cause,
-                    measure_name == measure,
-                    age %in% ages,
-                    estimate == 'central')
-    # Ensuring ages and age_weights$age are in the same order
-    age_weights <- age_weights[match(ages, age_weights$age),]
-  } else {
-    age_weights <- data.frame(val = 1)
-    if(grepl('child', cause)) ages = 'Under 5' else ages = '25+'
+  rr <- get_rr(rr_source) %>%
+    filter(cause == !!cause)
+
+  # Get age weights ---
+  ages <- unique(rr$age) %>%
+    deduplicate_adult_ages()
+
+  stopifnot(
+    !AGE_ADULTS %in% ages | length(intersect(ages, AGE_ADULTS_SPLIT))==0
+  )
+
+  age_weights <- ihme %>%
+    mutate(age=recode_age(age)) %>%
+    mutate(cause_short = case_when(cause_short==CAUSE_LRI & age==AGE_CHILDREN ~ CAUSE_LRICHILD,
+                                   T ~ cause_short)) %>%
+    dplyr::filter(location_id==get_epi_location_id(region_id),
+                  cause_short == !!cause,
+                  measure_name == measure,
+                  age %in% ages,
+                  estimate == 'central')
+
+  if(nrow(age_weights) == 0) {
+    warning(glue("No age weights found for {region_id} and {cause}"))
+    return(NULL)
   }
 
-  rr.base <- ages %>% sapply(function(.a) get_hazard_ratio(pm.base, gbd_rr = gbd_rr, gemm = gemm,
-                                             .cause = cause, .age = .a, .region = .region),
+  if(length(age_weights$age) != length(ages)) {
+    stop("Unmatching age weights")
+  }
+
+  # Ensuring ages and age_weights$age are in the same order
+  age_weights <- age_weights[match(ages, age_weights$age),]
+#
+#
+#   age.specific <- c('NCD.LRI', 'Stroke', 'IHD')
+#
+#   if(cause %in% age.specific) {
+#     ages <- adult_ages
+#     age_weights <- ihme %>%
+#       dplyr::filter(location_id==get_epi_location_id(region_id),
+#                     cause == !!cause,
+#                     measure_name == measure,
+#                     age %in% ages,
+#                     estimate == 'central')
+#     # Ensuring ages and age_weights$age are in the same order
+#     age_weights <- age_weights[match(ages, age_weights$age),]
+#   } else {
+#     age_weights <- data.frame(val = 1)
+#     if(grepl('child', cause)) ages = 'Under 5' else ages = '25+'
+#   }
+
+  rr.base <- ages %>% sapply(function(.a) get_hazard_ratio(pm.base, rr = rr, .cause = cause, .age = .a),
                              simplify = 'array')
 
   if(.mode == 'change') {
-    rr.perm <- ages %>% sapply(function(.a) get_hazard_ratio(pm.perm, gbd_rr = gbd_rr, gemm = gemm,
-                                               .cause = cause, .age = .a, .region = .region),
+    rr.perm <- ages %>% sapply(function(.a) get_hazard_ratio(pm.perm, rr = rr, .cause = cause, .age = .a),
                                simplify = 'array')
 
 
@@ -667,9 +673,15 @@ add_double_counted <- function(hia, crfs, epi) {
 
   # Manual for epi PM25
   joined[joined$Pollutant == 'PM25' &
-           any(joined$Cause == 'NCD.LRI') & # detect if GEMM risk function for NCD+LRI is being used
-           !joined$Cause %in% c('NCD.LRI', 'LRI.child') &
-           joined$Outcome %in% c('YLLs', 'Deaths'),
+           any(joined$Cause == CAUSE_NCDLRI) & # detect if NCD+LRI is being used (e.g. from GEMM or FUSION)
+           joined$Cause %in% CAUSE_NCDLRI_INCLUDED &
+           joined$Outcome %in% c(MEASURE_YLLS, MEASURE_DEATHS),
+         'double_counted'] <- TRUE
+
+  joined[joined$Pollutant == 'PM25' &
+           any(joined$Cause == CAUSE_CV) & # detect if NCD+LRI is being used (e.g. from GEMM or FUSION)
+           joined$Cause %in% CAUSE_CV_INCLUDED &
+           joined$Outcome %in% c(MEASURE_YLLS, MEASURE_DEATHS),
          'double_counted'] <- TRUE
 
   joined <- joined %>%

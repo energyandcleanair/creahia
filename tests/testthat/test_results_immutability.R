@@ -61,6 +61,35 @@ get_fingerprints <- function(){
     unnest(hia)
 }
 
+
+
+get_deaths_at_commit <- function(commit){
+  remotes::install_github("energyandcleanair/creahia", ref = commit, upgrade = FALSE)
+  creahelpers::reload_packages("creahia")
+  result <- get_fingerprint_bgd() %>%
+    filter(estimate=="central", Outcome=="Deaths") %>%
+    group_by(version) %>%
+    summarise(sum(number)) %>%
+    mutate(
+    commit = stringr::str_sub(commit, 1, 7)
+  )
+  print(result)
+  result
+}
+
+compare_commits <- function(){
+  commits <- c(
+    "aedf067d0add1891b65212ace1320dfcba1e4c32",
+    "c256ae5e6f1561134a74aa94f0673e2ddab6086e",
+    "611ce4bc634549501e469e16e6226053eb2aa777",
+    "10b046cfe8e4e404714671e1caae5f155b86ae1e"
+  )
+  # Get fingerprints
+  results <- lapply(commits, get_deaths_at_commit) %>%
+    bind_rows()
+}
+
+
 test_that("Estimates are compatible with previous versions", {
 
 
@@ -82,6 +111,7 @@ test_that("Estimates are compatible with previous versions", {
   filepath <- glue("tests/data/versions/{current_version}_hia_bgd.csv")
   dir.create(dirname(filepath), showWarnings = FALSE, recursive = TRUE)
   write.csv(hia, filepath, row.names = FALSE)
+
 
   # Compare fingerprints
   fingerprints <- get_fingerprints()
