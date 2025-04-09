@@ -1,5 +1,116 @@
-#' Takes file sent by Burnett and turns it into a compatible file
 generate_rr_fusion <- function(){
+
+  # Both code source and excel files were provided by Burnett
+  # We use code source, but compare with excel for validation
+  # CIs for burden analyses (e.g. small perturbations)
+  # However, values generated aren't exactly matching yet
+
+  rrs_excel <- generate_rrs_from_excel()
+  rrs_code <- generate_rr_fusion_from_code()
+
+  # Visual validation
+  # bind_rows(
+  #   rrs_excel %>% mutate(source='excel'),
+  #   rrs_source %>% mutate(source='code')) %>%
+  #   filter(exposure < 100) %>%
+  #   ggplot(aes(x=exposure, y=central, color=source)) +
+  #   geom_line() +
+  #   facet_grid(age~cause)
+
+  # We remove CV because pipeline not validated yet (i.e. ensure there's no double counting)
+  rrs <- rrs_code %>%
+    filter(cause != "CV")
+
+  return(rrs)
+}
+
+
+#' This one reads directly from the lookup table provided by Burnett
+#'
+#' @param cause
+#' @param age
+#' @param params
+#' @param datatheta
+#' @param col_indexes
+#' @param z_max
+#' @param z_step
+#' @param synthetize
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+generate_rrs_from_excel <- function(){
+
+  filepath <- get_hia_path("fusion/Fusion model RR lookup table.xlsx")
+
+  rr_copd_lc_lri_diabetes <- readxl::read_xlsx(filepath,
+                    range="Fusion RR!B21:N3021",
+                    col_names = c(
+                      "exposure",
+                      "COPD_central_25+", "COPD_low_25+", "COPD_high_25+",
+                      "LC_central_25+", "LC_low_25+", "LC_high_25+",
+                      "LRI_central_25+", "LRI_low_25+", "LRI_high_25+",
+                      "Diabetes_central_25+", "Diabetes_low_25+", "Diabetes_high_25+"
+                    ))
+
+
+  ages <- c("25-29",
+            "30-34",
+            "35-39",
+            "40-44",
+            "45-49",
+            "50-54",
+            "55-59",
+            "60-64",
+            "65-69",
+            "70-74",
+            "75-79",
+            "80-84",
+            "85-89",
+            "90-94",
+            "95+")
+
+  estimates <- c("central", "low", "high")
+
+  # cross them
+  age_estimates <- expand.grid(estimates, ages) %>%
+    mutate(colnames=paste0(Var1, "_", Var2)) %>%
+    pull(colnames)
+
+  rr_ihd <- readxl::read_xlsx(filepath,
+                              range="Fusion RR!P21:BI3021",
+                              col_names = c("exposure", paste0("IHD_", age_estimates)))
+
+  rr_stroke <- readxl::read_xlsx(filepath,
+                              range="Fusion RR!BK21:DD3021",
+                              col_names = c("exposure", paste0("Stroke_", age_estimates)))
+
+
+  # We don't take CV, NCD+LRI, NCD+Stroke, NCD+IHD and CVM for now as they aren't age specific
+  # and may have some overlap
+
+  rrs <- left_join(
+    rr_copd_lc_lri_diabetes,
+    rr_ihd) %>%
+    left_join(
+      rr_stroke
+    ) %>%
+    mutate(exposure=as.numeric(exposure)) %>%
+    pivot_longer(
+      cols = -exposure,
+      names_to = c("cause", "estimate", "age"),
+      names_pattern = "(.*)_(.*)_(.*)"
+    ) %>%
+    spread(estimate, value)
+
+  return(rrs)
+}
+
+
+#' Takes file sent by Burnett and turns it into a compatible file
+#' Not exactly matching excel file
+generate_rr_fusion_from_code <- function(){
 
   params <- read.csv(get_hia_path("fusion/Fusion Parameters Jul 7, 2021.csv"), header = T, check.names = F)
   col_indexes <- get_col_indexes(params)
@@ -15,11 +126,11 @@ generate_rr_fusion <- function(){
   rr_all <- cause_age %>%
     pmap_dfr(function(cause, age){
       generate_rrs_per_cause_age(cause=cause,
-                                         age=age,
-                                         params=params,
-                                         datatheta=datatheta,
-                                         col_indexes=col_indexes,
-                                         synthetize=TRUE) %>%
+                                 age=age,
+                                 params=params,
+                                 datatheta=datatheta,
+                                 col_indexes=col_indexes,
+                                 synthetize=TRUE) %>%
         as_tibble(rownames = "exposure") %>%
         mutate(
           cause = cause,
@@ -37,23 +148,20 @@ generate_rr_fusion <- function(){
   # Convert LRI to LRIChild when Under 5
   rr <- rr %>%
     mutate(cause=case_when(cause == CAUSE_LRI &
-                       age == AGE_CHILDREN ~ CAUSE_LRICHILD,
-                     TRUE ~ cause))
+                             age == AGE_CHILDREN ~ CAUSE_LRICHILD,
+                           TRUE ~ cause))
 
   # Format
   rr <- rr %>%
     select(cause,
-         exposure,
-         age,
-         central=rr_mean,
-         low=rr_lower,
-         high=rr_upper)
+           exposure,
+           age,
+           central=rr_mean,
+           low=rr_lower,
+           high=rr_upper)
 
   return(rr)
 }
-
-
-
 
 #' Generate 1000 RRs for a given cause, age and different pollution levels.
 #'
