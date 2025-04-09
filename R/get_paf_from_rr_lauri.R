@@ -38,7 +38,8 @@ get_paf_from_rr_lauri <- function(rr_base, rr_perm, age_weights, pop, ci_level =
   # Normalize age_weights to sum to 1
   age_weights_norm <- age_weights / sum(age_weights)
 
-  paf <- 1 - rr_base/rr_perm
+  paf <- rr_perm / rr_base - 1
+
 
   if(length(dim(paf))==3) {
     paf_low <- paf[,'low',]
