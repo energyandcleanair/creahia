@@ -1,59 +1,69 @@
 generate_rrs <- function(){
 
+  causes_to_keep <- c(
+    CAUSE_NCDLRI,
+    CAUSE_LRI,
+    CAUSE_COPD,
+    CAUSE_LBW,
+    CAUSE_IHD,
+    CAUSE_STROKE,
+    CAUSE_LUNGCANCER,
+    CAUSE_DIABETES,
+    CAUSE_LRICHILD
+  )
 
-  versions <- c(
+
+  sources <- c(
     RR_ORIGINAL,
     RR_GBD2019,
+    RR_FUSION,
+    RR_GEMM,
     RR_GBD2021
   )
 
 
-  rrs <- lapply(versions, function(version){
+  rrs <- lapply(sources, function(source){
 
-    raw <- if(version == RR_ORIGINAL){
-      generate_gbd_rr_original()
-    } else if(version == RR_GBD2019){
-      generate_gbd_rr_gbd2019()
-    } else if(version == RR_GBD2021){
-      generate_gbd_rr_gbd2021()
+    print(glue("Generating RR for {source}"))
+    raw <- if(source == RR_ORIGINAL){
+      generate_rr_original()
+    } else if(source == RR_GBD2019){
+      generate_rr_gbd2019()
+    } else if(source == RR_GBD2021){
+      generate_rr_gbd2021()
+    } else if(source == RR_FUSION){
+      generate_rr_fusion()
+    } else if(source == RR_GEMM){
+      generate_rr_gemm()
+    } else {
+      stop('Unknown version')
     }
 
     raw %>%
+      filter(cause %in% causes_to_keep) %>%
       check_rr() %>%
-      mutate(version=version) %>%
-      keep_historical_causes() %>%
-      write_csv(file.path('inst','extdata', paste0('gbd_rr_', version, '.csv')))
+      mutate(source=source) %>%
+      write_csv(file.path('inst','extdata', paste0('rr_', source, '.csv')))
 
   }) %>%
     bind_rows()
 
 
+  # Visual check
   ggplot(rrs %>%
            filter(exposure < 100) %>%
            pivot_longer(cols=c(low, central, high), names_to='rr_type', values_to='rr') %>%
            filter(rr_type=='central')
            ,
-         aes(exposure, rr, col=version,
+         aes(exposure, rr, col=source,
              # linetype = rr_type
              )) +
     geom_line() +
-    facet_grid(cause_short~age, scales='free_y')
+    facet_grid(cause~age, scales='free_y')
 }
 
 
-#' As we transition to newer GBD,
-#' let's first keep causes that existed before to avoid double counting with other CRFs
-#'
-#' @param x
-#'
-#' @returns
-#' @export
-#'
-#' @examples
-keep_historical_causes <- function(x){
-  causes <- c('LRI','LRI.child', 'COPD', 'IHD', 'Stroke', 'LC', 'Diabetes')
-  x %>% filter(cause_short %in% causes)
-}
+
 
 #' Check format and data
 #'
@@ -66,140 +76,103 @@ check_rr <- function(rr){
   # No NA age
   stopifnot(all(!is.na(rr$age)))
 
+
   # Cause short is known
-  stopifnot(all(rr$cause_short %in% c('LRI', 'COPD', 'LBW', 'IHD', 'Stroke', 'LC', 'PTB', 'GA', 'Diabetes', 'LRI.child')))
+  unknown_causes <- rr$cause[!rr$cause %in% c(
+    CAUSE_LRI,
+    CAUSE_COPD,
+    CAUSE_LBW,
+    CAUSE_IHD,
+    CAUSE_STROKE,
+    CAUSE_LUNGCANCER,
+    CAUSE_DIABETES,
+    CAUSE_LRICHILD,
+    CAUSE_NCDLRI,
+    CAUSE_PTB
+  )]
+  if(length(unknown_causes) > 0){
+    stop('Unknown causes: ', paste(unique(unknown_causes), collapse=', '))
+  }
+
+  # No NA cause
+  stopifnot(all(!is.na(rr$cause)))
 
   # Colnames
-  stopifnot(setequal(colnames(rr), c('cause_short', 'age', 'exposure', 'low', 'central', 'high')))
+  stopifnot(setequal(colnames(rr), c('cause', 'age', 'exposure', 'low', 'central', 'high')))
 
   # Exposure 0-300
   stopifnot(min(rr$exposure) == 0)
   stopifnot(max(rr$exposure) == 300)
 
+  # Check ages are known
+  stopifnot(all(rr$age %in% c(
+    AGE_CHILDREN,
+    AGE_ADULTS,
+    AGE_ADULTS_SPLIT
+  )))
+
+
   rr
 }
 
-recode_gbd_causes <- function(cause){
-  recode(cause,
-         lri = 'LRI',
-         lower_respiratory_infections = 'LRI',
-         t2_dm = 'Diabetes',
-         diabetes = 'Diabetes',
-         cvd_ihd = 'IHD',
-         ischaemic_heart_disease = 'IHD',
-         cvd_stroke = 'Stroke',
-         stroke = 'Stroke',
-         neo_lung = 'LC',
-         lung_cancer = 'LC',
-         resp_copd = 'COPD',
-         copd = 'COPD',
-         lbw = 'LBW',
-         ptb = 'PTB',
-         gestational_age_shift = 'GA'
+
+
+
+recode_gbd_causes <- function(cause, stop_on_unknown = TRUE){
+  result <- recode(tolower(cause),
+         lri = CAUSE_LRI,
+         lower_respiratory_infections = CAUSE_LRI,
+         t2_dm = CAUSE_DIABETES,
+         diabetes = CAUSE_DIABETES,
+         cvd_ihd = CAUSE_IHD,
+         ihd = CAUSE_IHD,
+         ischaemic_heart_disease = CAUSE_IHD,
+         cvd_stroke = CAUSE_STROKE,
+         stroke = CAUSE_STROKE,
+         neo_lung = CAUSE_LUNGCANCER,
+         lung_cancer = CAUSE_LUNGCANCER,
+         lc = CAUSE_LUNGCANCER,
+         `lung cancer` = CAUSE_LUNGCANCER,
+         resp_copd = CAUSE_COPD,
+         copd = CAUSE_COPD,
+         lbw = CAUSE_LBW,
+         ptb = CAUSE_PTB,
+         ncd.lri = CAUSE_NCDLRI,
+         `ncd&lri` = CAUSE_NCDLRI,
+         cv = CAUSE_CV,
+        .default = NA_character_
   )
+
+  # Check for NA values and raise error if found
+  if(stop_on_unknown && any(is.na(result))) {
+    unknown_causes <- cause[is.na(result)]
+    stop("Unknown cause(s) encountered: ", paste(unique(unknown_causes), collapse=", "))
+  }
+
+  return(result)
 }
 
 
 recode_age <- function(age){
-  case_when(age == 99 ~ '25+',
-            age == 80 ~ '80+',
-            age < 80 ~ paste0(age, '-', age + 4))
+  case_when(
+    as.character(age) == '25+' ~ AGE_ADULTS,
+    as.character(age) == '0-4' ~ AGE_CHILDREN,
+    as.character(age) == '<5' ~ AGE_CHILDREN,
+    as.character(age) == 'Under 5' ~ AGE_CHILDREN,
+    as.character(age) == "9999" ~ AGE_ADULTS,
+    as.character(age) %in% AGE_ADULTS_SPLIT ~ as.character(age),
+    # Avoiding unnecessary conversion warnings
+    suppressWarnings(as.numeric(age)) == 80 ~ '80+',
+    suppressWarnings(as.numeric(age)) < 80 ~ paste0(age, '-', suppressWarnings(as.numeric(age)) + 4),
+    TRUE ~ NA_character_)
 }
 
 
-add_lri_child <- function(rrs){
-  rrs %>% filter(cause_short == 'LRI') %>%
-    mutate(cause_short = 'LRI.child', age = 'Under 5') %>%
-    bind_rows(rrs)
+
+add_lri_child <- function(rr){
+  rr %>% filter(cause == CAUSE_LRI) %>%
+    mutate(cause = CAUSE_LRICHILD,
+           age = AGE_CHILDREN) %>%
+    bind_rows(rr)
 }
 
-generate_gbd_rr_original <- function(){
-
-  # Sent to Lauri by email
-  read_csv(get_hia_path('ier_computed_table.csv'), col_types = cols()) %>%
-    # there's a weird one where rr_upper < rr_mean
-    mutate(
-      low = rr_lower,
-      central = pmin(rr_mean, rr_upper),
-      high = pmax(rr_mean, rr_upper)
-    ) %>%
-    select(-c(rr_lower, rr_mean, rr_upper)) %>%
-    mutate(cause_short = recode_gbd_causes(cause)) %>%
-    mutate(age = recode_age(age)) %>%
-    dplyr::filter(exposure <= 300, !is.na(age)) %>%
-    select(cause_short, age, exposure, low, central, high) %>%
-    # add the LRI risk function to be used for children
-    add_lri_child()
-}
-
-generate_gbd_rr_gbd2019 <- function(){
-
-  # Summary/Mean Estimates [CSV] should be downloaded from there and unzipped
-  # https://ghdx.healthdata.org/record/ihme-data/global-burden-disease-study-2019-gbd-2019-particulate-matter-risk-curves
-  folder <- '~/Downloads/IHME_GBD_2019_PM_RISK_SUMM/'
-
-
-  tibble(file = list.files(folder)) %>%
-    mutate(
-      cause = tolower(str_extract(file, 'LRI|RESP_COPD|LBW|BW|CVD_STROKE|CVD_IHD|GA|NEO_LUNG|PTB|COPD|T2_DM')),
-      age = as.numeric(str_extract(file, '(?<=_)[0-9]{2}(?=_)')),
-      full_path = file.path(folder, file)
-    ) %>%
-    # Replace NA age_group with 99 (or another value) for files without age in name
-    mutate(age = ifelse(is.na(age), 99, age)) %>%
-    filter(cause != 'bw',
-           cause != 'ga'
-           ) %>%
-    mutate(age = recode_age(age)) %>%
-    mutate(data = map(full_path, read_csv)) %>%
-    select(cause, age, data) %>%
-    unnest(data) %>%
-    filter(exposure_spline <= 300,
-           !is.na(age)) %>%
-    mutate(cause_short = recode_gbd_causes(cause)) %>%
-    select(cause_short,
-           exposure=exposure_spline,
-           age,
-           exposure=exposure_spline,
-           central=mean,
-           low=lower,
-           high=upper) %>%
-  # Add child
-  add_lri_child()
-}
-
-generate_gbd_rr_gbd2021 <- function(){
-
-  # Download RR_CURVES from GBD2021: https://cloud.ihme.washington.edu/s/WXGaoWbd5ksS6jm
-  folder <- '~/Downloads/IHME_GBD_2021_AIR_POLLUTION_1990_2021_RR_CURVES/'
-
-
-  tibble(file = list.files(folder)) %>%
-    filter(grepl("_PM_", file),
-           grepl("_MEAN_", file)
-           ) %>%
-    mutate(
-      # cause = tolower(str_extract(file, 'BIRTH_WEIGHT|COPD|DIABETES|GESTATIONAL_AGE_SHIFT|ISCHEMIC_HEART_DISEASE|LOWER_RESPIRATORY_INFECTIONS|LUNG_CANCER|STROKE')),
-      age = as.numeric(str_extract(file, '(?<=_)[0-9]{2}(?=_)')),
-      full_path = file.path(folder, file)
-    ) %>%
-    # Replace NA age_group with 99 (or another value) for files without age in name
-    mutate(age = ifelse(is.na(age), 99, age)) %>%
-    mutate(age = recode_age(age)) %>%
-    mutate(data = map(full_path, read_csv)) %>%
-    select(age, data) %>%
-    unnest(data) %>%
-    filter(exposure <= 300,
-           cause != 'bw',
-           cause != 'ga',
-           !is.na(age)) %>%
-    mutate(cause_short = recode_gbd_causes(cause)) %>%
-    select(cause_short,
-           exposure,
-           age,
-           central=mean,
-           low=lower,
-           high=upper) %>%
-    # Add child
-    add_lri_child()
-}

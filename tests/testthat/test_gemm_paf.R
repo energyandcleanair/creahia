@@ -72,7 +72,7 @@ test_that("GEMM PAF is properly computed", {
     filter(iso3==!!iso3,
            measure_name=="Deaths",
            age %in% ages,
-           cause_short==cause
+           cause==cause
     )
 
   paf <- country_paf_perm(pm.base = conc[, 'conc_baseline_pm25'],

@@ -52,6 +52,8 @@ importFrom(ggspatial,layer_spatial)
 
 importFrom(gstat,idw)
 
+importFrom(logger, log_info)
+
 importFrom(lubridate,"hour<-")
 importFrom(lubridate,day)
 importFrom(lubridate,hour)
@@ -105,6 +107,8 @@ importFrom(readxl,read_xlsx)
 importFrom(reshape2,colsplit)
 
 importFrom(rgeos,gContains)
+
+importFrom(rlang, `%||%`)
 
 importFrom(sp,CRS)
 importFrom(sp,SpatialPointsDataFrame)
