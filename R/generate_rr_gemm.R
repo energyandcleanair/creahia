@@ -45,9 +45,9 @@ generate_rr_gemm_at_z <- function(gemm, z){
       z = z,
       z_corr = pmax(0, z-2.4, na.rm = T),
       g = log(1 + z_corr / a) / (1 + exp((u-z_corr) / p)),
-      low = g - 2 * se,
-      central = g,
-      high = g + 2 * se
+      low = g* (t - 2 * se),
+      central = g*t,
+      high = g*(t + 2 * se)
     ) %>%
     mutate_at(vars(low, central, high), exp) %>%
     select(exposure=z, age, cause, low, central, high)
