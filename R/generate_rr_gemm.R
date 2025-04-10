@@ -39,15 +39,14 @@ generate_rr_gemm <- function(region="inc_China"){
 
 generate_rr_gemm_at_z <- function(gemm, z){
   gemm %>%
-    # dplyr::filter(age == .age, cause == .cause, region == .region) %>%
     spread(param, value) %>%
     mutate(
       z = z,
-      z_corr = pmax(0, z-2.4, na.rm = T),
+      z_corr = pmax(0, z-2.4),
       g = log(1 + z_corr / a) / (1 + exp((u-z_corr) / p)),
-      low = g* (t - 2 * se),
-      central = g*t,
-      high = g*(t + 2 * se)
+      low = g * (t - 2 * se),
+      central = g * t,
+      high = g * (t + 2 * se)
     ) %>%
     mutate_at(vars(low, central, high), exp) %>%
     select(exposure=z, age, cause, low, central, high)

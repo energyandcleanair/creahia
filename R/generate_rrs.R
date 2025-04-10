@@ -50,16 +50,30 @@ generate_rrs <- function(){
 
 
   # Visual check
-  ggplot(rrs %>%
-           filter(exposure < 100) %>%
-           pivot_longer(cols=c(low, central, high), names_to='rr_type', values_to='rr') %>%
-           filter(rr_type=='central')
-           ,
-         aes(exposure, rr, col=source,
-             # linetype = rr_type
-             )) +
-    geom_line() +
-    facet_grid(cause~age, scales='free_y')
+  # ggplot(rrs %>%
+  #          filter(exposure < 200) %>%
+  #          filter(cause=='NCD.LRI', age=='25+') %>%
+  #          pivot_longer(cols=c(low, central, high), names_to='rr_type', values_to='rr') %>%
+  #          filter(rr_type=='central')
+  #          ,
+  #        aes(exposure, rr, col=source,
+  #            # linetype = rr_type
+  #            )) +
+  #   geom_line() +
+  #   facet_grid(cause~age, scales='free_y')
+  #
+  #
+  #
+  # # Plot marginal rrs
+  # rrs %>%
+  #   filter(exposure < 200, source %in% c("fusion", "gemm")) %>%
+  #   filter(age=='25+') %>%
+  #   group_by(source, cause, age) %>%
+  #   arrange(exposure) %>%
+  #   mutate(res=1 - 1/central) %>%
+  #   ggplot(aes(exposure, central, col=source)) + geom_line() +
+  #   facet_wrap(~cause)
+
 }
 
 
