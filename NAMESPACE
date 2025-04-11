@@ -106,8 +106,6 @@ importFrom(readxl,read_xlsx)
 
 importFrom(reshape2,colsplit)
 
-importFrom(rgeos,gContains)
-
 importFrom(rlang, `%||%`)
 
 importFrom(sp,CRS)
