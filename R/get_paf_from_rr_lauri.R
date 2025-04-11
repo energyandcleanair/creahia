@@ -60,8 +60,6 @@ get_paf_from_rr_lauri <- function(rr_base, rr_perm, age_weights, pop, ci_level =
   }
 
 
-
-
   # Weight by age group, then by population
   if(length(age_weights_norm)>1) {
     paf_low <- rowSums(paf_low %*% age_weights_norm, na.rm = TRUE)
@@ -79,23 +77,15 @@ get_paf_from_rr_lauri <- function(rr_base, rr_perm, age_weights, pop, ci_level =
     sweep(1, pop, "*") %>%
     colSums(na.rm = TRUE) / sum(pop)
 
-  # Some sanity checks
-  if(any(paf[order(abs(paf))] != paf) | n_distinct(setdiff(sign(paf),0)) > 1){
+  # Sanity checks
+  # If not all of the same sign or not ordered, stop
+  if(
+    # Not ordered (either way)
+    (any(paf[order(paf)] != paf) & any(paf[order(-paf)] != paf))
+    # Or different sign
+    | n_distinct(setdiff(sign(paf),0)) > 1){
     warning("PAF estimates are not properly ordered or of the same sign for ", cause, " ", measure)
-
-
-    rr <- cbind(low=rr_low, central=rr_central, high=rr_high) %>%
-      sweep(1, pop, "*") %>%
-      colSums(na.rm = TRUE) / sum(pop)
-
-
-    paf['low'] <- paf['central'] * rr['low']/rr['central']
-    paf['high'] <- paf['central'] * rr['high']/rr['central']
-  }
-
-  # If not all of the same sign, stop
-  if(any(paf[order(abs(paf))] != paf) | n_distinct(setdiff(sign(paf),0)) > 1){
-    stop("PAF estimates are not properly ordered or of the same sign for ", cause, " ", measure)
+    logger::log_warn("PAF estimates are not properly ordered or of the same sign for ", cause, " ", measure)
   }
 
   return(paf)
