@@ -53,7 +53,7 @@ get_calc_causes_old <- function(calc_causes = 'GEMM and GBD',
   }
 
 
-  if(gbd_causes[1] == 'default' & calc_causes[1] == CALC_GBD) gbd_causes <- 'all'
+  if(gbd_causes[1] == 'default' & calc_causes[1] == "GBD only") gbd_causes <- 'all'
 
   if(grepl('GEMM|GBD', calc_causes[1])) calc_causes <- get_calc_causes_from_set(calc_causes[1])
   if(calc_causes[1] == 'none') calc_causes <- character(0)
