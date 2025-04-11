@@ -8,8 +8,7 @@ test_that("HIAs are consistent across levels", {
   pm25 <- raster::raster("~/development/crea/studies/202412_hia_southafrica/cache/pm25_2023_30_sec.tif")
 
   hias <- generate_random_exposure_hias(levels=c(0,1,2),
-                                        iso3="ZAF",
-                                        calc_causes="GBD only",
+                                        iso3="BGD",
                                         administrative_res="full",
                                         baseline_rast=pm25
                                         )

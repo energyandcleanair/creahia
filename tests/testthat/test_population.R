@@ -135,20 +135,20 @@ test_that("Population is properly calculated and scaled- using HIA", {
   library(creaexposure)
   iso3 <- "ZAF"
 
-  hia_2020 <- get_random_exposure_hia(levels=c(0,1,2),
-                                       pop_year=2020,
-                                       iso3=iso3
-                                       ) %>%
-    mutate(year=2020)
+  hia_2015 <- get_random_exposure_hia(levels=c(0,1,2),
+                                      pop_year=2015,
+                                      iso3=iso3
+  ) %>%
+    mutate(year=2015)
 
 
-  hia_2023 <- get_random_exposure_hia(levels=c(0,1,2),
-                                      pop_year=2023,
+  hia_2019 <- get_random_exposure_hia(levels=c(0,1,2),
+                                      pop_year=2019,
                                       iso3=iso3) %>%
-    mutate(year=2023)
+    mutate(year=2019)
 
 
-  hias <- bind_rows(hia_2020, hia_2023)
+  hias <- bind_rows(hia_2015, hia_2019)
 
   pop_hia <- hias %>%
     distinct(iso3, year, level, pop) %>%
@@ -156,9 +156,9 @@ test_that("Population is properly calculated and scaled- using HIA", {
     summarise(pop_hia=sum(pop))
 
   pop_wb <- wbstats::wb_data(indicator="SP.POP.TOTL",
-                                             country=iso3,
-                                             start_date=min(hias$year),
-                                             end_date=max(hias$year)) %>%
+                             country=iso3,
+                             start_date=min(hias$year),
+                             end_date=max(hias$year)) %>%
     select(iso3=iso3c,
            year=date,
            pop_wb=`SP.POP.TOTL`)
