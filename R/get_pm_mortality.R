@@ -3,13 +3,12 @@
 #'
 #' @param paf_scenario
 #' @param epi_loc
-#' @param calc_causes
 #'
 #' @return
 #' @export
 #'
 #' @examples
-get_pm_mortality <- function(paf_scenario, epi_loc, calc_causes){
+get_pm_mortality <- function(paf_scenario, epi_loc){
 
   z_epi <- qnorm(1 - (1 - 0.95) / 2) # 95% confidence interval: 1.96
   z_paf <- qnorm(1 - (1 - 0.95) / 2) # 95% confidence interval

@@ -33,7 +33,9 @@ generate_random_exposure <- function(min, max){
 #' @export
 #'
 #' @examples
-generate_uniform_exposure_hia <- function(baseline, target, calc_causes = "GEMM and GBD"){
+generate_uniform_exposure_hia <- function(baseline,
+                                          target,
+                                          ...){
 
   library(terra)
   library(creahelpers)
@@ -68,7 +70,7 @@ generate_uniform_exposure_hia <- function(baseline, target, calc_causes = "GEMM 
     administrative_res = "low",
     administrative_iso3s = "BGD",
     epi_version = "gbd2019",
-    calc_causes = calc_causes
+    ...
   )
 
 }
@@ -92,12 +94,12 @@ generate_random_exposure_hias <- function(levels,
                                           min=20,
                                           max=60,
                                           target=0,
-                                          calc_causes = "GEMM and GBD",
                                           epi_version = "gbd2019",
                                           administrative_res = "full",
                                           iso3 = "BGD",
                                           res = 0.01,
-                                          baseline_rast = NULL
+                                          baseline_rast = NULL,
+                                          ...
 ){
 
   library(terra)

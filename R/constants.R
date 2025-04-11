@@ -5,4 +5,56 @@ CALC_FUSION = "fusion"
 
 RR_ORIGINAL = "original"
 RR_GBD2019 = "gbd2019"
+RR_FUSION = "fusion"
 RR_GBD2021 = "gbd2021"
+RR_GEMM = "gemm"
+
+CAUSE_IHD = "IHD"
+CAUSE_STROKE = "Stroke"
+CAUSE_COPD = "COPD"
+CAUSE_LUNGCANCER = "LC"
+CAUSE_DIABETES = "Diabetes"
+CAUSE_LRI = "LRI"
+CAUSE_LRICHILD = "LRI.child"
+CAUSE_PTB = "PTB"
+CAUSE_LBW = "LBW"
+
+# ENSEMBLE ONES
+# Watch out for double counting
+CAUSE_NCDLRI = "NCD.LRI"
+CAUSE_NCDLRI_INCLUDED = c(
+    CAUSE_IHD,
+    CAUSE_STROKE,
+    CAUSE_COPD,
+    CAUSE_LUNGCANCER,
+    CAUSE_DIABETES,
+    CAUSE_LRI
+)
+
+CAUSE_CV = "CV"
+CAUSE_CV_INCLUDED = c(CAUSE_IHD, CAUSE_STROKE)
+
+# Ages
+AGE_CHILDREN = "Under 5"
+
+AGE_ADULTS = "25+"
+AGE_ADULTS_SPLIT = c(
+  "25-29",
+  "30-34",
+  "35-39",
+  "40-44",
+  "45-49",
+  "50-54",
+  "55-59",
+  "60-64",
+  "65-69",
+  "70-74",
+  "75-79",
+  "80+"
+)
+
+# Measures
+MEASURE_DEATHS = "Deaths"
+MEASURE_YLLS = "YLLs"
+MEASURE_YLDS = "YLDs"
+MEASURE_DALYS = "DALYs"
