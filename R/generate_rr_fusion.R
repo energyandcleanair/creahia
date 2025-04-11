@@ -19,7 +19,8 @@ generate_rr_fusion <- function(){
 
   # We remove CV because pipeline not validated yet (i.e. ensure there's no double counting)
   rrs <- rrs_code %>%
-    filter(cause != "CV")
+    filter(cause != "CV") %>%
+    add_lri_child()
 
   return(rrs)
 }
