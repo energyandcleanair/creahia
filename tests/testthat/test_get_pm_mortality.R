@@ -41,8 +41,7 @@ test_that("get_pm_mortality computes attributable burden correctly", {
 
     pm_mortality <- creahia::get_pm_mortality(
       paf_scenario = data$paf_scenario,
-      epi_loc = data$epi_loc,
-      calc_causes = var
+      epi_loc = data$epi_loc
     )
 
     testthat::expect_true(all(c("region_id", "pop", paste0(var, "_PM25")) %in% colnames(pm_mortality)))

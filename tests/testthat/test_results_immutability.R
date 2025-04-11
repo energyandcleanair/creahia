@@ -52,13 +52,13 @@ params_to_filename <- function(params) {
 }
 
 # Install a specific version of the package
-install_package_version <- function(ref) {
+install_package_version <- function(ref, force=FALSE) {
   if (ref == "current") {
     # Install the current version from local directory
-    remotes::install_local(".", upgrade = FALSE, force=F)
+    remotes::install_local(".", upgrade = FALSE, force=force)
   } else {
     # Install from GitHub with specific ref
-    remotes::install_github("energyandcleanair/creahia", ref = ref, upgrade = FALSE)
+    remotes::install_github("energyandcleanair/creahia", ref = ref, upgrade = FALSE, force=FALSE)
   }
   creahelpers::reload_packages("creahia")
 }
@@ -104,11 +104,11 @@ generate_fingerprints <- function(refs=c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "cu
 
   # Process each ref version
   for(ref in refs){
-    # Install the package version once per ref
-    install_package_version(ref)
+
 
     # Then process all parameter sets for this version
     for(params in param_sets){
+
       # Always force regeneration for current version
       current_force <- if(ref == "current") TRUE else force
 
@@ -117,10 +117,13 @@ generate_fingerprints <- function(refs=c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "cu
       filepath <- glue("tests/data/versions/{ref}_hia_bgd_{param_string}.csv")
 
       # Check if file exists and force is FALSE
-      if (file.exists(filepath) && !force && ref != "current") {
+      if (file.exists(filepath) && !current_force && ref != "current") {
         message(glue("Fingerprint for version {ref} with params {param_string} already exists. Skipping."))
         next
       }
+
+      # Install the package version once per ref
+      install_package_version(ref, force = current_force)
 
       # Generate the fingerprint
       hia <- get_fingerprint_bgd(params = params)
@@ -159,7 +162,7 @@ test_that("Estimates are compatible with previous versions", {
   # Define parameter sets to test
   param_sets <- list(
     list(calc_causes = "GBD only", epi_version = "gbd2019", pop_year = 2020),
-    list(calc_causes = "GEMM and gbd", epi_version = "gbd2019", pop_year = 2020)
+    list(calc_causes = "GEMM and GBD", epi_version = "gbd2019", pop_year = 2020)
   )
 
   generate_fingerprints(refs = c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "current"), param_sets = param_sets, force = FALSE)

@@ -150,7 +150,8 @@ test_that("Our GEMM-derived deaths are similar to literature", {
       crfs_version = "C40",
       epi_version = "gbd2019",
       administrative_level = 0,
-      administrative_res = adm_res
+      administrative_res = adm_res,
+      rr_sources = c(RR_GEMM),
       )
 
     # Extract deaths and population
