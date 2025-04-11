@@ -65,7 +65,7 @@ compute_hia <- function(conc_map,
 
 
   if(!is.null(calc_causes) | !is.null(gbd_causes)) {
-    log_info("Using old parameters for calc_causes and gbd_causes. Erasing rr_sources.")
+    log_info("Using old parameters for calc_causes and gbd_causes. Ignoring rr_sources.")
     rr_sources <- convert_old_parameters_to_rr_sources(calc_causes = calc_causes, gbd_causes = gbd_causes)
   }
 
@@ -191,7 +191,9 @@ compute_hia_paf <- function(conc_map,
         return(paf_region)
       }, error = function(e) {
         # For instance if country iso3 not in ihme$ISO3
+        # or paf not well ordered
         logger::log_warn(paste("Failed for region ", region_id, ": ", e$message))
+        warning(paste("Failed for region ", region_id, ": ", e$message))
         return(NULL)
       })
     })
@@ -318,19 +320,17 @@ compute_hia_epi <- function(species,
         (1 - exp(-log(RRs)*source_concs / crfs$Conc.change[i]))
     }
 
-    # PM Mortality is always low < central < high, regardless of the direction
-    # For consistency, we impose the same direction for other outcomes
-    # Hack for now, would need to clean it a bit
-    hia_scenario <- hia_scenario %>%
-      pivot_longer(-c(region_id, estimate, pop),
-                   names_to = 'Outcome', values_to = 'number') %>%
-      group_by(region_id, Outcome) %>%
-      arrange(number) %>%
-      mutate(
-        estimate=c('low', 'central', 'high'),
-      ) %>%
-      ungroup() %>%
-      pivot_wider(names_from = Outcome, values_from = number)
+
+    # hia_scenario <- hia_scenario %>%
+    #   pivot_longer(-c(region_id, estimate, pop),
+    #                names_to = 'Outcome', values_to = 'number') %>%
+    #   group_by(region_id, Outcome) %>%
+    #   arrange(number) %>%
+    #   mutate(
+    #     estimate=c('low', 'central', 'high'),
+    #   ) %>%
+    #   ungroup() %>%
+    #   pivot_wider(names_from = Outcome, values_from = number)
 
 
 
