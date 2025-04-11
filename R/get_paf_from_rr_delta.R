@@ -35,7 +35,7 @@
 #'
 #'
 #' @export
-get_paf_from_rr_delta <- function(rr_base, rr_perm, age_weights, pop, ci_level = 0.95, seed = 123){
+get_paf_from_rr_delta <- function(rr_base, rr_perm, age_weights, pop, ci_level = 0.95, seed = 123, ...){
 
   # rr_base and rr_perm are 3D arrays: [pixel, estimate, agegroup]
   # estimates are "low", "central", "high"
