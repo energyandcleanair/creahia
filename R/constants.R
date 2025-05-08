@@ -3,6 +3,7 @@ RR_ORIGINAL = "original"
 RR_GBD2019 = "gbd2019"
 RR_FUSION = "fusion"
 RR_GBD2021 = "gbd2021"
+RR_GBD2023 = "gbd2023"
 RR_GEMM = "gemm"
 
 # Measures

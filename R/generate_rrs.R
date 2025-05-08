@@ -18,7 +18,8 @@ generate_rrs <- function(){
     RR_GBD2019,
     RR_FUSION,
     RR_GEMM,
-    RR_GBD2021
+    RR_GBD2021,
+    RR_GBD2023
   )
 
 
@@ -31,6 +32,8 @@ generate_rrs <- function(){
       generate_rr_gbd2019()
     } else if(source == RR_GBD2021){
       generate_rr_gbd2021()
+    } else if(source == RR_GBD2023){
+      generate_rr_gbd2023()
     } else if(source == RR_FUSION){
       generate_rr_fusion()
     } else if(source == RR_GEMM){
@@ -50,17 +53,18 @@ generate_rrs <- function(){
 
 
   # Visual check
-  # ggplot(rrs %>%
-  #          filter(exposure < 200) %>%
-  #          filter(cause=='NCD.LRI', age=='25+') %>%
-  #          pivot_longer(cols=c(low, central, high), names_to='rr_type', values_to='rr') %>%
-  #          filter(rr_type=='central')
-  #          ,
-  #        aes(exposure, rr, col=source,
-  #            # linetype = rr_type
-  #            )) +
-  #   geom_line() +
-  #   facet_grid(cause~age, scales='free_y')
+  ggplot(rrs %>%
+           filter(exposure < 200) %>%
+           filter(age=='25+') %>%
+           pivot_longer(cols=c(low, central, high), names_to='rr_type', values_to='rr') %>%
+           filter(rr_type=='central',
+                  source %in% c("fusion", "gbd2021", "gbd2023")
+                  ),
+         aes(exposure, rr, col=source,
+             # linetype = rr_type
+             )) +
+    geom_line() +
+    facet_wrap(cause~age, scales='free_y')
   #
   #
   #
@@ -140,6 +144,7 @@ recode_gbd_causes <- function(cause, stop_on_unknown = TRUE){
          diabetes = CAUSE_DIABETES,
          cvd_ihd = CAUSE_IHD,
          ihd = CAUSE_IHD,
+         ischemic_heart_disease = CAUSE_IHD,
          ischaemic_heart_disease = CAUSE_IHD,
          cvd_stroke = CAUSE_STROKE,
          stroke = CAUSE_STROKE,
