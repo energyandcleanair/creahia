@@ -19,7 +19,7 @@ generate_rr_gbd2023 <- function(){
   # 8 IHME_GBD_2023_AIR_POLLUTION_1990_2022_AIR_PM_RR_LOWER_RESPIRATORY_INFECTIONS_MEAN_Y2024M02D07.csv
   # 9 IHME_GBD_2023_AIR_POLLUTION_1990_2022_AIR_PM_RR_STROKE_MEAN_Y2024M02D07.csv
     mutate(
-      cause_from_file = tolower(str_extract(file, 'BIRTH_WEIGHT|COPD|DIABETES|GESTATIONAL_AGE_SHIFT|ISCHEMIC_HEART_DISEASE|LOWER_RESPIRATORY_INFECTIONS|LUNG_CANCER|STROKE')),
+      cause_from_file = tolower(str_extract(file, 'BIRTH_WEIGHT|COPD|DIABETES|GESTATIONAL_AGE_SHIFT|ISCHEMIC_HEART_DISEASE|LOWER_RESPIRATORY_INFECTIONS|LUNG_CANCER|STROKE|DEMENTIA')),
       age = as.numeric(str_extract(file, '(?<=_)[0-9]{2}(?=_)')),
       full_path = file.path(folder, file)
     ) %>%
@@ -36,9 +36,9 @@ generate_rr_gbd2023 <- function(){
            !is.na(age)) %>%
     mutate(cause = recode_gbd_causes(cause)) %>%
     filter(!is.na(cause)) %>%
-    group_by(cause) %>%
+    dplyr::group_by(cause) %>%
     # New version seem to be log(RR)
-    mutate(apply_exp=min(mean) == 0) %>%
+    dplyr::mutate(apply_exp=mean[exposure==0]==0) %>%
     mutate(
       mean = ifelse(apply_exp, exp(mean), mean),
       lower = ifelse(apply_exp, exp(lower), lower),
