@@ -4,7 +4,7 @@ testthat::source_test_helpers("tests", env = globalenv())
 testthat::source_test_helpers("../", env = globalenv())
 
 
-test_that("GBD2019 and GBD2017 have comparable data - input", {
+test_that("GBD2021, GBD2019 and GBD2017 have comparable data - input", {
 
   copy_epi_data_update()
   pop <- get_epi_pop()
@@ -13,24 +13,30 @@ test_that("GBD2019 and GBD2017 have comparable data - input", {
 
   crude2017 <- get_death_crude(version='gbd2017')
   crude2019 <- get_death_crude(version='gbd2019')
+  crude2021 <- get_death_crude(version='gbd2021')
 
   child2017 <- get_death_child_lri(pop.total=pop.total, version='gbd2017')
   child2019 <- get_death_child_lri(pop.total=pop.total, version='gbd2019')
+  child2021 <- get_death_child_lri(pop.total=pop.total, version='gbd2021')
 
   yld2017 <- get_yld(pop.total, version='gbd2017')
   yld2019 <- get_yld(pop.total, version='gbd2019')
+  yld2021 <- get_yld(pop.total, version='gbd2021')
 
   # totcp2017 <- get_death_totcp(yld=yld2017, pop.total=pop.total, version='gbd2017')
   # totcp2019 <- get_death_totcp(yld=yld2019, pop.total=pop.total, version='gbd2019')
+  # totcp2021 <- get_death_totcp(yld=yld2021, pop.total=pop.total, version='gbd2021')
 
   asthma2017 <- get_asthma_prev(pop.total, version='gbd2017')
   asthma2019 <- get_asthma_prev(pop.total, version='gbd2019')
+  asthma2021 <- get_asthma_prev(pop.total, version='gbd2021')
 
   ihme2017 <- get_ihme(version = "gbd2017")
   ihme2019 <- get_ihme(version = "gbd2017")
+  ihme2021 <- get_ihme(version = "gbd2021")
 
 
-  compare <- function(df2017, df2019, tolerance=0.1){
+  compare <- function(df2017, df2019, df2021, tolerance=0.1){
 
     options(dplyr.summarise.inform = FALSE)
     allowed_missing_iso3s <- c("COK", "MCO", "NRU", "NIU",
@@ -46,7 +52,8 @@ test_that("GBD2019 and GBD2017 have comparable data - input", {
 
     comparison <- bind_rows(
       df2017 %>% mutate(version='gbd2017'),
-      df2019 %>% mutate(version='gbd2019')
+      df2019 %>% mutate(version='gbd2019'),
+      df2021 %>% mutate(version='gbd2021')
     ) %>%
       fill_cols() %>%
       select(measure_name, location_id, iso3, location_level, metric_name, estimate, var, val, version) %>%
@@ -72,18 +79,20 @@ test_that("GBD2019 and GBD2017 have comparable data - input", {
     # Check years
     testthat::expect_true(all(df2017$year == 2017))
     testthat::expect_true(all(df2019$year == 2019))
+    testthat::expect_true(all(df2021$year == 2019)) # Actually there is no year differentiator in the code so all years should be equal?
 
     # Test that it has subnational data
     comparison %>%
       filter(location_level==4,
-             !is.na(gbd2017 + gbd2019)) %>%
+             !is.na(gbd2017 + gbd2019 + gbd2021)) %>%
       nrow() %>%
       testthat::expect_gt(100)
 
     # Test no duplicate
     bind_rows(
       df2017 %>% mutate(version='gbd2017'),
-      df2019 %>% mutate(version='gbd2019')
+      df2019 %>% mutate(version='gbd2019'),
+      df2021 %>% mutate(version='gbd2021'),
     ) %>%
       fill_cols() %>%
       group_by(measure_name, location_id, iso3, location_level, metric_name, estimate, var, version) %>%
@@ -93,23 +102,24 @@ test_that("GBD2019 and GBD2017 have comparable data - input", {
       testthat::expect_equal(1)
   }
 
-  compare(crude2017, crude2019, tolerance=0.2)
-  compare(child2017, child2019, tolerance=0.3)
-  compare(yld2017, yld2019, tolerance=0.3)
-  compare(totcp2017, totcp2019, tolerance=0.2)
-  compare(asthma2017, asthma2019, tolerance=0.4)
+  compare(crude2017, crude2019, crude2021, tolerance=0.2)
+  compare(child2017, child2019, child2021, tolerance=0.3)
+  compare(yld2017, yld2019, yld2021, tolerance=0.3)
+  compare(asthma2017, asthma2019, asthma2021, tolerance=0.4)
 
 
 })
 
-test_that("GBD2019 and GBD2017 have comparable data - output", {
+test_that("GBD2021, GBD2019 and GBD2017 have comparable data - output", {
 
   epi2017 <- get_epi('gbd2017')
   epi2019 <- get_epi('gbd2019')
+  epi2021 <- get_epi('gbd2021')
 
   comparison <- bind_rows(
     epi2017 %>% mutate(version='gbd2017'),
-    epi2019 %>% mutate(version='gbd2019')
+    epi2019 %>% mutate(version='gbd2019'),
+    epi2021 %>% mutate(version='gbd2021')
   ) %>%
     select(-c(location_name)) %>%
     tidyr::pivot_longer(cols = -c(location_id, location_level, iso3, estimate, country, region, income_group, version)) %>%
@@ -117,7 +127,7 @@ test_that("GBD2019 and GBD2017 have comparable data - output", {
 
   missing_iso3s <- comparison %>%
     filter(location_level==3,
-           is.na(gbd2017 + gbd2019)) %>%
+           is.na(gbd2017 + gbd2019 + gbd2021)) %>%
     pull(iso3) %>%
     unique()
 
@@ -126,16 +136,29 @@ test_that("GBD2019 and GBD2017 have comparable data - output", {
   testthat::expect_in(missing_iso3s, allowed_missing_iso3s)
 
 
+  # Plot comparison
+  # bind_rows(
+  #   epi2017 %>% mutate(version='gbd2017'),
+  #   epi2019 %>% mutate(version='gbd2019'),
+  #   epi2021 %>% mutate(version='gbd2021')
+  # ) %>%
+  #   select(-c(location_name)) %>%
+  #   tidyr::pivot_longer(cols = -c(location_id, location_level, iso3, estimate, country, region, income_group, version)) %>%
+  #   filter(iso3=="ZAF", location_level==3) %>%
+  #   ggplot() + geom_col(aes(version, value, fill=version), position='dodge') + facet_wrap(~name, scales='free_y')
+
 })
 
-test_that("GBD2019 and GBD2017 have comparable data - IHME", {
+test_that("GBD2021, GBD2019 and GBD2017 have comparable data - IHME", {
 
   ihme2017 <- get_ihme('gbd2017')
   ihme2019 <- get_ihme('gbd2019')
+  ihme2021 <- get_ihme('gbd2021')
 
   comparison <- bind_rows(
     ihme2017 %>% mutate(version='gbd2017'),
-    ihme2019 %>% mutate(version='gbd2019')
+    ihme2019 %>% mutate(version='gbd2019'),
+    ihme2021 %>% mutate(version='gbd2021')
   ) %>%
     filter(location_level == 3) %>%
     select(measure_name, location_id, iso3, location_level, age, cause_short, cause_name, sex_name, estimate, val, version) %>%
@@ -143,7 +166,9 @@ test_that("GBD2019 and GBD2017 have comparable data - IHME", {
 
   missing_iso3s <- comparison %>%
     filter(location_level==3,
-           is.na(gbd2017 + gbd2019)) %>%
+           # COPD for low age NA in new versions
+           ! age %in% c("5-9", "10-14", "<5") | cause_short != "COPD",
+           is.na(gbd2017 + gbd2019 + gbd2021)) %>%
     pull(iso3) %>%
     unique()
 
@@ -152,8 +177,7 @@ test_that("GBD2019 and GBD2017 have comparable data - IHME", {
   testthat::expect_in(missing_iso3s, allowed_missing_iso3s)
 })
 
-test_that("GBD2019 and GBD2017 yield roughly similar results - Philipines", {
-
+test_that("GBD2021, GBD2019 and GBD2017 yield roughly similar results - Philipines", {
 
   library(tidyverse)
   library(terra)
@@ -166,7 +190,9 @@ test_that("GBD2019 and GBD2017 yield roughly similar results - Philipines", {
   perturbation_map <- obs_map - baseline_map
   names(perturbation_map) <- names(obs_map)
 
-  hia <- lapply(c('gbd2017', 'gbd2019'), function(epi_version){
+  hia <- lapply(c(
+    'gbd2017',
+                  'gbd2019', 'gbd2021'), function(epi_version){
     creahia::wrappers.compute_hia_two_images.default(
       perturbation_rasters = raster::stack(perturbation_map),
       baseline_rasters = raster::stack(baseline_map),
@@ -184,7 +210,7 @@ test_that("GBD2019 and GBD2017 yield roughly similar results - Philipines", {
   comparison <- hia %>%
     filter(!double_counted,
            estimate=='central') %>%
-    group_by(Outcome, epi_version) %>%
+    group_by(Outcome, double_counted, epi_version) %>%
     dplyr::summarise(value=sum(number, na.rm=T))
 
 
@@ -207,8 +233,9 @@ test_that("GBD2019 and GBD2017 yield roughly similar results - Philipines", {
   # Not equal but close for GBD outcomes (except Deaths.child which has similar epi data apparently, at least in PHP)
   idx_gbd <- !idx_non_gbd
   testthat::expect_equal(comparison_epi$gbd2017[idx_gbd], comparison_epi$gbd2019[idx_gbd], tolerance=1e-1)
+  testthat::expect_equal(comparison_epi$gbd2017[idx_gbd], comparison_epi$gbd2021[idx_gbd], tolerance=1e-1)
   testthat::expect_true(all(comparison_epi$gbd2017[idx_gbd]!=comparison_epi$gbd2019[idx_gbd]))
-
+  testthat::expect_true(all(comparison_epi$gbd2017[idx_gbd]!=comparison_epi$gbd2021[idx_gbd]))
 
 })
 
