@@ -115,7 +115,8 @@ get_epi_versions <- function() {
     "default" = "epi_for_hia.csv",
     "C40" = "epi_for_hia_C40.csv",
     "gbd2017" = "epi_for_hia_gbd2017.csv",
-    "gbd2019" = "epi_for_hia_gbd2019.csv"
+    "gbd2019" = "epi_for_hia_gbd2019.csv",
+    "gbd2021" = "epi_for_hia_gbd2021.csv"
   )
 }
 
@@ -422,7 +423,8 @@ get_ihme <- function(version='gbd2017') {
     version,
     default='gbd2017',
     C40='gbd2017',
-    gbd2019='gbd2019'
+    gbd2019='gbd2019',
+    gbd2021='gbd2021'
   )
 
   read_csv(get_hia_path(glue("ihme_{file_version}.csv")), col_types = cols())
