@@ -9,7 +9,8 @@ generate_rrs <- function(){
     CAUSE_STROKE,
     CAUSE_LUNGCANCER,
     CAUSE_DIABETES,
-    CAUSE_LRICHILD
+    CAUSE_LRICHILD,
+    CAUSE_DEMENTIA
   )
 
 
@@ -53,18 +54,18 @@ generate_rrs <- function(){
 
 
   # Visual check
-  ggplot(rrs %>%
-           filter(exposure < 200) %>%
-           filter(age=='25+') %>%
-           pivot_longer(cols=c(low, central, high), names_to='rr_type', values_to='rr') %>%
-           filter(rr_type=='central',
-                  source %in% c("fusion", "gbd2021", "gbd2023")
-                  ),
-         aes(exposure, rr, col=source,
-             # linetype = rr_type
-             )) +
-    geom_line() +
-    facet_wrap(cause~age, scales='free_y')
+  # ggplot(rrs %>%
+  #          filter(exposure < 200) %>%
+  #          filter(age=='25+') %>%
+  #          pivot_longer(cols=c(low, central, high), names_to='rr_type', values_to='rr') %>%
+  #          filter(rr_type=='central',
+  #                 source %in% c("fusion", "gbd2021", "gbd2023")
+  #                 ),
+  #        aes(exposure, rr, col=source,
+  #            # linetype = rr_type
+  #            )) +
+  #   geom_line() +
+  #   facet_wrap(cause~age, scales='free_y')
   #
   #
   #
@@ -106,7 +107,8 @@ check_rr <- function(rr){
     CAUSE_DIABETES,
     CAUSE_LRICHILD,
     CAUSE_NCDLRI,
-    CAUSE_PTB
+    CAUSE_PTB,
+    CAUSE_DEMENTIA
   )]
   if(length(unknown_causes) > 0){
     stop('Unknown causes: ', paste(unique(unknown_causes), collapse=', '))
@@ -158,6 +160,7 @@ recode_gbd_causes <- function(cause, stop_on_unknown = TRUE){
          ptb = CAUSE_PTB,
          ncd.lri = CAUSE_NCDLRI,
          `ncd&lri` = CAUSE_NCDLRI,
+         dementia = CAUSE_DEMENTIA,
          cv = CAUSE_CV,
         .default = NA_character_
   )

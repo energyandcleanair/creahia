@@ -9,13 +9,13 @@ download_raw_epi <- function(version, dataset) {
       asthma = "https://gbd2017.healthdata.org/gbd-results?params=gbd-api-2017-permalink/ad187e50445a73d6227f8dc8df6e8430"
     ),
     gbd2019 = list(
-      raw = "https://gbd2019.healthdata.org/gbd-results?params=gbd-api-2019-permalink/90031eb3993f063423bd348aaad4a7da",
+      raw = "https://gbd2019.healthdata.org/gbd-results?params=gbd-api-2019-permalink/ab58faccff223793b4ab74c53c1760d5",
       asthma = "https://gbd2019.healthdata.org/gbd-results?params=gbd-api-2019-permalink/81716ae90083a4c6e7f88ac16a0d0094"
     ),
     # For now, these are with pop from 2019 to ensure the scaling is alright. However, it would be much easier to
     # clean it, and download with rates instead
     gbd2021 = list(
-      raw = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2021-permalink/1581f54a5ea850e053de2552b47c66d3",
+      raw = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2021-permalink/951bb3a80e3e0c542986a1be0f32efec",
       asthma = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2021-permalink/428758edc6d75bebf16eb96beee09adc"
     )
   )
@@ -329,14 +329,16 @@ recode_gbd_cause <- function(cause_name){
 
     # General
     cause_name == "All causes" ~ "AllCause",
-    cause_name == "Lower respiratory infections" ~ "LRI",
-    cause_name == "Tracheal, bronchus, and lung cancer" ~ "LC",
-    cause_name == "Diabetes mellitus type 2" ~ "Diabetes",
+    cause_name == "Lower respiratory infections" ~ CAUSE_LRI,
+    cause_name == "Tracheal, bronchus, and lung cancer" ~ CAUSE_LUNGCANCER,
+    cause_name == "Diabetes mellitus type 2" ~ CAUSE_DIABETES,
+    cause_name == "Alzheimer's disease and other dementias" ~ CAUSE_DEMENTIA,
 
     # Cardiovascular diseases
-    cause_name == "Ischemic heart disease" ~ "IHD",
-    cause_name == "Stroke" ~ "Stroke",
+    cause_name == "Ischemic heart disease" ~ CAUSE_IHD,
+    cause_name == "Stroke" ~ CAUSE_STROKE,
     cause_name == "Cardiovascular diseases" ~ "TotCV",
+
     cause_name %in% c("Rheumatic heart disease",
                       "Hypertensive heart disease",
                       "Cardiomyopathy and myocarditis",
@@ -351,7 +353,7 @@ recode_gbd_cause <- function(cause_name){
                       ) ~ "OthCV",
 
     # Respiratory diseases
-    cause_name == "Chronic obstructive pulmonary disease" ~ "COPD",
+    cause_name == "Chronic obstructive pulmonary disease" ~ CAUSE_COPD,
     cause_name == "Chronic respiratory diseases" ~ "TotResp",
     cause_name %in% c("Pneumoconiosis",
                       "Asthma",
@@ -993,25 +995,26 @@ generate_ihme <- function(version = "gbd2019") {
 
   ihme <- ihme %>%
     mutate(cause_short = case_when(
-      grepl("Diab", cause_name) ~ "Diabetes",
-      grepl("Stroke", cause_name) ~ "Stroke",
-      grepl("Lower resp", cause_name) ~ "LRI",
+      grepl("Diab", cause_name) ~ CAUSE_DIABETES,
+      grepl("Stroke", cause_name) ~ CAUSE_STROKE,
+      grepl("Lower resp", cause_name) ~ CAUSE_LRI,
       grepl("Non-comm", cause_name) ~ "NCD",
-      grepl("Isch", cause_name) ~ "IHD",
-      grepl("obstr", cause_name) ~ "COPD",
-      grepl("lung canc", cause_name) ~ "LC",
+      grepl("Isch", cause_name) ~ CAUSE_IHD,
+      grepl("obstr", cause_name) ~ CAUSE_COPD,
+      grepl("lung canc", cause_name) ~ CAUSE_LUNGCANCER,
+      grepl("dementia", cause_name) ~ CAUSE_DEMENTIA,
       T ~ NA_character_
     )) %>%
     filter(!is.na(cause_short))
 
 
   # Check that we have all these
-  if(length(setdiff(c('Diabetes', 'Stroke', 'LRI', 'NCD', 'IHD', 'COPD', 'LC'),
+  if(length(setdiff(c(CAUSE_DIABETES, CAUSE_STROKE, CAUSE_LRI, "NCD", CAUSE_IHD, CAUSE_COPD, CAUSE_LUNGCANCER, CAUSE_DEMENTIA),
           unique(ihme$cause_short)))>0) stop("Missing data in IHME")
 
 
   ihme <- ihme %>%
-    dplyr::filter(cause_short %in% c("NCD", "LRI")) %>%
+    dplyr::filter(cause_short %in% c("NCD", CAUSE_LRI)) %>%
     group_by_at(vars(-val, -starts_with("cause"))) %>%
     dplyr::summarise(val=sum(val),
               n=n()) %>%
@@ -1019,7 +1022,7 @@ generate_ihme <- function(version = "gbd2019") {
       stopifnot(all(.$n == 2))
       .
     } %>%
-    mutate(cause_name = "NCD+LRI", cause_short = "NCD.LRI") %>%
+    mutate(cause_name = "NCD+LRI", cause_short = CAUSE_NCDLRI) %>%
     bind_rows(ihme) %>%
     ungroup() %>%
     select(-n)
