@@ -1,0 +1,48 @@
+# Test our results vs GBD
+testthat::source_test_helpers("tests", env = globalenv())
+testthat::source_test_helpers("../", env = globalenv())
+
+
+test_that("Deaths causes are similar to GBD2021", {
+
+  creaexposure::data.basemap_pm25()
+  hia_gbd2021 <- generate_donkelaar_exposure_hia(target=5,
+                                                 iso3 = "ZAF",
+                                                 epi_version = "gbd2021",
+                                                 rr_sources=RR_GBD2021)
+
+  # Manually collected GBD Dataa
+  crea_deaths <- hia_gbd2021 %>%
+    filter(Outcome=="Deaths",
+           estimate=="central") %>%
+    arrange(desc(abs(number))) %>%
+    mutate(source="CREA",
+           number=-number
+           ) %>%
+    select(number, Cause, source)
+
+
+  # Expected from PM air pollution
+  # https://vizhub.healthdata.org/gbd-results?params=gbd-api-2021-permalink/dfef5c8ac1a77a6caec1c119fb5f3322
+  expected <- tibble::tribble(
+    ~Cause, ~number, ~source,
+    "Stroke",   6223,   "GBD2021",
+    "IHD",      5973,   "GBD2021",
+    "LRI",      5069,   "GBD2021",
+    "Diabetes", 4727,   "GBD2021",
+    "COPD",     2654,   "GBD2021",
+    "LC",       1266,   "GBD2021"
+  )
+
+  bind_rows(crea_deaths, expected) %>%
+    ggplot() +
+    geom_col(aes(Cause, abs(number), fill=source), position='dodge')
+
+
+  # Test that roughly equal
+  comparison <- crea_deaths %>%
+    left_join(expected, by="Cause") %>%
+    mutate(diff = abs(number.x - number.y)/number.y) %>%
+    select(Cause, diff)
+  testthat::expect_true(all(abs(comparison$diff) < 0.07))
+})
