@@ -20,8 +20,10 @@ CAUSE_LUNGCANCER = "LC"
 CAUSE_DIABETES = "Diabetes"
 CAUSE_LRI = "LRI"
 CAUSE_LRICHILD = "LRI.child"
+CAUSE_DEMENTIA = "Dementia"
 CAUSE_PTB = "PTB"
 CAUSE_LBW = "LBW"
+
 
 # Cause ensembles
 # Watch out for double counting
@@ -32,7 +34,8 @@ CAUSE_NCDLRI_INCLUDED = c(
     CAUSE_COPD,
     CAUSE_LUNGCANCER,
     CAUSE_DIABETES,
-    CAUSE_LRI
+    CAUSE_LRI,
+    CAUSE_DEMENTIA
 )
 
 CAUSE_CV = "CV"

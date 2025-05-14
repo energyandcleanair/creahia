@@ -453,7 +453,7 @@ country_paf_perm <- function(pm.base,
                   estimate == 'central')
 
   if(nrow(age_weights) == 0) {
-    warning(glue("No age weights found for {region_id} and {cause}"))
+    warning(glue("No age weights found for {region_id} and {cause} and {measure}"))
     return(NULL)
   }
 

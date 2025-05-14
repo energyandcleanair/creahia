@@ -9,8 +9,14 @@ download_raw_epi <- function(version, dataset) {
       asthma = "https://gbd2017.healthdata.org/gbd-results?params=gbd-api-2017-permalink/ad187e50445a73d6227f8dc8df6e8430"
     ),
     gbd2019 = list(
-      raw = "https://gbd2019.healthdata.org/gbd-results?params=gbd-api-2019-permalink/90031eb3993f063423bd348aaad4a7da",
+      raw = "https://gbd2019.healthdata.org/gbd-results?params=gbd-api-2019-permalink/ab58faccff223793b4ab74c53c1760d5",
       asthma = "https://gbd2019.healthdata.org/gbd-results?params=gbd-api-2019-permalink/81716ae90083a4c6e7f88ac16a0d0094"
+    ),
+    # For now, these are with pop from 2019 to ensure the scaling is alright. However, it would be much easier to
+    # clean it, and download with rates instead
+    gbd2021 = list(
+      raw = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2021-permalink/951bb3a80e3e0c542986a1be0f32efec",
+      asthma = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2021-permalink/428758edc6d75bebf16eb96beee09adc"
     )
   )
 
@@ -24,8 +30,9 @@ download_raw_epi <- function(version, dataset) {
 
 get_gbd_raw <- function(version) {
   filepaths <- list(
+    gbd2017 = list.files("data/epi_update", pattern = "IHME-GBD_2017_DATA-\\d.csv", full.names = T),
     gbd2019 = list.files("data/epi_update", pattern = "IHME-GBD_2019_DATA-\\d.csv", full.names = T),
-    gbd2017 = list.files("data/epi_update", pattern = "IHME-GBD_2017_DATA-\\d.csv", full.names = T)
+    gbd2021 = list.files("data/epi_update", pattern = "IHME-GBD_2021_DATA-\\d.csv", full.names = T)
   )[[version]]
 
   if(!all(file.exists(filepaths))){
@@ -40,8 +47,9 @@ get_gbd_raw <- function(version) {
 
 get_gbd_asthma_raw <- function(version) {
   list(
+    gbd2017 = c("data/epi_update/IHME-GBD_2017_DATA-asthma.csv"),
     gbd2019 = c("data/epi_update/IHME-GBD_2019_DATA-asthma.csv"),
-    gbd2017 = c("data/epi_update/IHME-GBD_2017_DATA-asthma.csv")
+    gbd2021 = c("data/epi_update/IHME-GBD_2021_DATA-asthma.csv")
   )[[version]] %>%
     lapply(read_csv) %>%
     bind_rows()
@@ -172,8 +180,15 @@ get_locations_with_gadm <- function(use_cache = T) {
 }
 
 
-get_epi_pop <- function(level = c(3, 4)) {
+get_epi_pop <- function(version="gbd2019", level = c(3, 4)) {
+
   locations <- get_locations()
+
+  filepath <- list(
+    "gbd2019" = "IHME_GBD_2019_POP_2019_Y2020M10D15.CSV"
+
+  )
+
   # CHECK Should we use 2019 pop even with 2017 data?
   pop <- read_csv(get_hia_path("IHME_GBD_2019_POP_2019_Y2020M10D15.CSV")) %>% # read.csv('2017 data/IHME_GBD_2017_POP_2015_2017.CSV') %>%
     dplyr::filter(year_id == 2019, tolower(sex_name) == "both") %>%
@@ -314,14 +329,16 @@ recode_gbd_cause <- function(cause_name){
 
     # General
     cause_name == "All causes" ~ "AllCause",
-    cause_name == "Lower respiratory infections" ~ "LRI",
-    cause_name == "Tracheal, bronchus, and lung cancer" ~ "LC",
-    cause_name == "Diabetes mellitus type 2" ~ "Diabetes",
+    cause_name == "Lower respiratory infections" ~ CAUSE_LRI,
+    cause_name == "Tracheal, bronchus, and lung cancer" ~ CAUSE_LUNGCANCER,
+    cause_name == "Diabetes mellitus type 2" ~ CAUSE_DIABETES,
+    cause_name == "Alzheimer's disease and other dementias" ~ CAUSE_DEMENTIA,
 
     # Cardiovascular diseases
-    cause_name == "Ischemic heart disease" ~ "IHD",
-    cause_name == "Stroke" ~ "Stroke",
+    cause_name == "Ischemic heart disease" ~ CAUSE_IHD,
+    cause_name == "Stroke" ~ CAUSE_STROKE,
     cause_name == "Cardiovascular diseases" ~ "TotCV",
+
     cause_name %in% c("Rheumatic heart disease",
                       "Hypertensive heart disease",
                       "Cardiomyopathy and myocarditis",
@@ -331,10 +348,12 @@ recode_gbd_cause <- function(cause_name){
                       "Endocarditis",
                       "Non-rheumatic valvular heart disease",
                       "Peripheral artery disease",
-                      "Other cardiovascular and circulatory diseases") ~ "OthCV",
+                      "Other cardiovascular and circulatory diseases",
+                      "Pulmonary Arterial Hypertension"
+                      ) ~ "OthCV",
 
     # Respiratory diseases
-    cause_name == "Chronic obstructive pulmonary disease" ~ "COPD",
+    cause_name == "Chronic obstructive pulmonary disease" ~ CAUSE_COPD,
     cause_name == "Chronic respiratory diseases" ~ "TotResp",
     cause_name %in% c("Pneumoconiosis",
                       "Asthma",
@@ -346,7 +365,7 @@ recode_gbd_cause <- function(cause_name){
 
   # Print those that weren't matched
   if(any(is.na(new_cause_names))) {
-    warning(glue("Some causes were not matched:", unique(cause_name[is.na(new_cause_names)])))
+    warning(glue("Some causes were not matched:", paste0(unique(cause_name[is.na(new_cause_names)]), collapse=", ")))
   }
 
   return(new_cause_names)
@@ -555,7 +574,7 @@ compute_others <- function(yld, total, grep, newname, metric_name="Number") {
 
 get_asthma_prev <- function(pop.total, version = "gbd2019") {
 
-    asthma_raw_data <- get_gbd_asthma_raw(version = version) %>%
+  asthma_raw_data <- get_gbd_asthma_raw(version = version) %>%
     mutate(age_low = get_age_low(age_name))
 
   asthma.prev <- asthma_raw_data %>% # read.csv('2017 data/IHME-GBD_2017_Asthma.csv') %>%
@@ -566,7 +585,7 @@ get_asthma_prev <- function(pop.total, version = "gbd2019") {
     ) %>%
     gather_ihme() %>%
     filter(tolower(age_name) != "all ages") %>%
-    filter(age_low %in% c(1, 5, 10, 15)) %>%
+    filter(age_low %in% c(0, 1, 5, 10, 15)) %>% # Some GBD versions have 1-4, others <5 (<1 year is 0), hence the 0 and 1
     group_by(location_id, location_name, location_level, iso3, year, measure_name, estimate) %>%
     summarise_at("val", mean) %>%
     mutate(var = paste0("Asthma.", substr(measure_name, 1, 3), ".1to18nopopnorm")) %>%
@@ -581,7 +600,7 @@ get_asthma_prev <- function(pop.total, version = "gbd2019") {
     ) %>%
     gather_ihme() %>%
     filter(tolower(age_name) != "all ages") %>%
-    filter(age_low %in% c(1, 5, 10, 15)) %>%
+    filter(age_low %in% c(0, 1, 5, 10, 15)) %>% # Some GBD versions have 1-4, others <5 (<1 year is 0), hence the 0 and 1
     group_by(location_id, location_name, location_level, iso3, year, measure_name, estimate) %>%
     summarise_at("val", sum) %>%
     mutate(var = paste0("Asthma.", substr(measure_name, 1, 4), ".1to18")) %>%
@@ -784,7 +803,7 @@ generate_epi <- function(version = "gbd2019") {
 
   # Get data from various soruces
   wb_ind <- get_wb_ind()
-  pop <- get_epi_pop()
+  pop <- get_epi_pop(version)
   pop.total <- get_pop_total(pop)
   asthma.new <- get_asthma_new()
   asthma.erv <- get_asthma_erv(pop.total = pop.total)
@@ -947,7 +966,7 @@ generate_ihme <- function(version = "gbd2019") {
     filter(location_level %in% c(3, 4)) %>%
     dplyr::filter(metric_name == "Number") %>%
     # 25+ is redundant with all the various age groups
-    dplyr::filter(!grepl("95+|25+", age_name)) %>%
+    dplyr::filter(!grepl("95\\+|25\\+", age_name)) %>%
     gather_ihme()
 
   homogenise_age_name <- function(age_name) {
@@ -976,30 +995,37 @@ generate_ihme <- function(version = "gbd2019") {
 
   ihme <- ihme %>%
     mutate(cause_short = case_when(
-      grepl("Diab", cause_name) ~ "Diabetes",
-      grepl("Stroke", cause_name) ~ "Stroke",
-      grepl("Lower resp", cause_name) ~ "LRI",
+      grepl("Diab", cause_name) ~ CAUSE_DIABETES,
+      grepl("Stroke", cause_name) ~ CAUSE_STROKE,
+      grepl("Lower resp", cause_name) ~ CAUSE_LRI,
       grepl("Non-comm", cause_name) ~ "NCD",
-      grepl("Isch", cause_name) ~ "IHD",
-      grepl("obstr", cause_name) ~ "COPD",
-      grepl("lung canc", cause_name) ~ "LC",
+      grepl("Isch", cause_name) ~ CAUSE_IHD,
+      grepl("obstr", cause_name) ~ CAUSE_COPD,
+      grepl("lung canc", cause_name) ~ CAUSE_LUNGCANCER,
+      grepl("dementia", cause_name) ~ CAUSE_DEMENTIA,
       T ~ NA_character_
     )) %>%
     filter(!is.na(cause_short))
 
 
   # Check that we have all these
-  if(length(setdiff(c('Diabetes', 'Stroke', 'LRI', 'NCD', 'IHD', 'COPD', 'LC'),
+  if(length(setdiff(c(CAUSE_DIABETES, CAUSE_STROKE, CAUSE_LRI, "NCD", CAUSE_IHD, CAUSE_COPD, CAUSE_LUNGCANCER, CAUSE_DEMENTIA),
           unique(ihme$cause_short)))>0) stop("Missing data in IHME")
 
 
   ihme <- ihme %>%
-    dplyr::filter(cause_short %in% c("NCD", "LRI")) %>%
+    dplyr::filter(cause_short %in% c("NCD", CAUSE_LRI)) %>%
     group_by_at(vars(-val, -starts_with("cause"))) %>%
-    summarise_at("val", sum) %>%
-    mutate(cause_name = "NCD+LRI", cause_short = "NCD.LRI") %>%
+    dplyr::summarise(val=sum(val),
+              n=n()) %>%
+    {
+      stopifnot(all(.$n == 2))
+      .
+    } %>%
+    mutate(cause_name = "NCD+LRI", cause_short = CAUSE_NCDLRI) %>%
     bind_rows(ihme) %>%
-    ungroup()
+    ungroup() %>%
+    select(-n)
 
 
   ihme <- fill_young_lungcancer(ihme)
