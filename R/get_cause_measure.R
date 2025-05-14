@@ -1,12 +1,13 @@
 get_cause_measure <- function(){
   # Define causes for each measure type
   causes_ylls <- c(CAUSE_NCDLRI, CAUSE_LRICHILD, CAUSE_IHD, CAUSE_STROKE,
-                   CAUSE_COPD, CAUSE_LUNGCANCER, CAUSE_LRI)
+                   CAUSE_COPD, CAUSE_LUNGCANCER, CAUSE_LRI, CAUSE_DEMENTIA)
 
-  causes_ylds <- c(CAUSE_STROKE, CAUSE_DIABETES, CAUSE_COPD)
+  causes_ylds <- c(CAUSE_STROKE, CAUSE_DIABETES, CAUSE_COPD, CAUSE_DEMENTIA)
 
   causes_deaths <- c(CAUSE_NCDLRI, CAUSE_IHD, CAUSE_STROKE, CAUSE_COPD,
-                     CAUSE_LUNGCANCER, CAUSE_LRI, CAUSE_LRICHILD, CAUSE_DIABETES)
+                     CAUSE_LUNGCANCER, CAUSE_LRI, CAUSE_LRICHILD, CAUSE_DIABETES,
+                     CAUSE_DEMENTIA)
 
   # Create the tribble more clearly
   bind_rows(

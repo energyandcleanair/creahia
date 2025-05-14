@@ -35,6 +35,8 @@ generate_random_exposure <- function(min, max){
 #' @examples
 generate_uniform_exposure_hia <- function(baseline,
                                           target,
+                                          iso3 = "BGD",
+                                          epi_version = "gbd2019",
                                           ...){
 
   library(terra)
@@ -44,12 +46,15 @@ generate_uniform_exposure_hia <- function(baseline,
   library(creaexposure)
 
   # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
+  iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')
+  adm <- creahelpers::get_adm(level=0, res="low", iso2s=iso2)
+  bbox <- sf::st_bbox(adm)
   res <- 0.01
   baseline_rast <- terra::rast(
-    xmin=88,
-    xmax=92,
-    ymin=20,
-    ymax=27,
+    xmin=bbox$xmin,
+    xmax=bbox$xmax,
+    ymin=bbox$ymin,
+    ymax=bbox$ymax,
     res=res,
     crs="+proj=longlat +datum=WGS84")
 
@@ -68,8 +73,8 @@ generate_uniform_exposure_hia <- function(baseline,
     pop_year=2020,
     administrative_level = 0,
     administrative_res = "low",
-    administrative_iso3s = "BGD",
-    epi_version = "gbd2019",
+    administrative_iso3s = iso3,
+    epi_version = epi_version,
     ...
   )
 
@@ -144,4 +149,55 @@ generate_random_exposure_hias <- function(levels,
       mutate(level=level)
   }) %>%
     bind_rows()
+}
+
+#' Generate a HIA for van Donkelaar exposure map
+#'
+#' @param baseline
+#' @param target
+#' @param calc_causes
+#'
+#' @return
+#' @export
+#'
+#' @examples
+generate_donkelaar_exposure_hia <- function(target,
+                                            rr_sources,
+                                          iso3 = "BGD",
+                                          epi_version = "gbd2021",
+                                          ...){
+
+  library(terra)
+  library(creahelpers)
+  library(dplyr)
+  library(creahia)
+  library(creaexposure)
+
+  # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
+  iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')
+  adm <- creahelpers::get_adm(level=0, res="low", iso2s=iso2)
+  bbox <- sf::st_bbox(adm)
+  pop <- creaexposure::data.pop(res=creaexposure::RES_30_SEC, bbox = bbox)
+  pm25 <- creaexposure::data.basemap_pm25(pop=pop, res=creaexposure::RES_30_SEC, year=2020)
+
+
+  # Build two perturbations:
+  # p1: bring it down to 0
+  # p2: bring it down to WHO2021
+  perturbation_rast <- target-pm25
+
+  creahia::wrappers.compute_hia_two_images.default(
+    perturbation_rasters = list(pm25 = perturbation_rast),
+    baseline_rasters = list(pm25 = pm25),
+    scale_base_year = NULL, # Just to avoid unnecessary warning
+    scale_target_year = NULL,  # Just to avoid unnecessary warning
+    pop_year=2020,
+    administrative_level = 0,
+    administrative_res = "low",
+    administrative_iso3s = iso3,
+    epi_version = epi_version,
+    rr_sources = rr_sources,
+    ...
+  )
+
 }
