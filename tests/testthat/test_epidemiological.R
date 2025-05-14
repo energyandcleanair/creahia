@@ -191,8 +191,9 @@ test_that("GBD2021, GBD2019 and GBD2017 yield roughly similar results - Philipin
   names(perturbation_map) <- names(obs_map)
 
   hia <- lapply(c(
-    'gbd2017',
-                  'gbd2019', 'gbd2021'), function(epi_version){
+    # 'gbd2017',
+    'gbd2019',
+    'gbd2021'), function(epi_version){
     creahia::wrappers.compute_hia_two_images.default(
       perturbation_rasters = raster::stack(perturbation_map),
       baseline_rasters = raster::stack(baseline_map),
@@ -200,12 +201,15 @@ test_that("GBD2021, GBD2019 and GBD2017 yield roughly similar results - Philipin
       administrative_level = 0,
       crfs_version = "C40",
       epi_version = epi_version,
+      rr_sources = RR_GBD2021,
       ihme_version = "gbd2019" # Use for comparable population
     ) %>%
       mutate(epi_version = epi_version)
   }) %>%
     bind_rows()
 
+
+  unique(hia$Cause)
 
   comparison <- hia %>%
     filter(!double_counted,

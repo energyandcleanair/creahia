@@ -11,14 +11,29 @@ test_that("Deaths causes are similar to GBD2021", {
                                                  epi_version = "gbd2021",
                                                  rr_sources=RR_GBD2021)
 
+  hia_gbd2023 <- generate_donkelaar_exposure_hia(target=5,
+                                                 iso3 = "ZAF",
+                                                 epi_version = "gbd2021",
+                                                 rr_sources=RR_GBD2023)
+
   # Manually collected GBD Dataa
-  crea_deaths <- hia_gbd2021 %>%
+  crea_deaths_gbd2021 <- hia_gbd2021 %>%
     filter(Outcome=="Deaths",
            estimate=="central") %>%
     arrange(desc(abs(number))) %>%
-    mutate(source="CREA",
+    mutate(source="CREA (GBD2021)",
            number=-number
            ) %>%
+    select(number, Cause, source)
+
+  # Just for visual check
+  crea_deaths_gbd2023 <- hia_gbd2023 %>%
+    filter(Outcome=="Deaths",
+           estimate=="central") %>%
+    arrange(desc(abs(number))) %>%
+    mutate(source="CREA (GBD2023)",
+           number=-number
+    ) %>%
     select(number, Cause, source)
 
 
@@ -34,13 +49,13 @@ test_that("Deaths causes are similar to GBD2021", {
     "LC",       1266,   "GBD2021"
   )
 
-  bind_rows(crea_deaths, expected) %>%
+  bind_rows(crea_deaths_gbd2021, crea_deaths_gbd2023, expected) %>%
     ggplot() +
     geom_col(aes(Cause, abs(number), fill=source), position='dodge')
 
 
   # Test that roughly equal
-  comparison <- crea_deaths %>%
+  comparison <- crea_deaths_gbd2021 %>%
     left_join(expected, by="Cause") %>%
     mutate(diff = abs(number.x - number.y)/number.y) %>%
     select(Cause, diff)
