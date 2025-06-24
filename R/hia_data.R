@@ -318,7 +318,8 @@ get_valuation_versions <- function() {
     "default" = "valuation.csv",
     "viscusi" = "valuation_viscusi.csv",
     "viscusi_gdp" = "valuation_viscusi_gdp.csv",
-    "viscusi_gni" = "valuation_viscusi_gni.csv"
+    "viscusi_gni" = "valuation_viscusi_gni.csv",
+    "worldbank" = "valuation_worldbank.csv"
   )
 }
 
