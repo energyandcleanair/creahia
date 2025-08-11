@@ -76,18 +76,14 @@ get_conc_baseline_pm25 <- function(target_year = lubridate::year(lubridate::toda
                                    grid_raster){
   basemap_year <- get_baseline_pm25_year(target_year) # get latest available basemap year
 
-  pm25_tif <- if(basemap_year < 2018){
-    glue("V5GL03.HybridPM25.Global.{basemap_year}01-{basemap_year}12.tif")
-  } else {
-    glue('V5GL04.HybridPM25.Global.{basemap_year}01-{basemap_year}12.tif')
-  }
+  pm25_tif <- glue("V5GL05.HybridPM25.Global.{basemap_year}01-{basemap_year}12.tif")
   creahelpers::get_concentration_path(pm25_tif) %>% rast %>%
     cropProj(grid_raster)
 }
 
 
 get_baseline_pm25_year <- function(year){
-  basemap_years <- seq(2015, 2022)
+  basemap_years <- seq(2015, 2023)
   max(basemap_years[basemap_years<=year])
 }
 
