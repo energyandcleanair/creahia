@@ -5,8 +5,8 @@
 #' @export
 #'
 #' @examples
-create_valuation_file <- function(input_file = 'inst/extdata/valuation_worldbank_raw.csv',
-                                  output_file = 'inst/extdata/valuation_worldbank.csv') {
+create_valuation_file <- function(input_file = 'inst/extdata/valuation_viscusi_gni_raw.csv',
+                                  output_file = 'inst/extdata/valuation_viscusi_gni.csv') {
 
   raw <- read_csv(input_file)
 
