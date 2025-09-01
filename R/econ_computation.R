@@ -154,7 +154,8 @@ get_total_cost_by_region <- function(hia_cost) {
 }
 
 
-get_total_cost_by_region_outcome <- function(hia_cost, iso3, gdp = get_gdp(),
+get_total_cost_by_region_outcome <- function(hia_cost,
+                                             iso3,
                                              dict = get_dict()) {
 
   gdp_gni <- hia_cost %>%
