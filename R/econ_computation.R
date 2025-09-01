@@ -2,19 +2,15 @@ compute_econ_costs <- function(hia,
                                results_dir = NULL,
                                iso3s_of_interest = NULL,
                                current_year = 2019,
-                               gdp = get_gdp(year = current_year),
                                dict = get_dict(),
                                valuation_version = "default",
-                               valuation = get_valuation(version = valuation_version),
                                projection_years = NULL,
                                suffix = "",
                                ...) {
 
   hia_cost <- get_hia_cost(hia = hia,
                            valuation_version = valuation_version,
-                           valuation = valuation,
                            current_year = current_year,
-                           gdp = gdp,
                            dict = dict)
 
   cost_by_outcome <- get_total_cost_by_outcome(hia_cost)
@@ -40,22 +36,18 @@ compute_econ_costs <- function(hia,
       write_csv(file.path(results_dir, sprintf('formatted/cost_by_region%s.csv', suffix)))
 
   }
-  # cost_by_region_outcome <- get_total_cost_by_region_outcome(hia_cost) %T>% write_csv(file.path(results_dir, sprintf('cost_by_region_outcome%s.csv', suffix)))
 
-    # Forecast
-    if(length(projection_years)>0) {
-      cost_forecast <- get_econ_forecast(hia_cost, years=projection_years, ...) %T>%
-        write_csv(file.path(results_dir, sprintf('health_and_cost_by_year%s.csv', suffix)))
-    } else cost_forecast=NULL
+  # Forecast
+  if(length(projection_years)>0) {
+    cost_forecast <- get_econ_forecast(hia_cost, years=projection_years, ...) %T>%
+      write_csv(file.path(results_dir, sprintf('health_and_cost_by_year%s.csv', suffix)))
+  } else cost_forecast=NULL
 
 
   list("hia_cost" = hia_cost,
        "cost_by_outcome" = cost_by_outcome,
        "cost_by_region" = cost_by_region,
        "cost_forecast" = cost_forecast) %>%
-    # "cost_by_region_outcome" = cost_by_region_outcome
-    # "cost_forecast" = cost_forecast %>%
-    # lapply(add_total_deaths) %>%
     lapply(add_long_names)
 }
 
@@ -64,41 +56,30 @@ get_hia_cost <- function(hia,
                          valuation_version = "viscusi",
                          valuation = get_valuation(valuation_version),
                          current_year = 2019,
-                         gdp = get_gdp(year = current_year),
                          dict = get_dict()) {
 
-  hia_cost <- hia
 
-  # Values from above, at the time of creating valuation_viscusi.csv
-  gdp_world_2017_current <- 10825.9
-  gdp_world_2017_constant2015 <- 10625.26
-  gdp_world_ppp_2017intl <- 16276.48
-  gni_world_ppp_2017intl <- 15927.18
 
-  valuation <- valuation %>% select(-any_of('Outcome_name'))
+  # Get valuation for the country/years in the HIA dataset
+  iso3s <- unique(hia$iso3)
+  years <- current_year
+  valuation <- get_valuations(valuation_version=valuation_version,
+                              iso3s=iso3s,
+                              years=years)
 
-  nrow_before <- nrow(hia_cost)
-  hia_cost <- hia_cost %>%
-    left_join(dict %>% rename(Outcome = Code, Outcome.long = Long.name)) %>%
-    left_join(valuation, by = c('Outcome')) %>%
-    left_join(gdp, by = c('iso3')) %>%
-    filter(!is.na(Pollutant)) %>%
-    dplyr::mutate(
-      lcu_per_usd = GDP.PC.currLCU / GDP.PC.currUSD,
-      valuation_current_usd = case_when(
-        gni_or_gdp == 'gni' & ppp ~ valuation_world_2017 * (GNI.PC.PPP.2017USD / gni_world_ppp_2017intl)^elasticity * GNI.PC.PPP.currUSD / GNI.PC.PPP.2017USD * PPP.convLCUUSD / lcu_per_usd,
-        gni_or_gdp == 'gdp' & ppp ~ valuation_world_2017 * (GDP.PC.PPP.2017USD / gdp_world_ppp_2017intl)^elasticity * GDP.PC.PPP.currUSD / GDP.PC.PPP.2017USD * PPP.convLCUUSD / lcu_per_usd,
-        gni_or_gdp == 'gdp' & !ppp ~ valuation_world_2017 * (GDP.PC.2015USD / gdp_world_2017_constant2015)^elasticity * GDP.PC.currUSD / GDP.PC.2015USD ,
-        T ~ NA_real_), # Other cases not yet supported
+  hia_cost <- hia %>%
+    left_join(valuation,
+              by=c("Outcome", "iso3")) %>%
+    rename(valuation_current_usd = valuation_usd) %>%
+    mutate(
       valuation_current_lcu = valuation_current_usd * lcu_per_usd,
       cost_mn_currentUSD = number * valuation_current_usd / 1e6,
       cost_mn_currentLCU = cost_mn_currentUSD * lcu_per_usd,
-      share_gdp = cost_mn_currentLCU * 1e6 / GDP.TOT.currLCU
-    ) %>% ungroup %>%
-    relocate(starts_with(c('GDP', 'GNI', 'PPP')), .after = everything())
+      share_gdp = cost_mn_currentLCU * 1e6 / gdp_curr_usd
+    )
 
   # checks
-  if(nrow(hia_cost) != nrow_before) {stop('Wrong joins')}
+  stopifnot(nrow(hia_cost) == nrow(hia))
 
   missing_outcome <- hia_cost %>% filter(is.na(valuation_current_usd)) %>%
     distinct(Outcome) %>% pull()
@@ -112,32 +93,12 @@ get_hia_cost <- function(hia,
 
 get_total_cost_by_outcome <- function(hia_cost) {
 
-  gdp <- hia_cost %>%
-    ungroup() %>%
-    distinct(region_id, GDP.TOT.currLCU, GDP.TOT.currUSD) %>%
-    summarise_at(c('GDP.TOT.currLCU', 'GDP.TOT.currUSD'), sum)
-
-  gdp_tbl <-  tibble(unit = c('mn_currentLCU', 'mn_currentUSD'),
-                     gdp = c(gdp$GDP.TOT.currLCU / 1e6, gdp$GDP.TOT.currUSD / 1e6))
-
   hia_cost %>%
     filter(!double_counted) %>%
-    group_by(across(c(any_of('scenario'), estimate, Outcome, Outcome.long))) %>%
+    group_by(across(c(any_of('scenario'), estimate, Outcome))) %>%
     summarise_at(c('number', 'cost_mn_currentUSD', 'cost_mn_currentLCU'), sum, na.rm = T) %>%
+    ungroup() %>%
     na.omit %>%
-    tidyr::pivot_longer(cols = c(cost_mn_currentLCU, cost_mn_currentUSD, number),
-                        names_prefix = 'cost_',
-                        names_to = 'unit') %>%
-    filter(Outcome != 'LBW') %>%
-    left_join(gdp_tbl) %>%
-    mutate(share_gdp = value / gdp) %>%
-    select(-c(gdp)) %>%
-    tidyr::pivot_wider(names_from = unit,
-                       values_from = c(value, share_gdp)) %>%
-    select(-c(share_gdp_number, share_gdp_mn_currentUSD)) %>%
-    rename(share_gdp = share_gdp_mn_currentLCU,
-           number = value_number) %>%
-    rename_with(~stringr::str_replace(.x, 'value_', 'cost_')) %>%
     mutate(valuation_currentUSD = cost_mn_currentUSD * 1e6 / number,
            valuation_currentLCU = cost_mn_currentLCU * 1e6 / number)
 }
@@ -147,6 +108,7 @@ format_hia_table <- function(table, CI_underneath = F) {
 
   values <- intersect(names(table),
                       c('cost_mn_currentLCU', 'cost_mn_currentUSD', 'number', 'share_gdp'))
+
   groups <- intersect(names(table),
                       c('scenario', 'Outcome', 'Cause', 'Outcome.long', 'region_id',
                         'Pollutant', 'AgeGrp', 'double_counted'))
@@ -184,24 +146,12 @@ format_hia_table <- function(table, CI_underneath = F) {
 
 
 get_total_cost_by_region <- function(hia_cost) {
-
   hia_cost %>%
     filter(!double_counted) %>%
-    group_by(across(c(any_of('scenario'), estimate, region_id, pop, GDP.TOT.currLCU,
-                      GDP.TOT.currUSD))) %>%
+    group_by(across(c(any_of('scenario'), estimate, region_id, pop))) %>%
     summarise_at(c('cost_mn_currentUSD', 'cost_mn_currentLCU'), sum, na.rm = T) %>%
-    mutate(share_gdp = cost_mn_currentLCU * 1e6 / GDP.TOT.currLCU) %>%
-    ungroup() %>%
-    select(-starts_with('GDP'))
+    ungroup()
 }
-
-
-# get_total_cost_by_country <- function(hia_cost){
-#
-#   hia_cost_national <- get_total_cost_by_region(hia_cost) %>%
-#     group_by(scenario, iso3, estimate) %>%
-#     summarise_at(c('cost.mnLCU', 'cost.mnUSD'), sum)
-# }
 
 
 get_total_cost_by_region_outcome <- function(hia_cost, iso3, gdp = get_gdp(),
@@ -237,7 +187,7 @@ get_econ_forecast <- function(hia_cost,
     hia_cost <- hia_cost$hia_cost
   }
 
-  pop_proj <- get_pop_proj() %>% # from hia_data.R or gis_data.R?
+  pop_proj <- get_pop_proj() %>%
     filter(iso3 %in% unique(hia_cost$iso3),
            year %in% c(pop_targetyr, years))
 
