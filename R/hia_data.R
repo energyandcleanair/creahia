@@ -160,102 +160,6 @@ get_epi <- function(version = "default") {
 }
 
 
-get_gdp <- function(year = NULL) {
-
-  gdp <- read_csv(get_hia_path('gdp.csv'), col_types = cols())
-
-  if (!is.null(year)) {
-    gdp <- gdp %>% filter(year %in% !!year)
-  }
-
-  if (nrow(gdp) == 0) {
-    logger::log_info(glue("No GDP data found for requested year(s). Attempting to download... Consider using recreate_gdp and rebuild the package."))
-    end_year <- if(is.null(year)) lubridate::year(lubridate::today()) else max(year)
-    start_year <- if(is.null(year)) 1980 else min(year)
-
-    gdp <- download_gdp(start_year = start_year, end_year = end_year)
-
-    if (is.null(gdp) || nrow(gdp) == 0) {
-      logger::log_error("Failed to download GDP data")
-      return(NULL)
-    }
-
-    if (!is.null(year)) {
-      gdp <- gdp %>% filter(year %in% !!year)
-    }
-  }
-
-  return(gdp)
-}
-
-#' Download GDP data from World Bank API
-#'
-download_gdp <- function(start_year = 1980, end_year = lubridate::year(lubridate::today()), save_file = FALSE) {
-  logger::log_info(glue("Downloading GDP data from {start_year} to {end_year}"))
-
-  tryCatch({
-    gdp <- get_gdp_timeseries(start_year = start_year, end_year = end_year)
-
-    if (save_file) {
-      output_path <- get_hia_path('gdp.csv')
-      write_csv(gdp, output_path)
-      logger::log_info(glue("GDP data saved to {output_path}"))
-    }
-
-    return(gdp)
-  }, error = function(e) {
-    logger::log_error(glue("Error downloading GDP data: {e$message}"))
-    return(NULL)
-  })
-}
-
-#' Update the GDP data file bundled with the package
-#'
-#' This function downloads the latest GDP data and saves it to the package's extdata folder.
-#' It should be run by package maintainers when updating the package.
-#' Data will then be available offline using get_gdp
-#'
-recreate_gdp <- function(start_year = 1980, end_year = lubridate::year(lubridate::today()),
-                         output_path = "inst/extdata/gdp.csv") {
-
-  gdp <- download_gdp(start_year = start_year, end_year = end_year, save_file = FALSE)
-  dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
-  write_csv(gdp, output_path)
-}
-
-
-get_gdp_timeseries <- function(start_year = 1980, end_year = lubridate::year(lubridate::today())) {
-
-  list(
-      # GDP per capita
-       GDP.PC.PPP.2017USD = 'NY.GDP.PCAP.PP.KD',
-       GDP.PC.PPP.currUSD = 'NY.GDP.PCAP.PP.CD',
-       GDP.PC.currLCU     = 'NY.GDP.PCAP.CN',
-       GDP.PC.currUSD     = 'NY.GDP.PCAP.CD',
-       GDP.PC.2015USD     = 'NY.GDP.PCAP.KD',
-
-       # GDP total
-       GDP.TOT.PPP.2017USD = 'NY.GDP.MKTP.PP.KD',
-       GDP.TOT.PPP.currUSD = 'NY.GDP.MKTP.PP.CD',
-       GDP.TOT.currLCU    = 'NY.GDP.MKTP.CN',
-       GDP.TOT.currUSD    = 'NY.GDP.MKTP.CD',
-       GDP.TOT.2015USD    = 'NY.GDP.MKTP.KD',
-
-       # GNI per capita
-       GNI.PC.PPP.2017USD = 'NY.GNP.PCAP.PP.KD',
-       GNI.PC.PPP.currUSD = 'NY.GNP.PCAP.PP.CD',
-       GNI.PC.currLCU     = 'NY.GNP.PCAP.CN',
-       GNI.PC.currUSD     = 'NY.GNP.PCAP.CD',
-
-       # GNI total
-       PPP.convLCUUSD     = 'PA.NUS.PPP') %>%
-    lapply(function(x, ...){print(x); readWB_online(x, ...)}, start_date = start_year, end_date = end_year, latest.year.only = F) %>%
-    bind_rows(.id = 'valuename') %>%
-    sel(country, iso3, year, valuename, Value) %>%
-    spread(valuename, Value)
-}
-
-
 get_gdp_forecast <- function(pop_proj=NULL) {
   print("Getting GDP forecast")
   gdp_forecast_file <- get_hia_path('OECD_GDP_forecast.csv')
@@ -281,7 +185,8 @@ get_gdp_forecast <- function(pop_proj=NULL) {
 
 get_gdp_scaling <- function(iso3){
 
-  gdp_historical <- get_gdp()
+  gdp_historical <- get_income() %>%
+    spread(income_type, value)
   gdp_forecast <- get_gdp_forecast()
 
   gdp_all <- suppressMessages(full_join(gdp_historical, gdp_forecast, by=c("iso3", "year"))) %>%
