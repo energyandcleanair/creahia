@@ -53,7 +53,6 @@ conc_regions <- creahia::extract_concs_at_regions(concs, regions, species)
 # gbd_rr <- get_gbd_rr()
 # calc_causes <- get_calc_causes()
 # valuation <- get_valuation()
-# gdp <- get_gdp()
 
 # 07: HIA Calculations: PAF -----------------------------------------------------------------
 hia <- compute_hia(conc_map=conc_regions,
