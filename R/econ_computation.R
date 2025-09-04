@@ -213,7 +213,8 @@ get_econ_forecast <- function(hia_cost,
   hia_cost$fatal <- grepl('YLLs|YLDs|Deaths', hia_cost$Outcome)
 
   pop_scaling <- suppressMessages(
-    popproj_tot %>% ungroup %>%
+    popproj_tot %>%
+    ungroup %>%
       filter(iso3 %in% unique(hia_cost$iso3),
              AgeGrp %in% unique(hia_cost$AgeGrp),
              year %in% c(pop_targetyr, years)) %>%
@@ -236,14 +237,14 @@ get_econ_forecast <- function(hia_cost,
 
     pop_scaling <- pop_scaling %>%
       full_join(gdp_scaling %>%
-                  sel(iso3, year, GDP.PC.PPP.2017USD) %>%
+                  sel(iso3, year, GDP.PC.PPP.constUSD) %>%
                   filter(year %in% c(pop_targetyr, years),
                          iso3 %in% unique(hia_cost$iso3),
                          !iso3 %in% missing_iso3s_pop)) %>%
       group_by(iso3) %>%
-      mutate(GDPscaling = GDP.PC.PPP.2017USD / GDP.PC.PPP.2017USD[year == pop_targetyr] /
+      mutate(GDPscaling = GDP.PC.PPP.constUSD / GDP.PC.PPP.constUSD[year == pop_targetyr] /
                (1 + discount_rate)^(year - pop_targetyr)) %>%
-      sel(-GDP.PC.PPP.2017USD) %>%
+      sel(-GDP.PC.PPP.constUSD) %>%
       ungroup()
 
     missing_iso3s_gdp <- setdiff(unique(hia_cost$iso3),

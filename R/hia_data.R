@@ -198,20 +198,20 @@ get_gdp_scaling <- function(iso3){
       group_by(iso3) %>%
       group_modify(function(df, ...) {
 
-        PPP.scaling <- df$GDP.PC.PPP.2017USD[df$year == 2019] / df$GDP.PC.realUSD[df$year == 2019]
+        PPP.scaling <- df$GDP.PC.PPP.constUSD[df$year == 2019] / df$GDP.PC.realUSD[df$year == 2019]
 
-        past.scaling <- df %>% filter(!is.na(GDP.PC.PPP.2017USD + GDP.PC.realUSD)) %>% head(1)
+        past.scaling <- df %>% filter(!is.na(GDP.PC.PPP.constUSD + GDP.PC.realUSD)) %>% head(1)
         ind <- df$year < past.scaling$year
 
-        df$GDP.PC.PPP.2017USD[ind] <- df$GDP.PC.PPP.2017USD[ind] %>%
-          na.cover(df$GDP.PC.realUSD[ind] * past.scaling$GDP.PC.PPP.2017USD / past.scaling$GDP.PC.realUSD)
+        df$GDP.PC.PPP.constUSD[ind] <- df$GDP.PC.PPP.constUSD[ind] %>%
+          na.cover(df$GDP.PC.realUSD[ind] * past.scaling$GDP.PC.PPP.constUSD / past.scaling$GDP.PC.realUSD)
 
 
-        future.scaling = df %>% filter(!is.na(GDP.PC.PPP.2017USD + GDP.PC.realUSD)) %>% tail(1)
+        future.scaling = df %>% filter(!is.na(GDP.PC.PPP.constUSD + GDP.PC.realUSD)) %>% tail(1)
         ind <- df$year > future.scaling$year
 
-        df$GDP.PC.PPP.2017USD[ind] <- df$GDP.PC.PPP.2017USD[ind] %>%
-          na.cover(df$GDP.PC.realUSD[ind] * future.scaling$GDP.PC.PPP.2017USD / future.scaling$GDP.PC.realUSD)
+        df$GDP.PC.PPP.constUSD[ind] <- df$GDP.PC.PPP.constUSD[ind] %>%
+          na.cover(df$GDP.PC.realUSD[ind] * future.scaling$GDP.PC.PPP.constUSD / future.scaling$GDP.PC.realUSD)
 
         return(df)
       }))

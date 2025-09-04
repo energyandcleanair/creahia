@@ -45,24 +45,25 @@ download_income <- function(start_year = 1980,
 
   income_raw <- list(
     # GDP per capita
-    GDP.PC.PPP.2017USD = 'NY.GDP.PCAP.PP.KD',
+    GDP.PC.PPP.constUSD = 'NY.GDP.PCAP.PP.KD',
     GDP.PC.PPP.currUSD = 'NY.GDP.PCAP.PP.CD',
     GDP.PC.currLCU     = 'NY.GDP.PCAP.CN',
     GDP.PC.currUSD     = 'NY.GDP.PCAP.CD',
-    GDP.PC.2015USD     = 'NY.GDP.PCAP.KD',
+    GDP.PC.constUSD     = 'NY.GDP.PCAP.KD',
 
     # GDP total
-    GDP.TOT.PPP.2017USD = 'NY.GDP.MKTP.PP.KD',
+    GDP.TOT.PPP.constUSD = 'NY.GDP.MKTP.PP.KD',
     GDP.TOT.PPP.currUSD = 'NY.GDP.MKTP.PP.CD',
     GDP.TOT.currLCU    = 'NY.GDP.MKTP.CN',
     GDP.TOT.currUSD    = 'NY.GDP.MKTP.CD',
-    GDP.TOT.2015USD    = 'NY.GDP.MKTP.KD',
+    GDP.TOT.constUSD    = 'NY.GDP.MKTP.KD',
 
     # GNI per capita
-    GNI.PC.PPP.2017USD = 'NY.GNP.PCAP.PP.KD',
+    GNI.PC.PPP.constUSD = 'NY.GNP.PCAP.PP.KD',
     GNI.PC.PPP.currUSD = 'NY.GNP.PCAP.PP.CD',
     GNI.PC.currLCU     = 'NY.GNP.PCAP.CN',
     GNI.PC.currUSD     = 'NY.GNP.PCAP.CD',
+    GNI.PC.constUSD     = 'NY.GNP.PCAP.KD',
 
     # PPP conversion factor
     PPP.convLCUUSD     = 'PA.NUS.PPP'
@@ -92,9 +93,9 @@ download_income <- function(start_year = 1980,
 
 #' Update the income data file bundled with the package
 #'
-#' This function downloads the latest GDP data and saves it to the package's extdata folder.
+#' This function downloads the latest GDP/GNI data and saves it to the package's extdata folder.
 #' It should be run by package maintainers when updating the package.
-#' Data will then be available offline using get_gdp
+#' Data will then be available offline using get_income
 #'
 recreate_income <- function(
     start_year = 1980,

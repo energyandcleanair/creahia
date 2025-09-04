@@ -95,7 +95,7 @@ test_that("Test attach_reference_income works correctly", {
 
   # Test that GNI PPP outcomes get correct income type
   gni_ppp_outcomes <- result %>% filter(gni_or_gdp == "gni" & ppp == TRUE)
-  testthat::expect_true(all(gni_ppp_outcomes$income_type == "GNI.PC.PPP.currUSD"))
+  testthat::expect_true(all(gni_ppp_outcomes$income_type == "GNI.PC.PPP.constUSD"))
 
   # Test that reference income levels are properly matched
   testthat::expect_true(all(!is.na(result$income_reference)))
@@ -125,7 +125,6 @@ test_that("Test attach_target_income works correctly", {
   # Test that target income is attached
   testthat::expect_true("income_target" %in% names(result))
   testthat::expect_true("lcu_per_usd" %in% names(result))
-  testthat::expect_true("ppp_conversion_factor" %in% names(result))
   testthat::expect_true("gdp_curr_usd" %in% names(result))
 
   # Test that all required countries are present
@@ -204,30 +203,113 @@ test_that("Test get_valuations runs end-to-end", {
   testthat::expect_true(all(result$gdp_curr_usd > 0, na.rm = TRUE))
 })
 
-test_that("Test South Africa VSL 2023 - specific validation", {
+test_that("get_valuations returns correct VSL for ZAF 2019 - Worldbank version", {
 
-  # Test the specific case mentioned in the requirements
-  testthat::expect_no_error({
-    sa_valuation <- creahia::get_valuations(valuation_version = "viscusi_atlas",
-                                           iso3s = "ZAF",
-                                           years = 2023)
-  })
+  # Test get_valuations function directly
+  valuations <- creahia::get_valuations("ZAF", 2019, valuation_version = "worldbank")
 
-  # Get the Deaths (adults) VSL
-  deaths_row <- sa_valuation %>% filter(Outcome == "Deaths")
+  # Check that we get a data frame with expected columns
+  testthat::expect_true(is.data.frame(valuations))
+  testthat::expect_true("Outcome" %in% names(valuations))
+  testthat::expect_true("iso3" %in% names(valuations))
+  testthat::expect_true("year" %in% names(valuations))
+  testthat::expect_true("valuation_usd" %in% names(valuations))
 
-  # Test that we have the expected data
-  testthat::expect_equal(nrow(deaths_row), 1)
-  testthat::expect_equal(deaths_row$iso3, "ZAF")
-  testthat::expect_equal(deaths_row$year, 2023)
+  # Check that we have data for ZAF 2019
+  zaf_2019 <- valuations %>% filter(iso3 == "ZAF", year == 2019)
+  testthat::expect_true(nrow(zaf_2019) > 0)
 
-  # Test the USD VSL (expected: ~$1.1 million)
-  usd_vsl <- deaths_row$valuation_usd
-  testthat::expect_equal(usd_vsl, 1.11e6, tolerance = 0.01)
+  # Check that we have a VSL for Deaths
+  deaths_vsl <- zaf_2019 %>% filter(Outcome == "Deaths")
+  testthat::expect_true(nrow(deaths_vsl) == 1)
+  testthat::expect_true(!is.na(deaths_vsl$valuation_usd))
+  testthat::expect_true(deaths_vsl$valuation_usd > 0)
 
-  # Test the ZAR VSL (expected: ~R20.5 million)
-  zar_vsl <- deaths_row$valuation_usd * deaths_row$lcu_per_usd
-  testthat::expect_equal(zar_vsl, 20.5e6, tolerance = 0.01)
+  # Manually compute expected VSL for comparison
+  vsl_ref_amount <- 3830000
+  vsl_ref_iso3 <- "OED"
+  vsl_ref_elasticity <- 1.2
+  vsl_ref_year <- 2011
+
+  vsls <- wbstats::wb_data(c(gdp_current = 'NY.GDP.PCAP.CD',
+                             gdp_ppp_current = 'NY.GDP.PCAP.PP.CD',
+                             gdp_ppp_constant = 'NY.GDP.PCAP.PP.KD',
+                             gdp_constant = 'NY.GDP.PCAP.KD',
+                             gdp_current_lcu = 'NY.GDP.PCAP.CN'
+  ),
+  start_date = vsl_ref_year,
+  end_date = 2019,
+  country=c("ZAF", vsl_ref_iso3)) %>%
+    select(iso3c, date, gdp_current, gdp_ppp_constant, gdp_current_lcu, gdp_ppp_current) %>%
+    mutate(iso3c = if_else(iso3c == vsl_ref_iso3, "REF", iso3c)) %>%
+    pivot_wider(names_from = iso3c, values_from = -c(iso3c, date))
+
+  vsls$vsl_ppp <- vsl_ref_amount * (vsls$gdp_ppp_constant_ZAF / vsls$gdp_ppp_constant_REF[vsls$date==vsl_ref_year]) ^ vsl_ref_elasticity
+  vsls$vsl_market <- vsls$vsl_ppp * vsls$gdp_current_ZAF / vsls$gdp_ppp_constant_ZAF
+
+  # Remove attribute
+  attr(vsls$vsl_market, "label") <- NULL
+
+  vsl_manual_2019 <- vsls %>% filter(date == 2019) %>% pull(vsl_market)
+
+  # Compare with tolerance
+  testthat::expect_equal(deaths_vsl$valuation_usd, vsl_manual_2019, tolerance = 0.1)
+})
+
+test_that("get_valuations returns correct VSL for ZAF 2019 - Viscusi version", {
+
+  # Test get_valuations function directly
+  valuations <- creahia::get_valuations("ZAF", 2019, valuation_version = "viscusi")
+
+  # Check that we get a data frame with expected columns
+  testthat::expect_true(is.data.frame(valuations))
+  testthat::expect_true("Outcome" %in% names(valuations))
+  testthat::expect_true("iso3" %in% names(valuations))
+  testthat::expect_true("year" %in% names(valuations))
+  testthat::expect_true("valuation_usd" %in% names(valuations))
+
+  # Check that we have data for ZAF 2019
+  zaf_2019 <- valuations %>% filter(iso3 == "ZAF", year == 2019)
+  testthat::expect_true(nrow(zaf_2019) > 0)
+
+  # Check that we have a VSL for Deaths
+  deaths_vsl <- zaf_2019 %>% filter(Outcome == "Deaths")
+  testthat::expect_true(nrow(deaths_vsl) == 1)
+  testthat::expect_true(!is.na(deaths_vsl$valuation_usd))
+  testthat::expect_true(deaths_vsl$valuation_usd > 0)
+
+  # Manually compute expected VSL for comparison
+  vsl_ref_amount <- 9631000
+  vsl_ref_iso3 <- "USA"
+  vsl_ref_elasticity <- 1
+  vsl_ref_year <- 2015
+
+  vsls <- wbstats::wb_data(c(gdp_current = 'NY.GDP.PCAP.CD',
+                             gdp_ppp_current = 'NY.GDP.PCAP.PP.CD',
+                             gdp_ppp_constant = 'NY.GDP.PCAP.PP.KD',
+                             gdp_constant = 'NY.GDP.PCAP.KD',
+                             gdp_current_lcu = 'NY.GDP.PCAP.CN',
+                             gni_current = 'NY.GNP.PCAP.CD',
+                             gni_constant = 'NY.GNP.PCAP.KD',
+                             gni_ppp_constant = 'NY.GNP.PCAP.PP.KD',
+                             gni_ppp_current = 'NY.GNP.PCAP.PP.CD'
+  ),
+  start_date = vsl_ref_year,
+  end_date = 2019,
+  country=c("ZAF", vsl_ref_iso3)) %>%
+    select(iso3c, date, gni_constant, gni_current) %>%
+    mutate(iso3c = if_else(iso3c == vsl_ref_iso3, "REF", iso3c)) %>%
+    pivot_wider(names_from = iso3c, values_from = -c(iso3c, date))
+
+  vsls$vsl_market <- vsl_ref_amount * (vsls$gni_constant_ZAF / vsls$gni_constant_REF[vsls$date==vsl_ref_year]) ^ vsl_ref_elasticity * vsls$gni_current_ZAF / vsls$gni_constant_ZAF
+
+  # Remove attribute
+  attr(vsls$vsl_market, "label") <- NULL
+
+  vsl_manual_2019 <- vsls %>% filter(date == 2019) %>% pull(vsl_market)
+
+  # Compare with tolerance
+  testthat::expect_equal(deaths_vsl$valuation_usd, vsl_manual_2019, tolerance = 0.1)
 })
 
 test_that("Test valuation system with multiple countries and years", {

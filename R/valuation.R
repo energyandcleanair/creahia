@@ -60,13 +60,13 @@ attach_reference_income <- function(raw_valuation) {
   # Add reference column
   valuation <- valuation %>%
     mutate(
-      income_type = case_when(
-        gni_or_gdp == "gdp" & !ppp ~ "GDP.PC.currUSD",
-        gni_or_gdp == "gdp" & ppp ~ "GDP.PC.PPP.currUSD",
-        gni_or_gdp == "gni" & !ppp ~ "GNI.PC.currUSD",
-        gni_or_gdp == "gni" & ppp ~ "GNI.PC.PPP.currUSD",
+        income_type = case_when(
+          gni_or_gdp == "gdp" & !ppp ~ "GDP.PC.constUSD",
+          gni_or_gdp == "gdp" & ppp ~ "GDP.PC.PPP.constUSD",
+          gni_or_gdp == "gni" & !ppp ~ "GNI.PC.constUSD",
+          gni_or_gdp == "gni" & ppp ~ "GNI.PC.PPP.constUSD",
+        )
       )
-    )
 
   valuation_with_income <- valuation %>%
     left_join(income %>% select(iso3, year, income_type, income_reference = value),
@@ -218,6 +218,7 @@ attach_target_income <- function(valuation_with_ref, iso3s, years) {
            year_reference=year,
            income_reference,
            valuation_usd_reference,
+           gni_or_gdp,
            ppp,
            elasticity) %>%
     left_join(target_income,
@@ -225,17 +226,20 @@ attach_target_income <- function(valuation_with_ref, iso3s, years) {
               relationship = "many-to-many"
               )
 
-  # Add PPP conversion factor and lcu_per_usd for target countries/years
-  # and gdp total to compute %gdp later on
+  # Add GDP data for conversion calculations
   additional_infos <- income %>%
-    filter(income_type %in% c("PPP.convLCUUSD", "GDP.PC.currLCU", "GDP.PC.currUSD", "GDP.TOT.currUSD")) %>%
+    filter(income_type %in% c("GDP.PC.currUSD", "GDP.PC.currLCU", "GDP.PC.constUSD", "GDP.PC.PPP.constUSD", "GDP.TOT.currUSD",
+                              "GNI.PC.currUSD", "GNI.PC.constUSD", "GNI.PC.PPP.constUSD"
+                              )) %>%
     spread(income_type, value) %>%
     mutate(
       lcu_per_usd = GDP.PC.currLCU / GDP.PC.currUSD,
-      ppp_conversion_factor = PPP.convLCUUSD,
       gdp_curr_usd = GDP.TOT.currUSD
     ) %>%
-    select(iso3, year, lcu_per_usd, ppp_conversion_factor, gdp_curr_usd)
+    select(iso3, year,
+           GDP.PC.currUSD, GDP.PC.constUSD, GDP.PC.PPP.constUSD,
+           GNI.PC.currUSD, GNI.PC.constUSD, GNI.PC.PPP.constUSD,
+           gdp_curr_usd, lcu_per_usd)
 
   valuation_with_target <- valuation_with_target %>%
     left_join(additional_infos, by = c("iso3", "year"))
@@ -266,8 +270,12 @@ compute_transferred_valuation <- function(valuation_with_target) {
       # Apply elasticity scaling: V_target = V_reference * (income_ratio)^elasticity
       valuation_usd = valuation_usd_reference * (income_target / income_reference)^elasticity,
 
-      # Convert to market prices if needed
-      valuation_usd = if_else(ppp, valuation_usd * ppp_conversion_factor / lcu_per_usd, valuation_usd)
+      # Convert to current USD using GDP ratios
+      valuation_usd = valuation_usd * case_when(
+        gni_or_gdp == "gdp" & !ppp ~ GDP.PC.currUSD / GDP.PC.constUSD,
+        gni_or_gdp == "gdp" & ppp ~ GDP.PC.currUSD / GDP.PC.PPP.constUSD,
+        gni_or_gdp == "gni" & !ppp ~ GNI.PC.currUSD / GNI.PC.constUSD,
+        gni_or_gdp == "gni" & ppp ~ GNI.PC.currUSD / GNI.PC.PPP.constUSD)
     )
 
   # Validation checks
