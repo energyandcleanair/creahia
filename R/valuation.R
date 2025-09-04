@@ -61,10 +61,10 @@ attach_reference_income <- function(raw_valuation) {
   valuation <- valuation %>%
     mutate(
       income_type = case_when(
-        gni_or_gdp=="gdp" & !ppp ~ "GDP.PC.currUSD",
-        gni_or_gdp=="gdp" & ppp ~ "GDP.PC.PPP.currUSD",
-        gni_or_gdp=="gni" & !ppp ~ "GNI.PC.currUSD",
-        gni_or_gdp=="gni" & ppp ~ "GNI.PC.PPP.currUSD",
+        gni_or_gdp == "gdp" & !ppp ~ "GDP.PC.currUSD",
+        gni_or_gdp == "gdp" & ppp ~ "GDP.PC.PPP.currUSD",
+        gni_or_gdp == "gni" & !ppp ~ "GNI.PC.currUSD",
+        gni_or_gdp == "gni" & ppp ~ "GNI.PC.PPP.currUSD",
       )
     )
 
