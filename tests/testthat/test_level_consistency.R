@@ -4,14 +4,10 @@ testthat::source_test_helpers("../", env = globalenv())
 
 test_that("HIAs are consistent across levels", {
 
-
-  pm25 <- raster::raster("~/development/crea/studies/202412_hia_southafrica/cache/pm25_2023_30_sec.tif")
-
+  skip_on_ci()
   hias <- generate_random_exposure_hias(levels=c(0,1,2),
-                                        iso3="BGD",
-                                        administrative_res="full",
-                                        baseline_rast=pm25
-                                        )
+                                        iso3="ZAF",
+                                        administrative_res="full")
 
 
   # Check which region is weird
