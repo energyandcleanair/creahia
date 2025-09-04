@@ -58,16 +58,16 @@ test_that("get_pm_mortality computes attributable burden correctly", {
   se_paf <- 0.01
   central_epi <- 500
   se_epi <- 0
-  test_config(central_paf, se_paf, central_epi, se_epi, pop, var)
+  test_config(central_paf, se_paf, central_epi, se_epi, pop, var=var)
 
   # Config2
   se_paf <- 0
   se_epi <- 10
-  test_config(central_paf, se_paf, central_epi, se_epi, pop, var)
+  test_config(central_paf, se_paf, central_epi, se_epi, pop, var=var)
 
   # Config3
   se_paf <- 0.01
   se_epi <- 10
-  test_config(central_paf, se_paf, central_epi, se_epi, pop, var)
+  test_config(central_paf, se_paf, central_epi, se_epi, pop, var=var)
 
 })

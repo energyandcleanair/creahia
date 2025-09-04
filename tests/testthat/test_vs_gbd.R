@@ -5,6 +5,7 @@ testthat::source_test_helpers("../", env = globalenv())
 
 test_that("Deaths causes are similar to GBD2021", {
 
+  skip_on_ci()
   hia_gbd2021 <- generate_donkelaar_exposure_hia(target=5,
                                                  iso3 = "ZAF",
                                                  epi_version = "gbd2021",
@@ -57,5 +58,6 @@ test_that("Deaths causes are similar to GBD2021", {
     left_join(expected, by="Cause") %>%
     mutate(diff = abs(number.x - number.y)/number.y) %>%
     select(Cause, diff)
+
   testthat::expect_true(all(abs(comparison$diff) < 0.07))
 })

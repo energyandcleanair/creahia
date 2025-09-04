@@ -94,7 +94,7 @@ generate_fingerprint <- function(ref, params = list(calc_causes = "GBD only", ep
   return(filepath)
 }
 
-generate_fingerprints <- function(refs=c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "current"),
+generate_fingerprints <- function(refs=c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.5.2", "current"),
                                  param_sets = list(
                                    list(calc_causes = "GBD only", epi_version = "gbd2019", pop_year = 2020),
                                    list(calc_causes = "GEMM and GBD", epi_version = "gbd2019", pop_year = 2020)
