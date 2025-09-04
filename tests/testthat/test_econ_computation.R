@@ -1,7 +1,35 @@
-testthat::source_test_helpers("tests", env = globalenv())
-testthat::source_test_helpers("../", env = globalenv())
-
 # Test the economic computation system
+test_that("compute_econ_costs uses correct VSL and multiplies by number", {
+
+  # Create a simple HIA dataframe for testing
+  hia <- data.frame(
+    iso3 = "ZAF",
+    year = 2019,
+    Outcome = "Deaths",
+    number = 1000,
+    stringsAsFactors = FALSE,
+    double_counted = FALSE,
+    estimate = "central",
+    region_id = "region",
+    pop = 1e5
+  )
+
+  # Get the VSL directly from get_valuations
+  valuations <- creahia::get_valuations("ZAF", 2019, valuation_version = "worldbank")
+  expected_vsl <- valuations %>% filter(Outcome == "Deaths") %>% pull(valuation_usd)
+
+  # Compute economic costs
+  costs <- creahia::compute_econ_costs(hia, valuation_version = "worldbank")
+  actual_vsl <- costs$hia_cost %>% filter(Outcome == "Deaths") %>% pull(valuation_current_usd)
+  actual_cost <- costs$hia_cost %>% filter(Outcome == "Deaths") %>% pull(cost_mn_currentUSD)
+
+  # Check that VSL matches
+  testthat::expect_equal(actual_vsl, expected_vsl, tolerance = 0.1)
+
+  # Check that cost is VSL * number / 1e6 (converted to millions)
+  expected_cost <- expected_vsl * 1000 / 1e6
+  testthat::expect_equal(actual_cost, expected_cost, tolerance = 0.1)
+})
 
 test_that("Test get_hia_cost calculates costs correctly", {
 
@@ -140,7 +168,7 @@ test_that("Test get_total_cost_by_region works correctly", {
 
 
 test_that("Test get_hia_cost end-to-end with new valuation system", {
-  
+
   # Create a comprehensive test HIA dataset with all outcomes
   test_hia <- data.frame(
     iso3 = c("USA", "USA", "GBR", "GBR", "USA", "USA", "GBR", "GBR", "USA", "GBR", "USA", "GBR", "USA", "GBR"),
@@ -152,7 +180,7 @@ test_that("Test get_hia_cost end-to-end with new valuation system", {
     double_counted = c(FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE),
     stringsAsFactors = FALSE
   )
-  
+
   # Test that get_hia_cost runs without errors
   testthat::expect_no_error({
     hia_cost <- creahia::get_hia_cost(
@@ -161,62 +189,62 @@ test_that("Test get_hia_cost end-to-end with new valuation system", {
       current_year = 2019
     )
   })
-  
+
   # Test that the result has the expected structure
   testthat::expect_true(is.data.frame(hia_cost))
   testthat::expect_true(nrow(hia_cost) > 0)
-  
+
   # Test that required columns exist
   required_cols <- c("iso3", "Outcome", "number", "cost_mn_currentUSD", "cost_mn_currentLCU")
   testthat::expect_true(all(required_cols %in% names(hia_cost)))
-  
+
   # Test that costs are calculated (not all NA)
   testthat::expect_true(any(!is.na(hia_cost$cost_mn_currentUSD)))
   testthat::expect_true(any(!is.na(hia_cost$cost_mn_currentLCU)))
-  
+
   # Test that costs are positive
   testthat::expect_true(all(hia_cost$cost_mn_currentUSD >= 0, na.rm = TRUE))
   testthat::expect_true(all(hia_cost$cost_mn_currentLCU >= 0, na.rm = TRUE))
-  
+
   # Test that the number of rows is preserved
   testthat::expect_equal(nrow(hia_cost), nrow(test_hia))
-  
+
   # Test that all outcomes have valuations
   testthat::expect_true(all(!is.na(hia_cost$valuation_current_usd)))
-  
+
   # Test that GDP/GNI data is attached (new column names from valuation system)
   gdp_cols <- c("lcu_per_usd", "gdp_curr_usd")
   testthat::expect_true(all(gdp_cols %in% names(hia_cost)))
-  
+
   # Test that valuation data is present
   testthat::expect_true("valuation_current_usd" %in% names(hia_cost))
-  
+
   # Test that share of GDP is calculated
   testthat::expect_true("share_gdp" %in% names(hia_cost))
   testthat::expect_true(any(!is.na(hia_cost$share_gdp)))
-  
+
   # Test that share of GDP is reasonable (between 0 and 1)
   testthat::expect_true(all(hia_cost$share_gdp >= 0 & hia_cost$share_gdp <= 1, na.rm = TRUE))
-  
+
   # Test that all outcome types are properly handled
   expected_outcomes <- c("Deaths", "Deaths.child", "YLDs", "Asthma.Prev", "exac", "PTB")
   testthat::expect_true(all(expected_outcomes %in% hia_cost$Outcome))
-  
+
   # Test that different currency types are handled (USD, GBP, EUR)
   # This tests the currency conversion functionality
   testthat::expect_true(all(!is.na(hia_cost$valuation_current_usd)))
-  
+
   # Test that both GNI and GDP-based valuations work
   gni_outcomes <- c("Deaths", "Deaths.child", "YLDs")
   gdp_outcomes <- c("Asthma.Prev", "exac", "PTB")
-  
+
   testthat::expect_true(all(gni_outcomes %in% hia_cost$Outcome))
   testthat::expect_true(all(gdp_outcomes %in% hia_cost$Outcome))
-  
+
   # Test that both PPP and non-PPP valuations work
   # (All outcomes in your data use PPP, but the system should handle both)
   testthat::expect_true(all(!is.na(hia_cost$valuation_current_usd)))
-  
+
 })
 
 
