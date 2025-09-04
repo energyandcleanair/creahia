@@ -117,7 +117,7 @@ hia_totals <- hia %>%
 targetyears = c(seq(1996,2022,1))
 
 hia_cost <- get_hia_cost(hia=hia, valuation_version="viscusi")
-valuations <- get_valuation('viscusi')
+
 
 #usd_to_lcu=15447
 usd_to_lcu=461.15

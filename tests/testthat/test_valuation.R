@@ -1,13 +1,8 @@
-testthat::source_test_helpers("tests", env = globalenv())
-testthat::source_test_helpers("../", env = globalenv())
-
-# Test the economic valuation system end-to-end
-
-test_that("Test get_raw_valuation loads data correctly", {
+test_that("Test get_valuations_raw loads data correctly", {
 
   # Test that raw valuation data can be loaded
   testthat::expect_no_error({
-    raw_valuation <- creahia::get_raw_valuation("viscusi_gni")
+    raw_valuation <- creahia::get_valuations_raw("viscusi_gni")
   })
 
   # Test structure
@@ -78,7 +73,7 @@ test_that("Test transfer_to_usd handles different currencies", {
 test_that("Test attach_reference_income works correctly", {
 
   # Get raw valuation data
-  raw_valuation <- creahia::get_raw_valuation("viscusi_gni")
+  raw_valuation <- creahia::get_valuations_raw("viscusi_gni")
 
   # Test that function runs without error
   testthat::expect_no_error({
@@ -108,7 +103,7 @@ test_that("Test attach_reference_income works correctly", {
 test_that("Test attach_target_income works correctly", {
 
   # Get raw valuation and attach reference income
-  raw_valuation <- creahia::get_raw_valuation("viscusi_gni")
+  raw_valuation <- creahia::get_valuations_raw("viscusi_gni")
   valuation_with_ref <- creahia::attach_reference_income(raw_valuation)
 
   # Test with specific countries and years
@@ -141,7 +136,7 @@ test_that("Test attach_target_income works correctly", {
 test_that("Test compute_transferred_valuation works correctly", {
 
   # Get raw valuation and process through all steps
-  raw_valuation <- creahia::get_raw_valuation("viscusi_gni")
+  raw_valuation <- creahia::get_valuations_raw("viscusi_gni")
   valuation_with_ref <- creahia::attach_reference_income(raw_valuation)
   valuation_with_target <- creahia::attach_target_income(valuation_with_ref,
                                                         iso3s = c("ZAF"),
@@ -160,7 +155,7 @@ test_that("Test compute_transferred_valuation works correctly", {
   testthat::expect_true("valuation_usd" %in% names(result))
 
   # Test that all valuations are positive
-  testthat::expect_true(all(result$valuation_usd > 0, na.rm = TRUE))
+  testthat::expect_true(all(result$valuation_usd > 0))
 
   # Test that all valuations are finite
   testthat::expect_true(all(is.finite(result$valuation_usd)))
@@ -198,9 +193,9 @@ test_that("Test get_valuations runs end-to-end", {
   testthat::expect_true(all(c(2023) %in% result$year))
 
   # Test that valuations are reasonable
-  testthat::expect_true(all(result$valuation_usd > 0, na.rm = TRUE))
-  testthat::expect_true(all(result$lcu_per_usd > 0, na.rm = TRUE))
-  testthat::expect_true(all(result$gdp_curr_usd > 0, na.rm = TRUE))
+  testthat::expect_true(all(result$valuation_usd > 0))
+  testthat::expect_true(all(result$lcu_per_usd > 0))
+  testthat::expect_true(all(result$gdp_curr_usd > 0))
 })
 
 test_that("get_valuations returns correct VSL for ZAF 2019 - Worldbank version", {
@@ -336,8 +331,8 @@ test_that("Test valuation system with multiple countries and years", {
   testthat::expect_equal(nrow(multi_valuation), expected_combinations)
 
   # Test that valuations are reasonable across all countries
-  testthat::expect_true(all(multi_valuation$valuation_usd > 0, na.rm = TRUE))
-  testthat::expect_true(all(multi_valuation$lcu_per_usd > 0, na.rm = TRUE))
+  testthat::expect_true(all(multi_valuation$valuation_usd > 0))
+  testthat::expect_true(all(multi_valuation$lcu_per_usd > 0))
 
   # Test that USA valuations are in USD (lcu_per_usd should be close to 1)
   usa_rows <- multi_valuation %>% filter(iso3 == "USA")

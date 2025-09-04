@@ -87,7 +87,6 @@ epi <- get_epi()
 ihme <- get_ihme()
 gbd_rr <- get_gbd_rr()
 calc_causes <- get_calc_causes()
-valuation <- get_valuation()
 
 
 # 07: HIA Calculations: PAF -----------------------------------------------------------------

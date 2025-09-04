@@ -185,8 +185,7 @@ hia_cost <- get_hia_cost(hia=hia_totals, valuation_version="viscusi")
 hia_cost %>% group_by(Pollutant) %>%
   filter(!double_counted, Outcome=='Deaths', estimate=='central') %>% summarise(across(number, sum))
 
-#valuations <- read_csv('~/Rpackages/creahia/inst/extdata/valuation_viscusi.csv')
-valuations <- get_valuation('viscusi')
+valuations <- get_valuations_raw('viscusi')
 
 usd_to_lcu=14.7912
 

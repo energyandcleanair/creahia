@@ -245,10 +245,7 @@ hia_per_t_total %>% mutate(emitted_species = paste0('per_t_', emitted_species)) 
 
 
 
-
-
-#valuations <- read_csv('~/Rpackages/creahia/inst/extdata/valuation_viscusi.csv')
-valuations <- get_valuation('viscusi')
+valuations <- get_valuations_raw('viscusi')
 
 usd_to_lcu=15447
 
