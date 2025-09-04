@@ -54,7 +54,6 @@ compute_econ_costs <- function(hia,
 
 get_hia_cost <- function(hia,
                          valuation_version = "viscusi",
-                         valuation = get_valuation(valuation_version),
                          current_year = 2019,
                          dict = get_dict()) {
 

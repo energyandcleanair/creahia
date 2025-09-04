@@ -178,7 +178,7 @@ hia_totals  %>% group_by(scenario, Pollutant) %>% filter(!double_counted, Outcom
 targetyears = c(seq(2020,2037,1))
 
 hia_cost <- get_hia_cost(hia=hia, valuation_version="viscusi")
-valuations <- get_valuation('viscusi')
+valuations <- get_valuations_raw('viscusi')
 
 #usd_to_lcu=15447
 usd_to_lcu=14.7912
@@ -266,8 +266,7 @@ targetyears = 2022
 
 hia_cost <- get_hia_cost(hia=hia_totals, valuation_version="viscusi")
 
-#valuations <- read_csv('~/Rpackages/creahia/inst/extdata/valuation_viscusi.csv')
-valuations <- get_valuation('viscusi')
+valuations <- get_valuations_raw('viscusi')
 
 #usd_to_lcu=15447
 usd_to_lcu=14.7912

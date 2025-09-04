@@ -5,7 +5,6 @@ testthat::source_test_helpers("../", env = globalenv())
 
 test_that("Deaths causes are similar to GBD2021", {
 
-  creaexposure::data.basemap_pm25()
   hia_gbd2021 <- generate_donkelaar_exposure_hia(target=5,
                                                  iso3 = "ZAF",
                                                  epi_version = "gbd2021",
@@ -22,8 +21,7 @@ test_that("Deaths causes are similar to GBD2021", {
            estimate=="central") %>%
     arrange(desc(abs(number))) %>%
     mutate(source="CREA (GBD2021)",
-           number=-number
-           ) %>%
+           number=-number) %>%
     select(number, Cause, source)
 
   # Just for visual check

@@ -7,27 +7,11 @@ test_that("HIAs are consistent across levels", {
   skip_on_ci()
   hias <- generate_random_exposure_hias(levels=c(0,1,2),
                                         iso3="ZAF",
-                                        administrative_res="full")
-
-
-  # Check which region is weird
-  adm2 <- creahelpers::get_adm(level=2, res="low", iso2s="ZA")
-
-  bind_rows(
-    hias %>% filter(level==1) %>% mutate(GID_1=region_id),
-    hias %>% filter(level==2) %>% left_join(as.data.frame(adm2) %>% dplyr::select(GID_2, GID_1), by=c("region_id"="GID_2"))
-  ) %>%
-    filter(Outcome=="PTB") %>%
-    group_by(GID_1, level, Outcome, Cause, scenario, estimate) %>%
-    dplyr::summarise_at("number", sum) %>%
-    spread(level, number) %>%
-    mutate(diff=abs(`1`-`2`)/`1`) %>%
-    arrange(desc(diff))
-
+                                        administrative_res="low")
 
   # Comparison
   comparison <- hias %>%
-    filter(level %in% c(0,1)) %>%
+    filter(level %in% c(0,1, 2)) %>%
     filter(estimate=="central") %>%
     group_by(level, Outcome, Cause, scenario, estimate) %>%
     dplyr::summarise_at("number", sum) %>%
@@ -41,7 +25,7 @@ test_that("HIAs are consistent across levels", {
   # For central, expect very close results
   max_deviation_central <- comparison %>%
     filter(estimate=="central") %>%
-    summarise(max_deviation=max(abs(deviation), na.rm=T))
+    summarise(max_deviation=max(abs(deviation)))
   testthat::expect_lt(max_deviation_central$max_deviation, 0.05)
 
 })

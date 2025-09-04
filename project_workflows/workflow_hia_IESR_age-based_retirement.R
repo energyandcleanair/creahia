@@ -334,16 +334,11 @@ hia_plants %>%
   geom_point(aes(col=Owner, size=cost_mn_currentUSD_per_TWh))
 
 
+valuations <- get_valuations_raw('viscusi')
 
-
-
-
-
-
-#valuations <- read_csv('~/Rpackages/creahia/inst/extdata/valuation_viscusi.csv')
-valuations <- get_valuation('viscusi')
 
 usd_to_lcu=15447
+
 
 hia_cost %>%
   distinct(Outcome, valuation_world_2017, valuation_current_usd, iso3) %>%

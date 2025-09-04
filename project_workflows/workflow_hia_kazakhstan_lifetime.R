@@ -175,7 +175,7 @@ hia_totals  %>% group_by(scenario, Pollutant) %>% filter(!double_counted, Outcom
 targetyears = c(seq(1996,2023,1))
 
 hia_cost <- get_hia_cost(hia=hia, valuation_version="viscusi")
-valuations <- get_valuation('viscusi')
+valuations <- get_valuations_raw('viscusi')
 
 #usd_to_lcu=15447
 usd_to_lcu=461.15

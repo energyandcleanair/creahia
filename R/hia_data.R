@@ -229,13 +229,6 @@ get_valuation_versions <- function() {
 }
 
 
-get_valuation <- function(version = "default") {
-  filename <- get_valuation_versions()[[version]]
-  print(sprintf("Getting epi: %s", filename))
-  read_csv(get_hia_path(filename), col_types = cols())
-}
-
-
 get_calc_causes <- function(causes_set = 'GEMM and GBD', filter = NULL) {
   print("Getting calc_causes")
 

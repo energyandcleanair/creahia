@@ -1,6 +1,21 @@
 # These are a series of functions to help transfer valuations from the
 # reference year/location to any location/year of our choice
 
+
+#' Get raw valuations table
+#'
+#' @param version
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+get_valuations_raw <- function(version = "default") {
+  filename <- get_valuation_versions()[[version]]
+  read_csv(get_hia_path(file.path("valuations", filename)), col_types = cols())
+}
+
+
 #' Get valuations for specific countries and years
 #'
 #' @param valuation_version Character string specifying the valuation version (e.g., 'viscusi')
@@ -14,7 +29,7 @@ get_valuations <- function(valuation_version = 'viscusi',
                           years = NULL) {
 
   # Step 1: Take raw valuation
-  raw_valuation <- get_raw_valuation(valuation_version)
+  raw_valuation <- get_valuations_raw(valuation_version)
 
   # Step 2: Attach reference income
   valuation_with_ref <- attach_reference_income(raw_valuation)
@@ -30,15 +45,6 @@ get_valuations <- function(valuation_version = 'viscusi',
     select(Outcome, iso3, year, valuation_usd, lcu_per_usd, gdp_curr_usd)
 
   return(final_valuation)
-}
-
-#' Get raw valuation data
-#'
-#' @param valuation_version Character string specifying the valuation version
-#'
-#' @return Raw valuation data
-get_raw_valuation <- function(valuation_version) {
-  read_csv(get_hia_path(paste0("valuation_", valuation_version, "_raw.csv")))
 }
 
 #' Attach reference income data

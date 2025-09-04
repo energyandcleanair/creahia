@@ -63,8 +63,8 @@ test_that("Test get_hia_cost calculates costs correctly", {
   testthat::expect_true(all(required_cols %in% names(hia_cost)))
 
   # Test that costs are calculated and positive
-  testthat::expect_true(all(hia_cost$cost_mn_currentUSD > 0, na.rm = TRUE))
-  testthat::expect_true(all(hia_cost$cost_mn_currentLCU > 0, na.rm = TRUE))
+  testthat::expect_true(all(hia_cost$cost_mn_currentUSD > 0))
+  testthat::expect_true(all(hia_cost$cost_mn_currentLCU > 0))
 
   # Test that all outcomes have valuations
   testthat::expect_true(all(!is.na(hia_cost$valuation_current_usd)))
@@ -114,8 +114,8 @@ test_that("Test get_total_cost_by_outcome works correctly", {
   testthat::expect_true(all(c("Deaths", "Asthma.Prev") %in% cost_by_outcome$Outcome))
 
   # Test that costs are positive
-  testthat::expect_true(all(cost_by_outcome$cost_mn_currentUSD > 0, na.rm = TRUE))
-  testthat::expect_true(all(cost_by_outcome$cost_mn_currentLCU > 0, na.rm = TRUE))
+  testthat::expect_true(all(cost_by_outcome$cost_mn_currentUSD > 0))
+  testthat::expect_true(all(cost_by_outcome$cost_mn_currentLCU > 0))
 })
 
 test_that("Test get_total_cost_by_region works correctly", {
@@ -161,8 +161,8 @@ test_that("Test get_total_cost_by_region works correctly", {
   testthat::expect_true(all(c("USA", "ZAF") %in% cost_by_region$region_id))
 
   # Test that costs are positive
-  testthat::expect_true(all(cost_by_region$cost_mn_currentUSD > 0, na.rm = TRUE))
-  testthat::expect_true(all(cost_by_region$cost_mn_currentLCU > 0, na.rm = TRUE))
+  testthat::expect_true(all(cost_by_region$cost_mn_currentUSD > 0))
+  testthat::expect_true(all(cost_by_region$cost_mn_currentLCU > 0))
 })
 
 
@@ -203,8 +203,8 @@ test_that("Test get_hia_cost end-to-end with new valuation system", {
   testthat::expect_true(any(!is.na(hia_cost$cost_mn_currentLCU)))
 
   # Test that costs are positive
-  testthat::expect_true(all(hia_cost$cost_mn_currentUSD >= 0, na.rm = TRUE))
-  testthat::expect_true(all(hia_cost$cost_mn_currentLCU >= 0, na.rm = TRUE))
+  testthat::expect_true(all(hia_cost$cost_mn_currentUSD >= 0))
+  testthat::expect_true(all(hia_cost$cost_mn_currentLCU >= 0))
 
   # Test that the number of rows is preserved
   testthat::expect_equal(nrow(hia_cost), nrow(test_hia))
@@ -224,7 +224,7 @@ test_that("Test get_hia_cost end-to-end with new valuation system", {
   testthat::expect_true(any(!is.na(hia_cost$share_gdp)))
 
   # Test that share of GDP is reasonable (between 0 and 1)
-  testthat::expect_true(all(hia_cost$share_gdp >= 0 & hia_cost$share_gdp <= 1, na.rm = TRUE))
+  testthat::expect_true(all(hia_cost$share_gdp >= 0 & hia_cost$share_gdp <= 1))
 
   # Test that all outcome types are properly handled
   expected_outcomes <- c("Deaths", "Deaths.child", "YLDs", "Asthma.Prev", "exac", "PTB")
