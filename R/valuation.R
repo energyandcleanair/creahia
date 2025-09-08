@@ -11,7 +11,7 @@
 #'
 #' @examples
 get_valuations_raw <- function(version = "default") {
-  filename <- get_valuation_versions()[[version]]
+  filename <- glue("{version}.csv")
   read_csv(get_hia_path(file.path("valuations", filename)), col_types = cols())
 }
 
@@ -273,15 +273,24 @@ compute_transferred_valuation <- function(valuation_with_target) {
   # Apply income elasticity to transfer valuation from reference to target
   final_valuation <- valuation_with_target %>%
     mutate(
-      # Apply elasticity scaling: V_target = V_reference * (income_ratio)^elasticity
-      valuation_usd = valuation_usd_reference * (income_target / income_reference)^elasticity,
+      # Branch for elasticity == 1: directly scale by current USD over reference constant income
+      valuation_usd = case_when(
+        elasticity == 1 ~ valuation_usd_reference * case_when(
+          gni_or_gdp == "gdp" ~ GDP.PC.currUSD / income_reference,
+          gni_or_gdp == "gni" ~ GNI.PC.currUSD / income_reference
+        ),
 
-      # Convert to current USD using GDP ratios
-      valuation_usd = valuation_usd * case_when(
-        gni_or_gdp == "gdp" & !ppp ~ GDP.PC.currUSD / GDP.PC.constUSD,
-        gni_or_gdp == "gdp" & ppp ~ GDP.PC.currUSD / GDP.PC.PPP.constUSD,
-        gni_or_gdp == "gni" & !ppp ~ GNI.PC.currUSD / GNI.PC.constUSD,
-        gni_or_gdp == "gni" & ppp ~ GNI.PC.currUSD / GNI.PC.PPP.constUSD)
+        # Otherwise: original two-step logic using constant income and then convert to current USD
+        TRUE ~ {
+          tmp <- valuation_usd_reference * (income_target / income_reference)^elasticity
+          tmp * case_when(
+            gni_or_gdp == "gdp" & !ppp ~ GDP.PC.currUSD / GDP.PC.constUSD,
+            gni_or_gdp == "gdp" & ppp ~ GDP.PC.currUSD / GDP.PC.PPP.constUSD,
+            gni_or_gdp == "gni" & !ppp ~ GNI.PC.currUSD / GNI.PC.constUSD,
+            gni_or_gdp == "gni" & ppp ~ GNI.PC.currUSD / GNI.PC.PPP.constUSD
+          )
+        }
+      )
     )
 
   # Validation checks

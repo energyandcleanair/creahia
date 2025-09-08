@@ -218,17 +218,6 @@ get_gdp_scaling <- function(iso3){
 }
 
 
-get_valuation_versions <- function() {
-  list(
-    "default" = "valuation.csv",
-    "viscusi" = "valuation_viscusi.csv",
-    "viscusi_gdp" = "valuation_viscusi_gdp.csv",
-    "viscusi_gni" = "valuation_viscusi_gni.csv",
-    "worldbank" = "valuation_worldbank.csv"
-  )
-}
-
-
 get_calc_causes <- function(causes_set = 'GEMM and GBD', filter = NULL) {
   print("Getting calc_causes")
 
