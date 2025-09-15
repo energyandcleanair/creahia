@@ -111,7 +111,7 @@ hia_cost %>%
   write_csv(file.path(output_dir, 'valuations.csv'))
 
 # calculate future cost
-hia_fut <- hia_cost %>% creahia::get_econ_forecast(years = targetyears, pop_targetyr = 2022)
+hia_fut <- hia_cost %>% creahia::get_econ_forecast(forecast_years = targetyears, reference_year = 2022)
 
 # calculate HIA totals and its summary; export hia_results.csv to output_dir
 hia_totals <- hia_fut %>% add_long_names() %>%
@@ -133,7 +133,6 @@ hia_totals %>% filter(!double_counted) %>%
 
 
 # Plotting code below ----
-
 
 
 

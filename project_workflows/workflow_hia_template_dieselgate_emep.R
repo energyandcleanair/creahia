@@ -258,7 +258,7 @@ hia_cost %>%
 
 for (targetyears in seq(2009,2040)){
 
-hia_fut <- hia_cost %>% creahia::get_econ_forecast(years = targetyears, pop_targetyr = 2024, GDP_scaling = T)
+hia_fut <- hia_cost %>% creahia::get_econ_forecast(forecast_years = targetyears, reference_year = 2024, use_gdp_scaling = TRUE)
 hia_fut_totals <- hia_fut %>% add_long_names() %>%
   group_by(Outcome = Outcome_long, Cause = Cause_long, Pollutant,
            double_counted, scenario, estimate, iso3) %>%
@@ -375,7 +375,7 @@ for (targetyears in seq(2009,2040)){
   
   for (targetyears in seq(2009,2040)){
     
-    hia_fut <- hia_cost %>% creahia::get_econ_forecast(years = targetyears, pop_targetyr = 2024, GDP_scaling = T)
+    hia_fut <- hia_cost %>% creahia::get_econ_forecast(forecast_years = targetyears, reference_year = 2024, use_gdp_scaling = TRUE)
     hia_fut_totals <- hia_fut %>% add_long_names() %>%
       group_by(Outcome = Outcome_long, Cause = Cause_long, Pollutant,
                double_counted, scenario, estimate, iso3,NAME_2) %>%
@@ -485,7 +485,7 @@ for (targetyears in seq(2009,2040)){
   
   for (targetyears in seq(2009,2040)){
     
-    hia_fut <- hia_cost %>% creahia::get_econ_forecast(years = targetyears, pop_targetyr = 2024, GDP_scaling = T)
+    hia_fut <- hia_cost %>% creahia::get_econ_forecast(forecast_years = targetyears, reference_year = 2024, use_gdp_scaling = TRUE)
     hia_fut_totals <- hia_fut %>% add_long_names() %>%
       group_by(Outcome = Outcome_long, Cause = Cause_long, Pollutant,
                double_counted, scenario, estimate, iso3,NAME_2) %>%

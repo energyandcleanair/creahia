@@ -149,7 +149,7 @@ hia_fut <- hia_cost %>% group_by(concentration_year=force_numeric(scenario)) %>%
   group_modify(function(df, group) {
     targetyears = group$concentration_year
     if(targetyears==2030) targetyears=seq(2030, 2060, 5)
-    get_econ_forecast(df, years=targetyears, pop_targetyr=2019) %>% filter(year!=2019)
+    get_econ_forecast(df, forecast_years = targetyears, reference_year = 2019) %>% filter(year!=2019)
   })
 
 #hia_fut_indo <- hia_fut %>% filter(iso3=='IDN')

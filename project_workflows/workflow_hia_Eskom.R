@@ -202,7 +202,7 @@ hia_cost %>% filter(iso3=='ZAF') %>%
 
 
 
-hia_fut <- hia_cost %>% get_econ_forecast(years=targetyears, pop_targetyr=2019)
+hia_fut <- hia_cost %>% get_econ_forecast(forecast_years = targetyears, reference_year = 2019)
 
 #add emissions projections to HIA data
 hia_fut %<>% ungroup %>%
@@ -329,7 +329,6 @@ emis_byyear %>%
   filter(year==2031) %>%
   mutate(reduction = paste0(emitted_species, ' by ', scales::percent(-change), ', ')) %>%
   use_series(reduction) %>% rev %>% paste(collapse='')
-
 
 
 

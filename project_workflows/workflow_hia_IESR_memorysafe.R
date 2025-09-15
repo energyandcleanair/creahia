@@ -136,7 +136,7 @@ hia_cost <- get_hia_cost(hia$hia, valuation_version="viscusi")
 source('../CALPUFF/creapuff/project_workflows/read_IESR_emissions.R')
 
 targetyears = emis$year %>% unique
-hia_fut <- hia_cost %>% get_econ_forecast(years=targetyears, pop_targetyr=2019)
+hia_fut <- hia_cost %>% get_econ_forecast(forecast_years = targetyears, reference_year = 2019)
 
 hia_fut_indo <- hia_fut %>% filter(iso3=='IDN')
 

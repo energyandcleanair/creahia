@@ -175,7 +175,7 @@ hia_cost %>%
 
 
 
-hia_fut <- hia_cost %>% get_econ_forecast(years=targetyears, pop_targetyr=2019)
+hia_fut <- hia_cost %>% get_econ_forecast(forecast_years = targetyears, reference_year = 2019)
 
 hia_fut %>% add_long_names() %>%
   group_by(Outcome=Outcome_long, Cause=Cause_long, Pollutant, double_counted, scenario, estimate) %>%

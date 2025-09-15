@@ -207,7 +207,7 @@ hia$hia %<>%
 hia_cost <- get_hia_cost(hia$hia, valuation_version="viscusi")
 
 targetyears = c(2020:2030, seq(2035, 2060, 5))
-hia_fut <- hia_cost %>% get_econ_forecast(years=targetyears, pop_targetyr=2019)
+hia_fut <- hia_cost %>% get_econ_forecast(forecast_years = targetyears, reference_year = 2019)
 
 hia_fut_indo <- hia_fut %>% filter(iso3=='IDN')
 
@@ -448,5 +448,4 @@ blame_matrix %>% group_by(province=affected_province) %>%
        subtitle='Top 10 provinces: Air pollution deaths linked to coal power pollution taking place in each province',
        y='cases/year', x='') -> plt
 quicksave(file.path(output_dir, 'Provinces most affected by coal power emissions.png'), plot=plt)
-
 
