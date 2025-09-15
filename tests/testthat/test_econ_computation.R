@@ -49,7 +49,7 @@ test_that("Test get_hia_cost calculates costs correctly", {
   testthat::expect_no_error({
     hia_cost <- creahia::get_hia_cost(
       hia = test_hia,
-      valuation_version = "viscusi_gni",
+      valuation_version = "viscusi",
       current_year = 2023
     )
   })
@@ -92,7 +92,7 @@ test_that("Test get_total_cost_by_outcome works correctly", {
   testthat::expect_no_error({
     hia_cost <- creahia::get_hia_cost(
       hia = test_hia,
-      valuation_version = "viscusi_gni",
+      valuation_version = "viscusi",
       current_year = 2023
     )
   })
@@ -136,7 +136,7 @@ test_that("Test get_total_cost_by_region works correctly", {
   testthat::expect_no_error({
     hia_cost <- creahia::get_hia_cost(
       hia = test_hia,
-      valuation_version = "viscusi_gni",
+      valuation_version = "viscusi",
       current_year = 2023
     )
   })
