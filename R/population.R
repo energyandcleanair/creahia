@@ -152,6 +152,11 @@ generate_pop_proj <- function(){
     mutate(deaths = ifelse(is.na(deaths) & !is.na(death_rate), pop * death_rate, deaths))  %>%
     ungroup()
 
+  # Make it lighter
+  final <- final %>%
+    select(-location_name, -death_rate) %>%
+    filter(year >= 2000)
+
 
   # Write to default output path for compatibility
   output_dir <- file.path("inst", "extdata", "population")
