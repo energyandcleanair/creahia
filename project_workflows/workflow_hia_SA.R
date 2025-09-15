@@ -156,7 +156,7 @@ targetyears = c(seq(2025,2050,5))
 
 hia_cost <- get_hia_cost(hia=hia, valuation_version="viscusi")
 
-hia_fut <- get_econ_forecast(hia_cost, years=targetyears, pop_targetyr=2019)
+hia_fut <- get_econ_forecast(hia_cost, forecast_years = targetyears, reference_year = 2019)
 
 adm <- creahelpers::get_adm(level = 2, res='coarse')
 
@@ -238,4 +238,3 @@ hia_cumu %>%
   dplyr::group_by(across(c(scenario, estimate, iso3, matches('Outcome|Cause'), Pollutant))) %>%
   dplyr::summarise(across(c(number, cost.mnUSD), sum, na.rm=T)) %>%
   write_excel_csv(file.path(output_dir, 'hia results by country and year, 2022-2050 cumulative.csv'))
-

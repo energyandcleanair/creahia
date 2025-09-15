@@ -189,7 +189,7 @@ hia_cost %>%
 # calculate future cost
 targeryears <- "2019"
 
-hia_fut <- hia_cost %>% creahia::get_econ_forecast(years = targeryears, pop_targetyr = 2019)
+hia_fut <- hia_cost %>% creahia::get_econ_forecast(forecast_years = targeryears, reference_year = 2019)
 
 # calculate HIA totals and its summary; export hia_results.csv to output_dir
 hia_totals <- hia_fut %>% add_long_names() %>%

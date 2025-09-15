@@ -195,7 +195,7 @@ hia_cost %>%
   relocate(reference, .after=everything()) %>%
   write_csv(file.path(output_dir, 'valuations.csv'))
 
-hia_fut <- get_econ_forecast(hia_cost, years=targetyears, pop_targetyr=2019)
+hia_fut <- get_econ_forecast(hia_cost, forecast_years = targetyears, reference_year = 2019)
 
 
 
@@ -285,7 +285,7 @@ hia_cost %>%
 
 
 
-hia_fut <- hia_cost %>% get_econ_forecast(years=targetyears, pop_targetyr=2019)
+hia_fut <- hia_cost %>% get_econ_forecast(forecast_years = targetyears, reference_year = 2019)
 
 hia_fut %>% add_long_names() %>%
   group_by(Outcome=Outcome_long, Cause=Cause_long, Pollutant, double_counted, scenario, estimate) %>%
@@ -457,6 +457,5 @@ output_tables <- function(hiadata, output_name='', rounding_function=make_nice_n
     print() %>%
     writeLines(file.path(output_dir, paste0(good_scenario, ' vs ', bad_scenario, ', ', output_name, '.txt')))
 }
-
 
 

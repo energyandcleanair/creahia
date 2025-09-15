@@ -190,7 +190,7 @@ hia_cost %>%
   relocate(reference, .after=everything()) %>%
   write_csv(file.path(output_dir, 'valuations.csv'))
 
-hia_fut <- get_econ_forecast(hia_cost, years=targetyears, pop_targetyr=2019)
+hia_fut <- get_econ_forecast(hia_cost, forecast_years = targetyears, reference_year = 2019)
 
 hia_fut %>%
   left_join(hia_cost %>% distinct(Outcome, Cause, Pollutant, double_counted)) %>%
@@ -216,7 +216,6 @@ for(x in names(years)){
     select(scenario, Outcome, Cause, Pollutant,  central, low, high, variable=name, double_counted) %>%
     write_csv(file.path(output_dir, glue::glue('{x}_Cumulative.csv')))
 }
-
 
 
 
