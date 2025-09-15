@@ -23,9 +23,9 @@ test_that("Test population scaling only - fatal vs non-fatal outcomes", {
   testthat::expect_no_error({
     forecast_pop_only <- creahia::get_econ_forecast(
       test_hia_cost,
-      years = c(2020, 2023),
-      pop_targetyr = 2019,
-      GDP_scaling = FALSE
+      forecast_years = c(2020, 2023),
+      reference_year = 2019,
+      use_gdp_scaling = FALSE
     )
   })
 
@@ -34,14 +34,14 @@ test_that("Test population scaling only - fatal vs non-fatal outcomes", {
   testthat::expect_true(nrow(forecast_pop_only) > 0)
 
   # Test required columns exist
-  required_cols <- c("iso3", "Outcome", "year", "pop_scaling", "GDPscaling", "cost_mn_currentUSD")
+  required_cols <- c("iso3", "Outcome", "year", "pop_scaling", "gdp_scaling", "cost_mn_currentUSD")
   testthat::expect_true(all(required_cols %in% names(forecast_pop_only)))
 
   # Test that population scaling is reasonable
   testthat::expect_true(all(forecast_pop_only$pop_scaling >= 0.5 & forecast_pop_only$pop_scaling <= 2.0, na.rm = TRUE))
 
   # Test that GDP scaling is 1 (no GDP scaling applied)
-  testthat::expect_true(all(forecast_pop_only$GDPscaling == 1, na.rm = TRUE))
+  testthat::expect_true(all(forecast_pop_only$gdp_scaling == 1, na.rm = TRUE))
 
   # Test that costs are scaled by population only
   # For same country, same year, fatal vs non-fatal outcomes should have DIFFERENT pop_scaling
@@ -77,9 +77,9 @@ test_that("Test GDP scaling and discounting only", {
   testthat::expect_no_error({
     forecast_gdp_scaled <- creahia::get_econ_forecast(
       test_hia_cost,
-      years = c(2020, 2023),
-      pop_targetyr = 2019,
-      GDP_scaling = TRUE,
+      forecast_years = c(2020, 2023),
+      reference_year = 2019,
+      use_gdp_scaling = TRUE,
       discount_rate = 0.03
     )
   })
@@ -89,7 +89,7 @@ test_that("Test GDP scaling and discounting only", {
   testthat::expect_true(nrow(forecast_gdp_scaled) > 0)
 
   # Test that GDP scaling is positive
-  testthat::expect_true(all(forecast_gdp_scaled$GDPscaling > 0, na.rm = TRUE))
+  testthat::expect_true(all(forecast_gdp_scaled$gdp_scaling > 0, na.rm = TRUE))
 
   # Test that costs are scaled by both population and GDP
   testthat::expect_true("cost_mn_currentUSD" %in% names(forecast_gdp_scaled))
@@ -97,7 +97,7 @@ test_that("Test GDP scaling and discounting only", {
   # Test that reference year (2019) has GDP scaling = 1
   ref_year_data <- forecast_gdp_scaled %>% filter(year == 2019)
   testthat::expect_true(nrow(ref_year_data) > 0, info = "Should have reference year data")
-  testthat::expect_true(all(abs(ref_year_data$GDPscaling - 1) < 0.01),
+  testthat::expect_true(all(abs(ref_year_data$gdp_scaling - 1) < 0.01),
                        info = "Reference year should have GDP scaling close to 1")
 
   # Test that GDP scaling changes over time (due to GDP growth and discounting)
@@ -105,12 +105,12 @@ test_that("Test GDP scaling and discounting only", {
   testthat::expect_true(nrow(usa_data) > 1, info = "Should have multiple years of USA data")
   # GDP scaling should be different from 1 for future years
   future_years <- usa_data %>% filter(year > 2019)
-  testthat::expect_true(any(abs(future_years$GDPscaling - 1) > 0.01),
+  testthat::expect_true(any(abs(future_years$gdp_scaling - 1) > 0.01),
                        info = "Future years should have GDP scaling different from 1")
 
   # Test that different countries have different GDP scaling factors
   testthat::expect_true(nrow(forecast_gdp_scaled) > 1, info = "Should have multiple rows of data")
-  unique_gdp_scalings <- length(unique(forecast_gdp_scaled$GDPscaling))
+  unique_gdp_scalings <- length(unique(forecast_gdp_scaled$gdp_scaling))
   testthat::expect_true(unique_gdp_scalings > 1,
                        info = "Different countries should have different GDP scaling factors")
 })
@@ -135,9 +135,9 @@ test_that("Test population vs GDP scaling comparison", {
   testthat::expect_no_error({
     forecast_pop_only <- creahia::get_econ_forecast(
       test_hia_cost,
-      years = c(2020, 2023),
-      pop_targetyr = 2019,
-      GDP_scaling = FALSE
+      forecast_years = c(2020, 2023),
+      reference_year = 2019,
+      use_gdp_scaling = FALSE
     )
   })
 
@@ -145,9 +145,9 @@ test_that("Test population vs GDP scaling comparison", {
   testthat::expect_no_error({
     forecast_both <- creahia::get_econ_forecast(
       test_hia_cost,
-      years = c(2020, 2023),
-      pop_targetyr = 2019,
-      GDP_scaling = TRUE,
+      forecast_years = c(2020, 2023),
+      reference_year = 2019,
+      use_gdp_scaling = TRUE,
       discount_rate = 0.03
     )
   })
@@ -160,8 +160,8 @@ test_that("Test population vs GDP scaling comparison", {
   testthat::expect_equal(forecast_pop_only$pop_scaling, forecast_both$pop_scaling)
 
   # Test that GDP scaling is 1 in pop-only, but varies in both
-  testthat::expect_true(all(forecast_pop_only$GDPscaling == 1))
-  testthat::expect_true(any(forecast_both$GDPscaling != 1))
+  testthat::expect_true(all(forecast_pop_only$gdp_scaling == 1))
+  testthat::expect_true(any(forecast_both$gdp_scaling != 1))
 
   # Test that costs are different between the two approaches
   # (because GDP scaling affects the final cost calculation)
@@ -170,7 +170,7 @@ test_that("Test population vs GDP scaling comparison", {
   # Test that the relationship is: cost_both = cost_pop_only * GDPscaling
   # (since both have same pop_scaling)
   for(i in 1:nrow(forecast_pop_only)) {
-    expected_cost <- forecast_pop_only$cost_mn_currentUSD[i] * forecast_both$GDPscaling[i]
+    expected_cost <- forecast_pop_only$cost_mn_currentUSD[i] * forecast_both$gdp_scaling[i]
     actual_cost <- forecast_both$cost_mn_currentUSD[i]
     testthat::expect_equal(actual_cost, expected_cost, tolerance = 0.001,
                           info = paste("Row", i, "cost calculation mismatch"))
@@ -197,9 +197,9 @@ test_that("Test get_econ_forecast age group handling", {
   testthat::expect_no_error({
     forecast_age <- creahia::get_econ_forecast(
       test_hia_cost,
-      years = c(2020, 2023),
-      pop_targetyr = 2019,
-      GDP_scaling = FALSE
+      forecast_years = c(2020, 2023),
+      reference_year = 2019,
+      use_gdp_scaling = FALSE
     )
   })
 
@@ -231,9 +231,9 @@ test_that("Test get_econ_forecast input handling", {
   testthat::expect_no_error({
     forecast_list <- creahia::get_econ_forecast(
       list(hia_cost = test_hia_cost),
-      years = c(2020),
-      pop_targetyr = 2019,
-      GDP_scaling = FALSE
+      forecast_years = c(2020),
+      reference_year = 2019,
+      use_gdp_scaling = FALSE
     )
   })
 
@@ -241,9 +241,9 @@ test_that("Test get_econ_forecast input handling", {
   testthat::expect_no_error({
     forecast_df <- creahia::get_econ_forecast(
       test_hia_cost,
-      years = c(2020),
-      pop_targetyr = 2019,
-      GDP_scaling = FALSE
+      forecast_years = c(2020),
+      reference_year = 2019,
+      use_gdp_scaling = FALSE
     )
   })
 
@@ -271,9 +271,9 @@ test_that("Test get_econ_forecast edge cases", {
   testthat::expect_no_error({
     forecast_single <- creahia::get_econ_forecast(
       test_hia_cost,
-      years = 2023,
-      pop_targetyr = 2019,
-      GDP_scaling = FALSE
+      forecast_years = 2023,
+      reference_year = 2019,
+      use_gdp_scaling = FALSE
     )
   })
 
@@ -284,9 +284,9 @@ test_that("Test get_econ_forecast edge cases", {
   testthat::expect_no_error({
     forecast_same <- creahia::get_econ_forecast(
       test_hia_cost,
-      years = 2019,
-      pop_targetyr = 2019,
-      GDP_scaling = FALSE
+      forecast_years = 2019,
+      reference_year = 2019,
+      use_gdp_scaling = FALSE
     )
   })
 
@@ -300,14 +300,14 @@ test_that("Test GDP scaling for several countries", {
   hia_cost <- readRDS(get_test_file(file.path("example_kaz", "hia_cost.RDS")))
 
   econ_unscaled <- creahia::get_econ_forecast(hia_cost,
-                                        years=seq(2010, 2020),
-                                        pop_targetyr=2019,
-                                        GDP_scaling=F)
+                                        forecast_years=seq(2010, 2020),
+                                        reference_year=2019,
+                                        use_gdp_scaling=FALSE)
 
   econ_scaled <- creahia::get_econ_forecast(hia_cost,
-                                            years=seq(2010, 2020),
-                                            pop_targetyr=2019,
-                                            GDP_scaling=T)
+                                            forecast_years=seq(2010, 2020),
+                                            reference_year=2019,
+                                            use_gdp_scaling=TRUE)
 
   comparison <- bind_rows(
     econ_unscaled %>%
