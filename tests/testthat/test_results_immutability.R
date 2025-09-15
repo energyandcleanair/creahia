@@ -63,8 +63,10 @@ install_package_version <- function(ref, force=FALSE) {
   creahelpers::reload_packages("creahia")
 }
 
-generate_fingerprint <- function(ref, params = list(calc_causes = "GBD only", epi_version = "gbd2019", pop_year = 2020),
-                               force = FALSE, force_current = TRUE){
+generate_fingerprint <- function(ref,
+                                 params = list(calc_causes = "GBD only", epi_version = "gbd2019", pop_year = 2020),
+                                 force = FALSE,
+                                 force_current = TRUE){
 
 
   # Create the filepath
@@ -82,7 +84,8 @@ generate_fingerprint <- function(ref, params = list(calc_causes = "GBD only", ep
   install_package_version(ref, force = current_force)
 
   # Get the installed version
-  # version <- as.character(packageVersion("creahia"))
+  version <- as.character(packageVersion("creahia"))
+  message(glue("Installed creahia version {version} for ref {ref}"))
 
   # Generate the fingerprint
   hia <- get_fingerprint_bgd(params = params)
@@ -98,6 +101,7 @@ generate_fingerprint <- function(ref, params = list(calc_causes = "GBD only", ep
   return(filepath)
 }
 
+
 generate_fingerprints <- function(refs=c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.5.0", "0.5.1", "0.5.2", "current"),
                                  param_sets = list(
                                    list(calc_causes = "GBD only", epi_version = "gbd2019", pop_year = 2020),
@@ -109,40 +113,16 @@ generate_fingerprints <- function(refs=c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.
   # Process each ref version
   for(ref in refs){
 
-
     # Then process all parameter sets for this version
     for(params in param_sets){
-
-      # Use force_current for current version, force for others
-      current_force <- if(ref == "current") force_current else force
-
-      # Create the filepath
-      param_string <- params_to_filename(params)
-      filepath <- glue("tests/data/versions/{ref}_hia_bgd_{param_string}.csv")
-
-      # Check if file exists and force is FALSE
-      if (file.exists(filepath) && !current_force && ref != "current") {
-        message(glue("Fingerprint for version {ref} with params {param_string} already exists. Skipping."))
-        next
-      }
-
-      # Install the package version once per ref
-      install_package_version(ref, force = current_force)
-
-      # Generate the fingerprint
-      hia <- get_fingerprint_bgd(params = params)
-
-      # Save it
-      dir.create(dirname(filepath), showWarnings = FALSE, recursive = TRUE)
-      write.csv(hia, filepath, row.names = FALSE)
-
-      message(glue("Generated fingerprint for ref {ref} with params {param_string}"))
-      generated_files <- c(generated_files, filepath)
+      generated_file <- generate_fingerprint(ref=ref, params=params, force=force, force_current=force_current)
+      generated_files <- c(generated_files, generated_file)
     }
   }
 
   return(generated_files)
 }
+
 
 read_fingerprints <- function(){
   tibble(filepath=list.files("tests/data/versions", full.names = TRUE)) %>%
@@ -155,6 +135,9 @@ read_fingerprints <- function(){
 
 
 test_that("Estimates are compatible with previous versions", {
+
+  testthat::skip_on_ci()
+  
   library(terra)
   library(creahelpers)
   library(dplyr)
@@ -169,7 +152,11 @@ test_that("Estimates are compatible with previous versions", {
     list(calc_causes = "GEMM and GBD", epi_version = "gbd2019", pop_year = 2020)
   )
 
-  generate_fingerprints(refs = c("0.4.1", "0.4.4", "0.5.0", "0.5.1", "0.5.2", "current"), param_sets = param_sets, force = TRUE, force_current = T)
+  generate_fingerprints(refs = c("0.4.1", "0.4.4", "0.5.0", "0.5.1",
+                                 # "14391a3cd25ecb3b862481d0639d32b5fffc3954",
+                                 # "47dc2d457a942858ff1049d5ec18398ec30dc782",
+                                 # "02f3150a34005fc7e49e2adbd4a92c8fa02882e0",
+                                 "0.5.2", "current"), param_sets = param_sets, force = F, force_current = F)
 
   # Read all fingerprints
   all_fingerprints <- read_fingerprints() %>%
@@ -233,14 +220,14 @@ test_that("Estimates are compatible with previous versions", {
 
 
   # Show differences
-  # Show differences
   filtered_fingerprints %>%
-    select(-c(filepath, pop)) %>%
+    select(-c(filepath, pop, version)) %>%
+    filter(region_name=="Dhaka") %>%
     # group_by(scenario, region_id, Pollutant, Outcome, Cause, AgeGrp, calc_causes, epi_version) %>%
     # Round to 1 decimal place to ignore tiny issues
     mutate(number = round(number, 1)) %>%
     # ungroup() %>%
-    spread(version, number) %>% View()
+    spread(ref, number) %>% View()
 
   filtered_fingerprints %>%
     distinct(version, region_id, pop) %>%

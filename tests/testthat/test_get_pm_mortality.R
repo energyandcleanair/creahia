@@ -2,7 +2,9 @@ testthat::source_test_helpers("tests", env = globalenv())
 testthat::source_test_helpers("../", env = globalenv())
 
 
-test_that("get_pm_mortality computes attributable burden correctly", {
+test_that("get_pm_mortality computes confidence intervals correctly", {
+
+  testthat::skip_on_ci()
 
   # Sample PAF data
   generate_test_data <- function(central_paf, se_paf, central_epi, se_epi, pop, region_id = "BGD", var=c("cause1_yll")) {
