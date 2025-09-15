@@ -68,8 +68,96 @@ get_pop_count <- function(grid_raster, year_desired=2020) {
 
 
 get_pop_proj <- function() {
-  creahelpers::get_population_path('WPP2019_population-death_rate-birth_rate.csv') %>%
-    read_csv(., col_types = cols()) %>%
-    mutate(deaths = pop * death_rate) %>%
-    dplyr::rename(iso3 = ISO3, year = Yr)
+  # Read from included CSV
+  get_hia_path("population/WPP2024-population-deathrate.csv") %>%
+    read_csv()
+}
+
+
+generate_pop_proj <- function(){
+  pop_url <- "https://population.un.org/wpp/assets/Excel%20Files/1_Indicator%20(Standard)/CSV_FILES/WPP2024_PopulationByAge5GroupSex_Medium.csv.gz"
+  death_url1 <- "https://population.un.org/wpp/assets/Excel%20Files/1_Indicator%20(Standard)/CSV_FILES/WPP2024_DeathsBySingleAgeSex_Medium_1950-2023.csv.gz"
+  death_url2 <- "https://population.un.org/wpp/assets/Excel%20Files/1_Indicator%20(Standard)/CSV_FILES/WPP2024_DeathsBySingleAgeSex_Medium_2024-2100.csv.gz"
+
+  # Robust reader for WPP gzipped CSVs
+  read_wpp_csv <- function(url){
+    filename <- basename(url)
+    tf <- tempfile(pattern = filename, fileext = ".gz")
+    if(!file.exists(tf)){
+      httr::GET(url, httr::write_disk(tf, overwrite = TRUE), httr::timeout(120))
+    }
+    try(suppressWarnings(readr::read_csv(tf, show_col_types = FALSE, progress = FALSE, guess_max = 100000)), silent = TRUE)
+  }
+
+  # Read from gz URLs (with fallbacks)
+  pop_raw <- read_wpp_csv(pop_url)
+  deaths1_raw <- read_wpp_csv(death_url1)
+  deaths2_raw <- read_wpp_csv(death_url2)
+
+  # Standardize column names to lower case for easier handling
+  to_lower <- function(df){ names(df) <- tolower(names(df)); df }
+  pop <- pop_raw %>%
+    select(
+           iso3=ISO3_code,
+           location_id=LocID,
+           location_name=Location,
+           age_group=AgeGrp,
+           variant=Variant,
+           year=Time,
+           age_start=AgeGrpStart,
+           age_span=AgeGrpSpan,
+           pop=PopTotal)
+
+  deaths <- dplyr::bind_rows(deaths1_raw, deaths2_raw) %>%
+    select(
+           iso3=ISO3_code,
+           location_id=LocID,
+           age=AgeGrp,
+           variant=Variant,
+           year=Time,
+           deaths=DeathTotal
+        )
+
+  # Combine by age group
+  ages <- pop %>%
+    distinct(age_group, age_start, age_span) %>%
+    rowwise() %>%
+    mutate(age=case_when(age_group=="100+" ~ list(100),
+                       TRUE ~ list(seq(age_start, age_start + age_span - 1)))) %>%
+    distinct(age_group, age) %>%
+    tidyr::unnest(age) %>%
+    mutate(age=as.character(age))
+
+  deaths_by_group <- deaths %>%
+    left_join(ages, by=c("age"="age"), multiple="all") %>%
+    group_by(iso3, location_id, year, age_group) %>%
+    summarise(deaths=sum(deaths, na.rm=TRUE), .groups="drop")
+
+  # Join population and deaths
+  final <- pop %>%
+    left_join(deaths_by_group, by=c("iso3", "location_id", "year", "age_group")) %>%
+    mutate(
+      death_rate = dplyr::if_else(pop > 0, deaths / pop, NA_real_),
+      birth_rate = NA_real_
+    ) %>%
+    filter(variant=="Medium") %>%
+    select(iso3, location_id, location_name, age_group, age_start, age_span, year, pop, deaths, death_rate) %>%
+    filter(!is.na(iso3))
+
+  # 100+ doesn't have death rate. Assume similar to 95-99
+  final <- final %>%
+    group_by(iso3, location_id, location_name, year) %>%
+    arrange(age_start) %>%
+    fill(death_rate, .direction="down") %>%
+    mutate(deaths = ifelse(is.na(deaths) & !is.na(death_rate), pop * death_rate, deaths))  %>%
+    ungroup()
+
+
+  # Write to default output path for compatibility
+  output_dir <- file.path("inst", "extdata", "population")
+  if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+  output_file <- file.path(output_dir, "WPP2024-population-deathrate.csv")
+  readr::write_csv(final, output_file)
+
+  invisible(output_file)
 }

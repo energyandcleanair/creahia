@@ -193,40 +193,43 @@ get_total_cost_by_region_outcome <- function(hia_cost,
 #' @keywords internal
 #' @noRd
 compute_population_scaling <- function(hia_cost, reference_year, forecast_years) {
+
   pop_proj <- get_pop_proj() %>%
     filter(iso3 %in% unique(hia_cost$iso3),
            year %in% c(reference_year, forecast_years))
 
   # add new age groups to population data (heuristic multipliers; subject to revision)
-  add_age_groups <- tibble(AgeGrp = c('25+','0-18','1-18','18-99', '20-65'),
-                           AgeLow = c(25, 0, 0, 20, 20),
-                           AgeHigh = c(99, 20, 99, 99, 64),
+  add_age_groups <- tibble(age_group = c('25+','0-18','1-18','18-99', '20-65'),
+                           age_start = c(25, 0, 0, 20, 20),
+                           age_end = c(99, 20, 20, 99, 64),
                            multiplier = c(1, 19/20, 18/20, 82/80, 46/45))
 
   popproj_tot <- add_age_groups %>%
-    group_by(AgeGrp) %>%
+    group_by(age_group) %>%
     group_modify(function(df, ...) {
-      pop_proj %>% filter(Age_low >= df$AgeLow, Age_high <= df$AgeHigh) %>%
-        group_by(LocID, iso3, Location, year) %>%
-        sel(-contains('Age')) %>%
+      pop_proj %>%
+        filter(age_start >= df$age_start, age_start + age_span - 1 <= df$age_end) %>%
+        group_by(location_id, iso3, location_name, year) %>%
+        sel(-contains('age')) %>%
         mutate_if(is.numeric, multiply_by, df$multiplier) %>%
-        summarise_all(sum) %>%
-        mutate(death_rate = deaths / pop)
-    }) %>% bind_rows(pop_proj) %>% distinct
+        summarise_all(sum)
+    }) %>%
+    bind_rows(pop_proj) %>%
+    distinct(iso3, year, age_group, pop, deaths)
 
   # build scaling factors for both population and deaths
   pop_scaling <- suppressMessages(
     popproj_tot %>%
       ungroup %>%
       filter(iso3 %in% unique(hia_cost$iso3),
-             AgeGrp %in% unique(hia_cost$AgeGrp),
+             age_group %in% unique(hia_cost$age_group),
              year %in% c(reference_year, forecast_years)) %>%
       pivot_longer(c(pop, deaths)) %>%
-      group_by(iso3, AgeGrp, name) %>%
+      group_by(iso3, age_group, name) %>%
       dplyr::mutate(pop_scaling = value / value[year == reference_year]) %>%
       mutate(fatal = name == 'deaths') %>%
       ungroup %>%
-      sel(iso3, AgeGrp, year, fatal, pop_scaling) %>%
+      sel(iso3, age_group, year, fatal, pop_scaling) %>%
       distinct
   )
 
@@ -404,7 +407,7 @@ apply_econ_scaling <- function(hia_cost, pop_scaling, gdp_scaling_tbl = NULL, re
 #'   year = 2019, number = c(100, 1000), cost_mn_currentUSD = c(1.2, 0.3),
 #'   AgeGrp = "25+", double_counted = FALSE
 #' )
-#' 
+#'
 #' # Population-only scaling to 2020 and 2023
 #' fut <- get_econ_forecast(hia_cost,
 #'                          forecast_years = c(2020, 2023),
