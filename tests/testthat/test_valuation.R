@@ -2,7 +2,7 @@ test_that("Test get_valuations_raw loads data correctly", {
 
   # Test that raw valuation data can be loaded
   testthat::expect_no_error({
-    raw_valuation <- creahia::get_valuations_raw("viscusi_gni")
+    raw_valuation <- creahia::get_valuations_raw("viscusi")
   })
 
   # Test structure
@@ -26,11 +26,12 @@ test_that("Test get_valuations_raw loads data correctly", {
   # Test that elasticity values are reasonable
   testthat::expect_true(all(raw_valuation$elasticity >= 0.5 & raw_valuation$elasticity <= 2))
 
-  # Test that all outcomes use GNI
-  testthat::expect_true(all(raw_valuation$gni_or_gdp == "gni"))
+  # Test that Death outcomes use GNI
+  death_outcomes <- raw_valuation %>% filter(Outcome %in% c("Deaths", "Deaths.child"))
+  testthat::expect_true(all(death_outcomes$gni_or_gdp == "gni"))
 
-  # Test that all outcomes use PPP
-  testthat::expect_true(all(raw_valuation$ppp == TRUE))
+  # Test that Death outcomes do not use PPP
+  testthat::expect_true(all(death_outcomes$ppp == FALSE))
 })
 
 test_that("Test transfer_to_usd handles different currencies", {
@@ -73,7 +74,7 @@ test_that("Test transfer_to_usd handles different currencies", {
 test_that("Test attach_reference_income works correctly", {
 
   # Get raw valuation data
-  raw_valuation <- creahia::get_valuations_raw("viscusi_gni")
+  raw_valuation <- creahia::get_valuations_raw("viscusi")
 
   # Test that function runs without error
   testthat::expect_no_error({
@@ -103,7 +104,7 @@ test_that("Test attach_reference_income works correctly", {
 test_that("Test attach_target_income works correctly", {
 
   # Get raw valuation and attach reference income
-  raw_valuation <- creahia::get_valuations_raw("viscusi_gni")
+  raw_valuation <- creahia::get_valuations_raw("viscusi")
   valuation_with_ref <- creahia::attach_reference_income(raw_valuation)
 
   # Test with specific countries and years
@@ -136,7 +137,7 @@ test_that("Test attach_target_income works correctly", {
 test_that("Test compute_transferred_valuation works correctly", {
 
   # Get raw valuation and process through all steps
-  raw_valuation <- creahia::get_valuations_raw("viscusi_gni")
+  raw_valuation <- creahia::get_valuations_raw("viscusi")
   valuation_with_ref <- creahia::attach_reference_income(raw_valuation)
   valuation_with_target <- creahia::attach_target_income(valuation_with_ref,
                                                         iso3s = c("ZAF"),
@@ -168,7 +169,7 @@ test_that("Test get_valuations runs end-to-end", {
 
   # Test that the main function runs without error
   testthat::expect_no_error({
-    result <- creahia::get_valuations(valuation_version = "viscusi_gni",
+    result <- creahia::get_valuations(valuation_version = "viscusi",
                                      iso3s = c("ZAF", "USA"),
                                      years = c(2023))
   })
@@ -248,7 +249,7 @@ test_that("get_valuations returns correct VSL for ZAF 2019 - Worldbank version",
   vsl_manual_2019 <- vsls %>% filter(date == 2019) %>% pull(vsl_market)
 
   # Compare with tolerance
-  testthat::expect_equal(deaths_vsl$valuation_usd, vsl_manual_2019, tolerance = 0.1)
+  testthat::expect_equal(deaths_vsl$valuation_usd, vsl_manual_2019, tolerance = 0.01)
 })
 
 test_that("get_valuations returns correct VSL for ZAF 2019 - Viscusi version", {
