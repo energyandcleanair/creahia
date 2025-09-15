@@ -2,7 +2,7 @@ name: Build CI Docker Image
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
     paths:
       - 'Dockerfile.ci'
   workflow_dispatch:
