@@ -59,11 +59,13 @@ RUN --mount=type=secret,id=github-token \
       pak::pkg_install(c( \
         "remotes", \
         "devtools", \
+        "ggspatial", \
         "leaflet", \
         "magick", \
         "openxlsx", \
         "energyandcleanair/creahelpers", \
-        "energyandcleanair/rcrea" \
+        "energyandcleanair/rcrea", \
+        "energyandcleanair/creaexposure" \
       ))' \
  && Rscript -e 'pak::cache_clean()'
 
