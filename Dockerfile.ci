@@ -1,0 +1,70 @@
+# syntax=docker/dockerfile:1.7-labs
+
+FROM rocker/r-ver:4.4.1
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# System dependencies for common R packages used in this repo
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    ca-certificates \
+    locales \
+    libssl-dev \
+    libcurl4-openssl-dev \
+    libxml2-dev \
+    libfontconfig1-dev \
+    libfreetype6-dev \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff5-dev \
+    zlib1g-dev \
+    libcairo2-dev \
+    libxt-dev \
+    # geospatial stack for raster/terra
+    gdal-bin \
+    libgdal-dev \
+    libgeos-dev \
+    libproj-dev \
+    libudunits2-dev \
+    # image processing for magick
+    libmagick++-dev \
+    # useful tooling
+    pandoc \
+    cmake \
+ && rm -rf /var/lib/apt/lists/*
+
+# Set UTF-8 locale
+RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
+    locale-gen && \
+    update-locale LANG=en_US.UTF-8
+ENV LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8
+
+# Install pak from the stable binary repo suggested by r-lib
+RUN Rscript -e 'install.packages("pak", repos = sprintf("https://r-lib.github.io/p/pak/stable/%s/%s/%s", .Platform$pkgType, R.Version()$os, R.Version()$arch))'
+
+# Pre-install frequently used packages to warm cache and speed CI
+# Use BuildKit secrets to avoid GitHub rate limits for GitHub installs
+RUN --mount=type=secret,id=github-token \
+    --mount=type=secret,id=github-pat \
+    Rscript -e '\
+      options(Ncpus = max(1L, parallel::detectCores() - 1L)); \
+      read_secret <- function(path) if (file.exists(path)) paste(readLines(path), collapse = "\n") else ""; \
+      pat <- read_secret("/run/secrets/github-pat"); \
+      if (identical(pat, "")) pat <- read_secret("/run/secrets/github-token"); \
+      if (!identical(pat, "")) Sys.setenv(GITHUB_PAT = pat); \
+      pak::pkg_install(c( \
+        "remotes", \
+        "devtools", \
+        "leaflet", \
+        "magick", \
+        "openxlsx", \
+        "energyandcleanair/creahelpers", \
+        "energyandcleanair/rcrea" \
+      ))' \
+ && Rscript -e 'pak::cache_clean()'
+
+WORKDIR /work
