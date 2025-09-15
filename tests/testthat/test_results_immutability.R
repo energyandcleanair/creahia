@@ -64,7 +64,7 @@ install_package_version <- function(ref, force=FALSE) {
 }
 
 generate_fingerprint <- function(ref, params = list(calc_causes = "GBD only", epi_version = "gbd2019", pop_year = 2020),
-                               force = FALSE){
+                               force = FALSE, force_current = TRUE){
 
 
   # Create the filepath
@@ -72,19 +72,23 @@ generate_fingerprint <- function(ref, params = list(calc_causes = "GBD only", ep
   filepath <- glue("tests/data/versions/{ref}_hia_bgd_{param_string}.csv")
 
   # Check if file exists and force is FALSE
-  if (file.exists(filepath) && !force && ref != "current") {
+  current_force <- if(ref == "current") force_current else force
+  if (file.exists(filepath) && !current_force) {
     message(glue("Fingerprint for version {ref} with params {param_string} already exists. Skipping."))
     return(NULL)
   }
 
   # Install the package version
-  install_package_version(ref)
+  install_package_version(ref, force = current_force)
 
   # Get the installed version
   # version <- as.character(packageVersion("creahia"))
 
   # Generate the fingerprint
   hia <- get_fingerprint_bgd(params = params)
+
+  # Add ref in case it differs from version
+  hia$ref <- ref
 
   # Save it
   dir.create(dirname(filepath), showWarnings = FALSE, recursive = TRUE)
@@ -94,12 +98,12 @@ generate_fingerprint <- function(ref, params = list(calc_causes = "GBD only", ep
   return(filepath)
 }
 
-generate_fingerprints <- function(refs=c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "current"),
+generate_fingerprints <- function(refs=c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.5.0", "0.5.1", "0.5.2", "current"),
                                  param_sets = list(
                                    list(calc_causes = "GBD only", epi_version = "gbd2019", pop_year = 2020),
                                    list(calc_causes = "GEMM and GBD", epi_version = "gbd2019", pop_year = 2020)
                                  ),
-                                 force = FALSE){
+                                 force = FALSE, force_current = TRUE){
   generated_files <- list()
 
   # Process each ref version
@@ -109,8 +113,8 @@ generate_fingerprints <- function(refs=c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "cu
     # Then process all parameter sets for this version
     for(params in param_sets){
 
-      # Always force regeneration for current version
-      current_force <- if(ref == "current") TRUE else force
+      # Use force_current for current version, force for others
+      current_force <- if(ref == "current") force_current else force
 
       # Create the filepath
       param_string <- params_to_filename(params)
@@ -144,7 +148,7 @@ read_fingerprints <- function(){
   tibble(filepath=list.files("tests/data/versions", full.names = TRUE)) %>%
     rowwise() %>%
     mutate(hia = list(read_csv(filepath))) %>%
-    select(-filepath) %>%
+    # select(-filepath) %>%
     unnest(hia)
 }
 
@@ -165,7 +169,7 @@ test_that("Estimates are compatible with previous versions", {
     list(calc_causes = "GEMM and GBD", epi_version = "gbd2019", pop_year = 2020)
   )
 
-  generate_fingerprints(refs = c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "current"), param_sets = param_sets, force = FALSE)
+  generate_fingerprints(refs = c("0.4.1", "0.4.4", "0.5.0", "0.5.1", "0.5.2", "current"), param_sets = param_sets, force = TRUE, force_current = T)
 
   # Read all fingerprints
   all_fingerprints <- read_fingerprints() %>%
@@ -226,4 +230,23 @@ test_that("Estimates are compatible with previous versions", {
 
   testthat::expect_equal(nrow(different), 0,
                          info = glue("Different central values"))
+
+
+  # Show differences
+  # Show differences
+  filtered_fingerprints %>%
+    select(-c(filepath, pop)) %>%
+    # group_by(scenario, region_id, Pollutant, Outcome, Cause, AgeGrp, calc_causes, epi_version) %>%
+    # Round to 1 decimal place to ignore tiny issues
+    mutate(number = round(number, 1)) %>%
+    # ungroup() %>%
+    spread(version, number) %>% View()
+
+  filtered_fingerprints %>%
+    distinct(version, region_id, pop) %>%
+    # group_by(scenario, region_id, Pollutant, Outcome, Cause, AgeGrp, calc_causes, epi_version) %>%
+    # Round to 1 decimal place to ignore tiny issues
+    # mutate(number = round(number, 1)) %>%
+    # ungroup() %>%
+    spread(version, pop) %>% View()
 })

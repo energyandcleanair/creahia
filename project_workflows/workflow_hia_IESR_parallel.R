@@ -136,7 +136,7 @@ hia_cost <- get_hia_cost(hia$hia, valuation_version="viscusi")
 source('../creapuff/project_workflows/read_IESR_emissions.R')
 
 targetyears = emis$year %>% unique
-hia_fut <- hia_cost %>% get_econ_forecast(years=targetyears, pop_targetyr=2019)
+hia_fut <- hia_cost %>% get_econ_forecast(forecast_years = targetyears, reference_year = 2019)
 hia_fut %>% saveRDS(file.path(output_dir, 'hia_fut.RDS'))
 
 #get costs and deaths per t emissions
@@ -245,10 +245,7 @@ hia_per_t_total %>% mutate(emitted_species = paste0('per_t_', emitted_species)) 
 
 
 
-
-
-#valuations <- read_csv('~/Rpackages/creahia/inst/extdata/valuation_viscusi.csv')
-valuations <- get_valuation('viscusi')
+valuations <- get_valuations_raw('viscusi')
 
 usd_to_lcu=15447
 
@@ -490,6 +487,5 @@ output_tables <- function(hiadata, output_name='', rounding_function=make_nice_n
     print() %>%
     writeLines(file.path(output_dir, paste0(good_scenario, ' vs ', bad_scenario, ', ', output_name, '.txt')))
 }
-
 
 

@@ -1,4 +1,4 @@
-test_that("paf bootstrap computation from rr is correct", {
+test_that("paf computation from rr is correct", {
 
   # Define parameters for the test
   n_pixels <- 4

@@ -117,7 +117,7 @@ hia_totals <- hia %>%
 targetyears = c(seq(1996,2022,1))
 
 hia_cost <- get_hia_cost(hia=hia, valuation_version="viscusi")
-valuations <- get_valuation('viscusi')
+
 
 #usd_to_lcu=15447
 usd_to_lcu=461.15
@@ -132,7 +132,7 @@ hia_cost %>%
   relocate(reference, .after = everything()) %>%
   write_csv(file.path(output_dir, 'valuations.csv'))
 
-hia_fut <- get_econ_forecast(hia_cost, years=targetyears, pop_targetyr=2019, GDP_scaling=T)
+hia_fut <- get_econ_forecast(hia_cost, forecast_years = targetyears, reference_year = 2019, use_gdp_scaling = TRUE)
 
 hia_fut %>%
   left_join(hia_cost %>% distinct(Outcome, Cause, Pollutant, double_counted)) %>%
@@ -272,7 +272,6 @@ plot_costs <- ggplot(yearly_deaths_costs, aes(x = year, y = costs_per_death)) +
   scale_x_date(date_breaks = "5 year", date_labels = "%Y")
 plot(plot_costs)
 ggsave("H:/kazakhstan/HIA/Costs_per_death_Timeseries.png", plot_costs, width = 8, height = 6)
-
 
 
 
