@@ -49,7 +49,7 @@ hia$hia %<>%
 # 06: Compute and extract economic costs --------------------------------------------------------
 hia_cost <- get_hia_cost(hia$hia, valuation_version="viscusi")
 
-hia_fut <- hia_cost %>% get_econ_forecast(years=targetyears, pop_targetyr=2019)
+hia_fut <- hia_cost %>% get_econ_forecast(forecast_years = targetyears, reference_year = 2019)
 
 hia_fut_indo <- hia_fut %>% filter(iso3=='IDN') %>% #year==2022
   select(region_id, iso3, pop, Pollutant, Outcome, Cause, double_counted, year, estimate, unit, number, cost_mn_currentUSD)

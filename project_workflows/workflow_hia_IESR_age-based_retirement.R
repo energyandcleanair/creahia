@@ -138,7 +138,7 @@ source('../creapuff/project_workflows/read_IESR_emissions.R')
 emis %>% distinct(CFPP.name, GEM.ID, grid, region, province, Owner) %>% left_join(plant_names, .) %>% write_csv(file.path(emissions_dir, 'plant name dictionary.csv'))
 
 targetyears = emis$year %>% unique
-hia_fut <- hia_cost %>% get_econ_forecast(years=targetyears, pop_targetyr=2019)
+hia_fut <- hia_cost %>% get_econ_forecast(forecast_years = targetyears, reference_year = 2019)
 
 
 #get costs and deaths per t emissions
@@ -334,16 +334,11 @@ hia_plants %>%
   geom_point(aes(col=Owner, size=cost_mn_currentUSD_per_TWh))
 
 
+valuations <- get_valuations_raw('viscusi')
 
-
-
-
-
-
-#valuations <- read_csv('~/Rpackages/creahia/inst/extdata/valuation_viscusi.csv')
-valuations <- get_valuation('viscusi')
 
 usd_to_lcu=15447
+
 
 hia_cost %>%
   distinct(Outcome, valuation_world_2017, valuation_current_usd, iso3) %>%
@@ -437,5 +432,4 @@ blame_matrix %>% group_by(province=affected_province) %>%
        subtitle='Top 10 provinces: Air pollution deaths linked to coal power pollution taking place in each province',
        y='cases/year', x='') -> plt
 quicksave(file.path(output_dir, 'Provinces most affected by coal power emissions.png'), plot=plt)
-
 

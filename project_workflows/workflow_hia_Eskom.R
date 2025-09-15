@@ -185,8 +185,7 @@ hia_cost <- get_hia_cost(hia=hia_totals, valuation_version="viscusi")
 hia_cost %>% group_by(Pollutant) %>%
   filter(!double_counted, Outcome=='Deaths', estimate=='central') %>% summarise(across(number, sum))
 
-#valuations <- read_csv('~/Rpackages/creahia/inst/extdata/valuation_viscusi.csv')
-valuations <- get_valuation('viscusi')
+valuations <- get_valuations_raw('viscusi')
 
 usd_to_lcu=14.7912
 
@@ -203,7 +202,7 @@ hia_cost %>% filter(iso3=='ZAF') %>%
 
 
 
-hia_fut <- hia_cost %>% get_econ_forecast(years=targetyears, pop_targetyr=2019)
+hia_fut <- hia_cost %>% get_econ_forecast(forecast_years = targetyears, reference_year = 2019)
 
 #add emissions projections to HIA data
 hia_fut %<>% ungroup %>%
@@ -330,7 +329,6 @@ emis_byyear %>%
   filter(year==2031) %>%
   mutate(reduction = paste0(emitted_species, ' by ', scales::percent(-change), ', ')) %>%
   use_series(reduction) %>% rev %>% paste(collapse='')
-
 
 
 

@@ -1,7 +1,5 @@
 test_that("Results with different RR sources are properly ordered", {
 
-
-
   res <- 0.01
   m <- terra::rast(
     xmin=88,
@@ -29,8 +27,8 @@ test_that("Results with different RR sources are properly ordered", {
 
   hias <- lapply(ordered_sources, function(rr_source) {
     creahia::wrappers.compute_hia_two_images.default(
-      perturbation_rasters = list(pm25 = p1),
       baseline_rasters = list(pm25 = m),
+      perturbation_rasters = list(pm25 = p1),
       pop_year = 2020,
       administrative_level = 1,
       administrative_res = "low",

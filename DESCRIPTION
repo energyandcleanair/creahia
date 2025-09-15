@@ -1,11 +1,11 @@
 Package: creahia
 Type: Package
 Title: CREA HIA
-Version: 0.5.2
+Version: 0.6.0
 Authors@R: c(
-    person("Lauri", "Myllyvirta", email = "lauri@energyandcleanair.org", role = c("cre","aut")),
-    person("Hubert", "Thieriot", email = "hubert@energyandcleanair.org", role = c("aut")),
-    person("Danny", "Hartono", email = "danny@energyandcleanair.org", role = c("aut"))
+    person("Hubert", "Thieriot", email = "hubert@energyandcleanair.org", role = c("cre", "aut")),
+    person("Lauri", "Myllyvirta", email = "lauri@energyandcleanair.org", role = c("aut")),
+    person("Danny", "Hartono", email = "danny@energyandcleanair.org", role = c("ctb"))
     )
 Maintainer: Hubert Thieriot <hubert@energyandcleanair.org>
 Description: Health impact assessment from gridded concentration data

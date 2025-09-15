@@ -2,19 +2,15 @@ compute_econ_costs <- function(hia,
                                results_dir = NULL,
                                iso3s_of_interest = NULL,
                                current_year = 2019,
-                               gdp = get_gdp(year = current_year),
                                dict = get_dict(),
                                valuation_version = "default",
-                               valuation = get_valuation(version = valuation_version),
                                projection_years = NULL,
                                suffix = "",
                                ...) {
 
   hia_cost <- get_hia_cost(hia = hia,
                            valuation_version = valuation_version,
-                           valuation = valuation,
                            current_year = current_year,
-                           gdp = gdp,
                            dict = dict)
 
   cost_by_outcome <- get_total_cost_by_outcome(hia_cost)
@@ -40,65 +36,49 @@ compute_econ_costs <- function(hia,
       write_csv(file.path(results_dir, sprintf('formatted/cost_by_region%s.csv', suffix)))
 
   }
-  # cost_by_region_outcome <- get_total_cost_by_region_outcome(hia_cost) %T>% write_csv(file.path(results_dir, sprintf('cost_by_region_outcome%s.csv', suffix)))
 
-    # Forecast
-    if(length(projection_years)>0) {
-      cost_forecast <- get_econ_forecast(hia_cost, years=projection_years, ...) %T>%
-        write_csv(file.path(results_dir, sprintf('health_and_cost_by_year%s.csv', suffix)))
-    } else cost_forecast=NULL
+  # Forecast
+  if(length(projection_years)>0) {
+    cost_forecast <- get_econ_forecast(hia_cost, forecast_years = projection_years, ...) %T>%
+      write_csv(file.path(results_dir, sprintf('health_and_cost_by_year%s.csv', suffix)))
+  } else cost_forecast=NULL
 
 
   list("hia_cost" = hia_cost,
        "cost_by_outcome" = cost_by_outcome,
        "cost_by_region" = cost_by_region,
        "cost_forecast" = cost_forecast) %>%
-    # "cost_by_region_outcome" = cost_by_region_outcome
-    # "cost_forecast" = cost_forecast %>%
-    # lapply(add_total_deaths) %>%
     lapply(add_long_names)
 }
 
 
 get_hia_cost <- function(hia,
                          valuation_version = "viscusi",
-                         valuation = get_valuation(valuation_version),
                          current_year = 2019,
-                         gdp = get_gdp(year = current_year),
                          dict = get_dict()) {
 
-  hia_cost <- hia
 
-  # Values from above, at the time of creating valuation_viscusi.csv
-  gdp_world_2017_current <- 10825.9
-  gdp_world_2017_constant2015 <- 10625.26
-  gdp_world_ppp_2017intl <- 16276.48
-  gni_world_ppp_2017intl <- 15927.18
 
-  valuation <- valuation %>% select(-any_of('Outcome_name'))
+  # Get valuation for the country/years in the HIA dataset
+  iso3s <- unique(hia$iso3)
+  years <- current_year
+  valuation <- get_valuations(valuation_version=valuation_version,
+                              iso3s=iso3s,
+                              years=years)
 
-  nrow_before <- nrow(hia_cost)
-  hia_cost <- hia_cost %>%
-    left_join(dict %>% rename(Outcome = Code, Outcome.long = Long.name)) %>%
-    left_join(valuation, by = c('Outcome')) %>%
-    left_join(gdp, by = c('iso3')) %>%
-    filter(!is.na(Pollutant)) %>%
-    dplyr::mutate(
-      lcu_per_usd = GDP.PC.currLCU / GDP.PC.currUSD,
-      valuation_current_usd = case_when(
-        gni_or_gdp == 'gni' & ppp ~ valuation_world_2017 * (GNI.PC.PPP.2017USD / gni_world_ppp_2017intl)^elasticity * GNI.PC.PPP.currUSD / GNI.PC.PPP.2017USD * PPP.convLCUUSD / lcu_per_usd,
-        gni_or_gdp == 'gdp' & ppp ~ valuation_world_2017 * (GDP.PC.PPP.2017USD / gdp_world_ppp_2017intl)^elasticity * GDP.PC.PPP.currUSD / GDP.PC.PPP.2017USD * PPP.convLCUUSD / lcu_per_usd,
-        gni_or_gdp == 'gdp' & !ppp ~ valuation_world_2017 * (GDP.PC.2015USD / gdp_world_2017_constant2015)^elasticity * GDP.PC.currUSD / GDP.PC.2015USD ,
-        T ~ NA_real_), # Other cases not yet supported
+  hia_cost <- hia %>%
+    left_join(valuation,
+              by=c("Outcome", "iso3")) %>%
+    rename(valuation_current_usd = valuation_usd) %>%
+    mutate(
       valuation_current_lcu = valuation_current_usd * lcu_per_usd,
       cost_mn_currentUSD = number * valuation_current_usd / 1e6,
       cost_mn_currentLCU = cost_mn_currentUSD * lcu_per_usd,
-      share_gdp = cost_mn_currentLCU * 1e6 / GDP.TOT.currLCU
-    ) %>% ungroup %>%
-    relocate(starts_with(c('GDP', 'GNI', 'PPP')), .after = everything())
+      share_gdp = cost_mn_currentLCU * 1e6 / gdp_curr_usd
+    )
 
   # checks
-  if(nrow(hia_cost) != nrow_before) {stop('Wrong joins')}
+  stopifnot(nrow(hia_cost) == nrow(hia))
 
   missing_outcome <- hia_cost %>% filter(is.na(valuation_current_usd)) %>%
     distinct(Outcome) %>% pull()
@@ -112,32 +92,12 @@ get_hia_cost <- function(hia,
 
 get_total_cost_by_outcome <- function(hia_cost) {
 
-  gdp <- hia_cost %>%
-    ungroup() %>%
-    distinct(region_id, GDP.TOT.currLCU, GDP.TOT.currUSD) %>%
-    summarise_at(c('GDP.TOT.currLCU', 'GDP.TOT.currUSD'), sum)
-
-  gdp_tbl <-  tibble(unit = c('mn_currentLCU', 'mn_currentUSD'),
-                     gdp = c(gdp$GDP.TOT.currLCU / 1e6, gdp$GDP.TOT.currUSD / 1e6))
-
   hia_cost %>%
     filter(!double_counted) %>%
-    group_by(across(c(any_of('scenario'), estimate, Outcome, Outcome.long))) %>%
+    group_by(across(c(any_of('scenario'), estimate, Outcome))) %>%
     summarise_at(c('number', 'cost_mn_currentUSD', 'cost_mn_currentLCU'), sum, na.rm = T) %>%
+    ungroup() %>%
     na.omit %>%
-    tidyr::pivot_longer(cols = c(cost_mn_currentLCU, cost_mn_currentUSD, number),
-                        names_prefix = 'cost_',
-                        names_to = 'unit') %>%
-    filter(Outcome != 'LBW') %>%
-    left_join(gdp_tbl) %>%
-    mutate(share_gdp = value / gdp) %>%
-    select(-c(gdp)) %>%
-    tidyr::pivot_wider(names_from = unit,
-                       values_from = c(value, share_gdp)) %>%
-    select(-c(share_gdp_number, share_gdp_mn_currentUSD)) %>%
-    rename(share_gdp = share_gdp_mn_currentLCU,
-           number = value_number) %>%
-    rename_with(~stringr::str_replace(.x, 'value_', 'cost_')) %>%
     mutate(valuation_currentUSD = cost_mn_currentUSD * 1e6 / number,
            valuation_currentLCU = cost_mn_currentLCU * 1e6 / number)
 }
@@ -147,6 +107,7 @@ format_hia_table <- function(table, CI_underneath = F) {
 
   values <- intersect(names(table),
                       c('cost_mn_currentLCU', 'cost_mn_currentUSD', 'number', 'share_gdp'))
+
   groups <- intersect(names(table),
                       c('scenario', 'Outcome', 'Cause', 'Outcome.long', 'region_id',
                         'Pollutant', 'AgeGrp', 'double_counted'))
@@ -184,27 +145,16 @@ format_hia_table <- function(table, CI_underneath = F) {
 
 
 get_total_cost_by_region <- function(hia_cost) {
-
   hia_cost %>%
     filter(!double_counted) %>%
-    group_by(across(c(any_of('scenario'), estimate, region_id, pop, GDP.TOT.currLCU,
-                      GDP.TOT.currUSD))) %>%
+    group_by(across(c(any_of('scenario'), estimate, region_id, pop))) %>%
     summarise_at(c('cost_mn_currentUSD', 'cost_mn_currentLCU'), sum, na.rm = T) %>%
-    mutate(share_gdp = cost_mn_currentLCU * 1e6 / GDP.TOT.currLCU) %>%
-    ungroup() %>%
-    select(-starts_with('GDP'))
+    ungroup()
 }
 
 
-# get_total_cost_by_country <- function(hia_cost){
-#
-#   hia_cost_national <- get_total_cost_by_region(hia_cost) %>%
-#     group_by(scenario, iso3, estimate) %>%
-#     summarise_at(c('cost.mnLCU', 'cost.mnUSD'), sum)
-# }
-
-
-get_total_cost_by_region_outcome <- function(hia_cost, iso3, gdp = get_gdp(),
+get_total_cost_by_region_outcome <- function(hia_cost,
+                                             iso3,
                                              dict = get_dict()) {
 
   gdp_gni <- hia_cost %>%
@@ -227,21 +177,27 @@ get_total_cost_by_region_outcome <- function(hia_cost, iso3, gdp = get_gdp(),
 }
 
 
-get_econ_forecast <- function(hia_cost,
-                              years,
-                              pop_targetyr = 2019,
-                              GDP_scaling = F,
-                              discount_rate = .03) {
-
-  if(!is.data.frame(hia_cost)) {
-    hia_cost <- hia_cost$hia_cost
-  }
-
-  pop_proj <- get_pop_proj() %>% # from hia_data.R or gis_data.R?
+#' Build age-group specific population scaling factors
+#'
+#' Internal helper that prepares population and death-based scaling indices by
+#' `iso3`/`AgeGrp`/`fatal`/`year` for the requested horizon.
+#'
+#' @param hia_cost Data frame used only to derive `iso3` and `AgeGrp` coverage.
+#' @param reference_year Integer reference year.
+#' @param forecast_years Integer vector of forecast years.
+#'
+#' @return A list with:
+#'   - `popproj_tot`: population projections including synthesized age groups
+#'   - `pop_scaling`: tidy table with columns `iso3`, `AgeGrp`, `year`, `fatal`,
+#'      `pop_scaling`.
+#' @keywords internal
+#' @noRd
+compute_population_scaling <- function(hia_cost, reference_year, forecast_years) {
+  pop_proj <- get_pop_proj() %>%
     filter(iso3 %in% unique(hia_cost$iso3),
-           year %in% c(pop_targetyr, years))
+           year %in% c(reference_year, forecast_years))
 
-  # add new age groups to population data
+  # add new age groups to population data (heuristic multipliers; subject to revision)
   add_age_groups <- tibble(AgeGrp = c('25+','0-18','1-18','18-99', '20-65'),
                            AgeLow = c(25, 0, 0, 20, 20),
                            AgeHigh = c(99, 20, 99, 99, 64),
@@ -258,64 +214,230 @@ get_econ_forecast <- function(hia_cost,
         mutate(death_rate = deaths / pop)
     }) %>% bind_rows(pop_proj) %>% distinct
 
-  # flag mortality outcomes (to be scaled by number of deaths)
-  hia_cost$fatal <- grepl('YLLs|YLDs|Deaths', hia_cost$Outcome)
-
+  # build scaling factors for both population and deaths
   pop_scaling <- suppressMessages(
-    popproj_tot %>% ungroup %>%
+    popproj_tot %>%
+      ungroup %>%
       filter(iso3 %in% unique(hia_cost$iso3),
              AgeGrp %in% unique(hia_cost$AgeGrp),
-             year %in% c(pop_targetyr, years)) %>%
+             year %in% c(reference_year, forecast_years)) %>%
       pivot_longer(c(pop, deaths)) %>%
       group_by(iso3, AgeGrp, name) %>%
-      dplyr::mutate(pop_scaling = value / value[year == pop_targetyr],
-                    GDPscaling = 1) %>%
+      dplyr::mutate(pop_scaling = value / value[year == reference_year]) %>%
       mutate(fatal = name == 'deaths') %>%
       ungroup %>%
-      sel(iso3, AgeGrp, year, fatal, pop_scaling, GDPscaling) %>%
+      sel(iso3, AgeGrp, year, fatal, pop_scaling) %>%
       distinct
   )
 
-  missing_iso3s_pop <- setdiff(unique(hia_cost$iso3), c(unique(popproj_tot[popproj_tot$year %in% years,]$iso3)))
-  missing_iso3s_gdp <- c()
+  list(popproj_tot = popproj_tot, pop_scaling = pop_scaling)
+}
 
-  if(GDP_scaling) {
+#' Build GDP per-capita PPP scaling factors (and discounted variant)
+#'
+#' @param hia_cost Data frame used to derive `iso3` coverage.
+#' @param reference_year Integer reference year.
+#' @param forecast_years Integer vector of forecast years.
+#' @param discount_rate Numeric annual discount rate.
+#'
+#' @return A data.frame with columns `iso3`, `year`, `gdp_pc_scaling`,
+#'   `gdp_scaling`.
+#' @keywords internal
+#' @noRd
+compute_gdp_scaling <- function(hia_cost, reference_year, forecast_years, discount_rate) {
+  gdp_scaling <- get_gdp_scaling(iso3 = unique(hia_cost$iso3))
+  # keep only needed years and columns; create both pc scaling and discounted scaling
+  gdp_scaling %>%
+    sel(iso3, year, GDP.PC.PPP.constUSD) %>%
+    filter(year %in% c(reference_year, forecast_years),
+           iso3 %in% unique(hia_cost$iso3)) %>%
+    group_by(iso3) %>%
+    mutate(gdp_pc_scaling = GDP.PC.PPP.constUSD / GDP.PC.PPP.constUSD[year == reference_year],
+           gdp_scaling = gdp_pc_scaling / (1 + discount_rate)^(year - reference_year)) %>%
+    sel(-GDP.PC.PPP.constUSD) %>%
+    ungroup()
+}
 
-    gdp_scaling <- get_gdp_scaling(iso3=unique(hia_cost$iso3))
+#' Apply population and GDP scaling to HIA rows and expand by year
+#'
+#' @param hia_cost HIA rows at reference year.
+#' @param pop_scaling Output of `compute_population_scaling()`.
+#' @param gdp_scaling_tbl Output of `compute_gdp_scaling()` or NULL.
+#' @param reference_year Integer.
+#' @param forecast_years Integer vector.
+#'
+#' @return A data.frame with rows replicated across requested years and scaled
+#'   `number`, `cost_mn_currentUSD` and `cost_mn_currentLCU` (if present). Also
+#'   contains `pop_scaling`, `gdp_pc_scaling`, `gdp_scaling`, and recomputed
+#'   `share_gdp` when GDP totals are available.
+#' @keywords internal
+#' @noRd
+apply_econ_scaling <- function(hia_cost, pop_scaling, gdp_scaling_tbl = NULL, reference_year, forecast_years) {
+  # set outcome fatal flag: YLLs and Deaths are fatal; YLDs are non-fatal
+  hia_cost <- hia_cost %>% mutate(fatal = grepl('YLLs|Deaths', Outcome))
 
-    pop_scaling <- pop_scaling %>%
-      full_join(gdp_scaling %>%
-                  sel(iso3, year, GDP.PC.PPP.2017USD) %>%
-                  filter(year %in% c(pop_targetyr, years),
-                         iso3 %in% unique(hia_cost$iso3),
-                         !iso3 %in% missing_iso3s_pop)) %>%
-      group_by(iso3) %>%
-      mutate(GDPscaling = GDP.PC.PPP.2017USD / GDP.PC.PPP.2017USD[year == pop_targetyr] /
-               (1 + discount_rate)^(year - pop_targetyr)) %>%
-      sel(-GDP.PC.PPP.2017USD) %>%
-      ungroup()
-
-    missing_iso3s_gdp <- setdiff(unique(hia_cost$iso3),
-                                 c(unique(gdp_scaling[gdp_scaling$year %in% years,]$iso3)))
+  # ensure unique pop_scaling keys
+  key_cols <- c('iso3','AgeGrp','fatal','year')
+  if(nrow(pop_scaling %>% sel(all_of(key_cols)) %>% distinct()) != nrow(pop_scaling)) {
+    stop('Population scaling table contains duplicate keys for iso3/AgeGrp/fatal/year. Aborting.')
   }
 
-  # Check if any country missing population information
+  # build combined scaling table (add GDP columns; default to 1)
+  if(!is.null(gdp_scaling_tbl)) {
+    scaling <- pop_scaling %>% left_join(gdp_scaling_tbl, by = c('iso3','year'))
+  } else {
+    scaling <- pop_scaling %>% mutate(gdp_scaling = 1, gdp_pc_scaling = 1)
+  }
+
+  # warn on missing iso3s
+  missing_iso3s_pop <- setdiff(unique(hia_cost$iso3), unique(scaling$iso3[scaling$year %in% forecast_years]))
   if(length(missing_iso3s_pop) > 0) {
-    warning("Missing population projection information for the following countries: ",
-            paste(missing_iso3s_pop, collapse = ', '), ". Will be ignored.")
+    warning(sprintf('Missing population projection information for %d iso3(s): %s. These rows will be dropped in forecasting.',
+                    length(missing_iso3s_pop), paste(missing_iso3s_pop, collapse = ', ')))
   }
-  if(length(missing_iso3s_gdp) > 0) {
-    warning("Missing GDP information for the following countries: ",
-            paste(missing_iso3s_gdp, collapse = ', '), ". Will be ignored.")
+  if(!is.null(gdp_scaling_tbl)){
+    missing_iso3s_gdp <- setdiff(unique(hia_cost$iso3), unique(gdp_scaling_tbl$iso3[gdp_scaling_tbl$year %in% forecast_years]))
+    if(length(missing_iso3s_gdp) > 0) {
+      warning(sprintf('Missing GDP information for %d iso3(s): %s. Using population-only scaling for those.',
+                      length(missing_iso3s_gdp), paste(missing_iso3s_gdp, collapse = ', ')))
+    }
   }
 
+  # join without year to expand across years, safer than many-to-many full_join
+  base_cols <- setdiff(names(hia_cost), 'year')
+  hia_by_year <- hia_cost %>%
+    sel(all_of(base_cols)) %>%
+    inner_join(scaling, by = c('iso3','AgeGrp','fatal'))
 
-  hia_by_year <- suppressMessages(hia_cost %>%
-                                    select(-year) %>%
-                                    full_join(pop_scaling,
-                                              relationship = "many-to-many"
-                                              ))
+  # duplication guard: after join, each original row should be replicated exactly length(ref+forecast) times
+  expected_mult <- length(unique(c(reference_year, forecast_years)))
+  dup_check <- hia_by_year %>%
+    group_by(across(all_of(base_cols))) %>%
+    summarise(n_years = n_distinct(year), .groups='drop')
+  if(any(dup_check$n_years != expected_mult)) {
+    stop('Unexpected expansion in join: some rows did not map to all requested years. Check iso3/AgeGrp/fatal coverage.')
+  }
 
-  hia_by_year %>% mutate(number = number * pop_scaling,
-                         cost_mn_currentUSD = cost_mn_currentUSD * pop_scaling * GDPscaling)
+  # scale metrics
+  out <- hia_by_year %>%
+    mutate(
+      number = number * pop_scaling,
+      cost_mn_currentUSD = cost_mn_currentUSD * pop_scaling * gdp_scaling
+    )
+  if('cost_mn_currentLCU' %in% names(out)) {
+    out <- out %>% mutate(cost_mn_currentLCU = cost_mn_currentLCU * pop_scaling * gdp_scaling)
+  }
+
+  # recompute share_gdp if possible; prefer matching currency
+  recompute_share <- function(df) {
+    # detect baseline GDP total columns
+    use_lcu <- 'GDP.TOT.currLCU' %in% names(df)
+    use_usd <- 'GDP.TOT.currUSD' %in% names(df)
+    if(use_lcu) {
+      df <- df %>% mutate(GDP_total_scaled = GDP.TOT.currLCU * pop_scaling * gdp_pc_scaling,
+                          share_gdp = (cost_mn_currentLCU * 1e6) / GDP_total_scaled)
+    } else if(use_usd) {
+      df <- df %>% mutate(GDP_total_scaled = GDP.TOT.currUSD * pop_scaling * gdp_pc_scaling,
+                          share_gdp = (cost_mn_currentUSD * 1e6) / GDP_total_scaled)
+    } else if('share_gdp' %in% names(df)) {
+      # cannot recompute reliably; drop stale column
+      df <- df %>% sel(-share_gdp)
+    }
+    df %>% sel(-any_of('GDP_total_scaled'))
+  }
+
+  out <- recompute_share(out)
+
+  out
+}
+
+#' Forecast HIA counts and costs across years using population and GDP scaling
+#'
+#' Scales HIA results from a reference year to the requested forecast years.
+#' Health outcomes are scaled by age-group specific population factors. Fatal
+#' outcomes (Deaths, YLLs) use death scaling, while non-fatal outcomes use
+#' population scaling. When `use_gdp_scaling = TRUE`, monetary costs are also
+#' scaled by per-capita GDP PPP growth and discounted back to the reference year.
+#'
+#' @param hia_cost A data.frame or a list with element `hia_cost` containing the
+#'   HIA results for the reference year. Required columns: `iso3`, `year`,
+#'   `AgeGrp`, `Outcome`, `number`, `cost_mn_currentUSD`. Optional columns such
+#'   as `cost_mn_currentLCU`, `GDP.TOT.currLCU`, `GDP.TOT.currUSD` are used when
+#'   present to recompute `share_gdp`.
+#' @param forecast_years Integer vector of target years to produce.
+#' @param reference_year Integer. Base year for scaling (default 2019). The
+#'   output includes this year as well as `forecast_years`.
+#' @param use_gdp_scaling Logical. If TRUE, apply GDP per-capita PPP growth and
+#'   discount to `reference_year` when scaling costs (default FALSE).
+#' @param discount_rate Numeric. Annual discount rate used when
+#'   `use_gdp_scaling = TRUE` (default 0.03).
+#'
+#' @return A data.frame with the input rows expanded across years and the
+#'   following additional columns:
+#'   - `year`: reference and forecast years
+#'   - `fatal`: outcome fatality flag
+#'   - `pop_scaling`: age-group/cause-specific population scaling factor
+#'   - `gdp_pc_scaling`: per-capita GDP PPP index relative to reference year
+#'   - `gdp_scaling`: `gdp_pc_scaling` discounted to the reference year
+#'   - `number`: scaled health outcome counts
+#'   - `cost_mn_currentUSD`: scaled costs in million USD
+#'   - `cost_mn_currentLCU`: scaled costs in million LCU (if present in input)
+#'   - `share_gdp`: recomputed if GDP totals are provided; removed otherwise
+#'
+#' @details
+#' - Fatal outcomes are identified as those with `Outcome` matching `"YLLs"` or
+#'   `"Deaths"`. Outcomes with `"YLDs"` are treated as non-fatal.
+#' - Age group synthesis for groups like `"25+"`, `"0-18"`, etc., uses heuristic
+#'   multipliers over UN WPP bins; these multipliers are a pragmatic approximation
+#'   and may be revised.
+#' - The join expands each input row to all requested years using
+#'   `iso3`/`AgeGrp`/`fatal` as keys. A duplication guard verifies that each base
+#'   row expands to exactly the number of requested years and stops otherwise.
+#' - Missing population projection years or GDP data for some `iso3`s trigger
+#'   informative warnings; population-only scaling is used where GDP data are
+#'   missing.
+#'
+#' @examples
+#' # Minimal example
+#' hia_cost <- data.frame(
+#'   iso3 = "USA", region_id = "USA", Outcome = c("Deaths","Asthma.Prev"),
+#'   year = 2019, number = c(100, 1000), cost_mn_currentUSD = c(1.2, 0.3),
+#'   AgeGrp = "25+", double_counted = FALSE
+#' )
+#' 
+#' # Population-only scaling to 2020 and 2023
+#' fut <- get_econ_forecast(hia_cost,
+#'                          forecast_years = c(2020, 2023),
+#'                          reference_year = 2019,
+#'                          use_gdp_scaling = FALSE)
+#'
+#' @export
+get_econ_forecast <- function(hia_cost,
+                              forecast_years,
+                              reference_year = 2019,
+                              use_gdp_scaling = FALSE,
+                              discount_rate = 0.03) {
+
+  # accept list(hia_cost=...) or data.frame
+  if(!is.data.frame(hia_cost)) {
+    hia_cost <- hia_cost$hia_cost
+  }
+
+  # basic input validation
+  required_cols <- c('iso3','year','AgeGrp','Outcome','number','cost_mn_currentUSD')
+  missing_cols <- setdiff(required_cols, names(hia_cost))
+  if(length(missing_cols) > 0) stop(sprintf('hia_cost is missing required columns: %s', paste(missing_cols, collapse = ', ')))
+  if(length(forecast_years) < 1) stop('forecast_years must contain at least one year')
+
+  # compute scaling tables
+  pop_scaling_info <- compute_population_scaling(hia_cost, reference_year, forecast_years)
+  pop_scaling <- pop_scaling_info$pop_scaling
+
+  gdp_tbl <- NULL
+  if(isTRUE(use_gdp_scaling)) {
+    gdp_tbl <- compute_gdp_scaling(hia_cost, reference_year, forecast_years, discount_rate)
+  }
+
+  # apply scaling and return
+  apply_econ_scaling(hia_cost, pop_scaling, gdp_tbl, reference_year, forecast_years)
 }

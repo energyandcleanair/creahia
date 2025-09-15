@@ -158,8 +158,7 @@ targetyears = 2022
 
 hia_cost <- get_hia_cost(hia=hia_totals, valuation_version="viscusi")
 
-#valuations <- read_csv('~/Rpackages/creahia/inst/extdata/valuation_viscusi.csv')
-valuations <- get_valuation('viscusi')
+valuations <- get_valuations_raw('viscusi')
 
 usd_to_lcu=1292.16 #2022 average
 
@@ -176,7 +175,7 @@ hia_cost %>%
 
 
 
-hia_fut <- hia_cost %>% get_econ_forecast(years=targetyears, pop_targetyr=2019)
+hia_fut <- hia_cost %>% get_econ_forecast(forecast_years = targetyears, reference_year = 2019)
 
 hia_fut %>% add_long_names() %>%
   group_by(Outcome=Outcome_long, Cause=Cause_long, Pollutant, double_counted, scenario, estimate) %>%

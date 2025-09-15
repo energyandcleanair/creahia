@@ -143,8 +143,7 @@ generate_random_exposure_hias <- function(levels,
       administrative_level = level,
       administrative_res = administrative_res,
       administrative_iso3s = iso3,
-      epi_version = epi_version,
-      calc_causes = calc_causes
+      epi_version = epi_version
     ) %>%
       mutate(level=level)
   }) %>%

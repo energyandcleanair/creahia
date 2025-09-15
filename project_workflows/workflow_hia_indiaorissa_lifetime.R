@@ -174,7 +174,7 @@ hia_totals  %>% group_by(scenario, Pollutant) %>% filter(!double_counted, Outcom
 targetyears = c(seq(2022,2062,1))
 
 hia_cost <- get_hia_cost(hia=hia, valuation_version="viscusi")
-valuations <- get_valuation('viscusi')
+valuations <- get_valuations_raw('viscusi')
 
 #usd_to_lcu=15447
 usd_to_lcu=83.05
@@ -190,7 +190,7 @@ hia_cost %>%
   relocate(reference, .after=everything()) %>%
   write_csv(file.path(output_dir, 'valuations.csv'))
 
-hia_fut <- get_econ_forecast(hia_cost, years=targetyears, pop_targetyr=2019)
+hia_fut <- get_econ_forecast(hia_cost, forecast_years = targetyears, reference_year = 2019)
 
 hia_fut %>%
   left_join(hia_cost %>% distinct(Outcome, Cause, Pollutant, double_counted)) %>%
@@ -216,7 +216,6 @@ for(x in names(years)){
     select(scenario, Outcome, Cause, Pollutant,  central, low, high, variable=name, double_counted) %>%
     write_csv(file.path(output_dir, glue::glue('{x}_Cumulative.csv')))
 }
-
 
 
 
