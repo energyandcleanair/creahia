@@ -114,7 +114,7 @@ make_nothing <- function(x) {x}
 #' @export
 #'
 #' @examples
-get_model_adm <- function(grid_raster, shp = NULL,
+get_adm <- function(grid_raster, shp = NULL,
                           admin_level = 0, iso3s = NULL, ...) {
 
   grid_raster <- grid_raster %>% terra::rast()
