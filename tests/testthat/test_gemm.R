@@ -4,9 +4,6 @@ test_that("Our GEMM-derived deaths are similar to literature", {
 
   testthat::skip_on_ci()
 
-  library(rnaturalearth)
-  library(sf)
-
   # We use the following references for comparison, that both use GEMM:
   #
   # Reversal of trends in global fine particulate matter air pollution
@@ -112,8 +109,8 @@ test_that("Our GEMM-derived deaths are similar to literature", {
   pop <- creaexposure::data.pop(res=res)
   grid <- pop %>% rast()
   adm_res <- "low"
-  # Replace creahelpers::get_adm with rnaturalearth - get all countries
-  adm <- rnaturalearth::ne_countries(scale = if(adm_res == "low") "medium" else "large", returnclass = "sf")
+  # Use creahelpers::get_adm - get all countries
+  adm <- creahelpers::get_adm(level = 0, res = adm_res)
   years <- unique(validation$year)
 
   # We compute one HIA for all countries at once

@@ -94,9 +94,10 @@ get_random_exposure_hia <- function(levels,
 
   # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
   res <- 0.01
-  country_name <- countrycode::countrycode(iso3, origin='iso3c', destination='country.name')
-  # Replace creahelpers::get_adm with rnaturalearth
-  bbox <- rnaturalearth::ne_countries(scale = "large", country = country_name, returnclass = "sf") %>% sf::st_bbox()
+  iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')
+  # Use creahelpers::get_adm now that we have GIS data in CI
+  adm <- creahelpers::get_adm(level = 0, res = "low", iso2s = iso2)
+  bbox <- sf::st_bbox(adm)
   baseline_rast <- terra::rast(
     xmin=bbox$xmin,
     xmax=bbox$xmax,
@@ -138,8 +139,6 @@ test_that("Population is properly calculated and scaled- using HIA", {
   library(dplyr)
   library(creahia)
   library(creaexposure)
-  library(rnaturalearth)
-  library(sf)
   iso3 <- "ZAF"
 
   hia_2015 <- get_random_exposure_hia(levels=c(0,1,2),
