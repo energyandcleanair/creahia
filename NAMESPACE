@@ -5,7 +5,7 @@ export(`wrappers.compute_hia_two_images`)
 S3method(`wrappers.compute_hia_two_images`, default)
 S3method(`wrappers.compute_hia_two_images`, character)
 
-exportPattern("^[[:alpha:]]|\\%+") # For now...
+exportPattern("^[[:alpha:]]|\\%+")
 
 importFrom(RColorBrewer,brewer.pal)
 

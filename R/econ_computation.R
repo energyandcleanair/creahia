@@ -209,20 +209,21 @@ compute_population_scaling <- function(hia_cost, reference_year, forecast_years)
     group_modify(function(df, ...) {
       pop_proj %>%
         filter(age_start >= df$age_start, age_start + age_span - 1 <= df$age_end) %>%
-        group_by(location_id, iso3, location_name, year) %>%
+        group_by(location_id, iso3, year) %>%
         sel(-contains('age')) %>%
         mutate_if(is.numeric, multiply_by, df$multiplier) %>%
         summarise_all(sum)
     }) %>%
     bind_rows(pop_proj) %>%
-    distinct(iso3, year, age_group, pop, deaths)
+    distinct(iso3, year, age_group, pop, deaths) %>%
+    ungroup()
 
   # build scaling factors for both population and deaths
   pop_scaling <- suppressMessages(
     popproj_tot %>%
       ungroup %>%
       filter(iso3 %in% unique(hia_cost$iso3),
-             age_group %in% unique(hia_cost$age_group),
+             age_group %in% unique(hia_cost$AgeGrp),
              year %in% c(reference_year, forecast_years)) %>%
       pivot_longer(c(pop, deaths)) %>%
       group_by(iso3, age_group, name) %>%
@@ -280,7 +281,7 @@ apply_econ_scaling <- function(hia_cost, pop_scaling, gdp_scaling_tbl = NULL, re
   hia_cost <- hia_cost %>% mutate(fatal = grepl('YLLs|Deaths', Outcome))
 
   # ensure unique pop_scaling keys
-  key_cols <- c('iso3','AgeGrp','fatal','year')
+  key_cols <- c('iso3','age_group','fatal','year')
   if(nrow(pop_scaling %>% sel(all_of(key_cols)) %>% distinct()) != nrow(pop_scaling)) {
     stop('Population scaling table contains duplicate keys for iso3/AgeGrp/fatal/year. Aborting.')
   }
@@ -310,7 +311,7 @@ apply_econ_scaling <- function(hia_cost, pop_scaling, gdp_scaling_tbl = NULL, re
   base_cols <- setdiff(names(hia_cost), 'year')
   hia_by_year <- hia_cost %>%
     sel(all_of(base_cols)) %>%
-    inner_join(scaling, by = c('iso3','AgeGrp','fatal'))
+    inner_join(scaling, by = c('iso3', 'AgeGrp'='age_group','fatal'))
 
   # duplication guard: after join, each original row should be replicated exactly length(ref+forecast) times
   expected_mult <- length(unique(c(reference_year, forecast_years)))
@@ -427,7 +428,7 @@ get_econ_forecast <- function(hia_cost,
   }
 
   # basic input validation
-  required_cols <- c('iso3','year','AgeGrp','Outcome','number','cost_mn_currentUSD')
+  required_cols <- c('iso3','year', 'AgeGrp','Outcome','number','cost_mn_currentUSD')
   missing_cols <- setdiff(required_cols, names(hia_cost))
   if(length(missing_cols) > 0) stop(sprintf('hia_cost is missing required columns: %s', paste(missing_cols, collapse = ', ')))
   if(length(forecast_years) < 1) stop('forecast_years must contain at least one year')
