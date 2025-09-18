@@ -7,9 +7,6 @@ test_that("Population is properly calculated", {
     skip("GIS data not available - population files not found")
   }
 
-  library(rnaturalearth)
-  library(sf)
-
   # Create a grid raster around Bangladesh
   iso2 <- "BD"
 
@@ -36,10 +33,9 @@ test_that("Population is properly calculated", {
   )
 
   iso3 <- countrycode::countrycode(iso2, origin='iso2c', destination='iso3c')
-  country_name <- countrycode::countrycode(iso3, origin='iso3c', destination='country.name')
-  # Replace creahelpers::get_adm with rnaturalearth
-  adm <- rnaturalearth::ne_countries(scale = "large", country = country_name, returnclass = "sf")
-  bbox <- adm %>% sf::st_bbox()
+  # Use creahelpers::get_adm now that we have GIS data in CI
+  adm <- creahelpers::get_adm(level = 0, res = "low", iso3 = iso3)
+  bbox <- sf::st_bbox(adm)
 
   # Create a grid to project the population
   grid <- terra::rast(terra::ext(bbox), 1000, 1000)
