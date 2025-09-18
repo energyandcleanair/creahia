@@ -7,6 +7,7 @@ inst/doc
 
 tmp/
 cache/
+keys/
 
 validation/*.RDS
 examples/example_ph/

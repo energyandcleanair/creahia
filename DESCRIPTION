@@ -35,7 +35,9 @@ Imports:
     terra,
     logger,
     matrixStats,
-    rlang
+    rlang,
+    rnaturalearth,
+    sf
 Depends:
     tidyverse,
     creahelpers

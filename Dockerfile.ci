@@ -55,7 +55,7 @@ RUN --mount=type=secret,id=github-token \
       read_secret <- function(path) if (file.exists(path)) paste(readLines(path), collapse = "\n") else ""; \
       pat <- read_secret("/run/secrets/github-pat"); \
       if (identical(pat, "")) pat <- read_secret("/run/secrets/github-token"); \
-      if (!identical(pat, "")) Sys.setenv(GITHUB_PAT = pat); \
+      if (!identical(pat, "") && pat != "false") Sys.setenv(GITHUB_PAT = pat); \
       pak::pkg_install(c( \
         "remotes", \
         "devtools", \
@@ -68,5 +68,74 @@ RUN --mount=type=secret,id=github-token \
         "energyandcleanair/creaexposure" \
       ))' \
  && Rscript -e 'pak::cache_clean()'
+
+# Set up GIS directory for tests
+ENV GIS_DIR=/work/gis
+RUN mkdir -p $GIS_DIR/population $GIS_DIR/boundaries
+
+# Add build arguments for GIS data download
+ARG DOWNLOAD_GIS_DATA=false
+ARG GCS_SERVICE_ACCOUNT_KEY=""
+
+# Install gsutil and download GIS data if requested
+RUN if [ "$DOWNLOAD_GIS_DATA" = "true" ]; then \
+        echo "=== TESTING GCS DOWNLOAD ===" && \
+        apt-get update && apt-get install -y python3-pip curl && \
+        pip3 install gsutil && \
+        # Setup GCS authentication and download in one step
+        if [ ! -z "$GCS_SERVICE_ACCOUNT_KEY" ]; then \
+            echo "Decoding service account key..." && \
+            echo "$GCS_SERVICE_ACCOUNT_KEY" | base64 -d > /tmp/gcs-key.json && \
+            echo "Activating service account with gsutil..." && \
+            gsutil config -e < /dev/null || true && \
+            export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcs-key.json && \
+            echo "Testing gsutil with explicit credentials..." && \
+            gsutil -o "Credentials:gs_service_key_file=/tmp/gcs-key.json" ls gs://crea-data/gis/ && \
+            echo "Downloading population data..." && \
+            gsutil -o "Credentials:gs_service_key_file=/tmp/gcs-key.json" -m cp \
+                "gs://crea-data/gis/population/gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2015_30_sec.tif" \
+                "gs://crea-data/gis/population/gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_30_sec.tif" \
+                $GIS_DIR/population/ && \
+            echo "Downloading specific boundary data..." && \
+            gsutil -o "Credentials:gs_service_key_file=/tmp/gcs-key.json" -m cp \
+                "gs://crea-data/gis/boundaries/gadm36_0_low.RDS" \
+                "gs://crea-data/gis/boundaries/gadm36_1_low.RDS" \
+                "gs://crea-data/gis/boundaries/gadm36_2_low.RDS" \
+                "gs://crea-data/gis/boundaries/gadm36_0_low_rgeos.RDS" \
+                "gs://crea-data/gis/boundaries/gadm36_1_low_rgeos.RDS" \
+                "gs://crea-data/gis/boundaries/gadm36_2_low_rgeos.RDS" \
+                "gs://crea-data/gis/boundaries/citiesDistToLarge.RDS" \
+                "gs://crea-data/gis/boundaries/citiesDistToLarge.shp" \
+                "gs://crea-data/gis/boundaries/citiesDistToLarge.dbf" \
+                "gs://crea-data/gis/boundaries/citiesDistToLarge.prj" \
+                "gs://crea-data/gis/boundaries/citiesDistToLarge.shx" \
+                $GIS_DIR/boundaries/ && \
+            echo "=== GCS DOWNLOAD COMPLETE ===" && \
+            ls -la $GIS_DIR/population/ && \
+            ls -la $GIS_DIR/boundaries/ && \
+            rm -f /tmp/gcs-key.json; \
+        else \
+            echo "No GCS key provided"; \
+        fi; \
+    else \
+        echo "Skipping GIS data download. Set DOWNLOAD_GIS_DATA=true to enable."; \
+    fi
+
+# Install system dependencies for spatial packages
+RUN apt-get update && apt-get install -y \
+    libudunits2-dev \
+    libgdal-dev \
+    libgeos-dev \
+    libproj-dev
+
+# Install missing R packages that are needed for tests (excluding retired packages)
+RUN Rscript -e 'pak::pkg_install(c("rnaturalearthdata", "doParallel"), ask = FALSE)'
+
+# Install R package dependencies and the package itself
+COPY . /tmp/creahia
+WORKDIR /tmp/creahia
+RUN Rscript -e 'pak::local_install_deps(".", ask = FALSE)' && \
+    Rscript -e 'pak::local_install(".", ask = FALSE)' && \
+    Rscript -e 'library(creahia); print("✓ creahia package installed successfully")'
 
 WORKDIR /work

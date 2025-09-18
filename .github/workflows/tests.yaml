@@ -14,9 +14,22 @@ jobs:
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+      env:
+        GIS_DIR: /work/gis
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Check GIS data availability
+        run: |
+          # Check if GIS data was baked into the CI image
+          if [ -d "$GIS_DIR/population" ] && [ -d "$GIS_DIR/boundaries" ]; then
+            echo "GIS data found in CI image:"
+            ls -la $GIS_DIR/population/
+            ls -la $GIS_DIR/boundaries/
+          else
+            echo "GIS data not found in CI image - tests may run with reduced functionality"
+          fi
 
       - name: Install dependencies (no upgrade)
         run: |

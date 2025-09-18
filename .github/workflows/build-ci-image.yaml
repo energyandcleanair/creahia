@@ -28,6 +28,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup Google Cloud authentication (if available)
+        id: gcs-auth
+        run: |
+          if [ ! -z "${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}" ]; then
+            echo '${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}' | base64 -d > /tmp/gcs-key.json
+            echo "gcs_key_available=true" >> $GITHUB_OUTPUT
+            echo "GCS authentication configured for Docker build"
+          else
+            echo "gcs_key_available=false" >> $GITHUB_OUTPUT
+            echo "No GCS credentials available, Docker build will skip GIS data download"
+          fi
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -48,6 +60,9 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            DOWNLOAD_GIS_DATA=${{ steps.gcs-auth.outputs.gcs_key_available }}
           secrets: |
             github-token=${{ secrets.GITHUB_TOKEN }}
             github-pat=${{ secrets.GITHUB_TOKEN }}
+            gcs-service-account-key=${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}
