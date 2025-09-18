@@ -44,8 +44,9 @@ generate_uniform_exposure_hia <- function(baseline,
   library(creahia)
   library(creaexposure)
 
-  # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg  
-  adm <- creahelpers::get_adm(level = 0, res = "low", iso3 = iso3)
+  # Get PM2.5 exposure raster over country with resolution 0.01deg
+  iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')  
+  adm <- creahelpers::get_adm(level = 0, res = "low", iso2s = iso2)
   bbox <- sf::st_bbox(adm)
   res <- 0.01
   baseline_rast <- terra::rast(
@@ -110,9 +111,10 @@ generate_random_exposure_hias <- function(levels,
   library(creahia)
   library(creaexposure)
 
-  # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
+  # Get PM2.5 exposure raster over country with resolution 0.01deg
   if(is.null(baseline_rast)){
-    adm <- creahelpers::get_adm(level = 0, res = administrative_res, iso3 = iso3)
+    iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')
+    adm <- creahelpers::get_adm(level = 0, res = administrative_res, iso2s = iso2)
     bbox <- sf::st_bbox(adm)
     baseline_rast <- terra::rast(
       xmin=bbox$xmin,
@@ -168,8 +170,9 @@ generate_donkelaar_exposure_hia <- function(target,
   library(creahia)
   library(creaexposure)
 
-  # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
-  adm <- creahelpers::get_adm(level = 0, res = "low", iso3 = iso3)
+  # Get PM2.5 exposure raster over country with resolution 0.01deg
+  iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')
+  adm <- creahelpers::get_adm(level = 0, res = "low", iso2s = iso2)
   bbox <- sf::st_bbox(adm)
   pop <- creaexposure::data.pop(res=creaexposure::RES_30_SEC, bbox = bbox)
   pm25 <- creaexposure::data.basemap_pm25(pop=pop, res=creaexposure::RES_30_SEC, year=2020)
