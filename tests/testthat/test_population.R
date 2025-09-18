@@ -1,5 +1,11 @@
 
 test_that("Population is properly calculated", {
+  
+  # Skip test if GIS data is not available
+  gis_dir <- Sys.getenv("GIS_DIR", "")
+  if(gis_dir == "" || !dir.exists(file.path(gis_dir, "population"))) {
+    skip("GIS data not available - population files not found")
+  }
 
   library(rnaturalearth)
   library(sf)

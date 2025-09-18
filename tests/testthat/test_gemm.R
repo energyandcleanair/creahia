@@ -1,9 +1,8 @@
-testthat::skip("Needs exposure data that is not (yet?) available on GitHub actions")
 
 # This is a comparison with a literature article that also uses GEMM with von Donkelar
-
-
 test_that("Our GEMM-derived deaths are similar to literature", {
+
+  testthat::skip_on_ci()
 
   library(rnaturalearth)
   library(sf)

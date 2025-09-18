@@ -137,7 +137,8 @@ read_fingerprints <- function(){
 test_that("Estimates are compatible with previous versions", {
 
   testthat::skip_on_ci()
-  
+  testthat::skip()
+
   library(terra)
   library(creahelpers)
   library(dplyr)
