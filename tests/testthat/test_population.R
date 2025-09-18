@@ -32,9 +32,8 @@ test_that("Population is properly calculated", {
     )
   )
 
-  iso3 <- countrycode::countrycode(iso2, origin='iso2c', destination='iso3c')
   # Use creahelpers::get_adm now that we have GIS data in CI
-  adm <- creahelpers::get_adm(level = 0, res = "low", iso3 = iso3)
+  adm <- creahelpers::get_adm(level = 0, res = "low", iso2s = iso2)
   bbox <- sf::st_bbox(adm)
 
   # Create a grid to project the population
