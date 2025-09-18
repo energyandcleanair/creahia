@@ -153,7 +153,7 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
 
   # 04: Create support maps (e.g. countries, provinces, cities ) -----------------------------
   if(is.null(regions)) {
-    regions <- creahia::get_model_adm(grid_raster,
+    regions <- creahia::get_adm(grid_raster,
                                       admin_level = administrative_level,
                                       res = administrative_res,
                                       iso3s = administrative_iso3s)
