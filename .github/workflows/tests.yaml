@@ -17,6 +17,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
       env:
         GIS_DIR: /work/gis
+        CI: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
