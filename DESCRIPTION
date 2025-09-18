@@ -36,8 +36,6 @@ Imports:
     logger,
     matrixStats,
     rlang,
-    rnaturalearth,
-    sf,
     pbapply
 Depends:
     tidyverse,

@@ -43,13 +43,9 @@ generate_uniform_exposure_hia <- function(baseline,
   library(dplyr)
   library(creahia)
   library(creaexposure)
-  library(rnaturalearth)
-  library(sf)
 
-  # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
-  country_name <- countrycode::countrycode(iso3, origin='iso3c', destination='country.name')
-  # Replace creahelpers::get_adm with rnaturalearth
-  adm <- rnaturalearth::ne_countries(scale = "medium", country = country_name, returnclass = "sf")
+  # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg  
+  adm <- creahelpers::get_adm(level = 0, res = "low", iso3 = iso3)
   bbox <- sf::st_bbox(adm)
   res <- 0.01
   baseline_rast <- terra::rast(
@@ -113,14 +109,11 @@ generate_random_exposure_hias <- function(levels,
   library(dplyr)
   library(creahia)
   library(creaexposure)
-  library(rnaturalearth)
-  library(sf)
 
   # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
   if(is.null(baseline_rast)){
-    country_name <- countrycode::countrycode(iso3, origin='iso3c', destination='country.name')
-    # Replace creahelpers::get_adm with rnaturalearth - use "large" scale for higher resolution
-    bbox <- rnaturalearth::ne_countries(scale = "large", country = country_name, returnclass = "sf") %>% sf::st_bbox()
+    adm <- creahelpers::get_adm(level = 0, res = administrative_res, iso3 = iso3)
+    bbox <- sf::st_bbox(adm)
     baseline_rast <- terra::rast(
       xmin=bbox$xmin,
       xmax=bbox$xmax,
@@ -174,13 +167,9 @@ generate_donkelaar_exposure_hia <- function(target,
   library(dplyr)
   library(creahia)
   library(creaexposure)
-  library(rnaturalearth)
-  library(sf)
 
   # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
-  country_name <- countrycode::countrycode(iso3, origin='iso3c', destination='country.name')
-  # Replace creahelpers::get_adm with rnaturalearth
-  adm <- rnaturalearth::ne_countries(scale = "medium", country = country_name, returnclass = "sf")
+  adm <- creahelpers::get_adm(level = 0, res = "low", iso3 = iso3)
   bbox <- sf::st_bbox(adm)
   pop <- creaexposure::data.pop(res=creaexposure::RES_30_SEC, bbox = bbox)
   pm25 <- creaexposure::data.basemap_pm25(pop=pop, res=creaexposure::RES_30_SEC, year=2020)
