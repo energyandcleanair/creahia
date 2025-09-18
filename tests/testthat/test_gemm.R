@@ -5,6 +5,8 @@ testthat::skip("Needs exposure data that is not (yet?) available on GitHub actio
 
 test_that("Our GEMM-derived deaths are similar to literature", {
 
+  library(rnaturalearth)
+  library(sf)
 
   # We use the following references for comparison, that both use GEMM:
   #
@@ -111,7 +113,8 @@ test_that("Our GEMM-derived deaths are similar to literature", {
   pop <- creaexposure::data.pop(res=res)
   grid <- pop %>% rast()
   adm_res <- "low"
-  adm <- creahelpers::get_adm(level=0, res=adm_res)
+  # Replace creahelpers::get_adm with rnaturalearth - get all countries
+  adm <- rnaturalearth::ne_countries(scale = if(adm_res == "low") "medium" else "large", returnclass = "sf")
   years <- unique(validation$year)
 
   # We compute one HIA for all countries at once
