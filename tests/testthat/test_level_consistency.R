@@ -4,7 +4,6 @@ testthat::source_test_helpers("../", env = globalenv())
 
 test_that("HIAs are consistent across levels", {
 
-  skip_on_ci()
   hias <- generate_random_exposure_hias(levels=c(0,1,2),
                                         iso3="ZAF",
                                         administrative_res="low")
