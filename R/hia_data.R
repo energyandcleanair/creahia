@@ -174,7 +174,7 @@ get_gdp_forecast <- function(pop_proj=NULL) {
   gdp_forecast %>%
     left_join(pop_proj %>%
                 group_by(year, iso3) %>%
-                summarise(pop=sum(pop)*1000)) %>%
+                summarise(pop=sum(pop)*1000), by = c("year", "iso3")) %>%
     mutate(GDP.PC.realUSD = GDP.realUSD / pop) %>%
     select(-c(pop))
 }
