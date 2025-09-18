@@ -129,7 +129,7 @@ RUN apt-get update && apt-get install -y \
     libproj-dev
 
 # Install missing R packages that are needed for tests (excluding retired packages)
-RUN Rscript -e 'pak::pkg_install(c("rnaturalearthdata", "doParallel"), ask = FALSE)'
+RUN Rscript -e 'pak::pkg_install(c("doParallel"), ask = FALSE)'
 
 # Install R package dependencies and the package itself
 COPY . /tmp/creahia
