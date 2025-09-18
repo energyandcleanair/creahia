@@ -17,7 +17,8 @@ get_cause_source <- function(rr_sources, add_measure=F) {
 
   cause_source <- inner_join(
     existing,
-    rr_sources_tbl
+    rr_sources_tbl,
+    by = c("cause", "source")
   )
 
   if(add_measure){

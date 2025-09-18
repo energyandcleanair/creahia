@@ -123,7 +123,7 @@ get_locations <- function() {
 
 
   raw %>%
-    left_join(country_mapping) %>%
+    left_join(country_mapping, by = "location_id") %>%
     sel(location_id, location_name, location_level = level, country_id, country_name) %>%
     mutate(iso3 = countrycode::countrycode(country_name, "country.name", "iso3c"))
 }
@@ -195,7 +195,7 @@ get_epi_pop <- function(version="gbd2019", level = c(3, 4)) {
     dplyr::rename(country = location_name)
 
   locations %>%
-    right_join(pop) %>%
+    right_join(pop, by = "location_id") %>%
     filter(location_level %in% !!level) %>%
     distinct()
 }
@@ -730,7 +730,8 @@ fill_subnational <- function(epi) {
       left_join(
         epi %>%
           filter(location_level == 3) %>%
-          sel(iso3, var, estimate, val_country = val)
+          sel(iso3, var, estimate, val_country = val),
+        by = c("iso3", "var", "estimate")
       ) %>%
       mutate(val = coalesce(val, val_country)) %>%
       sel(-c(val_country))
@@ -774,8 +775,15 @@ add_location_details <- function(x, locations = get_locations()) {
   if (!"iso3" %in% names(x)) x$iso3 <- NA
   if (!"location_name" %in% names(x)) x$location_name <- NA
 
+  # Determine which columns to join on based on what's available
+  join_cols <- intersect(names(x), names(joiner))
+  if (length(join_cols) == 0) {
+    # If no common columns, we can't join
+    stop("No common columns found for joining location details")
+  }
+  
   y <- x %>%
-    left_join(joiner) %>%
+    left_join(joiner, by = join_cols) %>%
     mutate(
       iso3 = coalesce(iso3, iso3_filler),
       location_name = coalesce(location_name, location_name_filler)
@@ -874,7 +882,7 @@ generate_epi <- function(version = "gbd2019") {
   }
 
 
-  epi %<>% left_join(wb_countries %>% sel(iso3, country, region, income_group))
+  epi %<>% left_join(wb_countries %>% sel(iso3, country, region, income_group), by = "iso3")
   epi %<>% fill_subnational()
   epi %>%
     distinct() %>%

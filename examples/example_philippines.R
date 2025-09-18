@@ -48,7 +48,6 @@ conc_regions <- creahia::extract_concs_at_regions(concs, regions, species)
 # These are the values used by default
 # crfs <- get_crfs()
 # epi <- get_epi()
-# gemm <- get_gemm()
 # ihme <- get_ihme()
 # gbd_rr <- get_gbd_rr()
 # calc_causes <- get_calc_causes()

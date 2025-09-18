@@ -239,7 +239,7 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
 
   # custom_glue: to provide custom name for HIA .RDS files
   sapply(scenarios, function(scen, custom_glue = NULL, ...) {
-    message(glue('Processing scenario: "{scen}"'))
+    message('✅ Processing scenario: "', scen, '"')
 
     # 01: Get perturbation concentration levels for the scenario ----
     conc_perturbation <- perturbation_rasters_table %>%
