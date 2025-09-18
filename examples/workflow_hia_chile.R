@@ -130,7 +130,6 @@ scenarios <- names(conc_adm)
 # 06: Get HIA data, in case you want to modify them.  ---------------------------------------
 crfs <- get_crfs()
 epi <- get_epi()
-gemm <- get_gemm()
 ihme <- get_ihme()
 gbd_rr <- get_gbd_rr()
 calc_causes <- get_calc_causes()
