@@ -74,11 +74,9 @@ get_crfs_versions <- function() {
 
 
 get_crfs <- function(version = "default") {
+
   filename <- get_crfs_versions()[[version]]
-  print(sprintf("Getting CRFS: %s", filename))
-
   crfs <- read_csv(get_hia_path(filename), col_types = cols())
-
   names(crfs) <- names(crfs) %>% gsub('RR_', '', .)
   crfs$Exposure <- crfs$Exposure %>% gsub('PM2\\.5', "PM25", .)
   crfs$Incidence <- crf_recode_incidence(crfs$Incidence, crfs$Exposure)
@@ -124,8 +122,6 @@ get_epi_versions <- function() {
 get_epi <- function(version = "default") {
 
   filename <- get_epi_versions()[[version]]
-  print(sprintf("Getting epi: %s", filename))
-
   epi <- read_csv(get_hia_path(filename), col_types = cols()) %>%
     fix_epi_cols() %>%
     adddefos %>%
@@ -257,53 +253,6 @@ get_calc_causes <- function(causes_set = 'GEMM and GBD', filter = NULL) {
 
   return(causes_out)
 }
-
-
-get_gemm <- function() {
-  print("Getting GEMM")
-
-  # read GEMM function fit parameters
-  infile <- get_hia_path('GEMM Calculator (PNAS)_ab.xlsx')
-  gemm.china <- suppressMessages(read_xlsx(infile, sheet = 'GEMM fit parameters',
-                                           skip = 8, n_max = 14))
-  gemm.exchina <- suppressMessages(read_xlsx(infile, sheet = 'GEMM fit parameters',
-                                             skip = 29, n_max = 14))
-
-  gemm <- bind_rows(gemm.china %>% mutate(region = 'inc_China'),
-            gemm.exchina %>% mutate(region = 'ex_China'))
-
-  # eliminate empty rows and columns
-  gemm <- gemm[rowSums(!is.na(gemm)) > 1, colSums(!is.na(gemm)) > 0]
-  # write.csv(gemm, 'gemm fit parameters.csv') # CHECK necessary?
-
-  # read names of causes of death
-  causes <- suppressMessages(read_xlsx(infile, sheet = 'GEMM fit parameters',
-                                       skip = 6, n_max = 1, col_names = F)) %>%
-    unlist %>%
-    subset(!is.na(.))
-
-
-  # define short names
-  names(causes) <- c('NCD.LRI', 'IHD', 'Stroke', 'COPD', 'LC', 'LRI')
-
-  # remove duplicated age columns
-  names(gemm)[1] <- 'age'
-  gemm <- gemm %>% sel(-contains('Age'), age)
-
-  # give parameter columns names; t = theta, se = standard error of theta,
-  # a = alpha, u = mu, p = pi
-  newnames <- names(causes) %>% sapply(paste, c('t', 'se', 'a', 'u', 'p'), sep = '_') %>%
-    as.vector()
-  names(gemm)[seq_along(newnames)] <- newnames
-
-  gemm <- gemm %>% gather(cause, value, -region, -age) %>%
-    tidyr::separate(cause, c('cause', 'param'), '_')
-  gemm$age[gemm$age == '30-35'] <- '30-34'
-  # setwd(origwd)
-
-  return(gemm)
-}
-
 
 get_ihme <- function(version='gbd2017') {
 
