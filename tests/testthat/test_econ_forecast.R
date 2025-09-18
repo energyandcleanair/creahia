@@ -299,6 +299,8 @@ test_that("Test GDP scaling for several countries", {
 
   hia_cost <- readRDS(get_test_file(file.path("example_kaz", "hia_cost.RDS")))
 
+
+
   econ_unscaled <- creahia::get_econ_forecast(hia_cost,
                                         forecast_years=seq(2010, 2020),
                                         reference_year=2019,

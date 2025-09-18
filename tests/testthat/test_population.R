@@ -1,6 +1,8 @@
 
 test_that("Population is properly calculated", {
 
+  library(rnaturalearth)
+  library(sf)
 
   # Create a grid raster around Bangladesh
   iso2 <- "BD"
@@ -28,8 +30,10 @@ test_that("Population is properly calculated", {
   )
 
   iso3 <- countrycode::countrycode(iso2, origin='iso2c', destination='iso3c')
-  adm <- creahelpers::get_adm(level=0, res="full", iso2s=iso2)
-  bbox <- adm %>% sf::st_as_sf() %>% sf::st_bbox()
+  country_name <- countrycode::countrycode(iso3, origin='iso3c', destination='country.name')
+  # Replace creahelpers::get_adm with rnaturalearth
+  adm <- rnaturalearth::ne_countries(scale = "large", country = country_name, returnclass = "sf")
+  bbox <- adm %>% sf::st_bbox()
 
   # Create a grid to project the population
   grid <- terra::rast(terra::ext(bbox), 1000, 1000)
@@ -89,8 +93,9 @@ get_random_exposure_hia <- function(levels,
 
   # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
   res <- 0.01
-  iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')
-  bbox <- creahelpers::get_adm(level=0, res="full", iso2s=iso2) %>% sf::st_bbox()
+  country_name <- countrycode::countrycode(iso3, origin='iso3c', destination='country.name')
+  # Replace creahelpers::get_adm with rnaturalearth
+  bbox <- rnaturalearth::ne_countries(scale = "large", country = country_name, returnclass = "sf") %>% sf::st_bbox()
   baseline_rast <- terra::rast(
     xmin=bbox$xmin,
     xmax=bbox$xmax,
@@ -129,10 +134,11 @@ get_random_exposure_hia <- function(levels,
 test_that("Population is properly calculated and scaled- using HIA", {
 
   library(terra)
-  library(creahelpers)
   library(dplyr)
   library(creahia)
   library(creaexposure)
+  library(rnaturalearth)
+  library(sf)
   iso3 <- "ZAF"
 
   hia_2015 <- get_random_exposure_hia(levels=c(0,1,2),
