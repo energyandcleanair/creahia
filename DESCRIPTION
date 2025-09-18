@@ -37,7 +37,8 @@ Imports:
     matrixStats,
     rlang,
     rnaturalearth,
-    sf
+    sf,
+    pbapply
 Depends:
     tidyverse,
     creahelpers
