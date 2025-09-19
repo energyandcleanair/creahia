@@ -97,12 +97,11 @@ RUN if [ "$DOWNLOAD_GIS_DATA" = "true" ]; then \
                 "gs://crea-data/gis/population/gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_30_sec.tif" \
                 $GIS_DIR/population/ && \
             echo "Downloading specific boundary data..." && \
-            mkdir -p $GIS_DIR/boundaries/gadm && \
             gsutil -o "Credentials:gs_service_key_file=/tmp/gcs-key.json" -m cp \
-                "gs://crea-data/gis/boundaries/gadm/gadm410_0_low_rgeos.RDS" \
-                "gs://crea-data/gis/boundaries/gadm/gadm410_1_low_rgeos.RDS" \
-                "gs://crea-data/gis/boundaries/gadm/gadm410_2_low_rgeos.RDS" \
-                $GIS_DIR/boundaries/gadm/ && \
+                "gs://crea-data/gis/boundaries/gadm36_0_low_rgeos.RDS" \
+                "gs://crea-data/gis/boundaries/gadm36_1_low_rgeos.RDS" \
+                "gs://crea-data/gis/boundaries/gadm36_2_low_rgeos.RDS" \
+                $GIS_DIR/boundaries/ && \
             echo "=== GCS DOWNLOAD COMPLETE ===" && \
             ls -la $GIS_DIR/population/ && \
             ls -la $GIS_DIR/boundaries/ && \
