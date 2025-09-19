@@ -40,7 +40,7 @@ test_that("wrapper 2 images works", {
                                       results_dir = "tmp",
                                       valuation_version="viscusi",
                                       projection_years=c(2020),
-                                      GDP_scaling=T
+                                      use_gdp_scaling=T
                                       )
 
   # Really a minimal test...
