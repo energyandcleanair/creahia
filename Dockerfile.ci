@@ -129,6 +129,10 @@ RUN Rscript -e 'pak::pkg_install(c("doParallel"), ask = FALSE)'
 # .Renviron is excluded via .dockerignore to avoid overriding GIS_DIR
 COPY . /tmp/creahia
 WORKDIR /tmp/creahia
+
+# Create .Renviron with GIS_DIR to fix test issues
+RUN echo 'GIS_DIR=/work/gis' > .Renviron
+
 RUN Rscript -e 'pak::local_install_deps(".", ask = FALSE)' && \
     Rscript -e 'pak::local_install(".", ask = FALSE)' && \
     Rscript -e 'library(creahia); print("✓ creahia package installed successfully")'
