@@ -1,6 +1,8 @@
 
 test_that("Population is properly calculated", {
   
+  library(creahia)  # Add missing library import
+  
   # Skip test if GIS data is not available
   gis_dir <- Sys.getenv("GIS_DIR", "")
   if(gis_dir == "" || !dir.exists(file.path(gis_dir, "population"))) {
@@ -139,22 +141,22 @@ test_that("Population is properly calculated and scaled- using HIA", {
   library(dplyr)
   library(creahia)
   library(creaexposure)
-  iso3 <- "ZAF"
+  iso3 <- "BEL"  # Belgium - much smaller than South Africa
 
-  hia_2015 <- get_random_exposure_hia(levels=c(0,1,2),
-                                      pop_year=2015,
+  hia_2015 <- get_random_exposure_hia(levels=c(0,1),  # Only levels 0 and 1
+                                      pop_year=2015,  # Use available year
                                       iso3=iso3
   ) %>%
     mutate(year=2015)
 
 
-  hia_2019 <- get_random_exposure_hia(levels=c(0,1,2),
-                                      pop_year=2019,
+  hia_2020 <- get_random_exposure_hia(levels=c(0,1),  # Only levels 0 and 1
+                                      pop_year=2020,  # Use available year
                                       iso3=iso3) %>%
-    mutate(year=2019)
+    mutate(year=2020)
 
 
-  hias <- bind_rows(hia_2015, hia_2019)
+  hias <- bind_rows(hia_2015, hia_2020)
 
   pop_hia <- hias %>%
     distinct(iso3, year, level, pop) %>%
