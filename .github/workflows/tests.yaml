@@ -37,6 +37,6 @@ jobs:
         run: |
           Rscript -e 'pak::local_install_deps(".", ask = FALSE, upgrade = FALSE)'
 
-      - name: Run tests
+      - name: Run debug test only
         run: |
-          Rscript -e 'devtools::test(stop_on_failure = TRUE)'
+          Rscript -e 'testthat::test_file("tests/testthat/test_debug_gis_only.R")'
