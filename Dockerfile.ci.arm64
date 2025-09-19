@@ -1,0 +1,139 @@
+# syntax=docker/dockerfile:1.7-labs
+
+# Use the official rocker r-ver image which supports ARM64
+FROM --platform=linux/arm64 rocker/r-ver:4.4.1
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# System dependencies for common R packages used in this repo
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    ca-certificates \
+    locales \
+    libssl-dev \
+    libcurl4-openssl-dev \
+    libxml2-dev \
+    libfontconfig1-dev \
+    libfreetype6-dev \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff5-dev \
+    zlib1g-dev \
+    libcairo2-dev \
+    libxt-dev \
+    # geospatial stack for raster/terra
+    gdal-bin \
+    libgdal-dev \
+    libgeos-dev \
+    libproj-dev \
+    libudunits2-dev \
+    # image processing for magick
+    libmagick++-dev \
+    # useful tooling
+    pandoc \
+    cmake \
+ && rm -rf /var/lib/apt/lists/*
+
+# Set UTF-8 locale
+RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
+    locale-gen && \
+    update-locale LANG=en_US.UTF-8
+ENV LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8
+
+# Install pak from the stable binary repo suggested by r-lib
+# Note: ARM64 binaries should be available for pak
+RUN Rscript -e 'install.packages("pak", repos = sprintf("https://r-lib.github.io/p/pak/stable/%s/%s/%s", .Platform$pkgType, R.Version()$os, R.Version()$arch))'
+
+# Pre-install frequently used packages to warm cache and speed CI
+# Use BuildKit secrets to avoid GitHub rate limits for GitHub installs
+# Note: Some packages may need to compile from source on ARM64, which might be slower initially
+RUN --mount=type=secret,id=github-token \
+    --mount=type=secret,id=github-pat \
+    Rscript -e '\
+      options(Ncpus = max(1L, parallel::detectCores() - 1L)); \
+      read_secret <- function(path) if (file.exists(path)) paste(readLines(path), collapse = "\n") else ""; \
+      pat <- read_secret("/run/secrets/github-pat"); \
+      if (identical(pat, "")) pat <- read_secret("/run/secrets/github-token"); \
+      if (!identical(pat, "") && pat != "false") Sys.setenv(GITHUB_PAT = pat); \
+      pak::pkg_install(c( \
+        "remotes", \
+        "devtools", \
+        "ggspatial", \
+        "leaflet", \
+        "magick", \
+        "openxlsx", \
+        "energyandcleanair/creahelpers", \
+        "energyandcleanair/rcrea", \
+        "energyandcleanair/creaexposure" \
+      ))' \
+ && Rscript -e 'pak::cache_clean()'
+
+# Set up GIS directory for tests
+ENV GIS_DIR=/work/gis
+RUN mkdir -p $GIS_DIR/population $GIS_DIR/boundaries
+
+# Add build arguments for GIS data download
+ARG DOWNLOAD_GIS_DATA=false
+ARG GCS_SERVICE_ACCOUNT_KEY=""
+
+# Install gsutil and download GIS data if requested
+RUN if [ "$DOWNLOAD_GIS_DATA" = "true" ]; then \
+        echo "=== TESTING GCS DOWNLOAD ===" && \
+        apt-get update && apt-get install -y python3-pip curl && \
+        pip3 install gsutil && \
+        # Setup GCS authentication and download in one step
+        if [ ! -z "$GCS_SERVICE_ACCOUNT_KEY" ]; then \
+            echo "Decoding service account key..." && \
+            echo "$GCS_SERVICE_ACCOUNT_KEY" | base64 -d > /tmp/gcs-key.json && \
+            echo "Activating service account with gsutil..." && \
+            gsutil config -e < /dev/null || true && \
+            export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcs-key.json && \
+            echo "Testing gsutil with explicit credentials..." && \
+            gsutil -o "Credentials:gs_service_key_file=/tmp/gcs-key.json" ls gs://crea-data/gis/ && \
+            echo "Downloading population data..." && \
+            gsutil -o "Credentials:gs_service_key_file=/tmp/gcs-key.json" -m cp \
+                "gs://crea-data/gis/population/gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2015_30_sec.tif" \
+                "gs://crea-data/gis/population/gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_30_sec.tif" \
+                $GIS_DIR/population/ && \
+            echo "Downloading specific boundary data..." && \
+            mkdir -p $GIS_DIR/boundaries/gadm && \
+            gsutil -o "Credentials:gs_service_key_file=/tmp/gcs-key.json" -m cp \
+                "gs://crea-data/gis/boundaries/gadm/gadm410_0_low_rgeos.RDS" \
+                "gs://crea-data/gis/boundaries/gadm/gadm410_1_low_rgeos.RDS" \
+                "gs://crea-data/gis/boundaries/gadm/gadm410_2_low_rgeos.RDS" \
+                $GIS_DIR/boundaries/gadm/ && \
+            echo "=== GCS DOWNLOAD COMPLETE ===" && \
+            ls -la $GIS_DIR/population/ && \
+            ls -la $GIS_DIR/boundaries/ && \
+            rm -f /tmp/gcs-key.json; \
+        else \
+            echo "No GCS key provided"; \
+        fi; \
+    else \
+        echo "Skipping GIS data download. Set DOWNLOAD_GIS_DATA=true to enable."; \
+    fi
+
+# Install system dependencies for spatial packages (duplicate removal for clarity)
+RUN apt-get update && apt-get install -y \
+    libudunits2-dev \
+    libgdal-dev \
+    libgeos-dev \
+    libproj-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install missing R packages that are needed for tests (excluding retired packages)
+RUN Rscript -e 'pak::pkg_install(c("doParallel"), ask = FALSE)'
+
+# Install R package dependencies and the package itself
+# .Renviron is excluded via .dockerignore to avoid overriding GIS_DIR
+COPY . /tmp/creahia
+WORKDIR /tmp/creahia
+RUN Rscript -e 'pak::local_install_deps(".", ask = FALSE)' && \
+    Rscript -e 'pak::local_install(".", ask = FALSE)' && \
+    Rscript -e 'library(creahia); print("✓ creahia package installed successfully")'
+
+WORKDIR /work

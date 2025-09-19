@@ -1,0 +1,34 @@
+# Ignore local environment files that shouldn't be in Docker container
+.Renviron
+.Rhistory
+.RData
+.Rproj.user
+*.Rproj
+
+# Ignore cache and temporary files
+cache/
+tmp/
+results/
+
+# Ignore git files
+.git/
+.gitignore
+
+# Ignore test output
+tests/testthat/_snaps/
+tests/testthat/cache/
+tests/testthat/tmp/
+
+# Ignore project workflows (not needed for CI)
+project_workflows/
+
+# Ignore validation scripts (not needed for CI)
+validation/
+validation_gemm2.R
+
+# Ignore documentation
+doc/
+vignettes/
+README.md
+diagram.md
+rho.png

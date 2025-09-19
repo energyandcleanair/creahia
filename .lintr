@@ -1,0 +1,15 @@
+linters: linters_with_defaults(
+    line_length_linter=line_length_linter(120),
+    object_length_linter=object_length_linter(40),
+    object_usage_linter = NULL,
+    T_and_F_symbol_linter = NULL,
+   cyclocomp_linter      = NULL,
+   object_name_linter    = NULL,
+   commented_code_linter = NULL,
+   assignment_linter     = NULL,
+   seq_linter.           = NULL,
+   no_tab_linter.        = NULL,
+   semicolon_linter      = NULL,
+   single_quotes_linter  = NULL)
+
+
