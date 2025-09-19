@@ -38,6 +38,25 @@ debug_gis_directory <- function() {
       for (f in boundaries_files) {
         cat("  - boundaries/", f, "\n")
       }
+      
+      # Check specifically for GADM 410 files
+      gadm_dir <- file.path(boundaries_dir, "gadm")
+      cat("\nGADM 410 file check:\n")
+      if (dir.exists(gadm_dir)) {
+        cat("GADM directory exists:", gadm_dir, "\n")
+        gadm410_files <- c("gadm410_0_low_rgeos.RDS", "gadm410_1_low_rgeos.RDS", "gadm410_2_low_rgeos.RDS")
+        for (f in gadm410_files) {
+          file_path <- file.path(gadm_dir, f)
+          exists <- file.exists(file_path)
+          cat("  -", f, ":", ifelse(exists, "EXISTS", "MISSING"), "\n")
+          if (exists) {
+            file_info <- file.info(file_path)
+            cat("    Size:", file_info$size, "bytes, Modified:", file_info$mtime, "\n")
+          }
+        }
+      } else {
+        cat("GADM directory MISSING:", gadm_dir, "\n")
+      }
     } else {
       cat("Boundaries directory does not exist:", boundaries_dir, "\n")
     }
