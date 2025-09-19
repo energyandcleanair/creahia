@@ -136,7 +136,7 @@ attach_gadm_to_locations <- function(locations = get_locations()) {
     sel(iso3, ihme_level, ihme_location_name, gadm_level, gadm_id, gadm_name)
 
   # Create a country matching
-  matching_countries <- creahelpers::get_adm(level = 0, res = "coarse") %>%
+  matching_countries <- creahelpers::get_adm(level = 0, res = "low") %>%
     as.data.frame() %>%
     sel(
       iso3 = GID_0,
