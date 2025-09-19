@@ -1,12 +1,8 @@
-testthat::skip("Needs exposure data that is not (yet?) available on GitHub actions")
 
 # This is a comparison with a literature article that also uses GEMM with von Donkelar
-
-
 test_that("Our GEMM-derived deaths are similar to literature", {
 
-  library(rnaturalearth)
-  library(sf)
+  testthat::skip_on_ci()
 
   # We use the following references for comparison, that both use GEMM:
   #
@@ -113,8 +109,8 @@ test_that("Our GEMM-derived deaths are similar to literature", {
   pop <- creaexposure::data.pop(res=res)
   grid <- pop %>% rast()
   adm_res <- "low"
-  # Replace creahelpers::get_adm with rnaturalearth - get all countries
-  adm <- rnaturalearth::ne_countries(scale = if(adm_res == "low") "medium" else "large", returnclass = "sf")
+  # Use creahelpers::get_adm - get all countries
+  adm <- creahelpers::get_adm(level = 0, res = adm_res)
   years <- unique(validation$year)
 
   # We compute one HIA for all countries at once
