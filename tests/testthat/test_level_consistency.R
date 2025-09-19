@@ -5,12 +5,12 @@ testthat::source_test_helpers("../", env = globalenv())
 test_that("HIAs are consistent across levels", {
 
   hias <- generate_random_exposure_hias(levels=c(0,1,2),
-                                        iso3="ZAF",
+                                        iso3="BEL",
                                         administrative_res="low")
 
   # Comparison
   comparison <- hias %>%
-    filter(level %in% c(0,1, 2)) %>%
+    filter(level %in% c(0, 1, 2)) %>%
     filter(estimate=="central") %>%
     group_by(level, Outcome, Cause, scenario, estimate) %>%
     dplyr::summarise_at("number", sum) %>%
