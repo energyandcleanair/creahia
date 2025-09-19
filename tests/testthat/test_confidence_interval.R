@@ -4,6 +4,9 @@ testthat::source_test_helpers("../", env = globalenv())
 
 test_that("Confidence interval makes sense when comparing two scenarios", {
 
+  # Debug the test environment first
+  debug_test_environment()
+  
   hia_1 <- generate_uniform_exposure_hia(60, 0)
   hia_2 <- generate_uniform_exposure_hia(60, 10)
 
