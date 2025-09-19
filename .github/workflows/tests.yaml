@@ -11,7 +11,7 @@ jobs:
   test-creahia:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/energyandcleanair/creahia/ci-image:latest
+      image: ghcr.io/energyandcleanair/creahia/ci-image:feat-fixing_tests
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
