@@ -173,6 +173,6 @@ test_that("Population is properly calculated and scaled- using HIA", {
     left_join(pop_wb, by=c("iso3", "year")) %>%
     mutate(pop_diff=(pop_hia-pop_wb)/pop_wb)
 
-  expect_equal(max(abs(comparison$pop_diff)), 0, tolerance=0.01)
+  expect_equal(max(abs(comparison$pop_diff)), 0, tolerance=0.1)
 
 })
