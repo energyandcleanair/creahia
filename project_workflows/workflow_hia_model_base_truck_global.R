@@ -125,7 +125,7 @@ conc_base <- creahia::get_conc_baseline_manual(species = pollutants_to_process %
 
 # 03: Create support maps -------------------------------------------------
 shp <- creahelpers::get_adm(level = 0, res = 'low',version = '36')
-regions <- creahia::get_model_adm(grid_raster, shp = shp, admin_level = 0)
+regions <- creahia::get_adm(grid_raster, shp = shp, admin_level = 0)
 
 causes_to_include <- creahia::get_calc_causes(filter = 'Death|YLD')
 

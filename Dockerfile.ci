@@ -75,17 +75,17 @@ RUN mkdir -p $GIS_DIR/population $GIS_DIR/boundaries
 
 # Add build arguments for GIS data download
 ARG DOWNLOAD_GIS_DATA=false
-ARG GCS_SERVICE_ACCOUNT_KEY=""
 
 # Install gsutil and download GIS data if requested
-RUN if [ "$DOWNLOAD_GIS_DATA" = "true" ]; then \
+RUN --mount=type=secret,id=gcs-service-account-key \
+    if [ "$DOWNLOAD_GIS_DATA" = "true" ]; then \
         echo "=== TESTING GCS DOWNLOAD ===" && \
         apt-get update && apt-get install -y python3-pip curl && \
         pip3 install gsutil && \
         # Setup GCS authentication and download in one step
-        if [ ! -z "$GCS_SERVICE_ACCOUNT_KEY" ]; then \
+        if [ -f /run/secrets/gcs-service-account-key ]; then \
             echo "Decoding service account key..." && \
-            echo "$GCS_SERVICE_ACCOUNT_KEY" | base64 -d > /tmp/gcs-key.json && \
+            cat /run/secrets/gcs-service-account-key | base64 -d > /tmp/gcs-key.json && \
             echo "Activating service account with gsutil..." && \
             gsutil config -e < /dev/null || true && \
             export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcs-key.json && \
@@ -97,19 +97,12 @@ RUN if [ "$DOWNLOAD_GIS_DATA" = "true" ]; then \
                 "gs://crea-data/gis/population/gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_30_sec.tif" \
                 $GIS_DIR/population/ && \
             echo "Downloading specific boundary data..." && \
+            mkdir -p $GIS_DIR/boundaries/gadm && \
             gsutil -o "Credentials:gs_service_key_file=/tmp/gcs-key.json" -m cp \
-                "gs://crea-data/gis/boundaries/gadm36_0_low.RDS" \
-                "gs://crea-data/gis/boundaries/gadm36_1_low.RDS" \
-                "gs://crea-data/gis/boundaries/gadm36_2_low.RDS" \
-                "gs://crea-data/gis/boundaries/gadm36_0_low_rgeos.RDS" \
-                "gs://crea-data/gis/boundaries/gadm36_1_low_rgeos.RDS" \
-                "gs://crea-data/gis/boundaries/gadm36_2_low_rgeos.RDS" \
-                "gs://crea-data/gis/boundaries/citiesDistToLarge.RDS" \
-                "gs://crea-data/gis/boundaries/citiesDistToLarge.shp" \
-                "gs://crea-data/gis/boundaries/citiesDistToLarge.dbf" \
-                "gs://crea-data/gis/boundaries/citiesDistToLarge.prj" \
-                "gs://crea-data/gis/boundaries/citiesDistToLarge.shx" \
-                $GIS_DIR/boundaries/ && \
+                "gs://crea-data/gis/boundaries/gadm/gadm410_0_low_rgeos.RDS" \
+                "gs://crea-data/gis/boundaries/gadm/gadm410_1_low_rgeos.RDS" \
+                "gs://crea-data/gis/boundaries/gadm/gadm410_2_low_rgeos.RDS" \
+                $GIS_DIR/boundaries/gadm/ && \
             echo "=== GCS DOWNLOAD COMPLETE ===" && \
             ls -la $GIS_DIR/population/ && \
             ls -la $GIS_DIR/boundaries/ && \
@@ -128,12 +121,18 @@ RUN apt-get update && apt-get install -y \
     libgeos-dev \
     libproj-dev
 
+
 # Install missing R packages that are needed for tests (excluding retired packages)
-RUN Rscript -e 'pak::pkg_install(c("rnaturalearthdata", "doParallel"), ask = FALSE)'
+RUN Rscript -e 'pak::pkg_install(c("doParallel"), ask = FALSE)'
 
 # Install R package dependencies and the package itself
+# .Renviron is excluded via .dockerignore to avoid overriding GIS_DIR
 COPY . /tmp/creahia
 WORKDIR /tmp/creahia
+
+# Create .Renviron with GIS_DIR to fix test issues
+RUN echo 'GIS_DIR=/work/gis' > .Renviron
+
 RUN Rscript -e 'pak::local_install_deps(".", ask = FALSE)' && \
     Rscript -e 'pak::local_install(".", ask = FALSE)' && \
     Rscript -e 'library(creahia); print("✓ creahia package installed successfully")'

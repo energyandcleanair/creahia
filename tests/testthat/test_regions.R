@@ -12,7 +12,7 @@ test_that("Regions extraction works and doesn't have any double counting", {
   grid <- creaexposure::data.pop(res=res) %>% rast()
 
 
-  regions <- creahia::get_model_adm(grid,
+  regions <- creahia::get_adm(grid,
                                     admin_level = 0,
                                     res = "low",
                                     iso3s = NULL)

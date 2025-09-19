@@ -58,7 +58,7 @@ conc_base <- creahia::wrappers.get_conc_baseline(species = unique(calpuff_files$
 
 # 03: Create support maps (e.g. countries, provinces, cities) ----
 shp <- creahelpers::get_adm(level = 2, res = 'low')
-regions <- creahia::get_model_adm(grid_raster, shp = shp, admin_level = 2)
+regions <- creahia::get_adm(grid_raster, shp = shp, admin_level = 2)
 
 calpuff_files_all <- creapuff::get_calpuff_files(ext = ".tif", gasunit = 'ug',
                                                  dir = input_dir, hg_scaling = 1e-3)

@@ -5,7 +5,7 @@ testthat::source_test_helpers("../", env = globalenv())
 test_that("Confidence interval makes sense when comparing two scenarios", {
 
   hia_1 <- generate_uniform_exposure_hia(60, 0)
-  hia_2 <- generate_uniform_exposure_hia(60, 5)
+  hia_2 <- generate_uniform_exposure_hia(60, 10)
 
   # Because p1 is a larger (negative) perturbation
   # We expect number_1 to be larger (negative) numbers

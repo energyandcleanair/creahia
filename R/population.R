@@ -47,9 +47,13 @@ get_pop_count <- function(grid_raster, year_desired=2020) {
   year <- get_pop_year(year_desired)
   filename <- glue("gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_{year}_30_sec.tif")
   filepath <- creahelpers::get_population_path(filename)
-  if(!file.exists(filepath)) {
-    stop(sprintf("Can't find population file: %s", filepath))
+  
+  # Check if filepath is NULL or empty
+  if(is.null(filepath) || length(filepath) == 0 || filepath == "" || !file.exists(filepath)) {
+    stop(sprintf("Failed to construct population file path. Filename: %s, GIS_DIR: %s", 
+                 filename, Sys.getenv("GIS_DIR", "NOT_SET")))
   }
+  
 
   pop_density <- terra::rast(filepath)
 

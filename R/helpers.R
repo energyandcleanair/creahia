@@ -48,7 +48,7 @@ readWB_online <- function(indicator,
     sel(iso3 = iso3c, country, year = date, Value) %>%
     filter(!is.na(Value)) %>%
     mutate(Indicator.Code = indicator) %>%
-    right_join(wb_indicators, .)
+    right_join(wb_indicators, ., by = "Indicator.Code")
 
   if(latest.year.only)
     d <- d %>% arrange(-year) %>% distinct(iso3, .keep_all = T)
@@ -82,7 +82,7 @@ gather_ihme <- function(df) {
 
 
 ihme_getrate <- function(df, pop.total) {
-  df %>% left_join(pop.total %>% sel(location_id, pop = val)) %>%
+  df %>% left_join(pop.total %>% sel(location_id, pop = val), by = "location_id") %>%
     mutate(val = val / pop * 1e5) %>% sel(-pop) %>%
     ungroup %>%
     distinct
@@ -114,8 +114,7 @@ make_nothing <- function(x) {x}
 #' @export
 #'
 #' @examples
-get_model_adm <- function(grid_raster, shp = NULL,
-                          admin_level = 0, iso3s = NULL, ...) {
+get_adm <- function(grid_raster, shp = NULL, admin_level = 0, iso3s = NULL, ...) {
 
   grid_raster <- grid_raster %>% terra::rast()
 

@@ -41,12 +41,12 @@ test_that("Regions extraction works", {
     creahia::add_pop(grid_raster, year_desired=2020)
 
 
-  regions_0 <- creahia::get_model_adm(grid_raster,
+  regions_0 <- creahia::get_adm(grid_raster,
                                       admin_level = 0,
                                       res = "low",
                                       iso3s = "BGD")
 
-  regions_1 <- creahia::get_model_adm(grid_raster,
+  regions_1 <- creahia::get_adm(grid_raster,
                                       admin_level = 1,
                                       res = "low",
                                       iso3s = "BGD")

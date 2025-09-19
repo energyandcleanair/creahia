@@ -30,7 +30,6 @@ compute_hia <- function(conc_map,
                         species,
                         regions,
                         scenarios = names(conc_map),
-                        gemm = get_gemm(),
                         rr_sources = c(RR_GEMM, RR_ORIGINAL),
                         ihme = get_ihme(version = ihme_version),
                         epi_version = "default",
@@ -50,7 +49,6 @@ compute_hia <- function(conc_map,
 
                         ...){
 
-
   # Fix inputs: if scale_base_year or scale_target_year is not null,
   # warn user
   if(!is.null(scale_base_year) | !is.null(scale_target_year)){
@@ -63,7 +61,6 @@ compute_hia <- function(conc_map,
     warning(paste(messages, collapse = " "))
   }
 
-
   if(!is.null(calc_causes) | !is.null(gbd_causes)) {
     log_info("Using old parameters for calc_causes and gbd_causes. Ignoring rr_sources.")
     rr_sources <- convert_old_parameters_to_rr_sources(calc_causes = calc_causes, gbd_causes = gbd_causes)
@@ -72,9 +69,10 @@ compute_hia <- function(conc_map,
   # Parse sources of relative risk
   rr_sources <- parse_rr_sources(rr_sources)
 
+  # ✅ Step 1: Computing Population Attributable Fractions
   paf <- list()
   if(length(rr_sources) > 0) {
-    print("Computing paf")
+    message("✅ Computing PAF for ", length(scenarios), " scenarios...")
     paf <- compute_hia_paf(conc_map = conc_map,
                            scenarios = scenarios,
                            epi_version = epi_version,
@@ -84,7 +82,8 @@ compute_hia <- function(conc_map,
                            .mode = .mode)
   }
 
-  print("Computing epi")
+  # ✅ Step 2: Computing health impacts
+  message("✅ Computing health impacts...")
   hia <- compute_hia_epi(region = regions,
                          species = species,
                          paf = paf,
@@ -92,18 +91,15 @@ compute_hia <- function(conc_map,
                          epi = epi,
                          crfs = crfs)
 
-
-
-  # Population scaling
-  # Get the actual population year
-  # Ideally it would be in an attribute of hia somewhere
+  # ✅ Step 3: Population scaling (if needed)
   pop_year_actual <- get_pop_year(year_desired = pop_year)
   pop_year_desired <- pop_year
   if(pop_year_actual != pop_year_desired){
-    print(glue("Scaling population from {pop_year_actual} to {pop_year_desired}"))
+    message("✅ Scaling population from ", pop_year_actual, " to ", pop_year_desired)
     hia <- scale_hia_pop(hia, base_year = pop_year_actual, target_year = pop_year_desired)
   }
 
+  message("✅ HIA computation complete!")
   return(hia)
 }
 
@@ -134,13 +130,17 @@ compute_hia_paf <- function(conc_map,
   paf <- list()
   adult_ages <- get_adult_ages(ihme)
 
+  # Collect RRs to avoid reading them multiple times
+  unique_sources <- unique(rr_sources$source)
+  rrs <- lapply(unique_sources, get_rr) %>%
+    setNames(unique_sources)
+
 
   cause_measure_source <- get_cause_source(rr_sources=rr_sources,
                                             add_measure=T)
 
   for(scenario in scenarios) {
-    message(paste('processing', scenario))
-
+    message('   Processing scenario: ', scenario)
     conc_scenario <- conc_map[[scenario]] %>%
       subset(!is.null(.)) %>%
       subset(!is.na(unique(.))) %>%
@@ -148,50 +148,45 @@ compute_hia_paf <- function(conc_map,
       bind_rows(.id = 'region_id') %>%
       dlply(.(region_id))
 
-
-    pg <- progress::progress_bar$new(
-      format = "Computing PAF [:bar] :percent :eta",
-      total = length(names(conc_scenario))
-    )
-
-    paf[[scenario]] <- lapply(names(conc_scenario), function(region_id) {
-
+    paf[[scenario]] <- pbapply::pblapply(names(conc_scenario), function(region_id) {
       tryCatch({
-        pg$tick()
         paf_region <- list()
         non_na_cols <- c('conc_baseline_pm25', 'conc_scenario_pm25', 'pop')
         conc <- conc_scenario[[region_id]][complete.cases(conc_scenario[[region_id]][,non_na_cols]),]
         if(nrow(conc)==0) return(NULL)
 
-
-        for(i in 1:nrow(cause_measure_source)) {
-          measure_ <- cause_measure_source$measure[i]
-          cause_ <- cause_measure_source$cause[i]
+        paf_results <- pbapply::pbapply(cause_measure_source, MARGIN = 1, function(row) {
+          measure_ <- row[["measure"]]
+          cause_ <- row[["cause"]]
+          rr_source_ <- row[["source"]]
           cs_ms <- paste(cause_, measure_, sep = '_')
-          rr_source_ <- cause_measure_source$source[i]
-          logger::log_debug(glue("Computing PAF for {cause_} and {measure_} from {source_}"))
 
-          paf_region[[cs_ms]] <- country_paf_perm(pm.base = conc[, 'conc_baseline_pm25'],
-                                                  pm.perm = conc[, 'conc_scenario_pm25'],
-                                                  pop = conc[, 'pop'],
-                                                  region_id = region_id,
-                                                  cause = cause_,
-                                                  measure = measure_,
-                                                  rr_source = rr_source_,
-                                                  adult_ages = adult_ages,
-                                                  epi_version = epi_version,
-                                                  ihme = ihme,
-                                                  .region = "inc_China",
-                                                  .mode = .mode)
-        }
+          result <- country_paf_perm(pm.base = conc[, 'conc_baseline_pm25'],
+                                    pm.perm = conc[, 'conc_scenario_pm25'],
+                                    pop = conc[, 'pop'],
+                                    region_id = region_id,
+                                    cause = cause_,
+                                    measure = measure_,
+                                    rr = rrs[[rr_source_]],
+                                    adult_ages = adult_ages,
+                                    epi_version = epi_version,
+                                    ihme = ihme,
+                                    .region = "inc_China",
+                                    .mode = .mode)
 
-        paf_region <- paf_region %>% bind_rows(.id = 'var') %>%
+          # Return named list element - safe for parallel processing
+          setNames(list(result), cs_ms)
+        }, cl = NULL)
+
+        # Flatten the nested list structure and combine
+        paf_region <- do.call(c, paf_results)
+
+        paf_region <- paf_region %>%
+          bind_rows(.id = 'var') %>%
           mutate(region_id = region_id)
 
         return(paf_region)
       }, error = function(e) {
-        # For instance if country iso3 not in ihme$ISO3
-        # or paf not well ordered
         logger::log_warn(paste("Failed for region ", region_id, ": ", e$message))
         warning(paste("Failed for region ", region_id, ": ", e$message))
         return(NULL)
@@ -258,9 +253,10 @@ compute_hia_epi <- function(species,
 
     epi_loc <- epi %>%
       sel(-pop, -country) %>%
-      right_join(pop_domain %>% sel(region_id, epi_location_id, pop),
-                relationship = 'many-to-many',
-                by=c(location_id='epi_location_id'))
+      right_join(pop_domain %>%
+                   sel(region_id, epi_location_id, pop),
+                 relationship = 'many-to-many',
+                 by = c("location_id" = "epi_location_id"))
 
     # Exclude unmatched countries
     na_iso3s <- epi_loc$region_id[is.na(epi_loc$location_id)]
@@ -341,7 +337,7 @@ compute_hia_epi <- function(species,
         paf_scenario = paf[[scenario]],
         epi_loc = epi_loc
       )
-      hia_scenario <- full_join(pm_mortality, hia_scenario)
+      hia_scenario <- full_join(pm_mortality, hia_scenario, by = c("region_id", "estimate", "pop"))
     }
 
     hia_scenario <- hia_scenario %>%
@@ -351,13 +347,13 @@ compute_hia_epi <- function(species,
       clean_cause_outcome()
 
     hia[[scenario]] <- hia_scenario
-    print(scenario)
   }
 
   hia <- hia %>%
     ldply(.id='scenario') %>%
     left_join(regions %>% as.data.frame(row.names = NULL) %>%
-                sel(region_id, region_name, iso3 = country_id)) %>%
+                sel(region_id, region_name, iso3 = country_id),
+              by = "region_id") %>%
     tibble()
 
   return(hia)
@@ -408,7 +404,10 @@ get_hazard_ratio <- function(pm,
                              ) {
 
   rr_filtered <- rr %>%
-    dplyr::filter(cause == .cause, age == .age)
+    dplyr::filter(cause == .cause, age == .age) %>%
+    # Remove duplicate exposure values to avoid interpolation warnings
+    distinct(exposure, .keep_all = TRUE) %>%
+    arrange(exposure)
 
   rr_filtered %>% sel(low, central, high) %>%
     apply(2, function(y) approx(x = rr_filtered$exposure, y, xout = pm)$y)
@@ -423,7 +422,7 @@ country_paf_perm <- function(pm.base,
                              region_id,
                              cause,
                              measure,
-                             rr_source,
+                             rr,
                              epi_version,
                              ihme = get_ihme(version = epi_version),
                              adult_ages = get_adult_ages(ihme),
@@ -431,7 +430,8 @@ country_paf_perm <- function(pm.base,
                              .mode = 'change') { # change or attribution?
 
 
-  rr <- get_rr(rr_source) %>%
+  # Make sure this is the right cause
+  rr <- rr %>%
     filter(cause == !!cause)
 
   # Get age weights ---
