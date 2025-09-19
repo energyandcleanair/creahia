@@ -98,17 +98,9 @@ RUN if [ "$DOWNLOAD_GIS_DATA" = "true" ]; then \
                 $GIS_DIR/population/ && \
             echo "Downloading specific boundary data..." && \
             gsutil -o "Credentials:gs_service_key_file=/tmp/gcs-key.json" -m cp \
-                "gs://crea-data/gis/boundaries/gadm36_0_low.RDS" \
-                "gs://crea-data/gis/boundaries/gadm36_1_low.RDS" \
-                "gs://crea-data/gis/boundaries/gadm36_2_low.RDS" \
-                "gs://crea-data/gis/boundaries/gadm36_0_low_rgeos.RDS" \
-                "gs://crea-data/gis/boundaries/gadm36_1_low_rgeos.RDS" \
-                "gs://crea-data/gis/boundaries/gadm36_2_low_rgeos.RDS" \
-                "gs://crea-data/gis/boundaries/citiesDistToLarge.RDS" \
-                "gs://crea-data/gis/boundaries/citiesDistToLarge.shp" \
-                "gs://crea-data/gis/boundaries/citiesDistToLarge.dbf" \
-                "gs://crea-data/gis/boundaries/citiesDistToLarge.prj" \
-                "gs://crea-data/gis/boundaries/citiesDistToLarge.shx" \
+                "gs://crea-data/gis/boundaries/gadm/gadm410_0_low_rgeos.RDS" \
+                "gs://crea-data/gis/boundaries/gadm/gadm410_1_low_rgeos.RDS" \
+                "gs://crea-data/gis/boundaries/gadm/gadm410_2_low_rgeos.RDS" \
                 $GIS_DIR/boundaries/ && \
             echo "=== GCS DOWNLOAD COMPLETE ===" && \
             ls -la $GIS_DIR/population/ && \
@@ -127,6 +119,7 @@ RUN apt-get update && apt-get install -y \
     libgdal-dev \
     libgeos-dev \
     libproj-dev
+
 
 # Install missing R packages that are needed for tests (excluding retired packages)
 RUN Rscript -e 'pak::pkg_install(c("doParallel"), ask = FALSE)'
