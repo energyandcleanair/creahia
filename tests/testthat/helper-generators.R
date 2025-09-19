@@ -45,8 +45,17 @@ generate_uniform_exposure_hia <- function(baseline,
   library(creaexposure)
 
   # Get PM2.5 exposure raster over country with resolution 0.01deg
-  iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')  
+  iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')
+  
+  # Debug before calling get_adm
+  cat("\n=== DEBUGGING get_adm call in generate_uniform_exposure_hia ===\n")
+  cat("iso3:", iso3, "-> iso2:", iso2, "\n")
+  cat("Calling creahelpers::get_adm(level=0, res='low', iso2s='", iso2, "')\n", sep="")
+  
   adm <- creahelpers::get_adm(level = 0, res = "low", iso2s = iso2)
+  
+  cat("Success! Got", nrow(adm), "administrative boundaries\n")
+  cat("=== END get_adm debug ===\n\n")
   bbox <- sf::st_bbox(adm)
   res <- 0.01
   baseline_rast <- terra::rast(
@@ -114,7 +123,16 @@ generate_random_exposure_hias <- function(levels,
   # Get PM2.5 exposure raster over country with resolution 0.01deg
   if(is.null(baseline_rast)){
     iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')
+    
+    # Debug before calling get_adm
+    cat("\n=== DEBUGGING get_adm call in generate_random_exposure_hias ===\n")
+    cat("iso3:", iso3, "-> iso2:", iso2, "\n")
+    cat("Calling creahelpers::get_adm(level=0, res='", administrative_res, "', iso2s='", iso2, "')\n", sep="")
+    
     adm <- creahelpers::get_adm(level = 0, res = administrative_res, iso2s = iso2)
+    
+    cat("Success! Got", nrow(adm), "administrative boundaries\n")
+    cat("=== END get_adm debug ===\n\n")
     bbox <- sf::st_bbox(adm)
     baseline_rast <- terra::rast(
       xmin=bbox$xmin,
@@ -172,7 +190,16 @@ generate_donkelaar_exposure_hia <- function(target,
 
   # Get PM2.5 exposure raster over country with resolution 0.01deg
   iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')
+  
+  # Debug before calling get_adm
+  cat("\n=== DEBUGGING get_adm call in generate_donkelaar_exposure_hia ===\n")
+  cat("iso3:", iso3, "-> iso2:", iso2, "\n")
+  cat("Calling creahelpers::get_adm(level=0, res='low', iso2s='", iso2, "')\n", sep="")
+  
   adm <- creahelpers::get_adm(level = 0, res = "low", iso2s = iso2)
+  
+  cat("Success! Got", nrow(adm), "administrative boundaries\n")
+  cat("=== END get_adm debug ===\n\n")
   bbox <- sf::st_bbox(adm)
   pop <- creaexposure::data.pop(res=creaexposure::RES_30_SEC, bbox = bbox)
   pm25 <- creaexposure::data.basemap_pm25(pop=pop, res=creaexposure::RES_30_SEC, year=2020)
