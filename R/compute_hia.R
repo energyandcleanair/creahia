@@ -84,14 +84,19 @@ compute_hia <- function(conc_map,
                          crfs = crfs,
                          .mode = .mode)
 
+  # print("Validating paf")
+  # validate_paf(paf)
+
   print("Computing impacts")
-  hia <- compute_hia_impacts(region = regions,
+  impacts <- compute_hia_impacts(region = regions,
                              species = species,
                              paf = paf,
                              conc_map = conc_map,
                              epi = epi,
                              crfs = crfs)
 
+  # print("Validating impacts")
+  # validate_impacts(impacts)
 
 
   # Population scaling
@@ -101,8 +106,8 @@ compute_hia <- function(conc_map,
   pop_year_desired <- pop_year
   if(pop_year_actual != pop_year_desired){
     print(glue("Scaling population from {pop_year_actual} to {pop_year_desired}"))
-    hia <- scale_hia_pop(hia, base_year = pop_year_actual, target_year = pop_year_desired)
+    impacts <- scale_hia_pop(impacts, base_year = pop_year_actual, target_year = pop_year_desired)
   }
 
-  return(hia)
+  return(impacts)
 }

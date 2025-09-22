@@ -24,6 +24,9 @@ compute_hia_impacts <- function(species,
   scenarios <- names(conc_map)
   hia <- list()
 
+  # Validate epi data
+  # validate_epi(epi)
+
   for(scenario in scenarios) {
     conc_scenario <- conc_map[[scenario]]
     # names(conc_adm) %<>% country.recode(merge_into)

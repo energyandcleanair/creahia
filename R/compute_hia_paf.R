@@ -266,7 +266,10 @@ get_hazard_ratio <- function(pm,
                              ) {
 
   rr_filtered <- rr %>%
-    dplyr::filter(cause == .cause, age == .age)
+    dplyr::filter(cause == .cause, age == .age) %>%
+    # Remove duplicate exposure values to avoid interpolation warnings
+    distinct(exposure, .keep_all = TRUE) %>%
+    arrange(exposure)
 
   rr_filtered %>% sel(low, central, high) %>%
     apply(2, function(y) approx(x = rr_filtered$exposure, y, xout = pm)$y)

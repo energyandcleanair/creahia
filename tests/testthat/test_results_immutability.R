@@ -137,7 +137,7 @@ read_fingerprints <- function(){
 test_that("Estimates are compatible with previous versions", {
 
   testthat::skip_on_ci()
-  testthat::skip()
+  # testthat::skip() # Temporarily removed to run immutability test
 
   library(terra)
   library(creahelpers)
@@ -153,11 +153,20 @@ test_that("Estimates are compatible with previous versions", {
     list(calc_causes = "GEMM and GBD", epi_version = "gbd2019", pop_year = 2020)
   )
 
-  generate_fingerprints(refs = c("0.4.1", "0.4.4", "0.5.0", "0.5.1",
+  generate_fingerprints(refs = c("0.4.1",
+                                 "0.4.4",
+                                 "0.5.0",
+                                 "0.5.1",
+                                 # Below are additional commits
+                                 # to investigate the change in Absences.LBW,PTB
+                                 # Result: it's a slight change in epidemiological data. Minor.
                                  # "14391a3cd25ecb3b862481d0639d32b5fffc3954",
                                  # "47dc2d457a942858ff1049d5ec18398ec30dc782",
                                  # "02f3150a34005fc7e49e2adbd4a92c8fa02882e0",
-                                 "0.5.2", "current"), param_sets = param_sets, force = F, force_current = F)
+                                 "0.5.2",
+                                 "0.6.0",
+                                 "0.6.1",
+                                 "current"), param_sets = param_sets, force = F, force_current = F)
 
   # Read all fingerprints
   all_fingerprints <- read_fingerprints() %>%
