@@ -1,7 +1,7 @@
 Package: creahia
 Type: Package
 Title: CREA HIA
-Version: 0.6.1
+Version: 0.6.2
 Authors@R: c(
     person("Hubert", "Thieriot", email = "hubert@energyandcleanair.org", role = c("cre", "aut")),
     person("Lauri", "Myllyvirta", email = "lauri@energyandcleanair.org", role = c("aut")),

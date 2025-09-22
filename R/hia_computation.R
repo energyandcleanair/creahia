@@ -119,84 +119,84 @@ compute_hia <- function(conc_map,
 #' @export
 #'
 #' @examples
-compute_hia_paf <- function(conc_map,
-                            epi_version,
-                            ihme_version,
-                            rr_sources,
-                            scenarios = names(conc_map),
-                            ihme = get_ihme(ihme_version),
-                            .mode = 'change') {
+# compute_hia_paf <- function(conc_map,
+#                             epi_version,
+#                             ihme_version,
+#                             rr_sources,
+#                             scenarios = names(conc_map),
+#                             ihme = get_ihme(ihme_version),
+#                             .mode = 'change') {
 
-  paf <- list()
-  adult_ages <- get_adult_ages(ihme)
+#   paf <- list()
+#   adult_ages <- get_adult_ages(ihme)
 
-  # Collect RRs to avoid reading them multiple times
-  unique_sources <- unique(rr_sources$source)
-  rrs <- lapply(unique_sources, get_rr) %>%
-    setNames(unique_sources)
+#   # Collect RRs to avoid reading them multiple times
+#   unique_sources <- unique(rr_sources$source)
+#   rrs <- lapply(unique_sources, get_rr) %>%
+#     setNames(unique_sources)
 
 
-  cause_measure_source <- get_cause_source(rr_sources=rr_sources,
-                                            add_measure=T)
+#   cause_measure_source <- get_cause_source(rr_sources=rr_sources,
+#                                             add_measure=T)
 
-  for(scenario in scenarios) {
-    message('   Processing scenario: ', scenario)
-    conc_scenario <- conc_map[[scenario]] %>%
-      subset(!is.null(.)) %>%
-      subset(!is.na(unique(.))) %>%
-      lapply(data.frame) %>%
-      bind_rows(.id = 'region_id') %>%
-      dlply(.(region_id))
+#   for(scenario in scenarios) {
+#     message('   Processing scenario: ', scenario)
+#     conc_scenario <- conc_map[[scenario]] %>%
+#       subset(!is.null(.)) %>%
+#       subset(!is.na(unique(.))) %>%
+#       lapply(data.frame) %>%
+#       bind_rows(.id = 'region_id') %>%
+#       dlply(.(region_id))
 
-    paf[[scenario]] <- pbapply::pblapply(names(conc_scenario), function(region_id) {
-      tryCatch({
-        paf_region <- list()
-        non_na_cols <- c('conc_baseline_pm25', 'conc_scenario_pm25', 'pop')
-        conc <- conc_scenario[[region_id]][complete.cases(conc_scenario[[region_id]][,non_na_cols]),]
-        if(nrow(conc)==0) return(NULL)
+#     paf[[scenario]] <- pbapply::pblapply(names(conc_scenario), function(region_id) {
+#       tryCatch({
+#         paf_region <- list()
+#         non_na_cols <- c('conc_baseline_pm25', 'conc_scenario_pm25', 'pop')
+#         conc <- conc_scenario[[region_id]][complete.cases(conc_scenario[[region_id]][,non_na_cols]),]
+#         if(nrow(conc)==0) return(NULL)
 
-        paf_results <- pbapply::pbapply(cause_measure_source, MARGIN = 1, function(row) {
-          measure_ <- row[["measure"]]
-          cause_ <- row[["cause"]]
-          rr_source_ <- row[["source"]]
-          cs_ms <- paste(cause_, measure_, sep = '_')
+#         paf_results <- pbapply::pbapply(cause_measure_source, MARGIN = 1, function(row) {
+#           measure_ <- row[["measure"]]
+#           cause_ <- row[["cause"]]
+#           rr_source_ <- row[["source"]]
+#           cs_ms <- paste(cause_, measure_, sep = '_')
 
-          result <- country_paf_perm(pm.base = conc[, 'conc_baseline_pm25'],
-                                    pm.perm = conc[, 'conc_scenario_pm25'],
-                                    pop = conc[, 'pop'],
-                                    region_id = region_id,
-                                    cause = cause_,
-                                    measure = measure_,
-                                    rr = rrs[[rr_source_]],
-                                    adult_ages = adult_ages,
-                                    epi_version = epi_version,
-                                    ihme = ihme,
-                                    .region = "inc_China",
-                                    .mode = .mode)
+#           result <- country_paf_perm(pm.base = conc[, 'conc_baseline_pm25'],
+#                                     pm.perm = conc[, 'conc_scenario_pm25'],
+#                                     pop = conc[, 'pop'],
+#                                     region_id = region_id,
+#                                     cause = cause_,
+#                                     measure = measure_,
+#                                     rr = rrs[[rr_source_]],
+#                                     adult_ages = adult_ages,
+#                                     epi_version = epi_version,
+#                                     ihme = ihme,
+#                                     .region = "inc_China",
+#                                     .mode = .mode)
 
-          # Return named list element - safe for parallel processing
-          setNames(list(result), cs_ms)
-        }, cl = NULL)
+#           # Return named list element - safe for parallel processing
+#           setNames(list(result), cs_ms)
+#         }, cl = NULL)
 
-        # Flatten the nested list structure and combine
-        paf_region <- do.call(c, paf_results)
+#         # Flatten the nested list structure and combine
+#         paf_region <- do.call(c, paf_results)
 
-        paf_region <- paf_region %>%
-          bind_rows(.id = 'var') %>%
-          mutate(region_id = region_id)
+#         paf_region <- paf_region %>%
+#           bind_rows(.id = 'var') %>%
+#           mutate(region_id = region_id)
 
-        return(paf_region)
-      }, error = function(e) {
-        logger::log_warn(paste("Failed for region ", region_id, ": ", e$message))
-        warning(paste("Failed for region ", region_id, ": ", e$message))
-        return(NULL)
-      })
-    })
-  }
+#         return(paf_region)
+#       }, error = function(e) {
+#         logger::log_warn(paste("Failed for region ", region_id, ": ", e$message))
+#         warning(paste("Failed for region ", region_id, ": ", e$message))
+#         return(NULL)
+#       })
+#     })
+#   }
 
-  # Combine all scenarios
-  paf %>% lapply(bind_rows)
-}
+#   # Combine all scenarios
+#   paf %>% lapply(bind_rows)
+# }
 
 
 get_nrt_conc <- function(region_ids, conc_name, nrt, conc_map,
@@ -381,19 +381,7 @@ crf_recode_incidence <- function(Incidence, Exposure){
 }
 
 
-to_long_hia <- function(hia) {
-  hia %>%
-    pivot_longer(c(-where(is.character), -where(is.factor), -pop),
-                 names_to = 'Outcome', values_to = 'number') %>%
-    mutate(Outcome = Outcome %>% gsub('O3_8h', 'O3', .),
-           Pollutant = Outcome %>% gsub('.*_', '', .) %>% toupper,
-           Cause = Outcome %>% gsub('_.*', '', .)) %>%
-    mutate(Outcome = Outcome %>% gsub('_[A-Za-z0-9]*$', '', .) %>%
-             gsub('\\.[0-9]*to[0-9]*$', '', .) %>%
-             gsub('.*_', '', .),
-           Pollutant = case_when(Pollutant == 'O3' ~ 'O3_8h',
-                                 TRUE ~ Pollutant))
-}
+# to_long_hia function moved to compute_hia_utils.R
 
 
 # define a function to calculate the hazard ratio for a specific concentration, cause and age group
