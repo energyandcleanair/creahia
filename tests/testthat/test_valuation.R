@@ -227,11 +227,11 @@ test_that("get_valuations returns correct VSL for ZAF 2019 - Worldbank version",
   vsl_ref_elasticity <- 1.2
   vsl_ref_year <- 2011
 
-  vsls <- wbstats::wb_data(c(gdp_current = 'NY.GDP.PCAP.CD',
-                             gdp_ppp_current = 'NY.GDP.PCAP.PP.CD',
-                             gdp_ppp_constant = 'NY.GDP.PCAP.PP.KD',
-                             gdp_constant = 'NY.GDP.PCAP.KD',
-                             gdp_current_lcu = 'NY.GDP.PCAP.CN'
+  vsls <- creahia::safe_wb_data(c(gdp_current = 'NY.GDP.PCAP.CD',
+                         gdp_ppp_current = 'NY.GDP.PCAP.PP.CD',
+                         gdp_ppp_constant = 'NY.GDP.PCAP.PP.KD',
+                         gdp_constant = 'NY.GDP.PCAP.KD',
+                         gdp_current_lcu = 'NY.GDP.PCAP.CN'
   ),
   start_date = vsl_ref_year,
   end_date = 2019,
@@ -280,15 +280,15 @@ test_that("get_valuations returns correct VSL for ZAF 2019 - Viscusi version", {
   vsl_ref_elasticity <- 1
   vsl_ref_year <- 2015
 
-  vsls <- wbstats::wb_data(c(gdp_current = 'NY.GDP.PCAP.CD',
-                             gdp_ppp_current = 'NY.GDP.PCAP.PP.CD',
-                             gdp_ppp_constant = 'NY.GDP.PCAP.PP.KD',
-                             gdp_constant = 'NY.GDP.PCAP.KD',
-                             gdp_current_lcu = 'NY.GDP.PCAP.CN',
-                             gni_current = 'NY.GNP.PCAP.CD',
-                             gni_constant = 'NY.GNP.PCAP.KD',
-                             gni_ppp_constant = 'NY.GNP.PCAP.PP.KD',
-                             gni_ppp_current = 'NY.GNP.PCAP.PP.CD'
+  vsls <- creahia::safe_wb_data(c(gdp_current = 'NY.GDP.PCAP.CD',
+                         gdp_ppp_current = 'NY.GDP.PCAP.PP.CD',
+                         gdp_ppp_constant = 'NY.GDP.PCAP.PP.KD',
+                         gdp_constant = 'NY.GDP.PCAP.KD',
+                         gdp_current_lcu = 'NY.GDP.PCAP.CN',
+                         gni_current = 'NY.GNP.PCAP.CD',
+                         gni_constant = 'NY.GNP.PCAP.KD',
+                         gni_ppp_constant = 'NY.GNP.PCAP.PP.KD',
+                         gni_ppp_current = 'NY.GNP.PCAP.PP.CD'
   ),
   start_date = vsl_ref_year,
   end_date = 2019,

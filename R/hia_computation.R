@@ -403,97 +403,98 @@ get_hazard_ratio <- function(pm,
 }
 
 
+# OLD FUNCTION - COMMENTED OUT (replaced by new function in compute_hia_paf.R)
 # total fossil fuel PAF for a permutation run
-country_paf_perm <- function(pm.base,
-                             pm.perm,
-                             pop,
-                             region_id,
-                             cause,
-                             measure,
-                             rr,
-                             epi_version,
-                             ihme = get_ihme(version = epi_version),
-                             adult_ages = get_adult_ages(ihme),
-                             .region = "inc_China",
-                             .mode = 'change') { # change or attribution?
+# country_paf_perm <- function(pm.base,
+#                              pm.perm,
+#                              pop,
+#                              region_id,
+#                              cause,
+#                              measure,
+#                              rr,
+#                              epi_version,
+#                              ihme = get_ihme(version = epi_version),
+#                              adult_ages = get_adult_ages(ihme),
+#                              .region = "inc_China",
+#                              .mode = 'change') { # change or attribution?
 
-
-  # Make sure this is the right cause
-  rr <- rr %>%
-    filter(cause == !!cause)
-
-  # Get age weights ---
-  ages <- unique(rr$age) %>%
-    deduplicate_adult_ages()
-
-  stopifnot(
-    !AGE_ADULTS %in% ages | length(intersect(ages, AGE_ADULTS_SPLIT))==0
-  )
-
-  age_weights <- ihme %>%
-    mutate(age=recode_age(age)) %>%
-    mutate(cause_short = case_when(cause_short==CAUSE_LRI & age==AGE_CHILDREN ~ CAUSE_LRICHILD,
-                                   T ~ cause_short)) %>%
-    dplyr::filter(location_id==get_epi_location_id(region_id),
-                  cause_short == !!cause,
-                  measure_name == measure,
-                  age %in% ages,
-                  estimate == 'central')
-
-  if(nrow(age_weights) == 0) {
-    warning(glue("No age weights found for {region_id} and {cause} and {measure}"))
-    return(NULL)
-  }
-
-  if(length(age_weights$age) != length(ages)) {
-    stop("Unmatching age weights")
-  }
-
-  # Ensuring ages and age_weights$age are in the same order
-  age_weights <- age_weights[match(ages, age_weights$age),]
 #
+#   # Make sure this is the right cause
+#   rr <- rr %>%
+#     filter(cause == !!cause)
 #
-#   age.specific <- c('NCD.LRI', 'Stroke', 'IHD')
+#   # Get age weights ---
+#   ages <- unique(rr$age) %>%
+#     deduplicate_adult_ages()
 #
-#   if(cause %in% age.specific) {
-#     ages <- adult_ages
-#     age_weights <- ihme %>%
-#       dplyr::filter(location_id==get_epi_location_id(region_id),
-#                     cause == !!cause,
-#                     measure_name == measure,
-#                     age %in% ages,
-#                     estimate == 'central')
-#     # Ensuring ages and age_weights$age are in the same order
-#     age_weights <- age_weights[match(ages, age_weights$age),]
-#   } else {
-#     age_weights <- data.frame(val = 1)
-#     if(grepl('child', cause)) ages = 'Under 5' else ages = '25+'
+#   stopifnot(
+#     !AGE_ADULTS %in% ages | length(intersect(ages, AGE_ADULTS_SPLIT))==0
+#   )
+#
+#   age_weights <- ihme %>%
+#     mutate(age=recode_age(age)) %>%
+#     mutate(cause_short = case_when(cause_short==CAUSE_LRI & age==AGE_CHILDREN ~ CAUSE_LRICHILD,
+#                                    T ~ cause_short)) %>%
+#     dplyr::filter(location_id==get_epi_location_id(region_id),
+#                   cause_short == !!cause,
+#                   measure_name == measure,
+#                   age %in% ages,
+#                   estimate == 'central')
+#
+#   if(nrow(age_weights) == 0) {
+#     warning(glue("No age weights found for {region_id} and {cause} and {measure}"))
+#     return(NULL)
 #   }
-
-  rr.base <- ages %>% sapply(function(.a) get_hazard_ratio(pm.base, rr = rr, .cause = cause, .age = .a),
-                             simplify = 'array')
-
-  if(.mode == 'change') {
-    rr.perm <- ages %>% sapply(function(.a) get_hazard_ratio(pm.perm, rr = rr, .cause = cause, .age = .a),
-                               simplify = 'array')
-
-
-    paf <- get_paf_from_rr_lauri(
-      rr_base = rr.base,
-      rr_perm = rr.perm,
-      age_weights = age_weights$val,
-      pop = pop,
-      cause=cause,measure=measure
-    )
-
-  } else {
-    stop("Attribution mode not implemented yet")
-    #TODO implement the method with this formula
-    # paf.perm <- (1 - (1 / rr.base)) * (1 - pm.perm / pm.base)
-  }
-
-  return(paf)
-}
+#
+#   if(length(age_weights$age) != length(ages)) {
+#     stop("Unmatching age weights")
+#   }
+#
+#   # Ensuring ages and age_weights$age are in the same order
+#   age_weights <- age_weights[match(ages, age_weights$age),]
+# #
+# #
+# #   age.specific <- c('NCD.LRI', 'Stroke', 'IHD')
+# #
+# #   if(cause %in% age.specific) {
+# #     ages <- adult_ages
+# #     age_weights <- ihme %>%
+# #       dplyr::filter(location_id==get_epi_location_id(region_id),
+# #                     cause == !!cause,
+# #                     measure_name == measure,
+# #                     age %in% ages,
+# #                     estimate == 'central')
+# #     # Ensuring ages and age_weights$age are in the same order
+# #     age_weights <- age_weights[match(ages, age_weights$age),]
+# #   } else {
+# #     age_weights <- data.frame(val = 1)
+# #     if(grepl('child', cause)) ages = 'Under 5' else ages = '25+'
+# #   }
+#
+#   rr.base <- ages %>% sapply(function(.a) get_hazard_ratio(pm.base, rr = rr, .cause = cause, .age = .a),
+#                              simplify = 'array')
+#
+#   if(.mode == 'change') {
+#     rr.perm <- ages %>% sapply(function(.a) get_hazard_ratio(pm.perm, rr = rr, .cause = cause, .age = .a),
+#                                simplify = 'array')
+#
+#
+#     paf <- get_paf_from_rr_lauri(
+#       rr_base = rr.base,
+#       rr_perm = rr.perm,
+#       age_weights = age_weights$val,
+#       pop = pop,
+#       cause=cause,measure=measure
+#     )
+#
+#   } else {
+#     stop("Attribution mode not implemented yet")
+#     #TODO implement the method with this formula
+#     # paf.perm <- (1 - (1 / rr.base)) * (1 - pm.perm / pm.base)
+#   }
+#
+#   return(paf)
+# }
 
 
 scale_hia_pop <- function(hia, base_year = 2015, target_year = 2019) {

@@ -259,3 +259,34 @@ to_long_hia <- function(hia) {
            Pollutant = case_when(Pollutant == 'O3' ~ 'O3_8h',
                                  TRUE ~ Pollutant))
 }
+
+#' Safe World Bank data retrieval with retry logic and longer timeout
+#'
+#' Wraps \code{wbstats::wb_data()} with retry logic and configurable timeout
+#' to handle network issues and API timeouts more robustly.
+#'
+#' @param ... Arguments passed to \code{wbstats::wb_data()}
+#' @param max_retries Number of retry attempts (default: 3)
+#' @param timeout_seconds Timeout for each request in seconds (default: 60)
+#' @param retry_delay Delay between retries in seconds (default: 2)
+#' @return Data frame returned by \code{wbstats::wb_data()}
+#' @export
+safe_wb_data <- function(..., max_retries = 3, timeout_seconds = 60, retry_delay = 2) {
+  for (attempt in seq_len(max_retries)) {
+    tryCatch({
+      # Set longer timeout for httr requests using httr::timeout()
+      old_config <- httr::config()
+      httr::set_config(httr::timeout(timeout_seconds))
+      on.exit(httr::set_config(old_config), add = TRUE)
+      
+      result <- wbstats::wb_data(...)
+      return(result)
+    }, error = function(e) {
+      if (attempt == max_retries) {
+        stop("Failed to fetch World Bank data after ", max_retries, " attempts. Last error: ", e$message)
+      }
+      message("Attempt ", attempt, " failed, retrying in ", retry_delay, " seconds...")
+      Sys.sleep(retry_delay)
+    })
+  }
+}
