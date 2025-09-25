@@ -71,16 +71,12 @@ test_that("compute_hia_paf_crfs returns correct structure", {
       
       scenario_result <- result$scenario1
       expect_true(is.data.frame(scenario_result))
-      expect_true("region_id" %in% names(scenario_result))
-      expect_true("estimate" %in% names(scenario_result))
-      expect_true("pop" %in% names(scenario_result))
+      expected_cols <- c("pollutant", "cause", "outcome", "region_id", "low", "central", "high")
+      expect_true(all(expected_cols %in% names(scenario_result)))
       
-      # Check estimates are present
-      expect_equal(unique(scenario_result$estimate), c("low", "central", "high"))
-      
-      # Check PAF columns are present
-      paf_cols <- names(scenario_result)[grepl("PM25|NO2", names(scenario_result))]
-      expect_true(length(paf_cols) > 0)
+      expect_equal(sort(unique(scenario_result$region_id)), "BGD")
+      expect_true(all(scenario_result$pollutant %in% c("PM25", "NO2")))
+      expect_true(all(sapply(scenario_result[c("low", "central", "high")], is.numeric)))
     }
   )
 })
@@ -100,16 +96,10 @@ test_that("compute_hia_paf_crfs calculates PAF correctly", {
       
       scenario_result <- result$scenario1
       
-      # Check that PAF values are between 0 and 1 (for protective effects, they can be negative)
-      paf_cols <- names(scenario_result)[grepl("PM25|NO2", names(scenario_result))]
-      
-      for(col in paf_cols) {
-        paf_values <- scenario_result[[col]]
-        # PAF should be finite numbers
-        expect_true(all(is.finite(paf_values)))
-        # PAF should not be extremely large (sanity check)
-        expect_true(all(abs(paf_values) < 10))
-      }
+      expect_true(all(is.finite(scenario_result$low)))
+      expect_true(all(is.finite(scenario_result$central)))
+      expect_true(all(is.finite(scenario_result$high)))
+      expect_true(all(abs(scenario_result$central) < 10))
     }
   )
 })
@@ -129,15 +119,8 @@ test_that("compute_hia_paf_crfs handles different estimates correctly", {
       
       scenario_result <- result$scenario1
       
-      # Check that we have exactly 3 rows per region (one for each estimate)
-      region_counts <- table(scenario_result$region_id)
-      expect_true(all(region_counts == 3))
-      
-      # Check that estimates are properly ordered
-      for(region in unique(scenario_result$region_id)) {
-        region_data <- scenario_result[scenario_result$region_id == region, ]
-        expect_equal(region_data$estimate, c("low", "central", "high"))
-      }
+      expect_equal(nrow(scenario_result), nrow(unique(scenario_result[c('pollutant', 'cause', 'outcome', 'region_id')])))
+      expect_true(all(!is.na(scenario_result$central)))
     }
   )
 })
@@ -185,8 +168,9 @@ test_that("compute_hia_paf_rr_curves returns correct structure", {
       
       scenario_result <- result$scenario1
       expect_true(is.data.frame(scenario_result))
-      expect_true("var" %in% names(scenario_result))
-      expect_true("region_id" %in% names(scenario_result))
+      expected_cols <- c("pollutant", "cause", "outcome", "region_id", "low", "central", "high")
+      expect_true(all(expected_cols %in% names(scenario_result)))
+      expect_true(all(scenario_result$pollutant == "PM25"))
     }
   )
 })
@@ -328,18 +312,14 @@ test_that("PAF calculations are mathematically consistent", {
       
       scenario_result <- result$scenario1
       
-      # For PM25, manually calculate expected PAF
-      # Using the formula: 1 - exp(-log(RR) * delta_conc / conc_change)
-      # With RR = 1.06, delta_conc = -5, conc_change = 10
       expected_paf_pm25 <- 1 - exp(-log(1.06) * (-5) / 10)
-      
-      # Find PM25 PAF values
-      pm25_col <- names(scenario_result)[grepl("PM25", names(scenario_result))]
-      if(length(pm25_col) > 0) {
-        pm25_paf <- scenario_result[[pm25_col[1]]]
-        # Should be close to expected value (within 10% tolerance)
-        expect_true(abs(pm25_paf[2] - expected_paf_pm25) / abs(expected_paf_pm25) < 0.1)
-      }
+      pm25_row <- scenario_result %>%
+        dplyr::filter(pollutant == "PM25",
+                      cause == "NCD.LRI",
+                      outcome == "Deaths")
+
+      expect_equal(nrow(pm25_row), 1)
+      expect_true(abs(pm25_row$central - expected_paf_pm25) / abs(expected_paf_pm25) < 0.1)
     }
   )
 })

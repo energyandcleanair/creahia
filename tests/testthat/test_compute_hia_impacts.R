@@ -5,22 +5,25 @@ setup_impacts_test_data <- function() {
   # Create mock PAF data (both RR and CRF based)
   paf <- list(
     rr = list(
-      scenario1 = data.frame(
-        region_id = rep("BGD", 3),
-        estimate = c("low", "central", "high"),
-        var = rep("NCD.LRI_Deaths", 3),
-        low = c(-0.05, -0.05, -0.05),
-        central = c(-0.08, -0.08, -0.08),
-        high = c(-0.12, -0.12, -0.12)
+      scenario1 = tibble::tibble(
+        pollutant = "PM25",
+        cause = "NCD.LRI",
+        outcome = "Deaths",
+        region_id = "BGD",
+        low = -0.05,
+        central = -0.08,
+        high = -0.12
       )
     ),
     crf = list(
-      scenario1 = data.frame(
-        region_id = rep("BGD", 3),
-        estimate = c("low", "central", "high"),
-        pop = rep(100000, 3),
-        NCD.LRI_Deaths_PM25 = c(-0.02, -0.03, -0.04),
-        Asthma.Inci.1to18_NO2 = c(-0.01, -0.015, -0.02)
+      scenario1 = tibble::tibble(
+        pollutant = c("PM25", "NO2"),
+        cause = c("NCD.LRI", "Asthma.Inci.1to18"),
+        outcome = c("Deaths", "Asthma.Inci"),
+        region_id = c("BGD", "BGD"),
+        low = c(-0.02, -0.01),
+        central = c(-0.03, -0.015),
+        high = c(-0.04, -0.02)
       )
     )
   )
@@ -114,7 +117,7 @@ test_that("compute_hia_impacts calculates CRF-based impacts correctly", {
   
   # Test just the CRF calculation logic without full pipeline
   paf_crf_only <- list(
-    rr = list(scenario1 = data.frame()), # Empty RR data
+    rr = list(scenario1 = tibble::tibble()), # Empty RR data
     crf = test_data$paf$crf # Only CRF data
   )
   
@@ -148,18 +151,15 @@ test_that("compute_hia_impacts integrates RR-based impacts correctly", {
   # Test just the RR calculation logic without full pipeline
   paf_rr_only <- list(
     rr = test_data$paf$rr, # Only RR data
-    crf = list(scenario1 = data.frame()) # Empty CRF data
+    crf = list(scenario1 = tibble::tibble()) # Empty CRF data
   )
   
   # Mock get_pm_mortality to return RR-based impacts with different column names to avoid conflicts
-  mock_pm_mortality <- data.frame(
-    region_id = "BGD",
+  mock_pm_mortality <- tibble::tibble(
+    region_id = rep("BGD", 3),
     estimate = c("low", "central", "high"),
-    Outcome_rr = rep("Deaths", 3),
-    Cause_rr = rep("NCD.LRI", 3),
-    Pollutant_rr = rep("PM25", 3),
-    number_rr = c(-10, -15, -20),
-    pop = rep(100000, 3)
+    pop = rep(100000, 3),
+    NCD.LRI_Deaths_PM25 = c(-10, -15, -20)
   )
   
   with_mocked_bindings(
@@ -198,8 +198,8 @@ test_that("compute_hia_impacts handles missing epidemiological data gracefully",
   )
   
   paf_minimal <- list(
-    rr = list(scenario1 = data.frame()),
-    crf = list(scenario1 = data.frame())
+    rr = list(scenario1 = tibble::tibble()),
+    crf = list(scenario1 = tibble::tibble())
   )
   
   with_mocked_bindings(
@@ -240,12 +240,15 @@ test_that("compute_hia_impacts validates CRF-EPI data matching", {
   
   # Create PAF with CRF data that will trigger the validation
   paf_with_crf <- list(
-    rr = list(scenario1 = data.frame()),
-    crf = list(scenario1 = data.frame(
+    rr = list(scenario1 = tibble::tibble()),
+    crf = list(scenario1 = tibble::tibble(
+      pollutant = "PM25",
+      cause = "NonExistent",
+      outcome = "Deaths",
       region_id = "BGD",
-      estimate = c("low", "central", "high"),
-      pop = rep(100000, 3),
-      NonExistent_Deaths_PM25 = c(-0.02, -0.03, -0.04)
+      low = -0.02,
+      central = -0.03,
+      high = -0.04
     ))
   )
   
@@ -332,8 +335,8 @@ test_that("compute_hia_impacts handles multiple scenarios", {
   test_data$conc_map$scenario2 <- test_data$conc_map$scenario1
   
   paf_minimal <- list(
-    rr = list(scenario1 = data.frame(), scenario2 = data.frame()),
-    crf = list(scenario1 = data.frame(), scenario2 = data.frame())
+    rr = list(scenario1 = tibble::tibble(), scenario2 = tibble::tibble()),
+    crf = list(scenario1 = tibble::tibble(), scenario2 = tibble::tibble())
   )
   
   with_mocked_bindings(

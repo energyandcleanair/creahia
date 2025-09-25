@@ -70,28 +70,32 @@ compute_hia <- function(conc_map,
   # Parse sources of relative risk
   rr_sources <- parse_rr_sources(rr_sources)
 
-  print("Computing PAF")
-  paf <- compute_hia_paf(conc_map = conc_map,
-                         species = species,
-                         regions = regions,
-                         scenarios = scenarios,
-                         epi_version = epi_version,
-                         ihme_version = ihme_version,
-                         rr_sources = rr_sources,
-                         ihme = ihme,
-                         crfs = crfs,
-                         .mode = .mode)
+  message("Computing PAF")
+  paf <- compute_hia_paf(
+    conc_map = conc_map,
+    species = species,
+    regions = regions,
+    scenarios = scenarios,
+    epi_version = epi_version,
+    ihme_version = ihme_version,
+    rr_sources = rr_sources,
+    ihme = ihme,
+    crfs = crfs,
+    .mode = .mode
+  )
 
   # print("Validating paf")
   # validate_paf(paf)
 
-  print("Computing impacts")
-  impacts <- compute_hia_impacts(region = regions,
-                             species = species,
-                             paf = paf,
-                             conc_map = conc_map,
-                             epi = epi,
-                             crfs = crfs)
+  message("Computing impacts")
+  impacts <- compute_hia_impacts(
+    region = regions,
+    species = species,
+    paf = paf,
+    conc_map = conc_map,
+    epi = epi,
+    crfs = crfs
+  )
 
   # print("Validating impacts")
   # validate_impacts(impacts)
@@ -103,7 +107,7 @@ compute_hia <- function(conc_map,
   pop_year_actual <- get_pop_year(year_desired = pop_year)
   pop_year_desired <- pop_year
   if(pop_year_actual != pop_year_desired){
-    print(glue("Scaling population from {pop_year_actual} to {pop_year_desired}"))
+    message(glue("Scaling population from {pop_year_actual} to {pop_year_desired}"))
     impacts <- scale_hia_pop(impacts, base_year = pop_year_actual, target_year = pop_year_desired)
   }
 

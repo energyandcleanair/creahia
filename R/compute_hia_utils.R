@@ -165,28 +165,28 @@ add_double_counted <- function(hia, crfs, epi) {
   # Use CRFS double counted field first
   joined <- hia %>%
     left_join(crfs %>%
-                mutate(Cause = crf_incidence_to_cause(Incidence),
-                       Outcome = crf_effectname_to_outcome(effectname),
-                       Pollutant = Exposure) %>%
-                select(Cause, Outcome, Pollutant, double_counted = Double.Counted),
-              by = c('Cause', 'Outcome', 'Pollutant'))
+                # mutate(Cause = crf_incidence_to_cause(Incidence),
+                #        Outcome = crf_effectname_to_outcome(effectname),
+                #        Pollutant = Exposure) %>%
+                select(cause, outcome, pollutant, double_counted),
+              by = c('cause', 'outcome', 'pollutant'))
 
   # Except PM25, all of them should have been found in CRFs
-  if(nrow(joined %>% filter(is.na(double_counted) & Pollutant != 'PM25' & number > 0)) > 0) {
+  if(nrow(joined %>% filter(is.na(double_counted) & pollutant != 'PM25' & number > 0)) > 0) {
     stop('merged has failed in double counting detection')
   }
 
   # Manual for epi PM25
-  joined[joined$Pollutant == 'PM25' &
-           any(joined$Cause == CAUSE_NCDLRI) & # detect if NCD+LRI is being used (e.g. from GEMM or FUSION)
-           joined$Cause %in% CAUSE_NCDLRI_INCLUDED &
-           joined$Outcome %in% c(MEASURE_YLLS, MEASURE_DEATHS),
+  joined[joined$pollutant == 'PM25' &
+           any(joined$cause == CAUSE_NCDLRI) & # detect if NCD+LRI is being used (e.g. from GEMM or FUSION)
+           joined$cause %in% CAUSE_NCDLRI_INCLUDED &
+           joined$outcome %in% c(MEASURE_YLLS, MEASURE_DEATHS),
          'double_counted'] <- TRUE
 
-  joined[joined$Pollutant == 'PM25' &
-           any(joined$Cause == CAUSE_CV) & # detect if NCD+LRI is being used (e.g. from GEMM or FUSION)
-           joined$Cause %in% CAUSE_CV_INCLUDED &
-           joined$Outcome %in% c(MEASURE_YLLS, MEASURE_DEATHS),
+  joined[joined$pollutant == 'PM25' &
+           any(joined$cause == CAUSE_CV) & # detect if NCD+LRI is being used (e.g. from GEMM or FUSION)
+           joined$cause %in% CAUSE_CV_INCLUDED &
+           joined$outcome %in% c(MEASURE_YLLS, MEASURE_DEATHS),
          'double_counted'] <- TRUE
 
   joined <- joined %>%
@@ -197,20 +197,22 @@ add_double_counted <- function(hia, crfs, epi) {
 
 
 add_age_group <- function(hia) {
-  hia <- hia %>% mutate(AgeGrp = case_when(grepl("LRI\\.child", Cause) ~ "0-4",
-                                           grepl("PTB|LBW", Cause) ~ "Newborn",
-                                           grepl("0to17|1to18", Cause) ~ "0-18",
-                                           T ~ "25+"))
+  hia <- hia %>%
+    mutate(age_group = case_when(grepl("LRI\\.child", cause) ~ "0-4",
+                                 grepl("PTB|LBW", cause) ~ "Newborn",
+                                 grepl("0to17|1to18", cause) ~ "0-18",
+                                 T ~ "25+"))
   return(hia)
 }
 
 
 clean_cause_outcome <- function(hia) {
+
   # Clean asthma
-  hia$Cause[grep('exac|sthma', hia$Cause)] <- 'Asthma'
+  # hia$cause[grep('exac|sthma', hia$cause)] <- 'Asthma'
 
   # Valuation is now different between deaths and deaths.child
-  hia$Outcome[grepl("LRI\\.child", hia$Cause) & (hia$Outcome == 'Deaths')] <- 'Deaths.child'
+  hia$outcome[grepl("LRI\\.child", hia$cause) & (hia$outcome == 'Deaths')] <- 'Deaths.child'
   return(hia)
 }
 
@@ -237,27 +239,23 @@ to_long_hia <- function(hia) {
   # Get numeric columns to pivot (exclude character, factor, and pop columns)
   numeric_cols <- names(hia)[sapply(hia, is.numeric)]
   cols_to_pivot <- numeric_cols[numeric_cols != "pop"]
-  
+
   # If no columns to pivot, return the data as-is with default columns
-  if(length(cols_to_pivot) == 0) {
-    return(hia %>% 
-           mutate(Outcome = NA_character_, 
-                  Pollutant = NA_character_, 
-                  Cause = NA_character_, 
-                  number = NA_real_))
-  }
-  
+  # if(length(cols_to_pivot) == 0) {
+  #   return(hia %>%
+  #          mutate(Outcome = NA_character_,
+  #                 Pollutant = NA_character_,
+  #                 Cause = NA_character_,
+  #                 number = NA_real_))
+  # }
+
   hia %>%
     pivot_longer(all_of(cols_to_pivot),
-                 names_to = 'Outcome', values_to = 'number') %>%
-    mutate(Outcome = Outcome %>% gsub('O3_8h', 'O3', .),
-           Pollutant = Outcome %>% gsub('.*_', '', .) %>% toupper,
-           Cause = Outcome %>% gsub('_.*', '', .)) %>%
-    mutate(Outcome = Outcome %>% gsub('_[A-Za-z0-9]*$', '', .) %>%
-             gsub('\\.[0-9]*to[0-9]*$', '', .) %>%
-             gsub('.*_', '', .),
-           Pollutant = case_when(Pollutant == 'O3' ~ 'O3_8h',
-                                 TRUE ~ Pollutant))
+                 names_to = 'cause_outcome',
+                 values_to = 'number') %>%
+    mutate(cause = stringr::word(cause_outcome, 1, sep = "_"),
+           outcome = stringr::word(cause_outcome, 2, sep = "_")) %>%
+    sel(-cause_outcome)
 }
 
 #' Safe World Bank data retrieval with retry logic and longer timeout
@@ -278,7 +276,7 @@ safe_wb_data <- function(..., max_retries = 3, timeout_seconds = 60, retry_delay
       old_config <- httr::config()
       httr::set_config(httr::timeout(timeout_seconds))
       on.exit(httr::set_config(old_config), add = TRUE)
-      
+
       result <- wbstats::wb_data(...)
       return(result)
     }, error = function(e) {

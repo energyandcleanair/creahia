@@ -29,8 +29,17 @@ compute_hia_paf_rr_curves <- function(conc_map,
   cause_measure_source <- get_cause_source(rr_sources=rr_sources,
                                             add_measure=T)
 
+  empty_rr_df <- tibble::tibble(
+    pollutant = character(),
+    cause = character(),
+    outcome = character(),
+    region_id = character(),
+    low = numeric(),
+    central = numeric(),
+    high = numeric()
+  )
+
   for(scenario in scenarios) {
-    message(paste('processing', scenario))
 
     conc_scenario <- conc_map[[scenario]] %>%
       subset(!is.null(.)) %>%
@@ -45,41 +54,50 @@ compute_hia_paf_rr_curves <- function(conc_map,
       total = length(names(conc_scenario))
     )
 
-    paf[[scenario]] <- lapply(names(conc_scenario), function(region_id) {
+    scenario_rows <- lapply(names(conc_scenario), function(region_id) {
 
       tryCatch({
         pg$tick()
-        paf_region <- list()
         non_na_cols <- c('conc_baseline_pm25', 'conc_scenario_pm25', 'pop')
         conc <- conc_scenario[[region_id]][complete.cases(conc_scenario[[region_id]][,non_na_cols]),]
         if(nrow(conc)==0) return(NULL)
 
-
-        for(i in seq_len(nrow(cause_measure_source))) {
+        region_rows <- lapply(seq_len(nrow(cause_measure_source)), function(i) {
           measure_ <- cause_measure_source$measure[i]
           cause_ <- cause_measure_source$cause[i]
-          cs_ms <- paste(cause_, measure_, sep = '_')
           rr_source_ <- cause_measure_source$source[i]
-          logger::log_debug(glue("Computing PAF for {cause_} and {measure_} from {source_}"))
+          logger::log_debug(glue("Computing PAF for {cause_} and {measure_} from {rr_source_}"))
 
-          paf_region[[cs_ms]] <- country_paf_perm(pm.base = conc[, 'conc_baseline_pm25'],
-                                                  pm.perm = conc[, 'conc_scenario_pm25'],
-                                                  pop = conc[, 'pop'],
-                                                  region_id = region_id,
-                                                  cause = cause_,
-                                                  measure = measure_,
-                                                  rr_source = rr_source_,
-                                                  adult_ages = adult_ages,
-                                                  epi_version = epi_version,
-                                                  ihme = ihme,
-                                                  .region = "inc_China",
-                                                  .mode = .mode)
-        }
+          paf_values <- country_paf_perm(pm.base = conc[, 'conc_baseline_pm25'],
+                                         pm.perm = conc[, 'conc_scenario_pm25'],
+                                         pop = conc[, 'pop'],
+                                         region_id = region_id,
+                                         cause = cause_,
+                                         measure = measure_,
+                                         rr_source = rr_source_,
+                                         adult_ages = adult_ages,
+                                         epi_version = epi_version,
+                                         ihme = ihme,
+                                         .region = "inc_China",
+                                         .mode = .mode)
 
-        paf_region <- paf_region %>% bind_rows(.id = 'var') %>%
-          mutate(region_id = region_id)
+          if(is.null(paf_values)) return(NULL)
 
-        return(paf_region)
+          tibble::tibble(
+            pollutant = "PM25",
+            cause = cause_,
+            outcome = measure_,
+            region_id = region_id,
+            low = unname(paf_values[['low']]),
+            central = unname(paf_values[['central']]),
+            high = unname(paf_values[['high']])
+          )
+        })
+
+        region_rows <- region_rows[!vapply(region_rows, is.null, logical(1))]
+        if(length(region_rows) == 0) return(NULL)
+
+        dplyr::bind_rows(region_rows)
       }, error = function(e) {
         # For instance if country iso3 not in ihme$ISO3
         # or paf not well ordered
@@ -88,10 +106,13 @@ compute_hia_paf_rr_curves <- function(conc_map,
         return(NULL)
       })
     })
+
+    scenario_rows <- scenario_rows[!vapply(scenario_rows, is.null, logical(1))]
+    paf[[scenario]] <- if(length(scenario_rows) == 0) empty_rr_df else dplyr::bind_rows(scenario_rows)
   }
 
   # Combine all scenarios
-  paf %>% lapply(bind_rows)
+  paf
 }
 
 
@@ -112,91 +133,82 @@ compute_hia_paf_crfs <- function(species,
                                 regions,
                                 crfs = get_crfs(),
                                 .mode = 'change') {
-  
   hia_polls <- species_to_hiapoll(species)
   scenarios <- names(conc_map)
   paf_crfs <- list()
-  
+
+  empty_crf_df <- tibble::tibble(
+    pollutant = character(),
+    cause = character(),
+    outcome = character(),
+    region_id = character(),
+    low = numeric(),
+    central = numeric(),
+    high = numeric()
+  )
+
   for(scenario in scenarios) {
     conc_scenario <- conc_map[[scenario]]
-    
+
     conc_scenario %>% ldply(.id = 'region_id') -> conc_df
-    
+
     if(!all(complete.cases(conc_df))) {
       warning('missing values in concentration or population data')
       conc_df %<>% na.omit
     }
-    
+
     conc_scenario <- conc_df %>% dlply(.(region_id))
-    
-    # Calculate population-weighted concentrations for PAF computation
-    pop_domain <- conc_scenario %>% ldply(function(df) df %>%
-                                            sel(-region_id) %>%
-                                            select_if(is.numeric) %>%
-                                            apply(2, weighted.mean, w = df[,'pop']) %>%
-                                            t %>%
-                                            data.frame %>%
-                                            mutate(pop = sum(df[,'pop'], na.rm=T)), .id = 'region_id')
-    
-    # Initialize PAF data structure with estimates
-    paf_scenario <- pop_domain %>% sel(region_id, pop)
-    
-    # Add estimate column to match the expected structure
-    paf_scenario <- paf_scenario %>%
-      slice(rep(seq_len(n()), each = 3)) %>%
-      mutate(estimate = rep(c('low', 'central', 'high'), n()/3))
-    
-    for(i in which(crfs$Exposure %in% hia_polls)) {
-      
-      species_name <- hiapoll_to_species(crfs$Exposure[i])
-      
+    region_ids <- names(conc_scenario)
+
+    scenario_rows <- list()
+
+    for(i in which(crfs$pollutant %in% hia_polls)) {
+
+      species_name <- hiapoll_to_species(crfs$pollutant[i])
+
       if(grepl('nrt', species_name)) {
-        source_concs <- get_nrt_conc(paf_scenario$region_id[seq_along(unique(paf_scenario$region_id))], species_name, 0, conc_map = conc_scenario)
+        source_concs <- get_nrt_conc(region_ids, species_name, 0, conc_map = conc_scenario)
       } else {
         base_name <- species_name %>% paste0('conc_baseline_',.)
         perm_name <- species_name %>% paste0('conc_scenario_',.)
         nrt_flag <- NULL # ifelse(grepl('NCD\\.LRI_', crfs$Incidence[i]), 'grump', NULL)
-        
+
         cfconc <- crfs$Counterfact[i]
-        
-        base_concs <- get_nrt_conc(region_ids = unique(paf_scenario$region_id),
+
+        base_concs <- get_nrt_conc(region_ids = region_ids,
                                    conc_name = base_name,
                                    nrt = cfconc,
                                    conc_map = conc_scenario,
                                    units_multiplier = crfs$Units.multiplier[i],
                                    nrt_flag = nrt_flag)
-        
-        perm_concs <- get_nrt_conc(region_ids = unique(paf_scenario$region_id),
+
+        perm_concs <- get_nrt_conc(region_ids = region_ids,
                                    conc_name = perm_name,
                                    nrt = cfconc,
                                    conc_map = conc_scenario,
                                    units_multiplier = crfs$Units.multiplier[i],
                                    nrt_flag = nrt_flag)
-        
+
         source_concs <- perm_concs - base_concs
       }
-      
-      # Create effect name for this CRF
-      effect_name <- crfs$effectname[i]
-      
-      # Compute PAF for each estimate (low, central, high)
-      paf_values_list <- list()
-      for(est in c('low', 'central', 'high')) {
-        RR.ind <- match(est, names(crfs))
-        RRs <- crfs[i, RR.ind] %>% unlist %>% unname
-        
-        # PAF calculation: 1 - exp(-log(RR) * delta_concentration / concentration_change)
-        paf_values <- 1 - exp(-log(RRs) * source_concs / crfs$Conc.change[i])
-        paf_values_list[[est]] <- paf_values
-      }
-      
-      # Combine all estimates into a single column
-      paf_scenario[[effect_name]] <- c(paf_values_list$low, paf_values_list$central, paf_values_list$high)
+
+      effect_df <- tibble::tibble(
+        pollutant = crfs$pollutant[i],
+        cause = crfs$cause[i],
+        outcome = crfs$outcome[i],
+        region_id = region_ids,
+        low = 1 - exp(-log(crfs$low[i]) * source_concs / crfs$Conc.change[i]),
+        central = 1 - exp(-log(crfs$central[i]) * source_concs / crfs$Conc.change[i]),
+        high = 1 - exp(-log(crfs$high[i]) * source_concs / crfs$Conc.change[i])
+      )
+
+      scenario_rows[[length(scenario_rows) + 1]] <- effect_df
     }
-    
-    paf_crfs[[scenario]] <- paf_scenario
+
+    scenario_rows <- scenario_rows[!vapply(scenario_rows, is.null, logical(1))]
+    paf_crfs[[scenario]] <- if(length(scenario_rows) == 0) empty_crf_df else dplyr::bind_rows(scenario_rows)
   }
-  
+
   return(paf_crfs)
 }
 
@@ -217,7 +229,7 @@ compute_hia_paf_crfs <- function(species,
 #' @param ihme IHME data
 #' @param crfs CRF data table (for CRF-based PAF)
 #' @param .mode Computation mode (default: 'change')
-#' @return Combined list of PAF values from both methods
+#' @return Combined dataframe of PAF values from both methods
 #' @export
 compute_hia_paf <- function(conc_map,
                            species,
@@ -229,9 +241,18 @@ compute_hia_paf <- function(conc_map,
                            ihme = get_ihme(ihme_version),
                            crfs = get_crfs(),
                            .mode = 'change') {
-  
-  paf_combined <- list()
-  
+
+  paf <- tibble::tibble(
+    scenario = character(),
+    pollutant = character(),
+    cause = character(),
+    outcome = character(),
+    region_id = character(),
+    low = numeric(),
+    central = numeric(),
+    high = numeric()
+  )
+
   # Compute RR-based PAF if rr_sources are provided
   if(length(rr_sources) > 0) {
     print("Computing RR-based PAF")
@@ -242,9 +263,11 @@ compute_hia_paf <- function(conc_map,
                                         rr_sources = rr_sources,
                                         ihme = ihme,
                                         .mode = .mode)
-    paf_combined$rr <- paf_rr
+    paf_rr_combined <- paf_rr %>%
+      bind_rows(.id = 'scenario')
+    paf <- bind_rows(paf, paf_rr_combined)
   }
-  
+
   # Compute CRF-based PAF
   print("Computing CRF-based PAF")
   paf_crf <- compute_hia_paf_crfs(species = species,
@@ -252,9 +275,11 @@ compute_hia_paf <- function(conc_map,
                                   regions = regions,
                                   crfs = crfs,
                                   .mode = .mode)
-  paf_combined$crf <- paf_crf
-  
-  return(paf_combined)
+  paf_crf_combined <- paf_crf %>%
+    bind_rows(.id = 'scenario')
+  paf <- bind_rows(paf, paf_crf_combined)
+
+  return(paf)
 }
 
 
