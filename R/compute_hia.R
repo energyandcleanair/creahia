@@ -6,7 +6,6 @@
 #' @param scenarios
 #' @param calc_causes
 #' @param gbd_causes
-#' @param gemm
 #' @param ihme
 #' @param epi_version
 #' @param ihme_version
@@ -30,7 +29,6 @@ compute_hia <- function(conc_map,
                         species,
                         regions,
                         scenarios = names(conc_map),
-                        gemm = get_gemm(),
                         rr_sources = c(RR_GEMM, RR_ORIGINAL),
                         ihme = get_ihme(version = ihme_version),
                         epi_version = "default",
