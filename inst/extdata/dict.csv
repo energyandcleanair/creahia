@@ -20,7 +20,7 @@ Deaths,deaths,premature deaths
 Asthma.Inci,new cases of asthma in children,new cases of asthma in children
 Asthma.Prev,number of children suffering from asthma due to pollution exposure (increased prevalence),increased prevalence children suffering from asthma
 exac,asthma emergency room visits,asthma emergency room visits
-AllCause,all causes,all causes
+AllCauses,all causes,all causes
 TotCV,cardiovascular diseases,cardiovascular diseases
 OthCV,other cardiovascular diseases,other cardiovascular diseases
 TotResp,respiratory diseases,respiratory diseases

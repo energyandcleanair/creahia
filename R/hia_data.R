@@ -67,7 +67,6 @@ get_crfs_versions <- function() {
   list(
     "default" = "CRFs.csv",
     "C40" = "CRFs_C40.csv",
-    "Krewski" = "CRFs_Krewski.csv",
     "Krewski-South Africa" = "CRFs_Krewski_SouthAfrica.csv"
   )
 }
@@ -76,13 +75,18 @@ get_crfs_versions <- function() {
 get_crfs <- function(version = "default") {
 
   filename <- get_crfs_versions()[[version]]
-  crfs <- read_csv(get_hia_path(filename), col_types = cols())
+  crfs <- read_csv(get_hia_path(filename), col_types = cols()) %>%
+    dplyr::rename(cause=Cause,
+           outcome=Outcome,
+           pollutant=Exposure,
+           double_counted=Double.Counted
+           )
   names(crfs) <- names(crfs) %>% gsub('RR_', '', .)
-  crfs$Exposure <- crfs$Exposure %>% gsub('PM2\\.5', "PM25", .)
-  crfs$Incidence <- crf_recode_incidence(crfs$Incidence, crfs$Exposure)
-  crfs$effectname <- paste0(crfs$Incidence %>% gsub('\\.per|_base', '', .),
-                            '_',
-                            crfs$Exposure %>% gsub('\\..*|nrt', '', .))
+  crfs$pollutant <- crfs$pollutant %>% gsub('PM2\\.5', "PM25", .)
+  # crfs$Incidence <- crf_recode_incidence(crfs$Incidence, crfs$Exposure)
+  # crfs$effectname <- paste0(crfs$Incidence %>% gsub('\\.per|_base', '', .),
+  #                           '_',
+  #                           crfs$Exposure %>% gsub('\\..*|nrt', '', .))
 
   return(crfs)
 }
@@ -90,6 +94,7 @@ get_crfs <- function(version = "default") {
 
 fix_epi_cols <- function(epi){
 
+  # Old names to new names
   old_new_cols <- list(
     Region='region',
     Country='country',
@@ -104,6 +109,39 @@ fix_epi_cols <- function(epi){
       epi <- epi %>% dplyr::rename(!!new_col := !!old_col)
     }
   }
+
+  # Clean the asthma cause-outcome data to have a single cause (i.e. Asthma)
+  # and various outcomes i.e. AsthmaPrevalence, AsthmaIncidence, AsthmaERV (emergency room visit)
+  # Asthma.Inci.{} -> Asthma.{}_AsthmaIncidence
+  # Asthma.Prev.{} -> Asthma.{}_AsthmaPrevalence
+  # exac.{} -> Asthma.{}_AsthmaERV
+  col_names <- names(epi)
+  asthma_cols <- col_names[grepl('^Asthma\\.(Inci|Prev)\\.', col_names) | grepl('^exac\\.', col_names)]
+  for(col in asthma_cols) {
+    if(grepl('^Asthma\\.Inci\\.', col)) {
+      newname <- gsub('^Asthma\\.Inci\\.', 'Asthma.', col)
+      newname <- paste0(newname, '_AsthmaIncidence')
+    }
+    if(grepl('^Asthma\\.Prev\\.', col)) {
+      newname <- gsub('^Asthma\\.Prev\\.', 'Asthma.', col)
+      newname <- paste0(newname, '_AsthmaPrevalence')
+    }
+    if(grepl('^exac\\.', col)) {
+      newname <- gsub('^exac\\.', 'Asthma.', col)
+      newname <- paste0(newname, '_AsthmaERV')
+    }
+    message("Renaming asthma column ", col, " to ", newname)
+    colnames(epi)[colnames(epi) == col] <- newname
+  }
+
+  # For causes without outcomes, add default one to be compatible with new (explicit) crfs
+  # Select columns that are numeric and have no _ in their name (and not the pop column)
+  causes_wo_outcome <- names(epi)[sapply(epi, is.numeric) & !grepl('_', names(epi)) & !names(epi) %in% c("pop", "birth.rate", "labor.partic")]
+  for(cause in causes_wo_outcome) {
+    newname <- paste0(cause, '_', cause)
+    colnames(epi)[colnames(epi) == cause] <- newname
+  }
+
 
   epi
 }
@@ -155,6 +193,36 @@ get_epi <- function(version = "default") {
   return(epi %>% distinct())
 }
 
+
+
+#'
+#' @param epi
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+clean_epi_asthma <- function(epi) {
+
+  cols <- colnames(epi)
+
+
+  # Asthma.
+
+
+  # Clean asthma data
+  if('Asthma_Number' %in% names(epi)) {
+    epi <- epi %>%
+      mutate(Asthma_Number = ifelse(is.na(Asthma_Number) & !is.na(Asthma_Prevalence),
+                                    Asthma_Prevalence * pop / 100,
+                                    Asthma_Number),
+             Asthma_Prevalence = ifelse(is.na(Asthma_Prevalence) & !is.na(Asthma_Number),
+                                        Asthma_Number / pop * 100,
+                                        Asthma_Prevalence)
+      )
+  }
+  epi
+}
 
 get_gdp_forecast <- function(pop_proj=NULL) {
   print("Getting GDP forecast")
