@@ -307,11 +307,13 @@ apply_econ_scaling <- function(hia_cost, pop_scaling, gdp_scaling_tbl = NULL, re
     }
   }
 
-  # join without year to expand across years, safer than many-to-many full_join
+  # join without year to expand years, safer than many-to-many full_join
   base_cols <- setdiff(names(hia_cost), 'year')
   hia_by_year <- hia_cost %>%
     sel(all_of(base_cols)) %>%
-    inner_join(scaling, by = c('iso3', 'AgeGrp'='age_group','fatal'))
+    inner_join(scaling, by = c('iso3', 'AgeGrp'='age_group','fatal'),
+               relationship = 'many-to-many')
+
 
   # duplication guard: after join, each original row should be replicated exactly length(ref+forecast) times
   expected_mult <- length(unique(c(reference_year, forecast_years)))
