@@ -45,7 +45,6 @@ compute_hia <- function(conc_map,
                         # Old parameters
                         calc_causes = NULL,
                         gbd_causes = NULL,
-
                         ...){
 
 
@@ -84,9 +83,6 @@ compute_hia <- function(conc_map,
     .mode = .mode
   )
 
-  # print("Validating paf")
-  # validate_paf(paf)
-
   message("Computing impacts")
   impacts <- compute_hia_impacts(
     region = regions,
@@ -96,10 +92,6 @@ compute_hia <- function(conc_map,
     epi = epi,
     crfs = crfs
   )
-
-  # print("Validating impacts")
-  # validate_impacts(impacts)
-
 
   # Population scaling
   # Get the actual population year
