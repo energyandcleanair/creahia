@@ -164,16 +164,16 @@ hia %>%
   left_join(adm@data %>% select(region_id=GID_2, NAME_1)) %>%
   filter(iso3=='ZAF') %>%
   mutate(region_id=NAME_1) %>%
-  group_by(region_id, Outcome, Pollutant, Cause, AgeGrp, iso3, scenario, estimate, double_counted) %>%
+  group_by(region_id, outcome, pollutant, cause, age_group, iso3, scenario, estimate, double_counted) %>%
   summarise(across(number, sum)) %>%
-  filter(Pollutant != 'PM25' | Cause != 'AllCause') %>%
-  mutate(number = number * case_when(Pollutant != 'NO2' | Cause != 'AllCause'~1,
+  filter(pollutant != 'PM25' | cause != 'AllCause') %>%
+  mutate(number = number * case_when(pollutant != 'NO2' | cause != 'AllCause'~1,
                                      estimate=='central'~1/2,
                                      estimate=='low'~1/2,
                                      estimate=='high'~2/3)) ->
   hia_totals
 
-hia_totals %>% group_by(Pollutant) %>% filter(!double_counted, Outcome=='Deaths', estimate=='central') %>%
+hia_totals %>% group_by(pollutant) %>% filter(!double_counted, outcome=='Deaths', estimate=='central') %>%
   summarise(across(number, sum))
 
 
@@ -182,21 +182,21 @@ targetyears = unique(emis_byyear_byplant$year)
 
 hia_cost <- get_hia_cost(hia=hia_totals, valuation_version="viscusi")
 
-hia_cost %>% group_by(Pollutant) %>%
-  filter(!double_counted, Outcome=='Deaths', estimate=='central') %>% summarise(across(number, sum))
+hia_cost %>% group_by(pollutant) %>%
+  filter(!double_counted, outcome=='Deaths', estimate=='central') %>% summarise(across(number, sum))
 
 valuations <- get_valuations_raw('viscusi')
 
 usd_to_lcu=14.7912
 
 hia_cost %>% filter(iso3=='ZAF') %>%
-  distinct(Outcome, valuation_world_2017, valuation_current_usd, iso3) %>%
-  left_join(valuations %>% select(Outcome, reference)) %>%
+  distinct(outcome, valuation_world_2017, valuation_current_usd, iso3) %>%
+  left_join(valuations %>% select(outcome, reference)) %>%
   na.omit %>% add_long_names() %>%
-  select(-Outcome, Outcome=Outcome_long) %>%
+  select(-outcome, outcome=outcome_long) %>%
   mutate(valuation_current_lcu=valuation_current_usd*usd_to_lcu,
          across(is.numeric, function(x) x %>% signif(4) %>% scales::comma(accuracy=1))) %>%
-  relocate(Outcome) %>%
+  relocate(outcome) %>%
   relocate(reference, .after=everything()) %>%
   write_csv(file.path(output_dir, 'valuations.csv'))
 
@@ -224,11 +224,11 @@ emis_byyear_byplant %>% write_csv(file.path(emissions_dir, 'emissions scaling fo
 hia_fut %>% right_join(emis_byyear_byplant) -> hia_scen
 
 hia_scen %<>% mutate(across(c(number, cost_mn_currentUSD), multiply_by, emissions/modeled_emissions)) %>%
-  group_by(region_id, plant, year, scenario, Outcome, Cause, Pollutant, double_counted, estimate) %>%
+  group_by(region_id, plant, year, scenario, outcome, cause, pollutant, double_counted, estimate) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum))
 
 hia_scen %>%
-  filter(Outcome=='Deaths', !double_counted, estimate=='central',
+  filter(outcome=='Deaths', !double_counted, estimate=='central',
          region_id %in% c('Mpumalanga', 'Gauteng', 'Limpopo') | T) %>%
   group_by(year, scenario, province=region_id) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum)) ->
@@ -261,7 +261,7 @@ plotdata %>%
 quicksave(file.path(output_dir, 'deaths by province and scenario.png'), plot=p)
 
 hia_scen %>%
-  filter(Outcome=='Deaths', !double_counted, estimate=='central',
+  filter(outcome=='Deaths', !double_counted, estimate=='central',
          region_id %in% c('Mpumalanga', 'Gauteng', 'Limpopo') | T) %>%
   group_by(year, scenario) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum)) ->
@@ -291,7 +291,7 @@ quicksave(file.path(output_dir, 'deaths by scenario.png'), plot=p)
 
 
 hia_scen %>%
-  filter(Outcome=='Deaths', !double_counted, estimate=='central',
+  filter(outcome=='Deaths', !double_counted, estimate=='central',
          region_id %in% c('Mpumalanga', 'Gauteng', 'Limpopo') | T,
          year>=2025) %>%
   group_by(scenario, province=region_id) %>%

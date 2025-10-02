@@ -147,45 +147,45 @@ econ_costs %>% saveRDS(file.path(output_dir, 'econ_costs, viscusi.RDS'))
 #weighted by Zhou coefficients: 0.461546678-1
 
 econ_costs <- readRDS(file.path(output_dir, 'econ_costs, viscusi.RDS'))
-econ_costs$cost_forecast %<>% filter(Pollutant != 'SO2')
-econ_costs$cost_forecast %<>% mutate(include_in_totals = (Outcome != 'Deaths' | Cause %in% c('NCD.LRI', 'LRI.child', 'AllCause') &
-                                                            Cause %notin% c('TotCV', 'TotResp') &
-                                                            Pollutant != 'SO2'))
+econ_costs$cost_forecast %<>% filter(pollutant != 'SO2')
+econ_costs$cost_forecast %<>% mutate(include_in_totals = (outcome != 'Deaths' | cause %in% c('NCD.LRI', 'LRI.child', 'AllCause') &
+                                                            cause %notin% c('TotCV', 'TotResp') &
+                                                            pollutant != 'SO2'))
 
 proj <- read_xlsx(file.path(project_dir, 'emissions/Steel Production by Production Route.xlsx'))
 
 proj %>% pivot_longer(matches('[0-9]{4}'), names_to='year', values_to='steel_output') %>%
-  full_join(tibble(Pollutant = econ_costs$cost_forecast$Pollutant %>% unique %>% na.omit), by=character()) %>%
+  full_join(tibble(pollutant = econ_costs$cost_forecast$pollutant %>% unique %>% na.omit), by=character()) %>%
   dplyr::mutate(across(year, as.numeric),
                 route=case_when(route=='Blast Furnace'~'BF',
                                 grepl('Furnace with hydrogen', route)~'BF-H2',
                                 grepl('Furnace CCS', route)~'BF-CCS',
                                 T~route),
                 scaling = case_when(route=='BF'~1,
-                                    route=='BF-CCS' & Pollutant=='PM2.5'~0.461546678,
-                                    route=='BF-CCS' & Pollutant=='NO2'~0.71,
-                                    route=='BF-CCS' & Pollutant=='SO2'~0.15,
+                                    route=='BF-CCS' & pollutant=='PM2.5'~0.461546678,
+                                    route=='BF-CCS' & pollutant=='NO2'~0.71,
+                                    route=='BF-CCS' & pollutant=='SO2'~0.15,
                                     route=='BF-H2'~.7, T~0) *  steel_output) %>%
-  group_by(pathway, year, Pollutant) %>%
+  group_by(pathway, year, pollutant) %>%
   dplyr::summarise(across(scaling, sum)) %>%
   group_by(pathway) %>%
   dplyr::mutate(across(scaling, ~.x/.x[year==2020]),
                 year=ifelse(year==2020, 2021, year)) ->
   scaling
 
-scaling %>% ggplot(aes(year, scaling, col=pathway)) + facet_wrap(~Pollutant) + geom_line()
+scaling %>% ggplot(aes(year, scaling, col=pathway)) + facet_wrap(~pollutant) + geom_line()
 
 econ_costs$cost_forecast %>% full_join(scaling) %>%
   dplyr::mutate(across(c(number, cost.mnUSD), multiply_by, scaling)) ->
   hia_scaled
 
-hia_scaled %<>% mutate(include_in_totals = (Outcome != 'Deaths' | Cause %in% c('NCD.LRI', 'LRI.child', 'AllCause') &
-                                               Cause %notin% c('TotCV', 'TotResp') &
-                                               Pollutant != 'SO2'))
+hia_scaled %<>% mutate(include_in_totals = (outcome != 'Deaths' | cause %in% c('NCD.LRI', 'LRI.child', 'AllCause') &
+                                               cause %notin% c('TotCV', 'TotResp') &
+                                               pollutant != 'SO2'))
 
 hia_scaled %>%
   filter(include_in_totals, scenario=='krsteel') %>%
-  mutate(number=ifelse(Outcome=='Deaths', number, 0)) %>%
+  mutate(number=ifelse(outcome=='Deaths', number, 0)) %>%
   pivot_longer(c(number, cost.mnUSD)) %>%
   group_by(pathway, scenario, year, name, estimate) %>%
   dplyr::summarise(across(value, sum, na.rm=T)) %>%
@@ -208,13 +208,13 @@ hia_scaled %>%
 ggsave(file.path(output_dir, 'Deaths and economic costs linked to steel plant emissions.png'), height=8, width=8, bg='white')
 
 hia_scaled %>%
-  dplyr::group_by(across(c(pathway, scenario, estimate, iso3, matches('Outcome|Cause'), Pollutant, include_in_totals, year))) %>%
+  dplyr::group_by(across(c(pathway, scenario, estimate, iso3, matches('outcome|cause'), pollutant, include_in_totals, year))) %>%
   dplyr::summarise(across(c(number, cost.mnUSD), sum, na.rm=T)) %>%
   write_excel_csv(file.path(output_dir, 'hia results by country and year, pathways, viscusi.csv'))
 
 hia_scaled %>%
   filter(!is.na(year)) %>%
-  dplyr::group_by(across(c(pathway, scenario, estimate, iso3, matches('Outcome|Cause|region_'), include_in_totals, Pollutant))) %>%
+  dplyr::group_by(across(c(pathway, scenario, estimate, iso3, matches('outcome|cause|region_'), include_in_totals, pollutant))) %>%
   dplyr::mutate(groupnumber=cur_group_id()) -> indata
 
 indata %>%
@@ -228,13 +228,13 @@ indata %>%
                             }))
     }) -> hia_cumu
 
-hia_cumu %>% filter(scenario=='krsteel', include_in_totals, Outcome=='Deaths') %>% group_by(pathway, estimate) %>%
+hia_cumu %>% filter(scenario=='krsteel', include_in_totals, outcome=='Deaths') %>% group_by(pathway, estimate) %>%
   dplyr::summarise(across(c(number, cost.mnUSD), sum))
 
 
 hia_cumu %>% write_excel_csv(file.path(output_dir, 'hia results by admin 2 area, 2022-2050 cumulative, pathways, viscusi.csv'))
 hia_cumu %>% filter(scenario=='krsteel') %>%
-  dplyr::group_by(across(c(pathway, estimate, iso3, matches('Outcome|Cause'), Pollutant))) %>%
+  dplyr::group_by(across(c(pathway, estimate, iso3, matches('outcome|cause'), pollutant))) %>%
   dplyr::summarise(across(c(number, cost.mnUSD), sum, na.rm=T)) %>%
   write_excel_csv(file.path(output_dir, 'hia results by country, 2022-2050 cumulative, pathways, viscusi.csv'))
 
@@ -243,6 +243,6 @@ adm2 <- readRDS('~/GIS/boundaries/gadm36_2_coarse.RDS')
 
 hia_cumu %>% left_join(adm2@data %>% dplyr::select(region_id=GID_2, NAME_1, GID_1)) %>%
   filter(scenario=='krsteel') %>%
-  dplyr::group_by(across(c(pathway, estimate, iso3, matches('Outcome|Cause'), Pollutant, GID_1, NAME_1))) %>%
+  dplyr::group_by(across(c(pathway, estimate, iso3, matches('outcome|cause'), pollutant, GID_1, NAME_1))) %>%
   dplyr::summarise(across(c(number, cost.mnUSD), sum, na.rm=T)) %>%
   write_excel_csv(file.path(output_dir, 'hia results by admin 1 area, 2022-2050 cumulative, pathways, viscusi.csv'))

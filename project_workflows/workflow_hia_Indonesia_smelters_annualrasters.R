@@ -135,7 +135,7 @@ hia <- list()
 hia_list %>% lapply('[[', 'hia') %>% bind_rows -> hia$hia
 
 hia$hia %<>%
-  mutate(number = number * case_when(Pollutant != 'NO2' | Cause != 'AllCause'~1,
+  mutate(number = number * case_when(pollutant != 'NO2' | cause != 'AllCause'~1,
                                      estimate=='central'~1/2,
                                      estimate=='low'~1/2,
                                      estimate=='high'~2/3))
@@ -161,7 +161,7 @@ hia_fut_bottomup %<>%
 
 
 hia_fut %>% left_join(shp@data %>% select(region_id=GID_2, GID_1, Province=NAME_1)) %>%
-  group_by(country, iso3, GID_1, Province, Outcome, Cause, Pollutant, double_counted, year, estimate, unit) %>%
+  group_by(country, iso3, GID_1, Province, outcome, cause, pollutant, double_counted, year, estimate, unit) %>%
   summarise(across(c(number, cost_mn_currentUSD), ~sum(.x, na.rm=T))) ->
   hia_fut_totals
 
@@ -172,10 +172,10 @@ hia_fut_totals %<>%
 #adjust for totals from bottom up calculations
 hia_fut_bottomup %>% mutate(calculation_type='bottom-up') %>%
   bind_rows(hia_fut_totals %>% mutate(calculation_type='top-down')) %>%
-  filter(grepl('deaths, total', Outcome)) %>%
-  group_by(calculation_type, Outcome, year, estimate) %>% summarise(across(number, sum)) %>%
+  filter(grepl('deaths, total', outcome)) %>%
+  group_by(calculation_type, outcome, year, estimate) %>% summarise(across(number, sum)) %>%
   group_by(year) %>% filter(all(c('bottom-up', 'top-down') %in% calculation_type)) %>%
-  group_by(Outcome, year, estimate) %>%
+  group_by(outcome, year, estimate) %>%
   summarise(ratio=number[calculation_type=='bottom-up']/number[calculation_type=='top-down']) %>%
   filter(year>2020) %>% group_by(estimate) %>% summarise(across(ratio, mean)) ->
   adj
@@ -184,7 +184,7 @@ hia_fut_totals %<>% left_join(adj) %>% mutate(across(c(number, cost_mn_currentUS
   select(-ratio)
 
 hia_fut_totals %>% ungroup %>%
-  filter(estimate=='central', Outcome=='deaths, total', year==2030) %>%
+  filter(estimate=='central', outcome=='deaths, total', year==2030) %>%
   arrange(number) %>% slice_max(number, n=10) %>%
   mutate(Province=factor(Province, Province)) %>%
   ggplot(aes(Province, number)) +
@@ -209,7 +209,7 @@ by_emitting <- read_csv(file.path(output_dir, 'all health impacts by year and em
 
 bind_rows(by_affected, by_emitting) %>%
   filter(!double_counted) %>%
-  mutate(number=ifelse(grepl('Death', Outcome), number, 0)) %>%
+  mutate(number=ifelse(grepl('Death', outcome), number, 0)) %>%
   group_by(name, year, estimate) %>%
   summarise(across(c(deaths=number, cost_mn_currentUSD), ~sum(.x, na.rm=T))) %>%
   pivot_longer(c(deaths, cost_mn_currentUSD), names_to='var') %>%

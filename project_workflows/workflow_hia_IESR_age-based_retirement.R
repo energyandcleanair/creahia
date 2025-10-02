@@ -124,7 +124,7 @@ saveRDS(hia, file.path(project_dir, 'HIA', paste0('hia_GEMM_1ug.RDS')))
 hia <- readRDS(file.path(project_dir, 'HIA', paste0('hia_GEMM_1ug.RDS')))
 
 hia$hia %<>%
-  mutate(number = number * case_when(Pollutant != 'NO2' | Cause != 'AllCause'~1,
+  mutate(number = number * case_when(pollutant != 'NO2' | cause != 'AllCause'~1,
                                      estimate=='central'~1/2,
                                      estimate=='low'~1/2,
                                      estimate=='high'~2/3))
@@ -149,16 +149,16 @@ scenarios_to_process %>%
     paste0('exp_',run,'.csv') %>% file.path(output_dir, .) %>%
       read_csv() %>%
       pivot_longer(-region_id, names_to='subspecies', values_to='exposure') %>%
-      mutate(Pollutant=case_when(subspecies %in% c('so4', 'no3', 'ppm25')~'PM25',
+      mutate(pollutant=case_when(subspecies %in% c('so4', 'no3', 'ppm25')~'PM25',
                                T~toupper(subspecies)),
              emitted_species=case_when(subspecies %in% c('so2', 'so4')~'SOx',
                                        subspecies %in% c('no2','no3')~'NOx',
                                        subspecies=='ppm25'~'PM'),
              cluster=run) %>%
       left_join(modeled_emissions) %>%
-      left_join(hia_fut %>% select(region_id, iso3, pop, Pollutant, Outcome, Cause, double_counted, year, estimate, unit, number, cost_mn_currentUSD)) %>%
+      left_join(hia_fut %>% select(region_id, iso3, pop, pollutant, outcome, cause, double_counted, year, estimate, unit, number, cost_mn_currentUSD)) %>%
       mutate(across(c(number, cost_mn_currentUSD), ~.x * exposure/pop/modeled_emissions)) %>%
-      group_by(cluster, year, Outcome, Cause, emitted_species, Pollutant, double_counted, estimate, unit) %>%
+      group_by(cluster, year, outcome, cause, emitted_species, pollutant, double_counted, estimate, unit) %>%
       summarise(across(c(number, cost_mn_currentUSD), sum, na.rm=T))
   }) %>% bind_rows %>% ungroup -> hia_per_t
 
@@ -175,7 +175,7 @@ emis %>% ungroup %>% filter(grepl('age-based', scenario)) %>%
     message(group)
     df %>%
       inner_join(hia_per_t %>% filter(cluster==group$cluster, year==group$year)) %>%
-      group_by(CFPP.name, Owner, province, region, Latitude, Longitude, scenario, Outcome, Cause, Pollutant, double_counted, estimate, unit) %>%
+      group_by(CFPP.name, Owner, province, region, Latitude, Longitude, scenario, outcome, cause, pollutant, double_counted, estimate, unit) %>%
       mutate(across(c(number, cost_mn_currentUSD), ~.x*emissions_t)) %>%
       summarise(across(c(number, cost_mn_currentUSD), sum),
                 across(c(MW, utilization), unique))
@@ -189,27 +189,27 @@ hia_scenarios %>% saveRDS(file.path(output_dir, 'hia_scenarios, retirement by ag
 #hia_scenarios <- readRDS(file.path(output_dir, 'hia_scenarios.RDS'))
 
 hia_scenarios %>%
-  group_by(scenario, Outcome, Cause, Pollutant, double_counted, year, estimate, unit) %>%
+  group_by(scenario, outcome, cause, pollutant, double_counted, year, estimate, unit) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum)) ->
   hia_scenarios_totals
 
 hia_scenarios_totals %>% saveRDS(file.path(output_dir, 'hia_scenarios_totals, retirement by age.RDS'))
 hia_scenarios_totals <- readRDS(file.path(output_dir, 'hia_scenarios_totals.RDS')) %>% bind_rows(hia_scenarios_totals)
 
-hia_scenarios_totals %<>% filter(!double_counted, !grepl("economic costs", Outcome)) %>%
+hia_scenarios_totals %<>% filter(!double_counted, !grepl("economic costs", outcome)) %>%
   group_by(scenario, year, estimate) %>%
   summarise(across(c(number=cost_mn_currentUSD), sum)) %>%
-  mutate(Outcome = "economic costs", unit="million USD", double_counted = F) %>%
-  bind_rows(hia_scenarios_totals %>% filter(!grepl("economic costs", Outcome)))
+  mutate(outcome = "economic costs", unit="million USD", double_counted = F) %>%
+  bind_rows(hia_scenarios_totals %>% filter(!grepl("economic costs", outcome)))
 
-hia_scenarios_totals %<>% filter(!double_counted, grepl("Death", Outcome)) %>%
+hia_scenarios_totals %<>% filter(!double_counted, grepl("Death", outcome)) %>%
   group_by(scenario, year, estimate) %>%
   summarise(across(c(number), sum)) %>%
-  mutate(Outcome = "deaths, total", Cause='AllCause', Pollutant='All', unit="death", double_counted = T) %>%
-  bind_rows(hia_scenarios_totals %>% filter(Pollutant!='All'))
+  mutate(outcome = "deaths, total", cause='AllCause', pollutant='All', unit="death", double_counted = T) %>%
+  bind_rows(hia_scenarios_totals %>% filter(pollutant!='All'))
 
 hia_scenarios_totals %>% ungroup %>%
-  filter(estimate=='central', Outcome=='deaths, total',
+  filter(estimate=='central', outcome=='deaths, total',
          grepl('1\\.5 degrees($| /w APC| excluding captive$)|PERPRES.*2022$', scenario)) %>%
   group_by(scenario, year, estimate) %>% summarise(across(number, sum)) %>%
   complete(scenario, year=2000:2056, estimate) %>% replace_na(list(number=0)) %>%
@@ -238,24 +238,24 @@ quicksave(file.path(output_dir, 'Air pollution-related costs by scenario, age-ba
 
 hia_scenarios_totals %>% filter(year==2022, grepl("PERPRES.*2022$", scenario)) %>%
   add_long_names() %>%
-  select(scenario, Outcome=Outcome_long, Cause=Cause_long, Pollutant, unit, double_counted, estimate, number) %>%
+  select(scenario, outcome=outcome_long, cause=Cause_long, pollutant, unit, double_counted, estimate, number) %>%
   pivot_wider(names_from=estimate, values_from=number) %>%
   relocate(high, .after = low) %>%
   write_csv(file.path(output_dir, 'annual HIA 2022.csv'))
 
 
 hia_scenarios_totals %>% filter(year>2023) %>%
-  group_by(scenario, estimate, Outcome, Cause, Pollutant, double_counted, unit) %>%
+  group_by(scenario, estimate, outcome, cause, pollutant, double_counted, unit) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum)) ->
   hia_cum
 
-hia_cum %>% filter(!double_counted, grepl('Death', Outcome),
+hia_cum %>% filter(!double_counted, grepl('Death', outcome),
                    grepl('2022$|degrees$|age-based', scenario)) %>%
   group_by(scenario, estimate) %>% summarise(across(c(number, cost_mn_currentUSD), sum)) %>%
   group_by(scenario_group = scenario %>% gsub(', .*', '', .), estimate) %>%
   summarise(across(c(number, cost_mn_currentUSD), list(change=~.x[2]-.x[1], relative=~.x[2]/.x[1]-1)))
 
-hia_cum %>% filter(estimate=='central', !double_counted, grepl('Death', Outcome)) %>%
+hia_cum %>% filter(estimate=='central', !double_counted, grepl('Death', outcome)) %>%
   group_by(scenario, estimate) %>% summarise(across(number, sum)) %>%
   ggplot(aes(scenario, number)) + geom_col() +
   theme_crea() + #scale_color_crea_d('dramatic', guide=guide_legend(nrow = 1)) +
@@ -264,14 +264,14 @@ hia_cum %>% filter(estimate=='central', !double_counted, grepl('Death', Outcome)
 
 hia_cum %>% filter(!grepl("cofiring", scenario)) %>%
   add_long_names() %>%
-  select(scenario, Outcome=Outcome_long, Cause=Cause_long, Pollutant, unit, double_counted, estimate, number) %>%
+  select(scenario, outcome=outcome_long, cause=Cause_long, pollutant, unit, double_counted, estimate, number) %>%
   pivot_wider(names_from=estimate, values_from=number) %>%
   relocate(high, .after = low) %>%
   write_csv(file.path(output_dir, 'cumulative HIA 2024 to end-of-life.csv'))
 
 #results by plant
 hia_per_t %>%
-  mutate(number=number*ifelse(grepl('Death', Outcome), 1, 0)) %>%
+  mutate(number=number*ifelse(grepl('Death', outcome), 1, 0)) %>%
   filter(!double_counted) %>%
   group_by(cluster, emitted_species, year, estimate) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum, na.rm=T)) ->
@@ -282,15 +282,15 @@ hia_per_t_total %>% write_csv(file.path(output_dir, 'hia_per_t_total.csv'))
 #totals of deaths and costs by plant (current), by province (current and cumulative total), by scenario (cumulative total)
 hia_scenarios_totals %>% filter((grepl("PERPRES.*2022$", scenario) & year==2022) | year>=2025,
                                 !grepl("cofiring", scenario),
-                                Outcome %in% c('deaths, total', 'economic costs')) %>%
+                                outcome %in% c('deaths, total', 'economic costs')) %>%
   pivot_wider(names_from=estimate, values_from=number) %>%
   relocate(high, .after = low) %>%
   write_csv(file.path(output_dir, 'deaths and total costs by year, all scenarios.csv'))
 
 hia_scenarios_totals %>% filter(year>=2024,
                                 !grepl("cofiring", scenario),
-                                Outcome %in% c('deaths, total', 'economic costs')) %>%
-  group_by(scenario, Outcome, unit, estimate) %>% summarise(across(number, sum)) %>%
+                                outcome %in% c('deaths, total', 'economic costs')) %>%
+  group_by(scenario, outcome, unit, estimate) %>% summarise(across(number, sum)) %>%
   pivot_wider(names_from=estimate, values_from=number) %>%
   relocate(high, .after = low) %>%
   write_csv(file.path(output_dir, 'deaths and total costs cumulative, all scenarios.csv'))
@@ -303,7 +303,7 @@ emis %>% filter(scenario=='BAU', year==pmax(2022, COD)) %>%
 hia_scenarios %>% ungroup %>%
   filter(scenario=='BAU', !double_counted) %>%
   inner_join(plant_cod) %>%
-  mutate(across(matches('^deaths|^number'), ~.x * ifelse(grepl('Death', Outcome), 1, 0))) %>%
+  mutate(across(matches('^deaths|^number'), ~.x * ifelse(grepl('Death', outcome), 1, 0))) %>%
   group_by(CFPP.name, Owner, province, cluster, Latitude, Longitude, MW, scenario, year, estimate) %>%
   summarise(across(c(number, matches('^deaths|^cost|^number')), sum)) %>%
   rename(deaths=number) %>% right_join(plant_names, .) ->
@@ -341,13 +341,13 @@ usd_to_lcu=15447
 
 
 hia_cost %>%
-  distinct(Outcome, valuation_world_2017, valuation_current_usd, iso3) %>%
-  left_join(valuations %>% select(Outcome, reference)) %>%
+  distinct(outcome, valuation_world_2017, valuation_current_usd, iso3) %>%
+  left_join(valuations %>% select(outcome, reference)) %>%
   na.omit %>% add_long_names() %>%
-  select(-Outcome, Outcome=Outcome_long) %>%
+  select(-outcome, outcome=outcome_long) %>%
   mutate(valuation_current_lcu=valuation_current_usd*usd_to_lcu,
          across(is.numeric, function(x) x %>% signif(4) %>% scales::comma(accuracy=1))) %>%
-  relocate(Outcome) %>%
+  relocate(outcome) %>%
   relocate(reference, .after=everything()) %>%
   write_csv(file.path(output_dir, 'valuations.csv'))
 
@@ -355,8 +355,8 @@ hia_cost %>%
 #get impacts by affected province and emitting plant
 hia_fut %>% ungroup %>%
   filter(year==2022, !double_counted) %>%
-  mutate(across(number, ~.x * ifelse(grepl('Death', Outcome), 1, 0))) %>%
-  group_by(region_id, iso3, pop, Pollutant, year, estimate) %>%
+  mutate(across(number, ~.x * ifelse(grepl('Death', outcome), 1, 0))) %>%
+  group_by(region_id, iso3, pop, pollutant, year, estimate) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum, na.rm=T)) ->
   hia_fut_totals
 
@@ -366,7 +366,7 @@ scenarios_to_process %>%
     paste0('exp_',run,'.csv') %>% file.path(output_dir, .) %>%
       read_csv() %>%
       pivot_longer(-region_id, names_to='subspecies', values_to='exposure') %>%
-      mutate(Pollutant=case_when(subspecies %in% c('so4', 'no3', 'ppm25')~'PM25',
+      mutate(pollutant=case_when(subspecies %in% c('so4', 'no3', 'ppm25')~'PM25',
                                  T~toupper(subspecies)),
              emitted_species=case_when(subspecies %in% c('so2', 'so4')~'SOx',
                                        subspecies %in% c('no2','no3')~'NOx',
@@ -375,7 +375,7 @@ scenarios_to_process %>%
       left_join(modeled_emissions) %>%
       left_join(hia_fut_totals) %>%
       mutate(across(c(number, cost_mn_currentUSD), ~.x * exposure/pop/modeled_emissions)) %>%
-      select(cluster, year, Pollutant, region_id, estimate, number, cost_mn_currentUSD)
+      select(cluster, year, pollutant, region_id, estimate, number, cost_mn_currentUSD)
   }) %>% bind_rows %>% ungroup -> region_hia_per_t
 
 shp@data %>% select(region_id=GID_2, affected_province=NAME_1) %>%

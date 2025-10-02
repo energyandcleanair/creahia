@@ -87,11 +87,11 @@ hia <- runs %>% lapply(function(scen) readRDS(file.path(project_dir, 'hia',
 
 hia_totals <- hia %>%
   left_join(shp@data %>% dplyr::select(region_id = GID_2, starts_with('NAME'))) %>%
-  group_by(across(c(starts_with('NAME'), Outcome, Pollutant, Cause, AgeGrp, iso3,
+  group_by(across(c(starts_with('NAME'), outcome, pollutant, cause, age_group, iso3,
                     scenario, estimate, double_counted))) %>%
   summarise(across(number, sum)) %>%
-  filter(Pollutant != 'PM25' | Cause != 'AllCause') %>%
-  mutate(number = number * case_when(Pollutant != 'NO2' | Cause != 'AllCause' ~ 1,
+  filter(pollutant != 'PM25' | cause != 'AllCause') %>%
+  mutate(number = number * case_when(pollutant != 'NO2' | cause != 'AllCause' ~ 1,
                                      estimate == 'central' ~ 1/2,
                                      estimate == 'low' ~ 1/2,
                                      estimate == 'high' ~ 2/3))
@@ -103,12 +103,12 @@ hia_cost <- creahia::get_hia_cost(hia = hia_totals, valuation_version = "viscusi
 
 # export valuations.csv to output_dir
 hia_cost %>%
-  distinct(Outcome, valuation_world_2017, valuation_current_usd, iso3, reference) %>%
+  distinct(outcome, valuation_world_2017, valuation_current_usd, iso3, reference) %>%
   na.omit %>%
   add_long_names() %>%
-  dplyr::select(-Outcome, Outcome = Outcome_long) %>%
+  dplyr::select(-outcome, outcome = outcome_long) %>%
   mutate(across(where(is.numeric), function(x) x %>% signif(4) %>% scales::comma(accuracy = 1))) %>%
-  relocate(Outcome) %>%
+  relocate(outcome) %>%
   relocate(reference, .after = everything()) %>%
   write_csv(file.path(output_dir, 'valuations.csv'))
 
@@ -117,7 +117,7 @@ hia_fut <- hia_cost %>% creahia::get_econ_forecast(forecast_years = targetyears,
 
 # calculate HIA totals and its summary; export hia_results.csv to output_dir
 hia_totals <- hia_fut %>% add_long_names() %>%
-  group_by(Outcome = Outcome_long, Cause = Cause_long, Pollutant,
+  group_by(outcome = outcome_long, cause = Cause_long, pollutant,
            double_counted, scenario, estimate) %>%
   mutate(across(cost_mn_currentLCU, divide_by, 1000)) %>%
   rename(cost_bn_currentLCU = cost_mn_currentLCU) %>%
@@ -126,7 +126,7 @@ hia_totals <- hia_fut %>% add_long_names() %>%
 hia_totals %>% filter(!double_counted) %>%
   group_by(scenario, estimate) %>%
   summarise(across(starts_with('cost'), sum, na.rm = T)) %>%
-  pivot_longer(where(is.numeric), names_to = 'Outcome', values_to = 'number') %>%
+  pivot_longer(where(is.numeric), names_to = 'outcome', values_to = 'number') %>%
   bind_rows(hia_totals %>% filter(!double_counted)) %>%
   dplyr::select(-starts_with('cost')) %>%
   filter(!is.na(estimate)) %>%
