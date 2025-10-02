@@ -59,7 +59,7 @@ totalise_hia <- function(hia, .groups = c("scenario", "iso3", "region_id", "regi
   hia_total$cause <- lapply(str_split(hia_total$outcome, "_"),
                             function(x) {x[1]}) %>% unlist
 
-  hia_total %>% left_join(get_dict() %>% rename(cause = Code, cause_name = Long.name)) %>%
+  hia_total %>% left_join(get_dict() %>% rename(cause = code, cause_name = Long.name)) %>%
     dplyr::select(region_id, region_name, iso3, scenario, cause, cause_name,
                   unit, pollutant, central, high, low) %>%
     arrange(region_name, cause)

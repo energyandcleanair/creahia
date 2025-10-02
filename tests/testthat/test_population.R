@@ -94,14 +94,16 @@ test_that("Population is properly calculated and scaled- using HIA", {
 
   hia_2015 <- generate_random_exposure_hias(levels=c(0,1),  # Only levels 0 and 1
                                       pop_year=2015,  # Use available year
-                                      iso3=iso3
+                                      iso3=iso3,,
+                                      administrative_res="low"
   ) %>%
     mutate(year=2015)
 
 
   hia_2020 <- generate_random_exposure_hias(levels=c(0,1),  # Only levels 0 and 1
                                       pop_year=2020,  # Use available year
-                                      iso3=iso3) %>%
+                                      iso3=iso3,
+                                      administrative_res="low") %>%
     mutate(year=2020)
 
 

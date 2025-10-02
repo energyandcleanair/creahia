@@ -249,8 +249,6 @@ detect_breaks <- function(data, authorised_breaks) {
 
 test_that("Estimates are compatible with previous versions", {
 
-  testthat::skip_on_ci()
-
   library(terra)
   library(creahelpers)
   library(dplyr)
