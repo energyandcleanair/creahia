@@ -92,7 +92,7 @@ make_nice_numbers <- function(df, sigdigs=3, accuracy=1, columns=c('number', 'ce
 
 make_nice_data <- function(hiadata) {
   hiadata %<>% filter(!double_counted, !grepl('YLLs|LBW', outcome)) %>%
-    add_long_names() %>% select(-outcome, -cause) %>% rename(outcome=outcome_long, cause=Cause_long)
+    add_long_names() %>% select(-outcome, -cause) %>% rename(outcome=outcome_long, cause=cause_long)
 
   hiadata %>% group_by(scenario, estimate) %>%
     summarise(across(cost_mn_currentUSD, sum, na.rm=T)) %>%

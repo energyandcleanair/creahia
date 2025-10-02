@@ -194,7 +194,7 @@ hia_cost %>%
 hia_fut <- hia_cost %>% get_econ_forecast(forecast_years = targetyears, reference_year = 2019)
 
 hia_fut %>% add_long_names() %>%
-  group_by(outcome=outcome_long, cause=Cause_long, pollutant, double_counted, scenario, estimate) %>%
+  group_by(outcome=outcome_long, cause=cause_long, pollutant, double_counted, scenario, estimate) %>%
   mutate(across(cost_mn_currentLCU, divide_by, 1000)) %>% rename(cost_bn_currentLCU=cost_mn_currentLCU) %>%
   summarise(across(c(number, starts_with('cost')), sum, na.rm=T)) ->
   hia_totals

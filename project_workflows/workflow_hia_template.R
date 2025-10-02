@@ -115,7 +115,7 @@ hia_fut <- hia_cost %>% creahia::get_econ_forecast(forecast_years = targetyears,
 
 # calculate HIA totals and its summary; export hia_results.csv to output_dir
 hia_totals <- hia_fut %>% add_long_names() %>%
-  group_by(outcome = outcome_long, cause = Cause_long, pollutant,
+  group_by(outcome = outcome_long, cause = cause_long, pollutant,
            double_counted, scenario, estimate) %>%
   mutate(across(cost_mn_currentLCU, divide_by, 1000)) %>%
   rename(cost_bn_currentLCU = cost_mn_currentLCU) %>%

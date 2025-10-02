@@ -223,7 +223,7 @@ hia_scenarios_totals %>% ungroup %>%
 
 hia_scenarios_totals %>% filter(year==2022, grepl("PERPRES.*2022$", scenario)) %>%
   add_long_names() %>%
-  select(scenario, outcome=outcome_long, cause=Cause_long, pollutant, unit, double_counted, estimate, number) %>%
+  select(scenario, outcome=outcome_long, cause=cause_long, pollutant, unit, double_counted, estimate, number) %>%
   pivot_wider(names_from=estimate, values_from=number) %>%
   relocate(high, .after = low) %>%
   write_csv('annual HIA 2022.csv')
@@ -243,7 +243,7 @@ hia_cum %>% filter(estimate=='central', !double_counted, grepl('Death', outcome)
 
 hia_cum %>% filter(!grepl("cofiring", scenario)) %>%
   add_long_names() %>%
-  select(scenario, outcome=outcome_long, cause=Cause_long, pollutant, unit, double_counted, estimate, number) %>%
+  select(scenario, outcome=outcome_long, cause=cause_long, pollutant, unit, double_counted, estimate, number) %>%
   pivot_wider(names_from=estimate, values_from=number) %>%
   relocate(high, .after = low) %>%
   write_csv('annual HIA 2024 to end-of-life.csv')

@@ -255,7 +255,7 @@ for (targetyears in seq(2009,2040)){
 
 hia_fut <- hia_cost %>% creahia::get_econ_forecast(forecast_years = targetyears, reference_year = 2019, use_gdp_scaling = TRUE)
 hia_fut_totals <- hia_fut %>% add_long_names() %>%
-  group_by(outcome = outcome_long, cause = Cause_long, pollutant,
+  group_by(outcome = outcome_long, cause = cause_long, pollutant,
            double_counted, scenario, estimate, iso3, NAME_2) %>%
   mutate(across(cost_mn_currentLCU, divide_by, 1000)) %>%
   rename(cost_bn_currentLCU = cost_mn_currentLCU) %>%

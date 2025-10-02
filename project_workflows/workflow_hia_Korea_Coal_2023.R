@@ -178,7 +178,7 @@ hia_cost %>%
 hia_fut <- hia_cost %>% get_econ_forecast(forecast_years = targetyears, reference_year = 2019)
 
 hia_fut %>% add_long_names() %>%
-  group_by(outcome=outcome_long, cause=Cause_long, pollutant, double_counted, scenario, estimate) %>%
+  group_by(outcome=outcome_long, cause=cause_long, pollutant, double_counted, scenario, estimate) %>%
   mutate(across(cost_mn_currentLCU, divide_by, 1000)) %>% rename(cost_bn_currentLCU=cost_mn_currentLCU) %>%
   summarise(across(c(number, starts_with('cost')), sum, na.rm=T)) ->
   hia_totals
@@ -220,10 +220,10 @@ hia_totals %>% filter(grepl('death', outcome), !double_counted) %>%
   #filter(iso3=='KOR') %>%
   #filter(!double_counted) %>%
   add_long_names() %>%
-  mutate(outcome = case_when(outcome_long == Cause_long | Cause_long=='Asthma'~outcome_long,
+  mutate(outcome = case_when(outcome_long == cause_long | cause_long=='Asthma'~outcome_long,
                              outcome_long=='cost_mn_currentUSD'~'economic costs, mln USD',
                              outcome_long=='cost_bn_currentLCU'~'economic costs, bln KRW',
-                             T~paste0(outcome_long, ', ', Cause_long))) %>%
+                             T~paste0(outcome_long, ', ', cause_long))) %>%
   group_by(scenario, outcome, pollutant, estimate) %>%
   summarise(across(number, sum, na.rm=T)) %>%
   spread(estimate, number) %>%

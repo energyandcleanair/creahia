@@ -177,7 +177,7 @@ for(x in names(years)){
     summarise(across(c(number, cost_mn_currentUSD),  ~sum(.x, na.rm=T))) %>%
     left_join(hia %>% distinct(scenario, outcome, cause, pollutant, double_counted)) %>%
     mutate(double_counted = ifelse(pollutant=='NO2', F, double_counted)) %>%
-    add_long_names %>% ungroup %>% select(-outcome, -cause) %>% rename(cause=Cause_long, outcome=outcome_long) %>%
+    add_long_names %>% ungroup %>% select(-outcome, -cause) %>% rename(cause=cause_long, outcome=outcome_long) %>%
     pivot_longer(c(number, cost_mn_currentUSD)) %>%
     spread(estimate, value) %>%
     arrange(desc(name), scenario, outcome!='deaths', double_counted) %>%
@@ -195,7 +195,7 @@ for(x in names(years)){
     summarise(across(c(number, cost_mn_currentUSD),  ~sum(.x, na.rm=T))) %>%
     left_join(hia %>% distinct(scenario, outcome, cause, pollutant, double_counted)) %>%
     mutate(double_counted = ifelse(pollutant=='NO2', F, double_counted)) %>%
-    add_long_names %>% ungroup %>% select(-outcome, -cause) %>% rename(cause=Cause_long, outcome=outcome_long) %>%
+    add_long_names %>% ungroup %>% select(-outcome, -cause) %>% rename(cause=cause_long, outcome=outcome_long) %>%
     pivot_longer(c(number, cost_mn_currentUSD)) %>%
     spread(estimate, value) %>%
     arrange(desc(name), scenario, outcome!='deaths', double_counted) %>%

@@ -193,7 +193,7 @@ hia_fut <- hia_cost %>% creahia::get_econ_forecast(forecast_years = targeryears,
 
 # calculate HIA totals and its summary; export hia_results.csv to output_dir
 hia_totals <- hia_fut %>% add_long_names() %>%
-  group_by(outcome = outcome_long, cause = Cause_long, pollutant,
+  group_by(outcome = outcome_long, cause = cause_long, pollutant,
            double_counted, scenario, estimate) %>%
   mutate(across(cost_mn_currentLCU, divide_by, 1000)) %>%
   rename(cost_bn_currentLCU = cost_mn_currentLCU) %>%
@@ -229,7 +229,7 @@ for (ccase in (scenarios_to_process)){
   hia_totals <- hia_fut %>%
     filter(scenario == ccase) %>%
     add_long_names() %>%
-    group_by(outcome = outcome_long, cause = Cause_long, pollutant, iso3,
+    group_by(outcome = outcome_long, cause = cause_long, pollutant, iso3,
              double_counted, scenario, estimate) %>%
     mutate(across(cost_mn_currentLCU, divide_by, 1000)) %>%
     rename(cost_bn_currentLCU = cost_mn_currentLCU) %>%
@@ -276,7 +276,7 @@ for (ccase in (scenarios_to_process)){
     filter(scenario == ccase) %>%
     filter(iso3 %in% regs) %>%
     add_long_names() %>%
-    group_by(outcome = outcome_long, cause = Cause_long, pollutant, iso3,
+    group_by(outcome = outcome_long, cause = cause_long, pollutant, iso3,
              double_counted, scenario, estimate) %>%
     mutate(across(cost_mn_currentLCU, divide_by, 1000)) %>%
     rename(cost_bn_currentLCU = cost_mn_currentLCU) %>%

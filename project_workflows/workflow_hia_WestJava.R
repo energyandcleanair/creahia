@@ -174,7 +174,7 @@ hia_cost %>%
 hia_fut <- hia_cost %>% creahia::get_econ_forecast(forecast_years = targetyears, reference_year = 2019)
 
 hia_totals <- hia_fut %>% creahia::add_long_names() %>%
-  group_by(outcome = outcome_long, cause = Cause_long, pollutant, double_counted, scenario, estimate) %>%
+  group_by(outcome = outcome_long, cause = cause_long, pollutant, double_counted, scenario, estimate) %>%
   mutate(across(cost_mn_currentLCU, divide_by, 1000)) %>%
   rename(cost_bn_currentLCU = cost_mn_currentLCU) %>%
   summarise(across(c(number, starts_with('cost')), sum, na.rm = T))
@@ -286,7 +286,7 @@ output_tables <- function(hiadata, output_name = '', rounding_function = make_ni
   hiadata <- hiadata %>% filter(!double_counted, !grepl('YLLs|LBW', outcome)) %>%
     add_long_names() %>%
     select(-outcome, -cause) %>%
-    rename(outcome = outcome_long, cause = Cause_long)
+    rename(outcome = outcome_long, cause = cause_long)
 
   cost_totals <- hiadata %>% group_by(scenario, estimate) %>%
     summarise(across(cost_mn_currentUSD, sum, na.rm = T)) %>%

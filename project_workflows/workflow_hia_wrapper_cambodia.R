@@ -163,12 +163,12 @@ econ_costs <- hia %>% sel(-any_of('Deaths_Total')) %>%
                      valuation_version="default")
 
 econ_costs$cost_forecast %>%
-  group_by(estimate, outcome_long, Cause_long, pollutant, scenario, iso3) %>%
+  group_by(estimate, outcome_long, cause_long, pollutant, scenario, iso3) %>%
   summarise_if(is.numeric, sum) ->
   hia_cumu_by_country
 
 econ_costs$cost_forecast %>%
-  group_by(estimate, outcome_long, Cause_long, pollutant, scenario) %>%
+  group_by(estimate, outcome_long, cause_long, pollutant, scenario) %>%
   summarise_if(is.numeric, sum) ->
   hia_cumu_full_domain
 

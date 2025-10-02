@@ -19,7 +19,7 @@ t2 %>%
   add_total_deaths_and_costs() %>%
   add_long_names() %>%
   select(-outcome, -cause) %>%
-  rename(outcome=outcome_long, cause=Cause_long) %>%
+  rename(outcome=outcome_long, cause=cause_long) %>%
   pivot_wider(values_from=c(number, cost_mn_currentUSD), names_from=estimate) ->
   t3
 

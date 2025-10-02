@@ -185,7 +185,7 @@ hia_fut %>% filter(year %in% 2025:2060, pollutant != 'NO2' | cause != 'AllCause'
   summarise(across(c(number, cost_mn_currentUSD), sum)) %>%
   left_join(hia %>% distinct(scenario, scenario_description, outcome, cause, pollutant, double_counted)) %>%
   mutate(double_counted = ifelse(pollutant=='NO2', F, double_counted)) %>%
-  add_long_names %>% ungroup %>% select(-outcome, -cause) %>% rename(cause=Cause_long, outcome=outcome_long) %>%
+  add_long_names %>% ungroup %>% select(-outcome, -cause) %>% rename(cause=cause_long, outcome=outcome_long) %>%
   pivot_longer(c(number, cost_mn_currentUSD)) %>%
   spread(estimate, value) %>%
   arrange(desc(name), scenario, outcome!='deaths', double_counted) %>%

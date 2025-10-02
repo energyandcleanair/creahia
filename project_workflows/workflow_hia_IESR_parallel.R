@@ -264,7 +264,7 @@ hia_cost %>%
 
 
 hia_fut %>% add_long_names() %>%
-  group_by(outcome=outcome_long, cause=Cause_long, pollutant, double_counted, scenario, estimate) %>%
+  group_by(outcome=outcome_long, cause=cause_long, pollutant, double_counted, scenario, estimate) %>%
   mutate(across(cost_mn_currentLCU, divide_by, 1000)) %>% rename(cost_bn_currentLCU=cost_mn_currentLCU) %>%
   summarise(across(c(number, starts_with('cost')), sum, na.rm=T)) ->
   hia_totals
@@ -368,7 +368,7 @@ make_nice_numbers <- function(df, sigdigs=3, accuracy=1, columns=c('number', 'ce
 output_tables <- function(hiadata, output_name='', rounding_function=make_nice_numbers,
                           bad_scenario='Eskom plan', good_scenario='compliance') {
   hiadata %<>% filter(!double_counted, !grepl('YLLs|LBW', outcome)) %>%
-    add_long_names() %>% select(-outcome, -cause) %>% rename(outcome=outcome_long, cause=Cause_long)
+    add_long_names() %>% select(-outcome, -cause) %>% rename(outcome=outcome_long, cause=cause_long)
 
   hiadata %>% group_by(scenario, estimate) %>%
     summarise(across(cost_mn_currentUSD, sum, na.rm=T)) %>%
