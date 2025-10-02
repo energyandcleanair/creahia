@@ -16,7 +16,7 @@ test_that("Test get_valuations_raw loads data correctly", {
   testthat::expect_true(all(required_cols %in% names(raw_valuation)))
 
   # Test that all outcomes are present
-  expected_outcomes <- c("Asthma.Prev", "exac", "PTB", "Deaths", "Deaths.child", "YLDs", "Absences")
+  expected_outcomes <- c("AsthmaPrevalence", "AsthmaERV", "PTB", "Deaths", "Deaths.child", "YLDs", "Absences")
   testthat::expect_true(all(expected_outcomes %in% raw_valuation$Outcome))
 
   # Test that all currencies are handled
@@ -184,7 +184,7 @@ test_that("Test get_valuations runs end-to-end", {
   testthat::expect_true(all(required_cols %in% names(result)))
 
   # Test that all outcomes are processed
-  expected_outcomes <- c("Asthma.Prev", "exac", "PTB", "Deaths", "Deaths.child", "YLDs", "Absences")
+  expected_outcomes <- c("AsthmaPrevalence", "AsthmaERV", "PTB", "Deaths", "Deaths.child", "YLDs", "Absences")
   testthat::expect_true(all(expected_outcomes %in% result$Outcome))
 
   # Test that all countries are processed
