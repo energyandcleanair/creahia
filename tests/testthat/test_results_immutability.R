@@ -2,8 +2,6 @@
 # across versions.
 # This is an initial test. As new versions come up, it might be beneficial to include more cases
 # and allow for estimates to vary in certain version changes.
-
-
 get_fingerprint_bgd <- function(params = list(calc_causes = "GBD only", epi_version = "gbd2019", pop_year = 2020)){
 
   # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
@@ -51,16 +49,16 @@ params_to_filename <- function(params) {
   return(param_string)
 }
 
-# Install a specific version of the package
-install_package_version <- function(ref, force=FALSE) {
+# Load a specific version of the package
+load_package_version <- function(ref, force=FALSE) {
   if (ref == "current") {
-    # Install the current version from local directory
-    remotes::install_local(".", upgrade = FALSE, force=force)
+    # Load the current version from local directory
+    devtools::load_all(here::here(), quiet = TRUE)
   } else {
     # Install from GitHub with specific ref
     remotes::install_github("energyandcleanair/creahia", ref = ref, upgrade = FALSE, force=FALSE)
+    creahelpers::reload_packages("creahia")
   }
-  creahelpers::reload_packages("creahia")
 }
 
 generate_fingerprint <- function(ref,
@@ -71,7 +69,9 @@ generate_fingerprint <- function(ref,
 
   # Create the filepath
   param_string <- params_to_filename(params)
-  filepath <- glue("tests/data/versions/{ref}_hia_bgd_{param_string}.csv")
+  package_root <- here::here()
+  fingerprint_dir <- file.path(package_root, "inst", "testdata", "fingerprints")
+  filepath <- file.path(fingerprint_dir, glue("{ref}_hia_bgd_{param_string}.csv"))
 
   # Check if file exists and force is FALSE
   current_force <- if(ref == "current") force_current else force
@@ -80,12 +80,12 @@ generate_fingerprint <- function(ref,
     return(NULL)
   }
 
-  # Install the package version
-  install_package_version(ref, force = current_force)
+  # Load the package version
+  load_package_version(ref, force = current_force)
 
-  # Get the installed version
+  # Get the loaded version
   version <- as.character(packageVersion("creahia"))
-  message(glue("Installed creahia version {version} for ref {ref}"))
+  message(glue("Loaded creahia version {version} for ref {ref}"))
 
   # Generate the fingerprint
   hia <- get_fingerprint_bgd(params = params)
@@ -124,12 +124,125 @@ generate_fingerprints <- function(refs=c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.
 }
 
 
+read_fingerprint <- function(filepath){
+  fingerprint <- read_csv(filepath)
+
+  # Rename columns to be compatible through different versions
+  names(fingerprint) <- gsub("Outcome", "outcome", names(fingerprint))
+  names(fingerprint) <- gsub("Pollutant", "pollutant", names(fingerprint))
+  names(fingerprint) <- gsub("Cause", "cause", names(fingerprint))
+  names(fingerprint) <- gsub("AgeGrp", "age_group", names(fingerprint))
+
+  fingerprint <- fingerprint %>%
+    mutate(outcome = recode(outcome, exac="AsthmaERV"),
+           cause = recode(cause,
+                          Asthma.0to17="Asthma",
+                          Asthma.18to99="Asthma"
+                          ))
+
+
+  return(fingerprint)
+}
+
+
 read_fingerprints <- function(){
-  tibble(filepath=list.files("tests/data/versions", full.names = TRUE)) %>%
+  # Get the package root directory
+  package_root <- here::here()
+  fingerprint_dir <- file.path(package_root, "inst", "testdata", "fingerprints")
+  tibble(filepath=list.files(fingerprint_dir, full.names = TRUE)) %>%
     rowwise() %>%
-    mutate(hia = list(read_csv(filepath))) %>%
-    # select(-filepath) %>%
+    mutate(hia = list(read_fingerprint(filepath))) %>%
     unnest(hia)
+}
+
+# Helper function to detect missing cause/outcome pairs and identify unauthorised ones
+detect_missing <- function(data, authorised_missing) {
+  # Get all central estimates
+  central_data <- data %>%
+    filter(estimate == "central")
+
+  # Find all possible cause/outcome combinations
+  all_combinations <- central_data %>%
+    select(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version) %>%
+    distinct()
+
+  # Find which combinations are missing in each version
+  missing_pairs <- central_data %>%
+    group_by(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version) %>%
+    summarise(versions = list(unique(version)), .groups = "drop") %>%
+    mutate(
+      all_versions = list(unique(central_data$version)),
+      missing_versions = map2(all_versions, versions, ~ setdiff(.x, .y))
+    ) %>%
+    unnest(missing_versions) %>%
+    select(
+      version = missing_versions,
+      cause, outcome, calc_causes, epi_version
+    ) %>%
+    ungroup()
+
+  # Join with authorised missing to identify unauthorised ones
+  if (nrow(missing_pairs) > 0) {
+    missing_with_auth <- missing_pairs %>%
+      left_join(authorised_missing, by = c("cause", "outcome", "calc_causes", "epi_version", "version")) %>%
+      mutate(
+        is_authorised = !is.na(description),
+        unauthorised_missing = !is_authorised
+      )
+  } else {
+    missing_with_auth <- missing_pairs %>%
+      mutate(
+        is_authorised = FALSE,
+        unauthorised_missing = FALSE
+      )
+  }
+
+  return(missing_with_auth)
+}
+
+# Helper function to detect breaks and identify unauthorised ones
+detect_breaks <- function(data, authorised_breaks) {
+
+  # Get all central estimates, arrange by version
+  central_data <- data %>%
+    filter(estimate == "central") %>%
+    arrange(ref)
+
+  # Detect breaks by comparing consecutive versions
+  breaks <- central_data %>%
+    group_by(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version) %>%
+    arrange(ref) %>%
+    mutate(
+      prev_number = lag(number),
+      prev_ref = lag(ref),
+      is_break = !is.na(prev_number) & abs(number - prev_number) > 0.1
+    ) %>%
+    filter(is_break) %>%
+    select(
+      ref = ref, # from_ref means the ref that introduced the break
+      cause, outcome, calc_causes, epi_version,
+      prev_value = prev_number,
+      current_value = number
+    ) %>%
+    ungroup()
+
+  # Join with authorised breaks to identify unauthorised ones
+  if (nrow(breaks) > 0) {
+    breaks_with_auth <- breaks %>%
+      left_join(authorised_breaks, by = c("cause", "ref"="from_ref")) %>%
+      mutate(
+        is_authorised = !is.na(description),
+        unauthorised_break = !is_authorised
+      )
+  } else {
+    breaks_with_auth <- breaks %>%
+      mutate(
+        is_authorised = FALSE,
+        unauthorised_break = FALSE
+      )
+  }
+
+  return(breaks_with_auth)
 }
 
 
@@ -137,7 +250,6 @@ read_fingerprints <- function(){
 test_that("Estimates are compatible with previous versions", {
 
   testthat::skip_on_ci()
-  # testthat::skip() # Temporarily removed to run immutability test
 
   library(terra)
   library(creahelpers)
@@ -146,6 +258,8 @@ test_that("Estimates are compatible with previous versions", {
   library(creaexposure)
   library(glue)
   library(tidyr)
+
+  readRenviron(".Renviron")
 
   # Define parameter sets to test
   param_sets <- list(
@@ -157,16 +271,13 @@ test_that("Estimates are compatible with previous versions", {
                                  "0.4.4",
                                  "0.5.0",
                                  "0.5.1",
-                                 # Below are additional commits
-                                 # to investigate the change in Absences.LBW,PTB
-                                 # Result: it's a slight change in epidemiological data. Minor.
-                                 # "14391a3cd25ecb3b862481d0639d32b5fffc3954",
-                                 # "47dc2d457a942858ff1049d5ec18398ec30dc782",
-                                 # "02f3150a34005fc7e49e2adbd4a92c8fa02882e0",
                                  "0.5.2",
                                  "0.6.0",
                                  "0.6.1",
-                                 "current"), param_sets = param_sets, force = F, force_current = F)
+                                 "current"),
+                        param_sets = param_sets,
+                        force = F,
+                        force_current = T)
 
   # Read all fingerprints
   all_fingerprints <- read_fingerprints() %>%
@@ -179,71 +290,89 @@ test_that("Estimates are compatible with previous versions", {
   # Test all causes/outcomes are there
   ####################################################
 
-  # Define known exceptions where differences are expected
-  known_missing_exceptions <- list(
-    # YLLs that were NA in previous versions but have values in newer versions
-    tibble(
-      Outcome = "YLLs",
-      Cause = c("COPD", "IHD", "LC", "LRI", "Stroke"),
-      calc_causes = "GEMM and GBD",
-      version_condition = "version < '0.5.0'",
-    )
+  # Define authorised missing cause/outcome pairs
+  authorised_missing <- tibble(
+    outcome = rep("YLLs", 10),
+    cause = rep(c("COPD", "IHD", "LC", "LRI", "Stroke"), 2),
+    calc_causes = rep("GEMM and GBD", 10),
+    epi_version = rep("gbd2019", 10),
+    version = rep(c("0.4.1", "0.4.4"), each = 5),
+    description = rep("YLLs that were NA in previous versions but have values in newer versions", 10)
   )
 
-  # First check: ensure all versions have the same cause/outcome pairs after removing exceptions
-  missing_pairs <- all_fingerprints %>%
-    group_by(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version) %>%
-    summarise(n = n(), .groups = "drop") %>%
-    filter(n < length(unique(all_fingerprints$version))) %>%
-    distinct(calc_causes, epi_version, Cause, Outcome, n)
+  # Detect missing cause/outcome pairs and identify unauthorised ones
+  missing_analysis <- detect_missing(all_fingerprints, authorised_missing)
 
-  # Filter out known exceptions from missing_pairs
-  for (exception in known_missing_exceptions) {
-    join_cols <- setdiff(names(exception), "version_condition")
-    version_condition <- exception$version_condition[1]
-    missing_pairs <- anti_join(missing_pairs,
-                              exception %>% select(-version_condition),
-                              by = join_cols)
+  # Show which missing pairs were detected
+  if (nrow(missing_analysis) > 0) {
+    cat("\nDetected missing cause/outcome pairs:\n")
+    print(missing_analysis %>%
+          select(version, cause, outcome, calc_causes, epi_version, is_authorised, unauthorised_missing))
+
+    # Show authorised vs unauthorised missing
+    authorised_count <- sum(missing_analysis$is_authorised)
+    unauthorised_count <- sum(missing_analysis$unauthorised_missing)
+
+    cat(glue("\nMissing summary: {authorised_count} authorised, {unauthorised_count} unauthorised\n"))
+  } else {
+    cat("\nNo missing cause/outcome pairs detected - all versions have consistent pairs\n")
   }
 
-  testthat::expect_equal(nrow(missing_pairs), 0,
-                     info = glue("Some versions are missing cause/outcome pairs"))
+  # Test should fail if there are any unauthorised missing pairs
+  unauthorised_missing <- missing_analysis %>% filter(unauthorised_missing)
+
+  testthat::expect_equal(nrow(unauthorised_missing), 0,
+                         info = glue("Found {nrow(unauthorised_missing)} unauthorised missing cause/outcome pairs"))
 
 
 
   ####################################################
-  # Test all estimates are identical
+  # Test all estimates are identical (detect breaks)
   ####################################################
-  filtered_fingerprints <- all_fingerprints
 
-  # Second check: ensure values are consistent across versions
-  different <- filtered_fingerprints %>%
-    group_by(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version) %>%
-    # Round to 1 decimal place to ignore tiny issues
-    mutate(number = round(number, 1)) %>%
-    summarise(unique = n_distinct(number), .groups = "drop") %>%
-    filter(unique > 1) %>%
-    distinct(calc_causes, epi_version, cause, outcome)
+  # Define authorised breaks where values are expected to change between specific versions
+  authorised_breaks <- tibble(
+    cause = c("PTB", "LBW", "Absences"),
+    from_ref = "0.5.1",
+    description = "Epidemiological data update at version 0.5.1"
+  )
 
-  testthat::expect_equal(nrow(different), 0,
-                         info = glue("Different central values"))
+  # Detect all breaks and identify unauthorised ones
+  breaks_analysis <- detect_breaks(all_fingerprints, authorised_breaks)
+
+  # Show which breaks were detected
+  if (nrow(breaks_analysis) > 0) {
+    cat("\nDetected breaks:\n")
+    print(breaks_analysis %>%
+          select(ref, cause, outcome, calc_causes,
+                 prev_value, current_value, is_authorised, unauthorised_break))
+
+    # Show authorised vs unauthorised breaks
+    authorised_count <- sum(breaks_analysis$is_authorised)
+    unauthorised_count <- sum(breaks_analysis$unauthorised_break)
+
+    cat(glue("\nBreak summary: {authorised_count} authorised, {unauthorised_count} unauthorised\n"))
+  } else {
+    cat("\nNo breaks detected - all values are consistent across versions\n")
+  }
+
+  # Test should fail if there are any unauthorised breaks
+  unauthorised_breaks <- breaks_analysis %>% filter(unauthorised_break)
+
+  testthat::expect_equal(nrow(unauthorised_breaks), 0,
+                         info = glue("Found {nrow(unauthorised_breaks)} unauthorised breaks in central values"))
 
 
-  # Show differences
-  filtered_fingerprints %>%
-    select(-c(filepath, pop, version)) %>%
-    filter(region_name=="Dhaka") %>%
-    # group_by(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version) %>%
-    # Round to 1 decimal place to ignore tiny issues
-    mutate(number = round(number, 1)) %>%
-    # ungroup() %>%
-    spread(ref, number) %>% View()
-
-  filtered_fingerprints %>%
-    distinct(version, region_id, pop) %>%
-    # group_by(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version) %>%
-    # Round to 1 decimal place to ignore tiny issues
-    # mutate(number = round(number, 1)) %>%
-    # ungroup() %>%
-    spread(version, pop) %>% View()
+  # Show sample data for debugging
+  if(F){
+    all_fingerprints %>%
+      select(-c(filepath, pop, version)) %>%
+      filter(region_name=="Dhaka") %>%
+      select(-c(estimate, region_id, region_name, scenario, iso3)) %>%
+      mutate(number = round(number, 1)) %>%
+      group_by(cause, outcome, age_group, calc_causes) %>%
+      mutate(ok = n_distinct(round(number)) == 1) %>%
+      spread(ref, number) %>%
+      View()
+  }
 })
