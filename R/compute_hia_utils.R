@@ -112,18 +112,18 @@ make_hia_table <- function(hia_total,
 rename_str <- function(df, oldname, newname) { names(df)[names(df) == oldname] <- newname; df }
 
 
-add_long_names <- function(df, cols = c('Outcome', 'Cause'), dict = get_dict()) {
+add_long_names <- function(df, cols = c('outcome', 'cause'), dict = get_dict()) {
   for(cn in intersect(names(df), cols)) {
     out_cn <- paste0(cn, '_long')
     df <- df %>%
-      left_join(dict %>% rename_str('Code', cn)) %>%
-      rename_str('Long.name', out_cn)
+      left_join(dict %>% rename_str('code', cn)) %>%
+      rename_str('long_name', out_cn)
     df[[out_cn]] <- df[[out_cn]] %>% na.cover(df[[cn]])
   }
 
-  if('Cause_long' %in% names(df)) df$Cause_long[grep('non-comm', df$Cause_long)] <- 'all'
-
-  if('Pollutant' %in% names(df)) df$Pollutant <- df$Pollutant %>% recode(PM25 = "PM2.5")
+  #TODO clean these hardcoded things
+  if('cause_long' %in% names(df)) df$cause_long[grep('non-comm', df$cause_long)] <- 'all'
+  if('pollutant' %in% names(df)) df$pollutant <- df$pollutant %>% recode(PM25 = "PM2.5")
   return(df)
 }
 
@@ -134,7 +134,8 @@ hiapoll_species_corr <- function() {
     "NO2" = "no2",
     "O3_8h" = "o3_8h",
     "SO2" = "so2",
-    'PM10' = 'tpm10')
+    'PM10' = 'tpm10' #TODO Why is that?
+    )
 }
 
 
@@ -165,9 +166,6 @@ add_double_counted <- function(hia, crfs, epi) {
   # Use CRFS double counted field first
   joined <- hia %>%
     left_join(crfs %>%
-                # mutate(Cause = crf_incidence_to_cause(Incidence),
-                #        Outcome = crf_effectname_to_outcome(effectname),
-                #        Pollutant = Exposure) %>%
                 select(cause, outcome, pollutant, double_counted),
               by = c('cause', 'outcome', 'pollutant'))
 
