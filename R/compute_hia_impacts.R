@@ -39,14 +39,15 @@ compute_hia_impacts <- function(species,
 
     # calculate health impacts
     pop_domain <- conc_df %>%
-      group_by(region_id) %>%
-      summarise(pop=sum(pop, na.rm=T))
+      dplyr::group_by(region_id) %>%
+      dplyr::summarise(pop=sum(pop, na.rm=T))
 
     pop_domain$epi_location_id <- get_epi_location_id(pop_domain$region_id)
 
     epi_loc <- epi %>%
       sel(-pop, -country) %>%
-      right_join(pop_domain %>% sel(region_id, epi_location_id, pop),
+      right_join(pop_domain %>%
+                   sel(region_id, epi_location_id, pop),
                 relationship = 'many-to-many',
                 by=c(location_id='epi_location_id'))
 
@@ -63,7 +64,7 @@ compute_hia_impacts <- function(species,
       stop("Duplicated values in epidemiological data")
     }
 
-    impacts_scenario <- multiply_paf_epi.R(
+    impacts_scenario <- multiply_paf_epi(
       paf_scenario = paf %>% filter(scenario == !!scenario),
       epi_loc = epi_loc
     )

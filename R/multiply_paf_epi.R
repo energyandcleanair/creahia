@@ -8,7 +8,7 @@
 #' @export
 #'
 #' @examples
-multiply_paf_epi.R <- function(paf_scenario, epi_loc){
+multiply_paf_epi <- function(paf_scenario, epi_loc){
 
   z_epi <- qnorm(1 - (1 - 0.95) / 2) # 95% confidence interval: 1.96
   z_paf <- qnorm(1 - (1 - 0.95) / 2) # 95% confidence interval
@@ -16,6 +16,7 @@ multiply_paf_epi.R <- function(paf_scenario, epi_loc){
 
   empty_result <- tibble::tibble(
     region_id = character(),
+    pollutant = character(),
     estimate = character(),
     pop = numeric()
   )
@@ -33,6 +34,13 @@ multiply_paf_epi.R <- function(paf_scenario, epi_loc){
   }
 
   available_causes <- intersect(unique(paf_prepared$var), names(epi_loc))
+  
+  # Check for PAF entries that don't have matching EPI data
+  missing_causes <- setdiff(unique(paf_prepared$var), names(epi_loc))
+  if(length(missing_causes) > 0) {
+    warning("Some RR causes/outcomes have no match in epidemiological data: ", 
+            paste(missing_causes, collapse = ", "))
+  }
 
   if(length(available_causes) == 0) {
     return(empty_result)

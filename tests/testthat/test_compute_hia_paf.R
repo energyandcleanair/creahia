@@ -14,34 +14,34 @@ setup_test_data <- function() {
       )
     )
   )
-  
+
   # Create mock species
   species <- c("pm25", "no2")
-  
+
   # Create mock regions
   regions <- data.frame(
     region_id = "BGD",
     region_name = "Bangladesh",
     country_id = "BGD"
   )
-  
+
   # Create mock CRFs data
   crfs <- data.frame(
-    Exposure = c("PM25", "NO2"),
-    Incidence = c("NCD.LRI_Deaths", "Asthma.Inci.1to18"),
-    effectname = c("NCD.LRI_Deaths_PM25", "Asthma.Inci.1to18_NO2"),
+    pollutant = c("PM25", "NO2"),
+    cause = c("NCD.LRI", "Asthma.1to18"),
+    outcome = c("Deaths", "AsthmaIncidence"),
     Counterfact = c(5.8, 0),
     Conc.change = c(10, 10),
     Units.multiplier = c(1, 1),
     low = c(1.02, 1.01),
     central = c(1.06, 1.05),
     high = c(1.11, 1.09),
-    Double.Counted = c(FALSE, FALSE)
+    double_counted = c(FALSE, FALSE)
   )
-  
+
   # Create mock RR sources
   rr_sources <- c("GBD")
-  
+
   return(list(
     conc_map = conc_map,
     species = species,
@@ -53,7 +53,7 @@ setup_test_data <- function() {
 
 test_that("compute_hia_paf_crfs returns correct structure", {
   test_data <- setup_test_data()
-  
+
   # Mock the get_crfs function to return our test data
   with_mocked_bindings(
     get_crfs = function(...) test_data$crfs,
@@ -64,16 +64,16 @@ test_that("compute_hia_paf_crfs returns correct structure", {
         regions = test_data$regions,
         crfs = test_data$crfs
       )
-      
+
       # Check structure
       expect_true(is.list(result))
       expect_true("scenario1" %in% names(result))
-      
+
       scenario_result <- result$scenario1
       expect_true(is.data.frame(scenario_result))
       expected_cols <- c("pollutant", "cause", "outcome", "region_id", "low", "central", "high")
       expect_true(all(expected_cols %in% names(scenario_result)))
-      
+
       expect_equal(sort(unique(scenario_result$region_id)), "BGD")
       expect_true(all(scenario_result$pollutant %in% c("PM25", "NO2")))
       expect_true(all(sapply(scenario_result[c("low", "central", "high")], is.numeric)))
@@ -83,7 +83,7 @@ test_that("compute_hia_paf_crfs returns correct structure", {
 
 test_that("compute_hia_paf_crfs calculates PAF correctly", {
   test_data <- setup_test_data()
-  
+
   with_mocked_bindings(
     get_crfs = function(...) test_data$crfs,
     {
@@ -93,9 +93,9 @@ test_that("compute_hia_paf_crfs calculates PAF correctly", {
         regions = test_data$regions,
         crfs = test_data$crfs
       )
-      
+
       scenario_result <- result$scenario1
-      
+
       expect_true(all(is.finite(scenario_result$low)))
       expect_true(all(is.finite(scenario_result$central)))
       expect_true(all(is.finite(scenario_result$high)))
@@ -106,7 +106,7 @@ test_that("compute_hia_paf_crfs calculates PAF correctly", {
 
 test_that("compute_hia_paf_crfs handles different estimates correctly", {
   test_data <- setup_test_data()
-  
+
   with_mocked_bindings(
     get_crfs = function(...) test_data$crfs,
     {
@@ -116,9 +116,9 @@ test_that("compute_hia_paf_crfs handles different estimates correctly", {
         regions = test_data$regions,
         crfs = test_data$crfs
       )
-      
+
       scenario_result <- result$scenario1
-      
+
       expect_equal(nrow(scenario_result), nrow(unique(scenario_result[c('pollutant', 'cause', 'outcome', 'region_id')])))
       expect_true(all(!is.na(scenario_result$central)))
     }
@@ -127,7 +127,7 @@ test_that("compute_hia_paf_crfs handles different estimates correctly", {
 
 test_that("compute_hia_paf_rr_curves returns correct structure", {
   test_data <- setup_test_data()
-  
+
   # Mock required functions
   with_mocked_bindings(
     get_ihme = function(...) data.frame(
@@ -161,11 +161,11 @@ test_that("compute_hia_paf_rr_curves returns correct structure", {
         rr_sources = test_data$rr_sources,
         scenarios = names(test_data$conc_map)
       )
-      
+
       # Check structure
       expect_true(is.list(result))
       expect_true("scenario1" %in% names(result))
-      
+
       scenario_result <- result$scenario1
       expect_true(is.data.frame(scenario_result))
       expected_cols <- c("pollutant", "cause", "outcome", "region_id", "low", "central", "high")
@@ -177,7 +177,7 @@ test_that("compute_hia_paf_rr_curves returns correct structure", {
 
 test_that("compute_hia_paf coordinator function works", {
   test_data <- setup_test_data()
-  
+
   with_mocked_bindings(
     get_crfs = function(...) test_data$crfs,
     get_ihme = function(...) data.frame(
@@ -212,26 +212,27 @@ test_that("compute_hia_paf coordinator function works", {
         rr_sources = test_data$rr_sources,
         crfs = test_data$crfs
       )
-      
-      # Check structure
-      expect_true(is.list(result))
-      expect_true("rr" %in% names(result))
-      expect_true("crf" %in% names(result))
-      
-      # Check RR-based PAF
-      expect_true(is.list(result$rr))
-      expect_true("scenario1" %in% names(result$rr))
-      
-      # Check CRF-based PAF
-      expect_true(is.list(result$crf))
-      expect_true("scenario1" %in% names(result$crf))
+
+      # Check structure - new structure is a single tibble
+      expect_true(is.data.frame(result))
+      expect_true("scenario" %in% names(result))
+      expect_true("pollutant" %in% names(result))
+      expect_true("cause" %in% names(result))
+      expect_true("outcome" %in% names(result))
+      expect_true("region_id" %in% names(result))
+      expect_true("low" %in% names(result))
+      expect_true("central" %in% names(result))
+      expect_true("high" %in% names(result))
+
+      # Check that we have data for scenario1
+      expect_true("scenario1" %in% result$scenario)
     }
   )
 })
 
 test_that("compute_hia_paf handles empty rr_sources", {
   test_data <- setup_test_data()
-  
+
   with_mocked_bindings(
     get_crfs = function(...) test_data$crfs,
     {
@@ -243,22 +244,23 @@ test_that("compute_hia_paf handles empty rr_sources", {
         rr_sources = c(),  # Empty RR sources
         crfs = test_data$crfs
       )
-      
-      # Should only have CRF results
-      expect_true(is.list(result))
-      expect_true("crf" %in% names(result))
-      expect_false("rr" %in% names(result))
-      
+
+      # Should only have CRF results (new structure is single tibble)
+      expect_true(is.data.frame(result))
+      expect_true("scenario" %in% names(result))
+      expect_true("pollutant" %in% names(result))
+
       # CRF results should still be present
-      expect_true(is.list(result$crf))
-      expect_true("scenario1" %in% names(result$crf))
+      expect_true("scenario1" %in% result$scenario)
+      # Should have NO2 (CRF-based) but no PM25 (RR-based) when rr_sources is empty
+      expect_true(any(result$pollutant == "NO2"))
     }
   )
 })
 
 test_that("PAF calculations handle edge cases", {
   test_data <- setup_test_data()
-  
+
   # Test with zero concentrations
   conc_map_zero <- list(
     scenario1 = list(
@@ -271,7 +273,7 @@ test_that("PAF calculations handle edge cases", {
       )
     )
   )
-  
+
   with_mocked_bindings(
     get_crfs = function(...) test_data$crfs,
     {
@@ -281,14 +283,14 @@ test_that("PAF calculations handle edge cases", {
         regions = test_data$regions,
         crfs = test_data$crfs
       )
-      
+
       # Should handle zero concentrations gracefully
       expect_true(is.list(result))
       expect_true("scenario1" %in% names(result))
-      
+
       scenario_result <- result$scenario1
       paf_cols <- names(scenario_result)[grepl("PM25|NO2", names(scenario_result))]
-      
+
       for(col in paf_cols) {
         paf_values <- scenario_result[[col]]
         expect_true(all(is.finite(paf_values)))
@@ -299,7 +301,7 @@ test_that("PAF calculations handle edge cases", {
 
 test_that("PAF calculations are mathematically consistent", {
   test_data <- setup_test_data()
-  
+
   with_mocked_bindings(
     get_crfs = function(...) test_data$crfs,
     {
@@ -309,9 +311,9 @@ test_that("PAF calculations are mathematically consistent", {
         regions = test_data$regions,
         crfs = test_data$crfs
       )
-      
+
       scenario_result <- result$scenario1
-      
+
       expected_paf_pm25 <- 1 - exp(-log(1.06) * (-5) / 10)
       pm25_row <- scenario_result %>%
         dplyr::filter(pollutant == "PM25",

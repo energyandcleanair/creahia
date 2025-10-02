@@ -233,21 +233,21 @@ add_total_deaths_and_costs <- function(df) {
 #' Convert wide HIA data to long format
 #'
 #' @param hia Health impact assessment data in wide format
-#' @return HIA data in long format with proper Outcome, Pollutant, and Cause columns
+#' @return HIA data in long format with proper outcome and cause columns
 #' @export
 to_long_hia <- function(hia) {
+
+  # If empty, return as is with additional columns
+  if(nrow(hia) == 0) {
+    hia$number <- numeric(0)
+    hia$cause <- character(0)
+    hia$outcome <- character(0)
+    return(hia)
+  }
+
   # Get numeric columns to pivot (exclude character, factor, and pop columns)
   numeric_cols <- names(hia)[sapply(hia, is.numeric)]
   cols_to_pivot <- numeric_cols[numeric_cols != "pop"]
-
-  # If no columns to pivot, return the data as-is with default columns
-  # if(length(cols_to_pivot) == 0) {
-  #   return(hia %>%
-  #          mutate(Outcome = NA_character_,
-  #                 Pollutant = NA_character_,
-  #                 Cause = NA_character_,
-  #                 number = NA_real_))
-  # }
 
   hia %>%
     pivot_longer(all_of(cols_to_pivot),
