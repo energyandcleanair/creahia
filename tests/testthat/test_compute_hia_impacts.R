@@ -82,18 +82,18 @@ test_that("compute_hia_impacts returns correct structure", {
 
   # Test that the function can handle empty PAF data without crashing
   expect_no_error({
-    result <- compute_hia_impacts(
-      species = test_data$species,
-      paf = paf_minimal,
-      conc_map = test_data$conc_map,
-      regions = test_data$regions,
-      epi = test_data$epi,
-      crfs = test_data$crfs
-    )
+      result <- compute_hia_impacts(
+        species = test_data$species,
+        paf = paf_minimal,
+        conc_map = test_data$conc_map,
+        regions = test_data$regions,
+        epi = test_data$epi,
+        crfs = test_data$crfs
+      )
   })
 
   # Basic structure check
-  expect_true(is.data.frame(result))
+      expect_true(is.data.frame(result))
 
 })
 
@@ -104,20 +104,20 @@ test_that("compute_hia_impacts calculates CRF-based impacts correctly", {
   paf_crf_only <- test_data$paf %>%
     dplyr::filter(pollutant %in% c("NO2")) # Only CRF data (NO2)
 
-  # Test that the function can handle CRF data without crashing
-  expect_no_error({
-    result <- compute_hia_impacts(
-      species = test_data$species,
-      paf = paf_crf_only,
-      conc_map = test_data$conc_map,
-      regions = test_data$regions,
-      epi = test_data$epi,
-      crfs = test_data$crfs
-    )
-  })
+      # Test that the function can handle CRF data without crashing
+      expect_no_error({
+        result <- compute_hia_impacts(
+          species = test_data$species,
+          paf = paf_crf_only,
+          conc_map = test_data$conc_map,
+          regions = test_data$regions,
+          epi = test_data$epi,
+          crfs = test_data$crfs
+        )
+      })
 
-  # Basic structure check
-  expect_true(is.data.frame(result))
+      # Basic structure check
+      expect_true(is.data.frame(result))
 
 })
 
@@ -128,22 +128,22 @@ test_that("compute_hia_impacts integrates RR-based impacts correctly", {
   paf_pm25 <- test_data$paf %>%
     dplyr::filter(pollutant == "PM25") # Only RR data (PM25)
 
-  # Test that the function can handle RR data without crashing
+      # Test that the function can handle RR data without crashing
   expect_no_error({
-    result <- compute_hia_impacts(
-      species = test_data$species,
+      result <- compute_hia_impacts(
+        species = test_data$species,
       paf = paf_pm25,
-      conc_map = test_data$conc_map,
-      regions = test_data$regions,
-      epi = test_data$epi,
-      crfs = test_data$crfs
-    )
+        conc_map = test_data$conc_map,
+        regions = test_data$regions,
+        epi = test_data$epi,
+        crfs = test_data$crfs
+      )
   })
 
   print(result)
 
-  # Basic structure check
-  expect_true(is.data.frame(result))
+      # Basic structure check
+      expect_true(is.data.frame(result))
 
   # Content check
   expect_true(nrow(result) > 0)
@@ -217,25 +217,25 @@ test_that("compute_hia_impacts validates CRF-EPI data matching", {
   # Create PAF with CRF data that will trigger the validation
   paf_with_crf <- tibble::tibble(
     scenario = "scenario1",
-    pollutant = "PM25",
-    cause = "NonExistent",
-    outcome = "Deaths",
-    region_id = "BGD",
-    low = -0.02,
-    central = -0.03,
-    high = -0.04
+      pollutant = "PM25",
+      cause = "NonExistent",
+      outcome = "Deaths",
+      region_id = "BGD",
+      low = -0.02,
+      central = -0.03,
+      high = -0.04
   )
 
   # Should warn about data mismatch but not crash
   expect_warning(
     result <- compute_hia_impacts(
-      species = test_data$species,
-      paf = paf_with_crf,
-      conc_map = test_data$conc_map,
-      regions = test_data$regions,
-      epi = test_data$epi,
-      crfs = crfs_mismatch
-    ),
+          species = test_data$species,
+          paf = paf_with_crf,
+          conc_map = test_data$conc_map,
+          regions = test_data$regions,
+          epi = test_data$epi,
+          crfs = crfs_mismatch
+        ),
     "Some RR causes/outcomes have no match in epidemiological data"
   )
 
@@ -316,16 +316,251 @@ test_that("compute_hia_impacts handles multiple scenarios", {
 
   # Test that the function can handle multiple scenarios without crashing
   expect_no_error({
-    result <- compute_hia_impacts(
-      species = test_data$species,
-      paf = paf_minimal,
-      conc_map = test_data$conc_map,
-      regions = test_data$regions,
-      epi = test_data$epi,
-      crfs = test_data$crfs
+      result <- compute_hia_impacts(
+        species = test_data$species,
+        paf = paf_minimal,
+        conc_map = test_data$conc_map,
+        regions = test_data$regions,
+        epi = test_data$epi,
+        crfs = test_data$crfs
     )
   })
 
   # Basic structure check
   expect_true(is.data.frame(result))
+})
+
+# Tests for add_double_counted function
+test_that("add_double_counted joins CRF double_counted field correctly", {
+  test_data <- setup_impacts_test_data()
+
+  # Create HIA data that needs double_counted field added
+  hia_data <- data.frame(
+    cause = c("NCD.LRI", "Asthma.1to18"),
+    outcome = c("Deaths", "AsthmaIncidence"),
+    pollutant = c("PM25", "NO2"),
+    number = c(100, 50),
+    stringsAsFactors = FALSE
+  )
+
+  # Create CRFs with explicit double_counted values
+  crfs_with_double_counted <- data.frame(
+    pollutant = c("PM25", "NO2", "PM25"),
+    cause = c("NCD.LRI", "Asthma.1to18", "IHD"),
+    outcome = c("Deaths", "AsthmaIncidence", "Deaths"),
+    double_counted = c(TRUE, FALSE, TRUE),
+    stringsAsFactors = FALSE
+  )
+
+  # Create minimal EPI data (not used in this test but required by function)
+  epi_minimal <- data.frame(
+    location_id = 1,
+    estimate = "central",
+    stringsAsFactors = FALSE
+  )
+
+  result <- add_double_counted(hia_data, crfs_with_double_counted, epi_minimal)
+
+  # Check that double_counted field was added correctly
+  expect_true("double_counted" %in% names(result))
+
+  # Check specific values
+  ncdlri_row <- result[result$cause == "NCD.LRI" & result$outcome == "Deaths", ]
+  expect_true(ncdlri_row$double_counted)
+
+  asthma_row <- result[result$cause == "Asthma.1to18" & result$outcome == "AsthmaIncidence", ]
+  expect_false(asthma_row$double_counted)
+})
+
+test_that("add_double_counted handles PM25 NCD.LRI double counting correctly", {
+  test_data <- setup_impacts_test_data()
+
+  # Create HIA data with both NCD.LRI ensemble cause and individual causes
+  hia_data <- data.frame(
+    cause = c("NCD.LRI", "IHD", "Stroke", "COPD", "LRI"),
+    outcome = c("Deaths", "Deaths", "Deaths", "Deaths", "Deaths"),
+    pollutant = c("PM25", "PM25", "PM25", "PM25", "PM25"),
+    number = c(100, 50, 40, 30, 20),
+    stringsAsFactors = FALSE
+  )
+
+  # Create CRFs without double_counted field for PM25 (should trigger manual logic)
+  crfs_no_pm25 <- data.frame(
+    pollutant = c("NO2"),
+    cause = c("Asthma.1to18"),
+    outcome = c("AsthmaIncidence"),
+    double_counted = c(FALSE),
+    stringsAsFactors = FALSE
+  )
+
+  # Create minimal EPI data
+  epi_minimal <- data.frame(
+    location_id = 1,
+    estimate = "central",
+    stringsAsFactors = FALSE
+  )
+
+  result <- add_double_counted(hia_data, crfs_no_pm25, epi_minimal)
+
+  # Check that double_counted field was added
+  expect_true("double_counted" %in% names(result))
+
+  # All PM25 NCD.LRI causes should be marked as double_counted = TRUE
+  pm25_ncdlri_rows <- result[result$pollutant == "PM25" &
+                            result$cause %in% c("IHD", "Stroke", "COPD", "LRI") &
+                            result$outcome == "Deaths", ]
+
+  expect_true(all(pm25_ncdlri_rows$double_counted))
+})
+
+test_that("add_double_counted handles PM25 CV double counting correctly", {
+  test_data <- setup_impacts_test_data()
+
+  # Create HIA data with both CV ensemble cause and individual causes
+  hia_data <- data.frame(
+    cause = c("CV", "IHD", "Stroke"),
+    outcome = c("Deaths", "Deaths", "Deaths"),
+    pollutant = c("PM25", "PM25", "PM25"),
+    number = c(80, 50, 40),
+    stringsAsFactors = FALSE
+  )
+
+  # Create CRFs without double_counted field for PM25 (should trigger manual logic)
+  crfs_no_pm25 <- data.frame(
+    pollutant = c("NO2"),
+    cause = c("Asthma.1to18"),
+    outcome = c("AsthmaIncidence"),
+    double_counted = c(FALSE),
+    stringsAsFactors = FALSE
+  )
+
+  # Create minimal EPI data
+  epi_minimal <- data.frame(
+    location_id = 1,
+    estimate = "central",
+    stringsAsFactors = FALSE
+  )
+
+  result <- add_double_counted(hia_data, crfs_no_pm25, epi_minimal)
+
+  # Check that double_counted field was added
+  expect_true("double_counted" %in% names(result))
+
+  # All PM25 CV causes should be marked as double_counted = TRUE
+  pm25_cv_rows <- result[result$pollutant == "PM25" &
+                        result$cause %in% c("IHD", "Stroke") &
+                        result$outcome == "Deaths", ]
+
+  expect_true(all(pm25_cv_rows$double_counted))
+})
+
+test_that("add_double_counted defaults to FALSE when not specified", {
+  test_data <- setup_impacts_test_data()
+
+  # Create HIA data with PM25 pollutant (which is allowed to have missing double_counted)
+  hia_data <- data.frame(
+    cause = c("UnknownCause"),
+    outcome = c("UnknownOutcome"),
+    pollutant = c("PM25"),
+    number = c(25),
+    stringsAsFactors = FALSE
+  )
+
+  # Create empty CRFs (no matches)
+  crfs_empty <- data.frame(
+    pollutant = character(),
+    cause = character(),
+    outcome = character(),
+    double_counted = logical(),
+    stringsAsFactors = FALSE
+  )
+
+  # Create minimal EPI data
+  epi_minimal <- data.frame(
+    location_id = 1,
+    estimate = "central",
+    stringsAsFactors = FALSE
+  )
+
+  result <- add_double_counted(hia_data, crfs_empty, epi_minimal)
+
+  # Check that double_counted field was added and defaults to FALSE
+  expect_true("double_counted" %in% names(result))
+  expect_false(result$double_counted)
+})
+
+test_that("add_double_counted handles YLLs outcomes correctly", {
+  test_data <- setup_impacts_test_data()
+
+  # Create HIA data with both CV ensemble cause and individual causes with YLLs
+  hia_data <- data.frame(
+    cause = c("CV", "IHD", "Stroke"),
+    outcome = c("YLLs", "YLLs", "YLLs"),
+    pollutant = c("PM25", "PM25", "PM25"),
+    number = c(1000, 600, 400),
+    stringsAsFactors = FALSE
+  )
+
+  # Create CRFs without double_counted field for PM25
+  crfs_no_pm25 <- data.frame(
+    pollutant = c("NO2"),
+    cause = c("Asthma.1to18"),
+    outcome = c("AsthmaIncidence"),
+    double_counted = c(FALSE),
+    stringsAsFactors = FALSE
+  )
+
+  # Create minimal EPI data
+  epi_minimal <- data.frame(
+    location_id = 1,
+    estimate = "central",
+    stringsAsFactors = FALSE
+  )
+
+  result <- add_double_counted(hia_data, crfs_no_pm25, epi_minimal)
+
+  # Check that double_counted field was added
+  expect_true("double_counted" %in% names(result))
+
+  # All PM25 CV causes with YLLs should be marked as double_counted = TRUE
+  pm25_cv_ylls_rows <- result[result$pollutant == "PM25" &
+                             result$cause %in% c("IHD", "Stroke") &
+                             result$outcome == "YLLs", ]
+
+  expect_true(all(pm25_cv_ylls_rows$double_counted))
+})
+
+test_that("add_double_counted fails when non-PM25 pollutant has missing double_counted", {
+  test_data <- setup_impacts_test_data()
+
+  # Create HIA data with NO2 (non-PM25) that has positive number but no CRF match
+  hia_data <- data.frame(
+    cause = c("UnknownCause"),
+    outcome = c("UnknownOutcome"),
+    pollutant = c("NO2"),
+    number = c(50),  # Positive number should trigger error
+    stringsAsFactors = FALSE
+  )
+
+  # Create CRFs without match for NO2
+  crfs_no_match <- data.frame(
+    pollutant = c("PM25"),
+    cause = c("IHD"),
+    outcome = c("Deaths"),
+    double_counted = c(FALSE),
+    stringsAsFactors = FALSE
+  )
+
+  # Create minimal EPI data
+  epi_minimal <- data.frame(
+    location_id = 1,
+    estimate = "central",
+    stringsAsFactors = FALSE
+  )
+
+  # Should throw error for non-PM25 pollutant with missing double_counted and positive number
+  expect_error(
+    add_double_counted(hia_data, crfs_no_match, epi_minimal),
+    "merged has failed in double counting detection"
+  )
 })
