@@ -303,6 +303,7 @@ test_that("Test GDP scaling for several countries", {
   names(hia_cost) <- gsub("Outcome", "outcome", names(hia_cost))
   names(hia_cost) <- gsub("Pollutant", "pollutant", names(hia_cost))
   names(hia_cost) <- gsub("Cause", "cause", names(hia_cost))
+  names(hia_cost) <- gsub("AgeGrp", "age_group", names(hia_cost))
 
 
 
