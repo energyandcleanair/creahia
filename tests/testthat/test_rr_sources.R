@@ -43,7 +43,7 @@ test_that("Results with different RR sources are properly ordered", {
 
 
   ordered_sources_out <- hias %>%
-    filter(estimate=="central", Outcome=="Deaths", !double_counted) %>%
+    filter(estimate=="central", outcome=="Deaths", !double_counted) %>%
     group_by(rr_source) %>%
     summarise(sum=sum(number)) %>%
     arrange(abs(sum))

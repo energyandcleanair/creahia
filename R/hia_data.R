@@ -75,19 +75,8 @@ get_crfs_versions <- function() {
 get_crfs <- function(version = "default") {
 
   filename <- get_crfs_versions()[[version]]
-  crfs <- read_csv(get_hia_path(filename), col_types = cols()) %>%
-    dplyr::rename(cause=Cause,
-           outcome=Outcome,
-           pollutant=Exposure,
-           double_counted=Double.Counted
-           )
-  names(crfs) <- names(crfs) %>% gsub('RR_', '', .)
+  crfs <- read_csv(get_hia_path(filename), col_types = cols())
   crfs$pollutant <- crfs$pollutant %>% gsub('PM2\\.5', "PM25", .)
-  # crfs$Incidence <- crf_recode_incidence(crfs$Incidence, crfs$Exposure)
-  # crfs$effectname <- paste0(crfs$Incidence %>% gsub('\\.per|_base', '', .),
-  #                           '_',
-  #                           crfs$Exposure %>% gsub('\\..*|nrt', '', .))
-
   return(crfs)
 }
 

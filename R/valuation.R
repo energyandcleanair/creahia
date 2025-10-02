@@ -42,7 +42,7 @@ get_valuations <- function(valuation_version = 'viscusi',
 
   # Step 5: Only keep necessary columns
   final_valuation <- final_valuation %>%
-    select(Outcome, iso3, year, valuation_usd, lcu_per_usd, gdp_curr_usd)
+    select(outcome, iso3, year, valuation_usd, lcu_per_usd, gdp_curr_usd)
 
   return(final_valuation)
 }
@@ -219,7 +219,7 @@ attach_target_income <- function(valuation_with_ref, iso3s, years) {
 
   # Join target income to valuation data
   valuation_with_target <- valuation_with_ref %>%
-    select(Outcome,
+    select(outcome,
            income_type,
            year_reference=year,
            income_reference,
@@ -253,11 +253,11 @@ attach_target_income <- function(valuation_with_ref, iso3s, years) {
   # Check for missing target income data
   missing_target <- valuation_with_target %>%
     filter(is.na(income_target)) %>%
-    distinct(Outcome)
+    distinct(outcome)
 
   if(nrow(missing_target) > 0) {
     warning("Missing target income data for: ",
-            paste(missing_target$Outcome, collapse=", "))
+            paste(missing_target$outcome, collapse=", "))
   }
 
   return(valuation_with_target)

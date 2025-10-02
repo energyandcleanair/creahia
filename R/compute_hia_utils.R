@@ -44,19 +44,19 @@ totalise_hia <- function(hia, .groups = c("scenario", "iso3", "region_id", "regi
   hia_adm <- hia %>%
     group_by(across(c(scenario, estimate, all_of(.groups)))) %>%
     summarise_if(is.numeric, sum, na.rm=T) %>%
-    pivot_longer(is.numeric, names_to = 'Outcome', values_to = 'Number')
+    pivot_longer(is.numeric, names_to = 'outcome', values_to = 'number')
 
   hia_total <- hia_adm %>%
-    group_by(across(c(all_of(.groups), scenario, estimate, Outcome))) %>%
+    group_by(across(c(all_of(.groups), scenario, estimate, outcome))) %>%
     summarise_if(is.numeric, sum, na.rm = T) %>%
-    spread(estimate, Number)
+    spread(estimate, number)
 
   # Add cause long name & unit
-  hia_total$pollutant <- lapply(str_split(hia_total$Outcome, "_"),
+  hia_total$pollutant <- lapply(str_split(hia_total$outcome, "_"),
                                 function(x) {tail(x, 1)}) %>% unlist
-  hia_total$unit <- lapply(str_split(hia_total$Outcome, "_"),
+  hia_total$unit <- lapply(str_split(hia_total$outcome, "_"),
                            function(x) {ifelse(length(x) == 3, x[2], "")}) %>% unlist
-  hia_total$cause <- lapply(str_split(hia_total$Outcome, "_"),
+  hia_total$cause <- lapply(str_split(hia_total$outcome, "_"),
                             function(x) {x[1]}) %>% unlist
 
   hia_total %>% left_join(get_dict() %>% rename(cause = Code, cause_name = Long.name)) %>%
@@ -82,29 +82,29 @@ make_hia_table <- function(hia_total,
                            res_cols = c('low', 'central', 'high'),
                            dict = get_dict()) {
 
-  if('Cause' %notin% names(hia_total)) {
-    hia_total <- hia_total %>% separate(Outcome, c('Cause', 'Outcome', 'Pollutant'), '_')
-    ind <- is.na(hia_total$Pollutant)
-    hia_total$Pollutant[ind] <- hia_total$Outcome[ind]
-    hia_total$Outcome[ind] <- hia_total$Cause[ind]
+  if('cause' %notin% names(hia_total)) {
+    hia_total <- hia_total %>% separate(outcome, c('cause', 'outcome', 'pollutant'), '_')
+    ind <- is.na(hia_total$pollutant)
+    hia_total$pollutant[ind] <- hia_total$outcome[ind]
+    hia_total$outcome[ind] <- hia_total$cause[ind]
   }
 
-  if('Outcome_long' %notin% names(hia_total)) {
+  if('outcome_long' %notin% names(hia_total)) {
     hia_table <- hia_total %>% add_long_names(dict = dict) %>%
-      sel(scenario, Cause_long, Outcome_long, Pollutant, all_of(res_cols))
+      sel(scenario, cause_long, outcome_long, Pollutant, all_of(res_cols))
   }
 
-  deaths <- hia_table %>% filter(Outcome_long == 'deaths')
-  morb <- hia_table %>% filter(!grepl('deaths|life lost|prev|birthwe', Outcome_long),
-                               !is.na(Outcome_long))
+  deaths <- hia_table %>% filter(outcome_long == 'deaths')
+  morb <- hia_table %>% filter(!grepl('deaths|life lost|prev|birthwe', outcome_long),
+                               !is.na(outcome_long))
 
-  deaths <- deaths %>% filter(Outcome_long == 'deaths') %>%
+  deaths <- deaths %>% filter(outcome_long == 'deaths') %>%
     filter(!(Cause_long == 'all' & Pollutant == 'PM25'))
 
   bind_rows(deaths %>% make_ci_fun %>% arrange(desc(Pollutant)),
-            morb %>% make_ci_fun %>% arrange(Outcome_long)) %>%
-    sel(Outcome_long, Cause_long, everything()) %>%
-    mutate(Cause_long = recode(Cause_long, deaths = 'total'))
+            morb %>% make_ci_fun %>% arrange(outcome_long)) %>%
+    sel(outcome_long, cause_long, everything()) %>%
+    mutate(cause_long = recode(cause_long, deaths = 'total'))
 }
 
 

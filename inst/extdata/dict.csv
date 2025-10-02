@@ -1,4 +1,4 @@
-Code,Long.name,Medium.name
+code,long_name,medium_name
 NCD.LRI,non-communicable diseases and lower respiratory infections,non-communicable diseases and lower respiratory infections
 LRI.child,lower respiratory infections in children,lower respiratory infections in children
 Stroke,stroke,stroke
@@ -26,3 +26,4 @@ OthCV,other cardiovascular diseases,other cardiovascular diseases
 TotResp,respiratory diseases,respiratory diseases
 OthResp,other respiratory diseases,other respiratory diseases
 Deaths.child,deaths of children under 5,premature deaths of children under 5
+

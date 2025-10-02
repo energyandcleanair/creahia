@@ -30,12 +30,12 @@ setup_test_data <- function() {
     pollutant = c("PM25", "NO2"),
     cause = c("NCD.LRI", "Asthma.1to18"),
     outcome = c("Deaths", "AsthmaIncidence"),
-    Counterfact = c(5.8, 0),
-    Conc.change = c(10, 10),
-    Units.multiplier = c(1, 1),
-    low = c(1.02, 1.01),
-    central = c(1.06, 1.05),
-    high = c(1.11, 1.09),
+    counterfact = c(5.8, 0),
+    conc_change = c(10, 10),
+    units_multiplier = c(1, 1),
+    rr_low = c(1.02, 1.01),
+    rr_central = c(1.06, 1.05),
+    rr_high = c(1.11, 1.09),
     double_counted = c(FALSE, FALSE)
   )
 

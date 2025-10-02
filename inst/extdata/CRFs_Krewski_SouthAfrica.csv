@@ -1,4 +1,4 @@
-Cause,Outcome,Exposure,Double.Counted,Age_group,Age_low,Age_high,RR_central,RR_low,RR_high,Conc.change,Counterfact,Unit,Units.multiplier,Reference
+cause,outcome,pollutant,double_counted,age_group,age_low,age_high,rr_central,rr_low,rr_high,conc_change,counterfact,unit,units_multiplier,reference
 Asthma.Inci.1to18,Incidence,NO2,FALSE,1-18,1,18,1.26,1.1,1.37,10,2,ppb,0.532,
 Asthma.Prev.1to18,Prevalence,NO2,FALSE,1-18,1,18,1.26,1.1,1.37,10,2,ppb,0.532,
 Asthma.0to17,ERV,PM2.5,FALSE,0-18,0,18,1.025,1.013,1.037,10,6,ug,1,

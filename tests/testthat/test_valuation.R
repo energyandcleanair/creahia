@@ -10,14 +10,14 @@ test_that("Test get_valuations_raw loads data correctly", {
   testthat::expect_true(nrow(raw_valuation) > 0)
 
   # Test required columns
-  required_cols <- c("Outcome", "Outcome_name", "valuation", "currency", "unit",
+  required_cols <- c("outcome", "outcome_long", "valuation", "currency", "unit",
                      "year", "source", "reference_income_level", "elasticity",
                      "gni_or_gdp", "ppp")
   testthat::expect_true(all(required_cols %in% names(raw_valuation)))
 
   # Test that all outcomes are present
   expected_outcomes <- c("AsthmaPrevalence", "AsthmaERV", "PTB", "Deaths", "Deaths.child", "YLDs", "Absences")
-  testthat::expect_true(all(expected_outcomes %in% raw_valuation$Outcome))
+  testthat::expect_true(all(expected_outcomes %in% raw_valuation$outcome))
 
   # Test that all currencies are handled
   expected_currencies <- c("USD", "GBP", "EUR")
@@ -27,7 +27,7 @@ test_that("Test get_valuations_raw loads data correctly", {
   testthat::expect_true(all(raw_valuation$elasticity >= 0.5 & raw_valuation$elasticity <= 2))
 
   # Test that Death outcomes use GNI
-  death_outcomes <- raw_valuation %>% filter(Outcome %in% c("Deaths", "Deaths.child"))
+  death_outcomes <- raw_valuation %>% filter(outcome %in% c("Deaths", "Deaths.child"))
   testthat::expect_true(all(death_outcomes$gni_or_gdp == "gni"))
 
   # Test that Death outcomes do not use PPP
@@ -179,13 +179,13 @@ test_that("Test get_valuations runs end-to-end", {
   testthat::expect_true(nrow(result) > 0)
 
   # Test that required columns are present
-  required_cols <- c("Outcome", "iso3", "year", "valuation_usd",
+  required_cols <- c("outcome", "iso3", "year", "valuation_usd",
                      "lcu_per_usd", "gdp_curr_usd")
   testthat::expect_true(all(required_cols %in% names(result)))
 
   # Test that all outcomes are processed
   expected_outcomes <- c("AsthmaPrevalence", "AsthmaERV", "PTB", "Deaths", "Deaths.child", "YLDs", "Absences")
-  testthat::expect_true(all(expected_outcomes %in% result$Outcome))
+  testthat::expect_true(all(expected_outcomes %in% result$outcome))
 
   # Test that all countries are processed
   testthat::expect_true(all(c("ZAF", "USA") %in% result$iso3))
@@ -206,7 +206,7 @@ test_that("get_valuations returns correct VSL for ZAF 2019 - Worldbank version",
 
   # Check that we get a data frame with expected columns
   testthat::expect_true(is.data.frame(valuations))
-  testthat::expect_true("Outcome" %in% names(valuations))
+  testthat::expect_true("outcome" %in% names(valuations))
   testthat::expect_true("iso3" %in% names(valuations))
   testthat::expect_true("year" %in% names(valuations))
   testthat::expect_true("valuation_usd" %in% names(valuations))
@@ -216,7 +216,7 @@ test_that("get_valuations returns correct VSL for ZAF 2019 - Worldbank version",
   testthat::expect_true(nrow(zaf_2019) > 0)
 
   # Check that we have a VSL for Deaths
-  deaths_vsl <- zaf_2019 %>% filter(Outcome == "Deaths")
+  deaths_vsl <- zaf_2019 %>% filter(outcome == "Deaths")
   testthat::expect_true(nrow(deaths_vsl) == 1)
   testthat::expect_true(!is.na(deaths_vsl$valuation_usd))
   testthat::expect_true(deaths_vsl$valuation_usd > 0)
@@ -259,7 +259,7 @@ test_that("get_valuations returns correct VSL for ZAF 2019 - Viscusi version", {
 
   # Check that we get a data frame with expected columns
   testthat::expect_true(is.data.frame(valuations))
-  testthat::expect_true("Outcome" %in% names(valuations))
+  testthat::expect_true("outcome" %in% names(valuations))
   testthat::expect_true("iso3" %in% names(valuations))
   testthat::expect_true("year" %in% names(valuations))
   testthat::expect_true("valuation_usd" %in% names(valuations))
@@ -269,7 +269,7 @@ test_that("get_valuations returns correct VSL for ZAF 2019 - Viscusi version", {
   testthat::expect_true(nrow(zaf_2019) > 0)
 
   # Check that we have a VSL for Deaths
-  deaths_vsl <- zaf_2019 %>% filter(Outcome == "Deaths")
+  deaths_vsl <- zaf_2019 %>% filter(outcome == "Deaths")
   testthat::expect_true(nrow(deaths_vsl) == 1)
   testthat::expect_true(!is.na(deaths_vsl$valuation_usd))
   testthat::expect_true(deaths_vsl$valuation_usd > 0)

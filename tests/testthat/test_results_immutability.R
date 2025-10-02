@@ -125,38 +125,13 @@ generate_fingerprints <- function(refs=c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.
 
 
 read_fingerprints <- function(){
-  files <- tibble(filepath=list.files("tests/data/versions", full.names = TRUE))
-
-  read_file <- function(filepath){
-    cols_recoding <- c(
-      "Outcome" = "outcome",
-      "Cause" = "cause",
-      "Pollutant" = "pollutant",
-      "AgeGrp" = "age_group"
-    )
-    data <- read_csv(filepath, col_types = cols())
-    colnames(data) <- recode(colnames(data), !!!cols_recoding)
-    return(data)
-  }
-
-  lapply(files$filepath, read_file) %>%
-    bind_rows()
+  tibble(filepath=list.files("tests/data/versions", full.names = TRUE)) %>%
+    rowwise() %>%
+    mutate(hia = list(read_csv(filepath))) %>%
+    # select(-filepath) %>%
+    unnest(hia)
 }
 
-homogenize_cause_outcomes <- function(df){
-
-  # Different versions had different outcome classifications
-  df %>%
-    mutate(
-      outcome = case_when(
-        cause == "PTB" ~ "Number",
-        cause == "LBW" ~ "Number",
-        cause == "Asthma" ~ "Number",
-        cause == "Absences" ~ "Number",
-        TRUE ~ outcome
-      )
-  )
-}
 
 
 test_that("Estimates are compatible with previous versions", {
@@ -195,7 +170,6 @@ test_that("Estimates are compatible with previous versions", {
 
   # Read all fingerprints
   all_fingerprints <- read_fingerprints() %>%
-    homogenize_cause_outcomes() %>%
     # We only compare central values
     # Confidence intervals are expected to change more frequently
     filter(estimate == "central")
@@ -209,8 +183,8 @@ test_that("Estimates are compatible with previous versions", {
   known_missing_exceptions <- list(
     # YLLs that were NA in previous versions but have values in newer versions
     tibble(
-      outcome = "YLLs",
-      cause = c("COPD", "IHD", "LC", "LRI", "Stroke"),
+      Outcome = "YLLs",
+      Cause = c("COPD", "IHD", "LC", "LRI", "Stroke"),
       calc_causes = "GEMM and GBD",
       version_condition = "version < '0.5.0'",
     )
@@ -219,9 +193,9 @@ test_that("Estimates are compatible with previous versions", {
   # First check: ensure all versions have the same cause/outcome pairs after removing exceptions
   missing_pairs <- all_fingerprints %>%
     group_by(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version) %>%
-    dplyr::summarise(n = n(), .groups = "drop") %>%
+    summarise(n = n(), .groups = "drop") %>%
     filter(n < length(unique(all_fingerprints$version))) %>%
-    distinct(calc_causes, epi_version, cause, outcome, n)
+    distinct(calc_causes, epi_version, Cause, Outcome, n)
 
   # Filter out known exceptions from missing_pairs
   for (exception in known_missing_exceptions) {
@@ -247,7 +221,7 @@ test_that("Estimates are compatible with previous versions", {
     group_by(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version) %>%
     # Round to 1 decimal place to ignore tiny issues
     mutate(number = round(number, 1)) %>%
-    dplyr::summarise(unique = n_distinct(number), .groups = "drop") %>%
+    summarise(unique = n_distinct(number), .groups = "drop") %>%
     filter(unique > 1) %>%
     distinct(calc_causes, epi_version, cause, outcome)
 
@@ -257,9 +231,9 @@ test_that("Estimates are compatible with previous versions", {
 
   # Show differences
   filtered_fingerprints %>%
-    dplyr::select(-c(pop, version)) %>%
-    dplyr::filter(region_name=="Dhaka") %>%
-    # group_by(scenario, region_id, Pollutant, Outcome, Cause, AgeGrp, calc_causes, epi_version) %>%
+    select(-c(filepath, pop, version)) %>%
+    filter(region_name=="Dhaka") %>%
+    # group_by(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version) %>%
     # Round to 1 decimal place to ignore tiny issues
     mutate(number = round(number, 1)) %>%
     # ungroup() %>%
@@ -267,7 +241,7 @@ test_that("Estimates are compatible with previous versions", {
 
   filtered_fingerprints %>%
     distinct(version, region_id, pop) %>%
-    # group_by(scenario, region_id, Pollutant, Outcome, Cause, AgeGrp, calc_causes, epi_version) %>%
+    # group_by(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version) %>%
     # Round to 1 decimal place to ignore tiny issues
     # mutate(number = round(number, 1)) %>%
     # ungroup() %>%

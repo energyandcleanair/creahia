@@ -22,9 +22,9 @@ test_that("Confidence interval makes sense when comparing two scenarios", {
 
 test_that("Order of estimates is consistent", {
 
-
   # Old one: GEMM + old GBD
-  hia <- generate_uniform_exposure_hia(list(pm25 = list(baseline = 60, target = 10)), calc_causes='GEMM and GBD')
+  hia <- generate_uniform_exposure_hia(list(pm25 = list(baseline = 60, target = 10)),
+                                       calc_causes='GEMM and GBD')
 
   # Expect the order low <= central <= high to be consistent
   inconsistent_order <- hia %>%
@@ -35,7 +35,7 @@ test_that("Order of estimates is consistent", {
       T ~ "inconsistent"
     )) %>%
     # Diabetes old version is inconsistent
-    filter(Cause != 'Diabetes') %>%
+    filter(cause != 'Diabetes') %>%
     summarise(ok = n_distinct(order) == 1 & !("inconsistent" %in% order))
 
   testthat::expect_true(inconsistent_order$ok)

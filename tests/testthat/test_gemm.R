@@ -202,12 +202,9 @@ test_that("Our GEMM-derived deaths are similar to literature", {
          x=NULL)
 
 
-
-
-
   # test that there is no duplicate scenario,region_id,estimate,Outcome,Pollutant,Cause,AgeGrp
   n_duplicates <- hia_gbd2019 %>%
-    group_by(scenario, region_id, estimate, Outcome, Pollutant, Cause, AgeGrp) %>%
+    group_by(scenario, region_id, estimate, outcome, pollutant, cause, age_group) %>%
     summarise(n=n(), pop=n_distinct(pop), number=n_distinct(number)) %>%
     arrange(desc(n)) %>%
     filter(n>1)

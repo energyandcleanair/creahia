@@ -173,20 +173,18 @@ compute_hia_paf_crfs <- function(species,
         perm_name <- species_name %>% paste0('conc_scenario_',.)
         nrt_flag <- NULL # ifelse(grepl('NCD\\.LRI_', crfs$Incidence[i]), 'grump', NULL)
 
-        cfconc <- crfs$Counterfact[i]
-
         base_concs <- get_nrt_conc(region_ids = region_ids,
                                    conc_name = base_name,
-                                   nrt = cfconc,
+                                   nrt = crfs$counterfact[i],
                                    conc_map = conc_scenario,
-                                   units_multiplier = crfs$Units.multiplier[i],
+                                   units_multiplier = crfs$units_multiplier[i],
                                    nrt_flag = nrt_flag)
 
         perm_concs <- get_nrt_conc(region_ids = region_ids,
                                    conc_name = perm_name,
-                                   nrt = cfconc,
+                                   nrt = crfs$counterfact[i],
                                    conc_map = conc_scenario,
-                                   units_multiplier = crfs$Units.multiplier[i],
+                                   units_multiplier = crfs$units_multiplier[i],
                                    nrt_flag = nrt_flag)
 
         source_concs <- perm_concs - base_concs
@@ -197,9 +195,9 @@ compute_hia_paf_crfs <- function(species,
         cause = crfs$cause[i],
         outcome = crfs$outcome[i],
         region_id = region_ids,
-        low = 1 - exp(-log(crfs$low[i]) * source_concs / crfs$Conc.change[i]),
-        central = 1 - exp(-log(crfs$central[i]) * source_concs / crfs$Conc.change[i]),
-        high = 1 - exp(-log(crfs$high[i]) * source_concs / crfs$Conc.change[i])
+        low = 1 - exp(-log(crfs$rr_low[i]) * source_concs / crfs$conc_change[i]),
+        central = 1 - exp(-log(crfs$rr_central[i]) * source_concs / crfs$conc_change[i]),
+        high = 1 - exp(-log(crfs$rr_high[i]) * source_concs / crfs$conc_change[i])
       )
 
       scenario_rows[[length(scenario_rows) + 1]] <- effect_df
