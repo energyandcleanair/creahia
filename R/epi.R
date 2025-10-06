@@ -15,7 +15,7 @@ download_raw_epi <- function(version, dataset) {
     # For now, these are with pop from 2019 to ensure the scaling is alright. However, it would be much easier to
     # clean it, and download with rates instead
     gbd2021 = list(
-      raw = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2021-permalink/951bb3a80e3e0c542986a1be0f32efec",
+      raw = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2021-permalink/0244c581459f2f21131cd1bd23bbcf41",
       asthma = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2021-permalink/428758edc6d75bebf16eb96beee09adc"
     )
   )
