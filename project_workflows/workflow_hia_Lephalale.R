@@ -172,24 +172,24 @@ hia_fut <- get_econ_forecast(hia_cost, forecast_years = targetyears, reference_y
 adm <- creahelpers::get_adm(level = 2, res='coarse')
 
 hia_fut %>%
-  left_join(hia_cost %>% distinct(Outcome, Cause, Pollutant, double_counted)) %>%
+  left_join(hia_cost %>% distinct(outcome, cause, pollutant, double_counted)) %>%
   #left_join(adm@data %>% select(region_id=GID_2, NAME_1)) %>%
   #filter(iso3=='ZAF',
   #       NAME_1 %in% c('Mpumalanga', 'Gauteng', 'Limpopo')) %>%
   filter(estimate=='central', year %in% 2025:2060, !double_counted) %>%
-  group_by(scenario, Outcome) %>%
+  group_by(scenario, outcome) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum))
 
-hia_fut %>% filter(year %in% 2025:2060, Pollutant != 'NO2' | Cause != 'AllCause') %>%
-  group_by(scenario, estimate, Outcome, Cause, Pollutant) %>%
+hia_fut %>% filter(year %in% 2025:2060, pollutant != 'NO2' | cause != 'AllCause') %>%
+  group_by(scenario, estimate, outcome, cause, pollutant) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum)) %>%
-  left_join(hia %>% distinct(scenario, scenario_description, Outcome, Cause, Pollutant, double_counted)) %>%
-  mutate(double_counted = ifelse(Pollutant=='NO2', F, double_counted)) %>%
-  add_long_names %>% ungroup %>% select(-Outcome, -Cause) %>% rename(Cause=Cause_long, Outcome=Outcome_long) %>%
+  left_join(hia %>% distinct(scenario, scenario_description, outcome, cause, pollutant, double_counted)) %>%
+  mutate(double_counted = ifelse(pollutant=='NO2', F, double_counted)) %>%
+  add_long_names %>% ungroup %>% select(-outcome, -cause) %>% rename(cause=cause_long, outcome=outcome_long) %>%
   pivot_longer(c(number, cost_mn_currentUSD)) %>%
   spread(estimate, value) %>%
-  arrange(desc(name), scenario, Outcome!='deaths', double_counted) %>%
-  select(scenario_description, Outcome, Cause, Pollutant, central, low, high, variable=name, double_counted) %>%
+  arrange(desc(name), scenario, outcome!='deaths', double_counted) %>%
+  select(scenario_description, outcome, cause, pollutant, central, low, high, variable=name, double_counted) %>%
   write_csv(file.path(output_dir, 'Lephalale_HIA.csv'))
 
 econ_costs %>% saveRDS(file.path(output_dir, 'econ_costs.RDS'))
@@ -225,7 +225,7 @@ scaling %>% ggplot(aes(year, scaling_no2, col=pathway)) + geom_line()
 econ_costs$cost_forecast %>% full_join(scaling)
 
 econ_costs$cost_forecast %>%
-  dplyr::group_by(across(c(scenario, estimate, iso3, matches('Outcome|Cause'), Pollutant, year))) %>%
+  dplyr::group_by(across(c(scenario, estimate, iso3, matches('outcome|cause'), pollutant, year))) %>%
   dplyr::summarise(across(c(number, cost.mnUSD), sum, na.rm=T)) %>%
   write_excel_csv(file.path(output_dir, 'hia results by country and year.csv'))
 
@@ -234,7 +234,7 @@ econ_costs$cost_forecast %>%
 
 econ_costs$cost_forecast %>%
   filter(!is.na(year)) %>%
-  dplyr::group_by(across(c(scenario, estimate, iso3, matches('Outcome|Cause|region_'), Pollutant))) %>%
+  dplyr::group_by(across(c(scenario, estimate, iso3, matches('outcome|cause|region_'), pollutant))) %>%
   dplyr::mutate(groupnumber=cur_group_id()) -> indata
 
 indata %>%
@@ -251,6 +251,6 @@ indata %>%
 
 hia_cumu %>% write_excel_csv(file.path(output_dir, 'hia results by admin 2 area, 2022-2050 cumulative.csv'))
 hia_cumu %>%
-  dplyr::group_by(across(c(scenario, estimate, iso3, matches('Outcome|Cause'), Pollutant))) %>%
+  dplyr::group_by(across(c(scenario, estimate, iso3, matches('outcome|cause'), pollutant))) %>%
   dplyr::summarise(across(c(number, cost.mnUSD), sum, na.rm=T)) %>%
   write_excel_csv(file.path(output_dir, 'hia results by country and year, 2022-2050 cumulative.csv'))

@@ -50,7 +50,7 @@ test_that("Results using rr_sources is simlar to old way using calc_causes", {
   ) %>%
   # These should differ on LRI.child: in GEMM and GBD, LRI.child is from GBD
   # However, when we define rr_sources = c(GEMM, ORIGINAL) it will takes GEMM's
-  filter(Cause != 'LRI.child')
+  filter(cause != 'LRI.child')
 
   expect_equal(
     comparison$number_old,

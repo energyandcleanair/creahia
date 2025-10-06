@@ -197,7 +197,7 @@ for (clust in clusters_to_process[queue]) {
 hia <- readRDS(file.path(met_dir, 'HIA', paste0('hia_GEMM_1ug.RDS')))
 
 hia$hia %<>%
-  mutate(number = number * case_when(Pollutant != 'NO2' | Cause != 'AllCause'~1,
+  mutate(number = number * case_when(pollutant != 'NO2' | cause != 'AllCause'~1,
                                      estimate=='central'~1/2,
                                      estimate=='low'~1/2,
                                      estimate=='high'~2/3))
@@ -223,16 +223,16 @@ clusters_to_process %>%
       read_csv() %>%
       pivot_longer(-region_id, names_to='subspecies', values_to='exposure') %>%
       separate(subspecies, c('subspecies', 'release_height')) %>%
-      mutate(Pollutant=case_when(subspecies %in% c('so4', 'no3', 'ppm25')~'PM25',
+      mutate(pollutant=case_when(subspecies %in% c('so4', 'no3', 'ppm25')~'PM25',
                                T~toupper(subspecies)),
              emitted_species=case_when(subspecies %in% c('so2', 'so4')~'SO2',
                                        subspecies %in% c('no2','no3')~'NOx',
                                        subspecies=='ppm25'~'PM2.5'),
              loc_cluster=run) %>%
       left_join(modeled_emissions) %>%
-      left_join(hia_fut %>% select(region_id, iso3, pop, Pollutant, Outcome, Cause, double_counted, year, estimate, unit, number, cost_mn_currentUSD)) %>%
+      left_join(hia_fut %>% select(region_id, iso3, pop, pollutant, outcome, cause, double_counted, year, estimate, unit, number, cost_mn_currentUSD)) %>%
       mutate(across(c(number, cost_mn_currentUSD), ~.x * exposure/pop/emissions_tpa_modeled)) %>%
-      group_by(loc_cluster, release_height, year, Outcome, Cause, emitted_species, Pollutant, double_counted, estimate, unit) %>%
+      group_by(loc_cluster, release_height, year, outcome, cause, emitted_species, pollutant, double_counted, estimate, unit) %>%
       summarise(across(c(number, cost_mn_currentUSD), sum, na.rm=T))
   }) %>% bind_rows %>% ungroup -> hia_per_t
 
@@ -247,7 +247,7 @@ emis %>% ungroup %>%
     message(group)
     df %>%
       inner_join(hia_per_t %>% inner_join(group)) %>% select(-all_of(names(group))) %>%
-      group_by(Tracker.ID, smelter_company, Commodity_broad, Province, Latitude, Longitude, Outcome, Cause, Pollutant, double_counted, estimate, unit) %>%
+      group_by(Tracker.ID, smelter_company, Commodity_broad, Province, Latitude, Longitude, outcome, cause, pollutant, double_counted, estimate, unit) %>%
       mutate(across(c(number, cost_mn_currentUSD), ~.x*emissions_tpa)) %>%
       summarise(across(c(number, cost_mn_currentUSD), sum))
   }) -> hia_scenarios
@@ -261,7 +261,7 @@ hia_scenarios %<>% left_join(emis %>% distinct(Tracker.ID, smelter_company, Comm
 
 hia_scenarios %>%
   group_by(type, Province, COD,
-           Outcome, Cause, Pollutant, double_counted, year, estimate, unit) %>%
+           outcome, cause, pollutant, double_counted, year, estimate, unit) %>%
   summarise(across(c(number, cost_mn_currentUSD), ~sum(.x, na.rm=T))) ->
   hia_scenarios_totals
 
@@ -273,7 +273,7 @@ hia_scenarios_totals %<>%
   add_total_deaths_and_costs()
 
 hia_scenarios_totals %>% ungroup %>%
-  filter(estimate=='central', Outcome=='deaths, total', COD<year) %>%
+  filter(estimate=='central', outcome=='deaths, total', COD<year) %>%
   group_by(Province, year, estimate) %>% summarise(across(number, sum)) %>% ungroup %>%
   write_csv(file.path(output_dir, 'Air pollution-related deaths by scenario.csv')) %>%
   ggplot(aes(year, number, fill=Province)) +
@@ -300,13 +300,13 @@ quicksave(file.path(output_dir, 'Air pollution-related costs by scenario.png'), 
 
 hia_scenarios_totals %>% filter(COD<year) %>%
   group_by(type, emitting_province=Province,
-           Outcome, Cause, Pollutant, double_counted, year, estimate, unit) %>%
+           outcome, cause, pollutant, double_counted, year, estimate, unit) %>%
   summarise(across(c(number, cost_mn_currentUSD), ~sum(.x, na.rm=T))) %>%
   add_long_names() %>%
   write_csv(file.path(output_dir, 'all health impacts by year and emitting province.csv'))
 
 hia_scenarios %>% ungroup %>% filter(year==2030, !double_counted) %>%
-  mutate(across(matches('^deaths|^number'), ~.x * ifelse(grepl('Death', Outcome), 1, 0))) %>%
+  mutate(across(matches('^deaths|^number'), ~.x * ifelse(grepl('Death', outcome), 1, 0))) %>%
   group_by(smelter_company, Tracker.ID, Province, loc_cluster, Commodity_broad, capacity_output_tpa, captive_MW=MW, fuel, type, COD,
            Latitude, Longitude, year, estimate) %>%
   summarise(across(c(number, matches('^deaths|^cost|^number')), sum)) %>%
@@ -357,13 +357,13 @@ valuations <- get_valuations_raw('viscusi')
 usd_to_lcu=15447
 
 hia_cost %>%
-  distinct(Outcome, valuation_world_2017, valuation_current_usd, iso3) %>%
-  left_join(valuations %>% select(Outcome, reference)) %>%
+  distinct(outcome, valuation_world_2017, valuation_current_usd, iso3) %>%
+  left_join(valuations %>% select(outcome, reference)) %>%
   na.omit %>% add_long_names() %>%
-  select(-Outcome, Outcome=Outcome_long) %>%
+  select(-outcome, outcome=outcome_long) %>%
   mutate(valuation_current_lcu=valuation_current_usd*usd_to_lcu,
          across(is.numeric, function(x) x %>% signif(4) %>% scales::comma(accuracy=1))) %>%
-  relocate(Outcome) %>%
+  relocate(outcome) %>%
   relocate(reference, .after=everything()) %>%
   write_csv(file.path(output_dir, 'valuations.csv'))
 
@@ -371,8 +371,8 @@ hia_cost %>%
 #get impacts by affected province and emitting plant
 hia_fut %>% ungroup %>%
   filter(year==2022, !double_counted) %>%
-  mutate(across(number, ~.x * ifelse(grepl('Death', Outcome), 1, 0))) %>%
-  group_by(region_id, iso3, pop, Pollutant, year, estimate) %>%
+  mutate(across(number, ~.x * ifelse(grepl('Death', outcome), 1, 0))) %>%
+  group_by(region_id, iso3, pop, pollutant, year, estimate) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum, na.rm=T)) ->
   hia_fut_totals
 
@@ -382,7 +382,7 @@ scenarios_to_process %>%
     paste0('exp_',run,'.csv') %>% file.path(output_dir, .) %>%
       read_csv() %>%
       pivot_longer(-region_id, names_to='subspecies', values_to='exposure') %>%
-      mutate(Pollutant=case_when(subspecies %in% c('so4', 'no3', 'ppm25')~'PM25',
+      mutate(pollutant=case_when(subspecies %in% c('so4', 'no3', 'ppm25')~'PM25',
                                  T~toupper(subspecies)),
              emitted_species=case_when(subspecies %in% c('so2', 'so4')~'SOx',
                                        subspecies %in% c('no2','no3')~'NOx',
@@ -391,7 +391,7 @@ scenarios_to_process %>%
       left_join(modeled_emissions) %>%
       left_join(hia_fut_totals) %>%
       mutate(across(c(number, cost_mn_currentUSD), ~.x * exposure/pop/modeled_emissions)) %>%
-      select(cluster, year, Pollutant, region_id, estimate, number, cost_mn_currentUSD)
+      select(cluster, year, pollutant, region_id, estimate, number, cost_mn_currentUSD)
   }) %>% bind_rows %>% ungroup -> region_hia_per_t
 
 shp@data %>% select(region_id=GID_2, affected_province=NAME_1) %>%

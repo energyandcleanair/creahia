@@ -95,7 +95,7 @@ COD = c(atimonan = 2025, kamangas = 2021, pagbilao = 1996,
 
 econ_costs$cost_forecast %>% left_join(COD) %>%
   filter(year>=2021, year>=COD, year<COD+30) %>%
-  group_by(estimate, Outcome_long, Cause_long, Pollutant, scenario) %>%
+  group_by(estimate, outcome_long, cause_long, pollutant, scenario) %>%
   summarise_if(is.numeric, sum) %>% sel(-COD) ->
   hia_cumu
 

@@ -1,6 +1,6 @@
-Outcome,Outcome_name,valuation,currency,unit,year,source,reference_income_level,elasticity,gni_or_gdp,ppp
-Asthma.Prev,Year lived with asthma,"3,914",USD,case,2010,Brandt et al 2012,California,1,gdp,TRUE
-exac,Asthma emergency room visits,844,USD,visit,2010,Brandt et al 2012,California,1,gdp,TRUE
+outcome,outcome_long,valuation,currency,unit,year,source,reference_income_level,elasticity,gni_or_gdp,ppp
+AsthmaPrevalence,Year lived with asthma,"3,914",USD,case,2010,Brandt et al 2012,California,1,gdp,TRUE
+AsthmaERV,Asthma emergency room visits,844,USD,visit,2010,Brandt et al 2012,California,1,gdp,TRUE
 PTB,Preterm birth,"321,989",USD,birth,2010,Trasande et al 2016,USA,1,gdp,TRUE
 Deaths,"Deaths, adults","3,830,000",USD,death,2011,WorldBank and IHME 2016,OECD,1.2,gdp,TRUE
 Deaths.child,"Deaths, children","7,660,000",USD,death,2011,OECD 2012,USA,1.2,gdp,TRUE

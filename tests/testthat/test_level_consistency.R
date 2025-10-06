@@ -12,10 +12,10 @@ test_that("HIAs are consistent across levels", {
   comparison <- hias %>%
     filter(level %in% c(0, 1, 2)) %>%
     filter(estimate=="central") %>%
-    group_by(level, Outcome, Cause, scenario, estimate) %>%
+    group_by(level, outcome, cause, scenario, estimate) %>%
     dplyr::summarise_at("number", sum) %>%
     ungroup() %>%
-    group_by(Outcome, Cause, scenario, estimate) %>%
+    group_by(outcome, cause, scenario, estimate) %>%
     dplyr::summarise(deviation=(max(number) - min(number))/mean(number)) %>%
     ungroup() %>%
     arrange(desc(abs(deviation)))

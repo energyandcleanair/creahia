@@ -125,18 +125,18 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
 
   if(!is.null(pm2.5_to_pm10_ratio)) {
     if(!('tpm10' %in% conc_perturbation$species)) {
-      cond_perturbation <- conc_perturbation %>% filter(species == 'pm25') %>%
+      conc_perturbation <- conc_perturbation %>% filter(species == 'pm25') %>%
         mutate(species = 'tpm10') %>%
         bind_rows(conc_perturbation) # copy PM25 data
-      cond_perturbation$cond_perturbation[[which(cond_perturbation$species == 'tpm10')]] <-
-        cond_perturbation$cond_perturbation[[which(cond_perturbation$species == 'tpm10')]] %>%
+      conc_perturbation$conc_perturbation[[which(conc_perturbation$species == 'tpm10')]] <-
+        conc_perturbation$conc_perturbation[[which(conc_perturbation$species == 'tpm10')]] %>%
         divide_by(pm2.5_to_pm10_ratio) # divide by the ratio
       names(conc_perturbation$conc_perturbation) <- conc_perturbation$species
       species <- conc_perturbation$species
     }
 
     if(!('tpm10' %in% conc_baseline$species)) {
-      cond_baseline <- conc_baseline %>% filter(species == 'pm25') %>%
+      conc_baseline <- conc_baseline %>% filter(species == 'pm25') %>%
         mutate(species = 'tpm10') %>%
         bind_rows(conc_baseline) # copy PM25 data
       conc_baseline$conc_baseline[[which(conc_baseline$species == 'tpm10')]] <-
@@ -150,6 +150,12 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   concs <- creahia::combine_concs(conc_perturbation, conc_baseline) %>% # combine table
     creahia::flatten_concs() %>% # long to wide
     creahia::add_pop(grid_raster, year_desired=pop_year)
+  
+  # Extract species from the processed data
+  species <- names(concs) %>% 
+    grep("^conc_scenario_|^conc_baseline_", ., value = TRUE) %>%
+    gsub("^conc_scenario_|^conc_baseline_", "", .) %>%
+    unique()
 
   # 04: Create support maps (e.g. countries, provinces, cities ) -----------------------------
   if(is.null(regions)) {

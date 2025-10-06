@@ -3,6 +3,7 @@ man/
 .Rhistory
 .RData
 .Ruserdata
+.Renviron
 inst/doc
 
 tmp/

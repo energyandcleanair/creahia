@@ -34,7 +34,7 @@ hia_fut <- readRDS(file.path(output_dir, 'hia_fut.RDS'))
 hia_fut %>%
   left_join(emissions_modeled) %>%
   mutate(across(c(number, cost_mn_currentUSD), divide_by, modeled_emissions)) %>%
-  mutate(number = ifelse(grepl('Deaths', Outcome), number, 0)) %>%
+  mutate(number = ifelse(grepl('Deaths', outcome), number, 0)) %>%
   filter(!double_counted) %>%
   group_by(plant, emitted_species, year, estimate) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum, na.rm=T)) ->

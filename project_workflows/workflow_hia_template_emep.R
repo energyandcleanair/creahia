@@ -206,14 +206,14 @@ hia_x <- hia%>%filter(iso3 %in% im_regs)
 
 hia_totals <- hia_x %>%
   left_join(shp@data %>% dplyr::select(region_id = GID_2, starts_with('NAME'))) %>%
-  group_by(across(c(starts_with('NAME'), Outcome, Pollutant, Cause, AgeGrp, iso3,
+  group_by(across(c(starts_with('NAME'), outcome, pollutant, cause, age_group, iso3,
                     scenario, estimate, double_counted))) %>%
   summarise(across(number, sum)) %>%
-  #  filter(Pollutant != pollutants_to_process | Cause != 'AllCause') %>%
-  #  filter(Pollutant != 'pollutants_to_process' | Cause != 'GEMM and GBD') %>% 
-  #  mutate(number = number * case_when(Pollutant != 'NO2' | Cause != 'AllCause' ~ 1,
-  mutate(number = number * case_when(Pollutant != 'pollutants_to_process' | Cause != 'AllCause' ~ 1,
-#  mutate(number = number * case_when(Pollutant != 'pollutants_to_process' | Cause != 'GEMM and GBD' ~ 1,
+  #  filter(pollutant != pollutants_to_process | cause != 'AllCause') %>%
+  #  filter(pollutant != 'pollutants_to_process' | cause != 'GEMM and GBD') %>% 
+  #  mutate(number = number * case_when(pollutant != 'NO2' | cause != 'AllCause' ~ 1,
+  mutate(number = number * case_when(pollutant != 'pollutants_to_process' | cause != 'AllCause' ~ 1,
+#  mutate(number = number * case_when(pollutant != 'pollutants_to_process' | cause != 'GEMM and GBD' ~ 1,
                                      estimate == 'central' ~ 1/2,
                                      estimate == 'low' ~ 1/2,
                                      estimate == 'high' ~ 2/3))
@@ -241,12 +241,12 @@ hia_cost<- creahia::get_hia_cost(hia = hia_totals_x, valuation_version = "viscus
 #  filter(NAME_2 == "Greater London")
 
 hia_cost %>%
-  distinct(Outcome, valuation_world_2017, valuation_current_usd, iso3, reference) %>%
+  distinct(outcome, valuation_world_2017, valuation_current_usd, iso3, reference) %>%
   na.omit %>%
   add_long_names() %>%
-  dplyr::select(-Outcome, Outcome = Outcome_long) %>%
+  dplyr::select(-outcome, outcome = outcome_long) %>%
   mutate(across(where(is.numeric), function(x) x %>% signif(4) %>% scales::comma(accuracy = 1))) %>%
-  relocate(Outcome) %>%
+  relocate(outcome) %>%
   relocate(reference, .after = everything()) %>%
   write_csv(file.path(output_dir, paste0('valuations.',regs,'csv')))
 
@@ -255,7 +255,7 @@ for (targetyears in seq(2009,2040)){
 
 hia_fut <- hia_cost %>% creahia::get_econ_forecast(forecast_years = targetyears, reference_year = 2019, use_gdp_scaling = TRUE)
 hia_fut_totals <- hia_fut %>% add_long_names() %>%
-  group_by(Outcome = Outcome_long, Cause = Cause_long, Pollutant,
+  group_by(outcome = outcome_long, cause = cause_long, pollutant,
            double_counted, scenario, estimate, iso3, NAME_2) %>%
   mutate(across(cost_mn_currentLCU, divide_by, 1000)) %>%
   rename(cost_bn_currentLCU = cost_mn_currentLCU) %>%
@@ -283,9 +283,9 @@ for (targetyears in seq(2009,2040)){
 
 #  hia_fut_totals <- get(paste0("hia_fut_totals_",regs,"_",targetyears))%>%
   hia_fut_totals <- get(paste0("hia_fut_totals_",targetyears))%>%
-      mutate(number = ifelse(Pollutant == "O3_8h",number * 1.96, number),
-           cost_mn_currentUSD = ifelse(Pollutant == "O3_8h",cost_mn_currentUSD * 1.96, cost_mn_currentUSD),
-           cost_bn_currentLCU = ifelse(Pollutant == "O3_8h",cost_bn_currentLCU * 1.96, cost_bn_currentLCU))
+      mutate(number = ifelse(pollutant == "O3_8h",number * 1.96, number),
+           cost_mn_currentUSD = ifelse(pollutant == "O3_8h",cost_mn_currentUSD * 1.96, cost_mn_currentUSD),
+           cost_bn_currentLCU = ifelse(pollutant == "O3_8h",cost_bn_currentLCU * 1.96, cost_bn_currentLCU))
 
     for (scale_scenario in scenarios_to_process){
     sf_a <-emis_inv %>%
@@ -316,7 +316,7 @@ for (targetyears in seq(2009,2040)){
   hia_fut_totals_out <- hia_fut_totals
   
   hia_fut_totals_out <- hia_fut_totals_out%>%
-    group_by(Outcome,Cause,Pollutant,double_counted,scenario,estimate,iso3)%>%
+    group_by(outcome,cause,pollutant,double_counted,scenario,estimate,iso3)%>%
     summarize(
       across(where(is.numeric), sum, na.rm = TRUE)) # Sum numeric columns
 
@@ -324,7 +324,7 @@ for (targetyears in seq(2009,2040)){
   hia_fut_totals_out<-hia_fut_totals_out %>% filter(!double_counted) %>%
   group_by(scenario, estimate) %>%
   summarise(across(starts_with('cost'), sum, na.rm = T)) %>%
-  pivot_longer(where(is.numeric), names_to = 'Outcome', values_to = 'number') %>%
+  pivot_longer(where(is.numeric), names_to = 'outcome', values_to = 'number') %>%
   bind_rows(hia_fut_totals_out %>% filter(!double_counted)) %>%
   dplyr::select(-starts_with('cost')) %>%
   filter(!is.na(estimate)) %>%
@@ -347,9 +347,9 @@ for (targetyears in seq(2009,2040)){
   
   hia_fut_totals <- get(paste0("hia_fut_totals_city_ÃŽle-de-France_",targetyears))%>%
 #    filter(scenario%in%c("UK","France"))%>%
-    mutate(number = ifelse(Pollutant == "O3_8h",number * 1.96, number),
-           cost_mn_currentUSD = ifelse(Pollutant == "O3_8h",cost_mn_currentUSD * 1.96, cost_mn_currentUSD),
-           cost_bn_currentLCU = ifelse(Pollutant == "O3_8h",cost_bn_currentLCU * 1.96, cost_bn_currentLCU))
+    mutate(number = ifelse(pollutant == "O3_8h",number * 1.96, number),
+           cost_mn_currentUSD = ifelse(pollutant == "O3_8h",cost_mn_currentUSD * 1.96, cost_mn_currentUSD),
+           cost_bn_currentLCU = ifelse(pollutant == "O3_8h",cost_bn_currentLCU * 1.96, cost_bn_currentLCU))
   ## mod ozone since unit diff (ppb to ug/m3), factor in 1.96 
   
   
@@ -382,7 +382,7 @@ for (targetyears in seq(2009,2040)){
   
     
     hia_fut_totals_out <- hia_fut_totals_out%>%
-      group_by(Outcome,Cause,Pollutant,double_counted,scenario,estimate,iso3,NAME_2)%>%
+      group_by(outcome,cause,pollutant,double_counted,scenario,estimate,iso3,NAME_2)%>%
       summarize(
         across(where(is.numeric), sum, na.rm = TRUE)) # Sum numeric columns
     
@@ -390,7 +390,7 @@ for (targetyears in seq(2009,2040)){
     hia_fut_totals_out<-hia_fut_totals_out %>% filter(!double_counted) %>%
       group_by(scenario, estimate) %>%
       summarise(across(starts_with('cost'), sum, na.rm = T)) %>%
-      pivot_longer(where(is.numeric), names_to = 'Outcome', values_to = 'number') %>%
+      pivot_longer(where(is.numeric), names_to = 'outcome', values_to = 'number') %>%
       bind_rows(hia_fut_totals_out %>% filter(!double_counted)) %>%
       dplyr::select(-starts_with('cost')) %>%
       filter(!is.na(estimate)) %>%
@@ -518,12 +518,12 @@ emis_inv <- emis_inv%>%
 ### Test isolate NO2 death for different causes
   
   hia_fut_totals_test <- hia_fut_totals%>%
-    filter(Pollutant %in% c("NO2"))%>%
-    filter(Outcome %in% c("deaths"))%>%
+    filter(pollutant %in% c("NO2"))%>%
+    filter(outcome %in% c("deaths"))%>%
     filter(iso3 %in% c("FRA"))
   
    hia_fut_totals_test <- hia_fut_totals_test%>%
-    group_by(Outcome,Cause,Pollutant,double_counted,scenario,estimate,iso3)%>%
+    group_by(outcome,cause,pollutant,double_counted,scenario,estimate,iso3)%>%
     summarize(
       across(where(is.numeric), sum, na.rm = TRUE)) # Sum numeric columns
   
@@ -531,7 +531,7 @@ emis_inv <- emis_inv%>%
   hia_fut_totals_test_out<-hia_fut_totals_test %>% filter(!double_counted) %>%
     group_by(scenario, estimate) %>%
     summarise(across(starts_with('cost'), sum, na.rm = T)) %>%
-    pivot_longer(where(is.numeric), names_to = 'Outcome', values_to = 'number') %>%
+    pivot_longer(where(is.numeric), names_to = 'outcome', values_to = 'number') %>%
     bind_rows(hia_fut_totals_test %>% filter(!double_counted)) %>%
     dplyr::select(-starts_with('cost')) %>%
     filter(!is.na(estimate)) %>%

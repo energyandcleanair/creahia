@@ -7,10 +7,10 @@ file.path(data_dir, "hia_scenarios.RDS") %>% readRDS -> t1
 
 t1 %>% names
 t1 %>% filter(year==2022, scenario=='BAU') %>%
-  mutate(number=ifelse(Outcome=='Asthma.Prev', 0, number),
-         Outcome=ifelse(Outcome=='Asthma.Prev', 'Asthma.Inci', Outcome)) %>%
+  mutate(number=ifelse(outcome=='Asthma.Prev', 0, number),
+         outcome=ifelse(outcome=='Asthma.Prev', 'Asthma.Inci', outcome)) %>%
   replace_na(list(unit='case')) %>%
-  group_by(CFPP.name, Owner, province, Outcome, Cause, double_counted, Pollutant, unit, year, scenario, estimate) %>%
+  group_by(CFPP.name, Owner, province, outcome, cause, double_counted, pollutant, unit, year, scenario, estimate) %>%
   summarise(across(c(number, cost_mn_currentUSD), ~sum(.x, na.rm=T))) ->
   t2
 
@@ -18,8 +18,8 @@ t2 %>%
   group_by(CFPP.name, Owner, province, year, scenario, estimate) %>%
   add_total_deaths_and_costs() %>%
   add_long_names() %>%
-  select(-Outcome, -Cause) %>%
-  rename(Outcome=Outcome_long, Cause=Cause_long) %>%
+  select(-outcome, -cause) %>%
+  rename(outcome=outcome_long, cause=cause_long) %>%
   pivot_wider(values_from=c(number, cost_mn_currentUSD), names_from=estimate) ->
   t3
 

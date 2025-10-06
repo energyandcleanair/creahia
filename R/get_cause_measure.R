@@ -1,5 +1,6 @@
 get_cause_measure <- function(){
   # Define causes for each measure type
+  # TODO: it's unclear why some e.g. Diabetes should not have YLDs
   causes_ylls <- c(CAUSE_NCDLRI, CAUSE_LRICHILD, CAUSE_IHD, CAUSE_STROKE,
                    CAUSE_COPD, CAUSE_LUNGCANCER, CAUSE_LRI, CAUSE_DEMENTIA)
 

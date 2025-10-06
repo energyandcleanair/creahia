@@ -124,7 +124,7 @@ econ_costs <- hia %>% sel(-any_of('Deaths_Total')) %>%
   compute_econ_costs(results_dir=project_dir, projection_years=2025:2054, pop_targetyr=2025)
 
 econ_costs$cost_forecast %>%
-  group_by(estimate, Outcome_long, Cause_long, Pollutant, scenario, iso3) %>%
+  group_by(estimate, outcome_long, cause_long, pollutant, scenario, iso3) %>%
   summarise_if(is.numeric, sum) ->
   hia_cumu
 

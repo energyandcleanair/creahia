@@ -1,8 +1,11 @@
+testthat::source_test_helpers("tests", env = globalenv())
+testthat::source_test_helpers("../", env = globalenv())
+
 
 test_that("Population is properly calculated", {
-  
+
   library(creahia)  # Add missing library import
-  
+
   # Skip test if GIS data is not available
   gis_dir <- Sys.getenv("GIS_DIR", "")
   if(gis_dir == "" || !dir.exists(file.path(gis_dir, "population"))) {
@@ -80,60 +83,6 @@ test_that("Population is properly calculated", {
 })
 
 
-get_random_exposure_hia <- function(levels,
-                                    min=20,
-                                    max=60,
-                                    target=0,
-                                    pop_year=2020,
-                                    calc_causes="GEMM and GBD",
-                                    iso3="BGD"){
-
-  library(terra)
-  library(creahelpers)
-  library(dplyr)
-  library(creahia)
-  library(creaexposure)
-
-  # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
-  res <- 0.01
-  iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')
-  # Use creahelpers::get_adm now that we have GIS data in CI
-  adm <- creahelpers::get_adm(level = 0, res = "low", iso2s = iso2)
-  bbox <- sf::st_bbox(adm)
-  baseline_rast <- terra::rast(
-    xmin=bbox$xmin,
-    xmax=bbox$xmax,
-    ymin=bbox$ymin,
-    ymax=bbox$ymax,
-    res=res,
-    crs="+proj=longlat +datum=WGS84")
-
-  baseline_rast[] <- runif(prod(dim(baseline_rast)), min, max)
-
-  # Build two perturbations:
-  # p1: bring it down to 0
-  # p2: bring it down to WHO2021
-  perturbation_rast <- target-baseline_rast
-
-  # Compute HIAs
-  lapply(levels, function(level){
-    creahia::wrappers.compute_hia_two_images.default(
-      perturbation_rasters = list(pm25 = perturbation_rast),
-      baseline_rasters = list(pm25 = baseline_rast),
-      scale_base_year = NULL, # Just to avoid unnecessary warning
-      scale_target_year = NULL,  # Just to avoid unnecessary warning
-      pop_year=pop_year,
-      administrative_level = level,
-      administrative_res = "low",
-      administrative_iso3s = iso3,
-      epi_version = "gbd2019",
-      calc_causes = calc_causes
-    ) %>%
-      mutate(level=level)
-  }) %>%
-    bind_rows()
-}
-
 
 test_that("Population is properly calculated and scaled- using HIA", {
 
@@ -141,18 +90,20 @@ test_that("Population is properly calculated and scaled- using HIA", {
   library(dplyr)
   library(creahia)
   library(creaexposure)
-  iso3 <- "BEL"  # Belgium - much smaller than South Africa
+  iso3 <- "BEL"  # Belgium - much smaller than South Africa, faster to test
 
-  hia_2015 <- get_random_exposure_hia(levels=c(0,1),  # Only levels 0 and 1
+  hia_2015 <- generate_random_exposure_hias(levels=c(0,1),  # Only levels 0 and 1
                                       pop_year=2015,  # Use available year
-                                      iso3=iso3
+                                      iso3=iso3,,
+                                      administrative_res="low"
   ) %>%
     mutate(year=2015)
 
 
-  hia_2020 <- get_random_exposure_hia(levels=c(0,1),  # Only levels 0 and 1
+  hia_2020 <- generate_random_exposure_hias(levels=c(0,1),  # Only levels 0 and 1
                                       pop_year=2020,  # Use available year
-                                      iso3=iso3) %>%
+                                      iso3=iso3,
+                                      administrative_res="low") %>%
     mutate(year=2020)
 
 

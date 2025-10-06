@@ -55,7 +55,7 @@ so2 <- tibble(scenario = c('low utilization 13 months', 'high utilization 13 mon
 
 
 hia_cost %>% filter(scenario=='kusile_so2', year==2019) %>%
-  group_by(Outcome=Outcome.long, Pollutant, estimate, double_counted, unit) %>%
+  group_by(outcome=outcome.long, pollutant, estimate, double_counted, unit) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum)) %>%
   full_join(so2 %>% select(scenario, so2_multiplier), by=character()) %>%
   mutate(across(c(number, cost_mn_currentUSD), multiply_by, so2_multiplier)) ->
@@ -64,7 +64,7 @@ hia_cost %>% filter(scenario=='kusile_so2', year==2019) %>%
 
 kusile_excess_hia %>%
   mutate(cost_mn_ZAR = cost_mn_currentUSD*14.7912,
-         number = ifelse(grepl('deaths', Outcome) & !double_counted, number, 0),
+         number = ifelse(grepl('deaths', outcome) & !double_counted, number, 0),
          cost_mn_ZAR = ifelse(!double_counted, cost_mn_ZAR, 0)) %>%
   group_by(scenario, estimate) %>%
   summarise(across(c(number, cost_mn_ZAR), sum, na.rm=T)) %>%

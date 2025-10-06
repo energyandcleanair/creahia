@@ -211,6 +211,9 @@ get_wb_ind <- function() {
 }
 
 
+#' Get asthma new cases (from unknown source?)
+#'
+#' @returns
 get_asthma_new <- function() {
   read.csv("data/epi_update/new asthma cases.csv") %>%
     sel(country, starts_with("X2ppb")) %>%
@@ -223,6 +226,15 @@ get_asthma_new <- function() {
 }
 
 
+#' Get Asthma emergency room visits from Anenberg et al. 2018
+#' https://doi.org/10.1289/EHP3766
+#' https://ehp.niehs.nih.gov/doi/10.1289/ehp3766
+#'
+#' and scale it to population
+#'
+#' @param pop.total
+#'
+#' @returns
 get_asthma_erv <- function(pop.total = NULL) {
   asthma.erv <- read_xlsx("data/epi_update/Anenberg EHP 2018 results.xlsx", sheet = "pm totconc") %>%
     filter(!is.na(ID)) %>%
@@ -572,12 +584,22 @@ compute_others <- function(yld, total, grep, newname, metric_name="Number") {
     })
 }
 
-get_asthma_prev <- function(pop.total, version = "gbd2019") {
+
+#' Get asthma prevalence and incidence from GBD
+#'
+#' @param pop.total
+#' @param version
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+get_asthma_prev_and_inc <- function(pop.total, version = "gbd2019") {
 
   asthma_raw_data <- get_gbd_asthma_raw(version = version) %>%
     mutate(age_low = get_age_low(age_name))
 
-  asthma.prev <- asthma_raw_data %>% # read.csv('2017 data/IHME-GBD_2017_Asthma.csv') %>%
+  asthma.prev <- asthma_raw_data %>%
     add_location_details() %>%
     filter(
       measure_name %in% c("Incidence", "Prevalence"),
@@ -781,7 +803,7 @@ add_location_details <- function(x, locations = get_locations()) {
     # If no common columns, we can't join
     stop("No common columns found for joining location details")
   }
-  
+
   y <- x %>%
     left_join(joiner, by = join_cols) %>%
     mutate(
@@ -830,8 +852,7 @@ generate_epi <- function(version = "gbd2019") {
   deaths.crude <- get_death_crude(version = version)
   death.child.lri <- get_death_child_lri(pop.total = pop.total, version = version)
   yld <- get_yld(pop.total = pop.total, version = version)
-  # death.totcp <- get_death_totcp(yld = yld, pop.total = pop.total, version = version)
-  asthma.prev <- get_asthma_prev(pop.total = pop.total, version = version)
+  asthma.prev_inc <- get_asthma_prev_and_inc(pop.total = pop.total, version = version)
 
 
   epi <- lapply(list(
@@ -839,12 +860,11 @@ generate_epi <- function(version = "gbd2019") {
     deaths.crude,
     death.child.lri,
     yld,
-    # death.totcp,
     pop.total %>% mutate(var = "pop"),
     birth.rate,
     ptb,
     lbw,
-    asthma.prev,
+    asthma.prev_inc,
     asthma.new,
     asthma.erv,
     labor.partic,

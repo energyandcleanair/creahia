@@ -5,7 +5,7 @@ test_that("compute_econ_costs uses correct VSL and multiplies by number", {
   hia <- data.frame(
     iso3 = "ZAF",
     year = 2019,
-    Outcome = "Deaths",
+    outcome = "Deaths",
     number = 1000,
     stringsAsFactors = FALSE,
     double_counted = FALSE,
@@ -16,12 +16,12 @@ test_that("compute_econ_costs uses correct VSL and multiplies by number", {
 
   # Get the VSL directly from get_valuations
   valuations <- creahia::get_valuations("ZAF", 2019, valuation_version = "worldbank")
-  expected_vsl <- valuations %>% filter(Outcome == "Deaths") %>% pull(valuation_usd)
+  expected_vsl <- valuations %>% filter(outcome == "Deaths") %>% pull(valuation_usd)
 
   # Compute economic costs
   costs <- creahia::compute_econ_costs(hia, valuation_version = "worldbank")
-  actual_vsl <- costs$hia_cost %>% filter(Outcome == "Deaths") %>% pull(valuation_current_usd)
-  actual_cost <- costs$hia_cost %>% filter(Outcome == "Deaths") %>% pull(cost_mn_currentUSD)
+  actual_vsl <- costs$hia_cost %>% filter(outcome == "Deaths") %>% pull(valuation_current_usd)
+  actual_cost <- costs$hia_cost %>% filter(outcome == "Deaths") %>% pull(cost_mn_currentUSD)
 
   # Check that VSL matches
   testthat::expect_equal(actual_vsl, expected_vsl, tolerance = 0.1)
@@ -37,9 +37,9 @@ test_that("Test get_hia_cost calculates costs correctly", {
   test_hia <- data.frame(
     iso3 = c("USA", "ZAF"),
     region_id = c("USA", "ZAF"),
-    Outcome = c("Deaths", "Deaths"),
+    outcome = c("Deaths", "Deaths"),
     number = c(100, 50),
-    Pollutant = c("PM2.5", "PM2.5"),
+    pollutant = c("PM2.5", "PM2.5"),
     estimate = c("central", "central"),
     double_counted = c(FALSE, FALSE),
     stringsAsFactors = FALSE
@@ -59,7 +59,7 @@ test_that("Test get_hia_cost calculates costs correctly", {
   testthat::expect_true(nrow(hia_cost) == nrow(test_hia))
 
   # Test required columns exist
-  required_cols <- c("iso3", "Outcome", "number", "cost_mn_currentUSD", "cost_mn_currentLCU")
+  required_cols <- c("iso3", "outcome", "number", "cost_mn_currentUSD", "cost_mn_currentLCU")
   testthat::expect_true(all(required_cols %in% names(hia_cost)))
 
   # Test that costs are calculated and positive
@@ -80,9 +80,9 @@ test_that("Test get_total_cost_by_outcome works correctly", {
   test_hia <- data.frame(
     iso3 = c("USA", "USA", "ZAF", "ZAF"),
     region_id = c("USA", "USA", "ZAF", "ZAF"),
-    Outcome = c("Deaths", "Asthma.Prev", "Deaths", "Asthma.Prev"),
+    outcome = c("Deaths", "AsthmaPrevalence", "Deaths", "AsthmaPrevalence"),
     number = c(100, 1000, 50, 500),
-    Pollutant = c("PM2.5", "PM2.5", "PM2.5", "PM2.5"),
+    pollutant = c("PM2.5", "PM2.5", "PM2.5", "PM2.5"),
     estimate = c("central", "central", "central", "central"),
     double_counted = c(FALSE, FALSE, FALSE, FALSE),
     stringsAsFactors = FALSE
@@ -107,11 +107,11 @@ test_that("Test get_total_cost_by_outcome works correctly", {
   testthat::expect_true(nrow(cost_by_outcome) > 0)
 
   # Test required columns exist
-  required_cols <- c("Outcome", "cost_mn_currentUSD", "cost_mn_currentLCU")
+  required_cols <- c("outcome", "cost_mn_currentUSD", "cost_mn_currentLCU")
   testthat::expect_true(all(required_cols %in% names(cost_by_outcome)))
 
   # Test that all outcomes are present
-  testthat::expect_true(all(c("Deaths", "Asthma.Prev") %in% cost_by_outcome$Outcome))
+  testthat::expect_true(all(c("Deaths", "AsthmaPrevalence") %in% cost_by_outcome$outcome))
 
   # Test that costs are positive
   testthat::expect_true(all(cost_by_outcome$cost_mn_currentUSD > 0))
@@ -124,9 +124,9 @@ test_that("Test get_total_cost_by_region works correctly", {
   test_hia <- data.frame(
     iso3 = c("USA", "USA", "ZAF", "ZAF"),
     region_id = c("USA", "USA", "ZAF", "ZAF"),
-    Outcome = c("Deaths", "Asthma.Prev", "Deaths", "Asthma.Prev"),
+    outcome = c("Deaths", "AsthmaPrevalence", "Deaths", "AsthmaPrevalence"),
     number = c(100, 1000, 50, 500),
-    Pollutant = c("PM2.5", "PM2.5", "PM2.5", "PM2.5"),
+    pollutant = c("PM2.5", "PM2.5", "PM2.5", "PM2.5"),
     estimate = c("central", "central", "central", "central"),
     double_counted = c(FALSE, FALSE, FALSE, FALSE),
     stringsAsFactors = FALSE
@@ -173,9 +173,9 @@ test_that("Test get_hia_cost end-to-end with new valuation system", {
   test_hia <- data.frame(
     iso3 = c("USA", "USA", "GBR", "GBR", "USA", "USA", "GBR", "GBR", "USA", "GBR", "USA", "GBR", "USA", "GBR"),
     region_id = c("USA", "USA", "GBR", "GBR", "USA", "USA", "GBR", "GBR", "USA", "GBR", "USA", "GBR", "USA", "GBR"),
-    Outcome = c("Deaths", "Deaths.child", "Deaths", "Deaths.child", "YLDs", "YLDs", "YLDs", "YLDs", "Asthma.Prev", "Asthma.Prev", "exac", "exac", "PTB", "PTB"),
+    outcome = c("Deaths", "Deaths.child", "Deaths", "Deaths.child", "YLDs", "YLDs", "YLDs", "YLDs", "AsthmaPrevalence", "AsthmaPrevalence", "AsthmaERV", "AsthmaERV", "PTB", "PTB"),
     number = c(100, 50, 25, 15, 500, 300, 200, 150, 1000, 800, 200, 150, 10, 8),
-    Pollutant = c("PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5"),
+    pollutant = c("PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5", "PM2.5"),
     estimate = c("central", "central", "central", "central", "central", "central", "central", "central", "central", "central", "central", "central", "central", "central"),
     double_counted = c(FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE),
     stringsAsFactors = FALSE
@@ -195,7 +195,7 @@ test_that("Test get_hia_cost end-to-end with new valuation system", {
   testthat::expect_true(nrow(hia_cost) > 0)
 
   # Test that required columns exist
-  required_cols <- c("iso3", "Outcome", "number", "cost_mn_currentUSD", "cost_mn_currentLCU")
+  required_cols <- c("iso3", "outcome", "number", "cost_mn_currentUSD", "cost_mn_currentLCU")
   testthat::expect_true(all(required_cols %in% names(hia_cost)))
 
   # Test that costs are calculated (not all NA)
@@ -227,8 +227,8 @@ test_that("Test get_hia_cost end-to-end with new valuation system", {
   testthat::expect_true(all(hia_cost$share_gdp >= 0 & hia_cost$share_gdp <= 1))
 
   # Test that all outcome types are properly handled
-  expected_outcomes <- c("Deaths", "Deaths.child", "YLDs", "Asthma.Prev", "exac", "PTB")
-  testthat::expect_true(all(expected_outcomes %in% hia_cost$Outcome))
+  expected_outcomes <- c("Deaths", "Deaths.child", "YLDs", "AsthmaPrevalence", "AsthmaERV", "PTB")
+  testthat::expect_true(all(expected_outcomes %in% hia_cost$outcome))
 
   # Test that different currency types are handled (USD, GBP, EUR)
   # This tests the currency conversion functionality
@@ -236,10 +236,10 @@ test_that("Test get_hia_cost end-to-end with new valuation system", {
 
   # Test that both GNI and GDP-based valuations work
   gni_outcomes <- c("Deaths", "Deaths.child", "YLDs")
-  gdp_outcomes <- c("Asthma.Prev", "exac", "PTB")
+  gdp_outcomes <- c("AsthmaPrevalence", "AsthmaERV", "PTB")
 
-  testthat::expect_true(all(gni_outcomes %in% hia_cost$Outcome))
-  testthat::expect_true(all(gdp_outcomes %in% hia_cost$Outcome))
+  testthat::expect_true(all(gni_outcomes %in% hia_cost$outcome))
+  testthat::expect_true(all(gdp_outcomes %in% hia_cost$outcome))
 
   # Test that both PPP and non-PPP valuations work
   # (All outcomes in your data use PPP, but the system should handle both)

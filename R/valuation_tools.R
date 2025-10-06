@@ -123,7 +123,7 @@ create_valuation_file <- function(input_file = 'inst/extdata/valuation_viscusi_g
       gni_or_gdp == 'gdp' & !ppp ~ gdp_world_2017_constant2015 / gdp_constant2015,
       T ~ NA_real_)) %>% # Other cases not yet supported
     mutate(valuation_world_2017 = as.numeric(valuation_refyear * ratio^elasticity)) %>%
-    select(Outcome, Outcome_name, currency, unit,
+    select(outcome, outcome_long, currency, unit,
            elasticity, gni_or_gdp, ppp, valuation_world_2017) %>%
     filter(!is.na(valuation_world_2017))
 

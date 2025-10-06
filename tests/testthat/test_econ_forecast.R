@@ -9,12 +9,12 @@ test_that("Test population scaling only - fatal vs non-fatal outcomes", {
   test_hia_cost <- data.frame(
     iso3 = c("USA", "USA"),
     region_id = c("USA", "USA"),
-    Outcome = c("Deaths", "Asthma.Prev"),
+    outcome = c("Deaths", "Asthma.Prev"),
     year = c(2019, 2019),
     number = c(100, 1000),
     cost_mn_currentUSD = c(1.1, 0.1),
     cost_mn_currentLCU = c(1.1, 0.1),
-    AgeGrp = c("25+", "25+"),
+    age_group = c("25+", "25+"),
     double_counted = c(FALSE, FALSE),
     stringsAsFactors = FALSE
   )
@@ -34,7 +34,7 @@ test_that("Test population scaling only - fatal vs non-fatal outcomes", {
   testthat::expect_true(nrow(forecast_pop_only) > 0)
 
   # Test required columns exist
-  required_cols <- c("iso3", "Outcome", "year", "pop_scaling", "gdp_scaling", "cost_mn_currentUSD")
+  required_cols <- c("iso3", "outcome", "year", "pop_scaling", "gdp_scaling", "cost_mn_currentUSD")
   testthat::expect_true(all(required_cols %in% names(forecast_pop_only)))
 
   # Test that population scaling is reasonable
@@ -63,12 +63,12 @@ test_that("Test GDP scaling and discounting only", {
   test_hia_cost <- data.frame(
     iso3 = c("USA", "ZAF"),
     region_id = c("USA", "ZAF"),
-    Outcome = c("Deaths", "Deaths"),
+    outcome = c("Deaths", "Deaths"),
     year = c(2019, 2019),
     number = c(100, 50),
     cost_mn_currentUSD = c(1.1, 0.5),
     cost_mn_currentLCU = c(1.1, 9.3),
-    AgeGrp = c("25+", "25+"),
+    age_group = c("25+", "25+"),
     double_counted = c(FALSE, FALSE),
     stringsAsFactors = FALSE
   )
@@ -121,12 +121,12 @@ test_that("Test population vs GDP scaling comparison", {
   test_hia_cost <- data.frame(
     iso3 = c("USA", "ZAF"),
     region_id = c("USA", "ZAF"),
-    Outcome = c("Deaths", "Deaths"),
+    outcome = c("Deaths", "Deaths"),
     year = c(2019, 2019),
     number = c(100, 50),
     cost_mn_currentUSD = c(1.1, 0.5),
     cost_mn_currentLCU = c(1.1, 9.3),
-    AgeGrp = c("25+", "25+"),
+    age_group = c("25+", "25+"),
     double_counted = c(FALSE, FALSE),
     stringsAsFactors = FALSE
   )
@@ -183,12 +183,12 @@ test_that("Test get_econ_forecast age group handling", {
   test_hia_cost <- data.frame(
     iso3 = c("USA", "USA"),
     region_id = c("USA", "USA"),
-    Outcome = c("Deaths", "Deaths"),
+    outcome = c("Deaths", "Deaths"),
     year = c(2019, 2019),
     number = c(100, 50),
     cost_mn_currentUSD = c(1.1, 0.5),
     cost_mn_currentLCU = c(1.1, 0.5),
-    AgeGrp = c("25+", "0-4"),
+    age_group = c("25+", "0-4"),
     double_counted = c(FALSE, FALSE),
     stringsAsFactors = FALSE
   )
@@ -208,7 +208,7 @@ test_that("Test get_econ_forecast age group handling", {
   testthat::expect_true(nrow(forecast_age) > 0)
 
   # Test that synthetic age groups are created if needed
-  testthat::expect_true("AgeGrp" %in% names(forecast_age))
+  testthat::expect_true("age_group" %in% names(forecast_age))
 })
 
 test_that("Test get_econ_forecast input handling", {
@@ -217,12 +217,12 @@ test_that("Test get_econ_forecast input handling", {
   test_hia_cost <- data.frame(
     iso3 = c("USA"),
     region_id = c("USA"),
-    Outcome = c("Deaths"),
+    outcome = c("Deaths"),
     year = c(2019),
     number = c(100),
     cost_mn_currentUSD = c(1.1),
     cost_mn_currentLCU = c(1.1),
-    AgeGrp = c("25+"),
+    age_group = c("25+"),
     double_counted = c(FALSE),
     stringsAsFactors = FALSE
   )
@@ -257,12 +257,12 @@ test_that("Test get_econ_forecast edge cases", {
   test_hia_cost <- data.frame(
     iso3 = c("USA"),
     region_id = c("USA"),
-    Outcome = c("Deaths"),
+    outcome = c("Deaths"),
     year = c(2019),
     number = c(100),
     cost_mn_currentUSD = c(1.1),
     cost_mn_currentLCU = c(1.1),
-    AgeGrp = c("25+"),
+    age_group = c("25+"),
     double_counted = c(FALSE),
     stringsAsFactors = FALSE
   )
@@ -298,6 +298,12 @@ test_that("Test get_econ_forecast edge cases", {
 test_that("Test GDP scaling for several countries", {
 
   hia_cost <- readRDS(get_test_file(file.path("example_kaz", "hia_cost.RDS")))
+
+  # Rename columns to match new format
+  names(hia_cost) <- gsub("Outcome", "outcome", names(hia_cost))
+  names(hia_cost) <- gsub("Pollutant", "pollutant", names(hia_cost))
+  names(hia_cost) <- gsub("Cause", "cause", names(hia_cost))
+  names(hia_cost) <- gsub("AgeGrp", "age_group", names(hia_cost))
 
 
 

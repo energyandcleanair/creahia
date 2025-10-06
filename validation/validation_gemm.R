@@ -174,8 +174,8 @@ get_hia_deaths_pm <- function(year, res, grid, adm, adm_res, suffix, creahia_ver
   # Extract deaths and population
   deaths <- hia %>%
     filter(!double_counted,
-           Pollutant=="PM25",
-           grepl("Deaths", Outcome),
+           pollutant=="PM25",
+           grepl("Deaths", outcome),
            !is.na(number),
            estimate=="central") %>%
     group_by(region_id) %>%

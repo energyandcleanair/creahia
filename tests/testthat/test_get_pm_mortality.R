@@ -7,32 +7,50 @@ test_that("get_pm_mortality computes confidence intervals correctly", {
   testthat::skip_on_ci()
 
   # Sample PAF data
-  generate_test_data <- function(central_paf, se_paf, central_epi, se_epi, pop, region_id = "BGD", var=c("cause1_yll")) {
+  generate_test_data <- function(central_paf,
+                                 se_paf,
+                                 central_epi,
+                                 se_epi,
+                                 pop,
+                                 region_id = "BGD",
+                                 var = c("cause1_yll")) {
 
     z <- 1.96 # 95% confidence interval
 
-    # Create paf_scenario dataframe
+    cause <- sub('_.*$', '', var)
+    outcome <- sub('^[^_]*_', '', var)
+
+    central_paf_vals <- rep_len(central_paf, length(var))
+    se_paf_vals <- rep_len(se_paf, length(var))
+
     paf_scenario <- tibble::tibble(
-      var = var,
-      low = central_paf - z * se_paf,
-      central = central_paf,
-      high = central_paf + z * se_paf,
-      region_id = region_id
+      pollutant = rep("PM25", length(var)),
+      cause = cause,
+      outcome = outcome,
+      region_id = rep(region_id, length(var)),
+      low = central_paf_vals - z * se_paf_vals,
+      central = central_paf_vals,
+      high = central_paf_vals + z * se_paf_vals
     )
 
-    # Create epi_loc dataframe
+    central_epi_vals <- rep_len(central_epi, length(var))
+    se_epi_vals <- rep_len(se_epi, length(var))
+
     epi_loc <- tibble::tibble(
       iso3 = region_id,
       region_id = region_id,
-      estimate = rep(c("low", "central", "high"), each = length(vars)),
-      pop = rep(pop, 3 * length(vars)),
-      value = c(
-          central_epi - z * se_epi,
-          central_epi,
-          central_epi + z * se_epi
-        )
-    ) %>%
-      rename_at("value", ~var)
+      estimate = c("low", "central", "high"),
+      pop = rep(pop, 3)
+    )
+
+    for(idx in seq_along(var)) {
+      epi_values <- c(
+        central_epi_vals[idx] - z * se_epi_vals[idx],
+        central_epi_vals[idx],
+        central_epi_vals[idx] + z * se_epi_vals[idx]
+      )
+      epi_loc[[var[idx]]] <- epi_values
+    }
 
     return(list(paf_scenario = paf_scenario, epi_loc = epi_loc))
   }
@@ -46,9 +64,17 @@ test_that("get_pm_mortality computes confidence intervals correctly", {
       epi_loc = data$epi_loc
     )
 
-    testthat::expect_true(all(c("region_id", "pop", paste0(var, "_PM25")) %in% colnames(pm_mortality)))
+    expected_cols <- c("region_id", "pop", "estimate", paste0(var, "_PM25"))
+    testthat::expect_true(all(expected_cols %in% colnames(pm_mortality)))
 
-    actual_se <- (pm_mortality[which(pm_mortality$estimate == "high"),paste0(var, "_PM25")] - pm_mortality[which(pm_mortality$estimate == "low"),paste0(var, "_PM25")]) / (2 * 1.96)
+    high_val <- pm_mortality %>%
+      dplyr::filter(estimate == "high") %>%
+      dplyr::pull(paste0(var, "_PM25"))
+    low_val <- pm_mortality %>%
+      dplyr::filter(estimate == "low") %>%
+      dplyr::pull(paste0(var, "_PM25"))
+    actual_se <- (high_val - low_val) / (2 * 1.96)
+
     testthat::expect_equal(actual_se, expected_se, tolerance = 1e-4)
   }
 

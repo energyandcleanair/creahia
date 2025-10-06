@@ -229,8 +229,8 @@ hia_all %<>% ldply(.id='scenario') %>% mutate(ISO3 = GID %>% substr(1, 3))
 #scale population from year of population data to target year of estimates
 pop_baseyr=2015
 pop_targetyr=2019
-popproj %>% filter(Yr %in% c(pop_baseyr, pop_targetyr), AgeGrp != 'Newborn', !is.na(ISO3)) %>%
-  sel(-AgeGrp) %>% group_by(ISO3, Yr) %>% summarise_at('pop', sum) -> popscaling
+popproj %>% filter(Yr %in% c(pop_baseyr, pop_targetyr), age_group != 'Newborn', !is.na(ISO3)) %>%
+  sel(-age_group) %>% group_by(ISO3, Yr) %>% summarise_at('pop', sum) -> popscaling
 popscaling$Yr[popscaling$Yr==pop_baseyr] <- 'base'
 popscaling$Yr[popscaling$Yr==pop_targetyr] <- 'target'
 popscaling %>% spread(Yr, pop) %>% mutate(scaling=target/base) %>% sel(ISO3, scaling) %>%
@@ -247,12 +247,12 @@ hia_all %>% mutate(Deaths_Total =
                      COPD_Deaths_O3_8h +
                      LRI.child_Deaths_PM25) %>%
   group_by(GID, scenario, estimate) %>% summarise_if(is.numeric, sum, na.rm=T) %>%
-  gather(Outcome, Number, -GID, -scenario, -estimate) -> hia_adm
+  gather(outcome, Number, -GID, -scenario, -estimate) -> hia_adm
 
 names(hia_adm) %<>% recode(GID=paste0('GID_',adm_level))
 hia_adm %<>% left_join(admUTM@data %>% sel(starts_with('GID_'), starts_with('NAME_')))
 
-hia_adm %>% group_by(scenario, estimate, Outcome) %>% summarise_if(is.numeric, sum, na.rm=T) %>%
+hia_adm %>% group_by(scenario, estimate, outcome) %>% summarise_if(is.numeric, sum, na.rm=T) %>%
   spread(estimate, Number) -> hia_tot
 
 read_csv(paste0(HIApath, 'dict.csv')) -> dict
@@ -261,32 +261,32 @@ hia_tot %>% maketable -> hiatable
 hiatable %>% write_csv('HIAtable.csv')
 
 #economic cost
-hia_all %>% gather(Outcome, number, -scenario, -GID, -ISO3, -estimate, -pop) %>%
+hia_all %>% gather(outcome, number, -scenario, -GID, -ISO3, -estimate, -pop) %>%
   mutate(ISO3 = GID %>% substr(1, 3),
-         Outcome = Outcome %>%gsub('O3_8h', 'O3', .),
-         Pollutant = Outcome %>% gsub('.*_', '', .) %>% toupper,
-         Cause = Outcome %>% gsub('_.*', '', .),
-         Outcome = Outcome %>% gsub('_[A-Za-z0-9]*$', '', .) %>%
+         outcome = outcome %>%gsub('O3_8h', 'O3', .),
+         pollutant = outcome %>% gsub('.*_', '', .) %>% toupper,
+         cause = outcome %>% gsub('_.*', '', .),
+         outcome = outcome %>% gsub('_[A-Za-z0-9]*$', '', .) %>%
            gsub('\\.[0-9]*to[0-9]*$', '', .) %>% gsub('.*_', '', .)) ->
   hia2
 
-hia2$Cause[grep('exac|sthma', hia2$Cause)] <- 'Asthma'
+hia2$cause[grep('exac|sthma', hia2$cause)] <- 'Asthma'
 
 hia2 %<>% left_join(vals) %>% left_join(gdp) %>%
-  filter(!is.na(Pollutant)) %>%
+  filter(!is.na(pollutant)) %>%
   mutate(valuation = Valuation.2011.IntlDollars * (GDP.PPP.2011USD / 15914.05317)^Elasticity,
          cost=number*valuation/1e6,
          cost.USD = cost * GDP.currUSD / GDP.PPP.2011USD,
          cost.LCU = cost * GDP.currLCU / GDP.PPP.2011USD) %>%
   ungroup
 
-hia2 %>% group_by(scenario, estimate, Outcome, Pollutant) %>% summarise_at('cost.USD', sum) %>% na.omit %>%
-  filter(Outcome != 'LBW') %>% spread(estimate, cost.USD) %>%
+hia2 %>% group_by(scenario, estimate, outcome, pollutant) %>% summarise_at('cost.USD', sum) %>% na.omit %>%
+  filter(outcome != 'LBW') %>% spread(estimate, cost.USD) %>%
   mutate_at(rescols, scales::comma, accuracy=0.01) %>% mutate(CI = paste0('(', low, ' - ', high, ')')) %>%
   sel(-low, -high) %>% write_csv('total costs by cause, mln USD.csv')
 
 
-hia2 %>% filter(Outcome != 'LBW') %>%
+hia2 %>% filter(outcome != 'LBW') %>%
   group_by(scenario, ISO3, GID, estimate, Currency.Name, Currency.Code) %>%
   sel(starts_with('cost')) %>% summarise_all(sum, na.rm=T) %>%
   left_join(hia2 %>% distinct(GID, pop, GDP.PPP.2011USD)) %>%
@@ -305,50 +305,50 @@ cost_natl %>% write_csv('cost results national total.csv')
 #valuations used
 output_vals_for='Philippines'
 currency_name=gdp$Currency.Code[gdp$ISO3==get_iso3(output_vals_for)]
-hia2 %>% distinct(ISO3, Outcome, .keep_all=T) %>%
+hia2 %>% distinct(ISO3, outcome, .keep_all=T) %>%
   left_join(admUTM@data %>% sel(ISO3=GID_0, Country='NAME_0')) %>%
   filter(Country==output_vals_for) %>%
   mutate(valuation.USD = valuation * GDP.currUSD / GDP.PPP.2011USD,
          valuation.LCU = valuation * GDP.currLCU / GDP.PPP.2011USD) %>%
-  sel(Outcome.Code=Outcome,
+  sel(outcome.Code=outcome,
       Valuation.at.world.avg.GDP.2011.IntlDollars=Valuation.2011.IntlDollars,
       Valuation.in.COUNTRY.2011.IntlDollars=valuation,
       Valuation.in.COUNTRY.2019USD=valuation.USD,
       Valuation.in.COUNTRY.2019LCU=valuation.LCU) %>% distinct() %>% na.omit() %>%
   rename_with(function(x) x %>% gsub('COUNTRY', output_vals_for, .) %>% gsub('LCU', currency_name, .)) %>%
-  filter(Outcome.Code != 'LBW') %>%
-  right_join(dict %>% rename(Outcome.Code=Code, Outcome=Long.name), .) %>% sel(-Outcome.Code) %>%
+  filter(outcome.Code != 'LBW') %>%
+  right_join(dict %>% rename(outcome.Code=Code, outcome=Long.name), .) %>% sel(-outcome.Code) %>%
   write_excel_csv('valuations in focus country.csv')
 
 
 #future impacts
-hia2 %>% filter(Outcome != 'LBW',
-                Outcome %notin% c('Deaths', 'YLLs') | Cause %in% c('NCD.LRI', 'LRI.child', 'AllCause'),
-                Outcome!='YLDs' | Cause != 'NCD.LRI') -> hia3
+hia2 %>% filter(outcome != 'LBW',
+                outcome %notin% c('Deaths', 'YLLs') | cause %in% c('NCD.LRI', 'LRI.child', 'AllCause'),
+                outcome!='YLDs' | cause != 'NCD.LRI') -> hia3
 
 names(hia3) %<>% recode('GID' = paste0('GID_',adm_level))
 admLL@data %>% sel(starts_with('GID_'), starts_with('NAME_')) %>%
   right_join(hia3) -> hia3
-hia3 %>% group_by(scenario, fuel, area, estimate, ISO3, NAME_1, Outcome, Cause, AgeGrp, Pollutant) %>%
+hia3 %>% group_by(scenario, fuel, area, estimate, ISO3, NAME_1, outcome, cause, age_group, pollutant) %>%
   summarise_at(c('number', 'cost.USD'), sum, na.rm=T) -> hia_cost
 
 #add new age groups to population data
-add_age_groups = tibble(AgeGrp=c('25+','0-18','1-18','18-99', '20-65'),
+add_age_groups = tibble(age_group=c('25+','0-18','1-18','18-99', '20-65'),
                         AgeLow=c(25,0,0,20, 20),
                         AgeHigh=c(99,20,99, 99, 64),
                         multiplier=c(1,19/20,18/20, 82/80, 46/45))
 
-add_age_groups %>% group_by(AgeGrp) %>%
+add_age_groups %>% group_by(age_group) %>%
   group_modify(function(df, ...) {
     popproj %>% filter(Age_low>=df$AgeLow, Age_high<=df$AgeHigh) %>%
       group_by(LocID, ISO3, Location, Yr) %>% sel(-contains('Age')) %>%
       mutate_if(is.numeric, multiply_by, df$multiplier) %>%
       summarise_all(sum) %>%
-      mutate(death_rate = deaths / pop, AgeGrp=df$AgeGrp)
+      mutate(death_rate = deaths / pop, age_group=df$age_group)
   }) %>% bind_rows(popproj) %>% distinct -> popproj
 
 #flag mortality outcomes (to be scaled by number of deaths)
-hia_cost$fatal <- grepl('YLLs|YLDs|Deaths', hia_cost$Outcome)
+hia_cost$fatal <- grepl('YLLs|YLDs|Deaths', hia_cost$outcome)
 yrs = 1980:2060
 
 #gdp data
@@ -400,20 +400,20 @@ elast %>% subset(!is.null(.)) %>% bind_rows %>%
 
 popproj %>% ungroup %>%
   filter(ISO3 %in% unique(hia_cost$ISO3),
-         AgeGrp %in% unique(hia_cost$AgeGrp), Yr %in% yrs) %>%
+         age_group %in% unique(hia_cost$age_group), Yr %in% yrs) %>%
   full_join(GDP %>% sel(ISO3, Yr=Year, GDP.PPP.2011USD) %>%
               filter(Yr %in% yrs, ISO3 %in% unique(hia_cost$ISO3))) %>%
   pivot_longer(c(pop, deaths)) %>%
-  group_by(ISO3, AgeGrp, name) %>%
+  group_by(ISO3, age_group, name) %>%
   mutate(scaling = value/value[Yr==pop_targetyr],
          GDPscaling = GDP.PPP.2011USD/GDP.PPP.2011USD[Yr==pop_targetyr]) %>%
-  mutate(fatal=name=='deaths') %>% ungroup %>% sel(ISO3, AgeGrp, Yr, fatal, scaling, GDPscaling) -> popscaling
+  mutate(fatal=name=='deaths') %>% ungroup %>% sel(ISO3, age_group, Yr, fatal, scaling, GDPscaling) -> popscaling
 
 hia_cost %>% full_join(popscaling) -> hia_by_year
 
 hia_by_year %>% mutate(number = number*scaling,
                        cost.USD = cost.USD*scaling*GDPscaling) %>%
-  group_by(scenario, fuel, area, estimate, ISO3, NAME_1, Outcome, Cause, Pollutant, Yr) %>%
+  group_by(scenario, fuel, area, estimate, ISO3, NAME_1, outcome, cause, pollutant, Yr) %>%
   summarise_at(c('number', 'cost.USD'), sum) -> hia_by_year_scaled
 
 hia_by_year_scaled %>% filter(fuel == 'COAL', !is.na(scenario)) %>%

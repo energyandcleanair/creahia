@@ -141,12 +141,12 @@ emissions_data %>%
 hia_fut %>% right_join(emis_byyear) -> hia_scen
 
 hia_scen %<>% mutate(across(c(number, cost_mn_currentUSD), multiply_by, emissions/modeled_emissions)) %>%
-  group_by(region_id, plant, year, scenario, Outcome, Cause, Pollutant, double_counted, estimate) %>%
+  group_by(region_id, plant, year, scenario, outcome, cause, pollutant, double_counted, estimate) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum))
 
 #output
 hia_scen %>%
-  filter(Outcome=='Deaths', !double_counted, estimate=='central') %>%
+  filter(outcome=='Deaths', !double_counted, estimate=='central') %>%
   group_by(year, scenario) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum)) %>%
   ggplot(aes(year, number, col=scenario)) +
@@ -160,7 +160,7 @@ quicksave(file.path(output_dir, 'deaths by scenario.png'), plot=p)
 
 
 hia_scen %>%
-  filter(Outcome=='Deaths', !double_counted, year %in% 2030:2050) %>%
+  filter(outcome=='Deaths', !double_counted, year %in% 2030:2050) %>%
   group_by(scenario, estimate) %>%
   summarise(across(c(number), sum)) %>% #cost_mn_currentUSD
   spread(estimate, number) ->
@@ -183,7 +183,7 @@ quicksave(file.path(output_dir, 'excess deaths by scenario.png'), plot=p, scale=
 
 
 hia_scen %>%
-  filter(Outcome=='Deaths', !double_counted) %>%
+  filter(outcome=='Deaths', !double_counted) %>%
   mutate(across(c(number, cost_mn_currentUSD), ~ifelse(year %in% 2030:2050, .x, 0))) %>%
   group_by(scenario, plant, estimate) %>%
   summarise(across(c(number), sum)) %>% #cost_mn_currentUSD
@@ -220,7 +220,7 @@ hia_scen %>% ungroup %>%
   hia_out
 
 hia_out %>%
-  group_by(Outcome, Cause, Pollutant, double_counted, estimate) %>%
+  group_by(outcome, cause, pollutant, double_counted, estimate) %>%
   mutate(number=number - number[scenario==base_scenario]) %>%
   filter(scenario != base_scenario) %>%
   spread(estimate, number) %>%
@@ -228,9 +228,9 @@ hia_out %>%
   mutate(number=paste0(central, ' (', low, ' – ', high, ')')) %>%
   select(-c(low, central, high)) %>%
   spread(scenario, number) %>%
-  arrange(!grepl('deaths', Outcome), !grepl('asthma', Outcome), !grepl('births', Outcome), grepl('economic', Outcome),
-          Outcome, Pollutant != 'all', Pollutant!='PM2.5', double_counted, Cause, Pollutant) %>%
-  select(Outcome, Cause, Pollutant, any_of(scens_to_plot), double_counted) %>% filter(!is.na(Outcome)) ->
+  arrange(!grepl('deaths', outcome), !grepl('asthma', outcome), !grepl('births', outcome), grepl('economic', outcome),
+          outcome, pollutant != 'all', pollutant!='PM2.5', double_counted, cause, pollutant) %>%
+  select(outcome, cause, pollutant, any_of(scens_to_plot), double_counted) %>% filter(!is.na(outcome)) ->
   hia_avoided
 
 hia_avoided %>% write_excel_csv(file.path(output_dir, 'avoided health impacts, all, cumulative.csv'))

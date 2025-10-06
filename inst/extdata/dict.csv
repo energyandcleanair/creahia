@@ -1,4 +1,4 @@
-Code,Long.name,Medium.name
+code,long_name,medium_name
 NCD.LRI,non-communicable diseases and lower respiratory infections,non-communicable diseases and lower respiratory infections
 LRI.child,lower respiratory infections in children,lower respiratory infections in children
 Stroke,stroke,stroke
@@ -7,22 +7,23 @@ COPD,chronic obstructive pulmonary disease,chronic obstructive pulmonary disease
 IHD,ischaemic heart disease,ischaemic heart disease
 LC,lung cancer,lung cancer
 LRI,lower respiratory infections,lower respiratory infections
-Asthma.Inci.1to18,new cases of asthma in children,new cases of asthma in children
-Asthma.Prev.1to18,number of children suffering from asthma due to pollution exposure (increased prevalence),increased prevalence children suffering from asthma
-exac.0to17,"asthma emergency room visits, children","asthma emergency room visits, children"
-exac.18to99,"asthma emergency room visits, adults","asthma emergency room visits, adults"
+AsthmaIncidence.1to18,new cases of asthma in children,new cases of asthma in children
+AsthmaPrevalence.1to18,number of children suffering from asthma due to pollution exposure (increased prevalence),increased prevalence children suffering from asthma
+AsthmaERV.0to17,"asthma emergency room visits, children","asthma emergency room visits, children"
+AsthmaERV.18to99,"asthma emergency room visits, adults","asthma emergency room visits, adults"
 PTB,preterm births,preterm births
 LBW,low birthweight births,low birthweight births
 Absences,work absence (sick leave days),sick leave days
 YLLs,years of life lost,years of life lost
 YLDs,years lived with disability,years lived with disability
 Deaths,deaths,premature deaths
-Asthma.Inci,new cases of asthma in children,new cases of asthma in children
-Asthma.Prev,number of children suffering from asthma due to pollution exposure (increased prevalence),increased prevalence children suffering from asthma
-exac,asthma emergency room visits,asthma emergency room visits
-AllCause,all causes,all causes
+AsthmaIncidence,new cases of asthma in children,new cases of asthma in children
+AsthmaPrevalence,number of children suffering from asthma due to pollution exposure (increased prevalence),increased prevalence children suffering from asthma
+AsthmaERV,asthma emergency room visits,asthma emergency room visits
+AllCauses,all causes,all causes
 TotCV,cardiovascular diseases,cardiovascular diseases
 OthCV,other cardiovascular diseases,other cardiovascular diseases
 TotResp,respiratory diseases,respiratory diseases
 OthResp,other respiratory diseases,other respiratory diseases
 Deaths.child,deaths of children under 5,premature deaths of children under 5
+

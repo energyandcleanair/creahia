@@ -94,11 +94,11 @@ hia <- runs %>% lapply(function(scen) readRDS(file.path(project_dir, 'HIA', past
 
 hia_totals <- hia %>%
   left_join(shp@data %>% dplyr::select(region_id = GID_2, starts_with('NAME'))) %>%
-  group_by(across(c(starts_with('NAME'), Outcome, Pollutant, Cause, AgeGrp, iso3,
+  group_by(across(c(starts_with('NAME'), outcome, pollutant, cause, age_group, iso3,
                     scenario, estimate, double_counted))) %>%
   summarise(across(number, sum)) %>%
-  filter(Pollutant != 'PM25' | Cause != 'AllCause') %>%
-  mutate(number = number * case_when(Pollutant != 'NO2' | Cause != 'AllCause' ~ 1,
+  filter(pollutant != 'PM25' | cause != 'AllCause') %>%
+  mutate(number = number * case_when(pollutant != 'NO2' | cause != 'AllCause' ~ 1,
                                      estimate == 'central' ~ 1/2,
                                      estimate == 'low' ~ 1/2,
                                      estimate == 'high' ~ 2/3))
@@ -106,7 +106,7 @@ hia_totals <- hia %>%
 
 
 
-#hia_totals  %>% group_by(scenario, Pollutant) %>% filter(!double_counted, Outcome=='Deaths', estimate=='central') %>%
+#hia_totals  %>% group_by(scenario, pollutant) %>% filter(!double_counted, outcome=='Deaths', estimate=='central') %>%
 #  #summarise(across(number, sum, na.rm=T))
 #  summarise(across(number, ~sum(.x, na.rm=T), na.rm=T))
 
@@ -123,20 +123,20 @@ hia_cost <- get_hia_cost(hia=hia, valuation_version="viscusi")
 usd_to_lcu=461.15
 
 hia_cost %>%
-  distinct(Outcome, valuation_world_2017, valuation_current_usd, iso3, reference) %>%
+  distinct(outcome, valuation_world_2017, valuation_current_usd, iso3, reference) %>%
   na.omit %>%
   add_long_names() %>%
-  dplyr::select(-Outcome, Outcome = Outcome_long) %>%
+  dplyr::select(-outcome, outcome = outcome_long) %>%
   mutate(across(where(is.numeric), function(x) x %>% signif(4) %>% scales::comma(accuracy = 1))) %>%
-  relocate(Outcome) %>%
+  relocate(outcome) %>%
   relocate(reference, .after = everything()) %>%
   write_csv(file.path(output_dir, 'valuations.csv'))
 
 hia_fut <- get_econ_forecast(hia_cost, forecast_years = targetyears, reference_year = 2019, use_gdp_scaling = TRUE)
 
 hia_fut %>%
-  left_join(hia_cost %>% distinct(Outcome, Cause, Pollutant, double_counted)) %>%
-  group_by(scenario, Outcome) %>%
+  left_join(hia_cost %>% distinct(outcome, cause, pollutant, double_counted)) %>%
+  group_by(scenario, outcome) %>%
   summarise(across(c(number, cost_mn_currentUSD), ~sum(.x, na.rm=T)))
 
 years = list('allstack' = 1996:2022)
@@ -172,16 +172,16 @@ hia_fut <- rbind(hia_fut, hia_fut_2023)
 # cumulative  integrated over time and space
 for(x in names(years)){
   hia_fut %>% filter(scenario == x) %>%
-    filter(year %in% years[[x]], Pollutant != 'NO2' | Cause != 'AllCause') %>%
-    group_by(scenario, estimate, Outcome, Cause, Pollutant) %>%
+    filter(year %in% years[[x]], pollutant != 'NO2' | cause != 'AllCause') %>%
+    group_by(scenario, estimate, outcome, cause, pollutant) %>%
     summarise(across(c(number, cost_mn_currentUSD),  ~sum(.x, na.rm=T))) %>%
-    left_join(hia %>% distinct(scenario, Outcome, Cause, Pollutant, double_counted)) %>%
-    mutate(double_counted = ifelse(Pollutant=='NO2', F, double_counted)) %>%
-    add_long_names %>% ungroup %>% select(-Outcome, -Cause) %>% rename(Cause=Cause_long, Outcome=Outcome_long) %>%
+    left_join(hia %>% distinct(scenario, outcome, cause, pollutant, double_counted)) %>%
+    mutate(double_counted = ifelse(pollutant=='NO2', F, double_counted)) %>%
+    add_long_names %>% ungroup %>% select(-outcome, -cause) %>% rename(cause=cause_long, outcome=outcome_long) %>%
     pivot_longer(c(number, cost_mn_currentUSD)) %>%
     spread(estimate, value) %>%
-    arrange(desc(name), scenario, Outcome!='deaths', double_counted) %>%
-    select(scenario, Outcome, Cause, Pollutant,  central, low, high, variable=name, double_counted) %>%
+    arrange(desc(name), scenario, outcome!='deaths', double_counted) %>%
+    select(scenario, outcome, cause, pollutant,  central, low, high, variable=name, double_counted) %>%
     write_csv(file.path(output_dir, glue::glue('{x}_Cumulative.csv')))
 }
 
@@ -190,16 +190,16 @@ for(x in names(years)){
 # cumulative  integrated over time and space
 for(x in names(years)){
   hia_fut %>% filter(scenario == x) %>%
-    filter(year %in% years[[x]], Pollutant != 'NO2' | Cause != 'AllCause') %>%
-    group_by(scenario, estimate, Outcome, Cause, Pollutant, year) %>%
+    filter(year %in% years[[x]], pollutant != 'NO2' | cause != 'AllCause') %>%
+    group_by(scenario, estimate, outcome, cause, pollutant, year) %>%
     summarise(across(c(number, cost_mn_currentUSD),  ~sum(.x, na.rm=T))) %>%
-    left_join(hia %>% distinct(scenario, Outcome, Cause, Pollutant, double_counted)) %>%
-    mutate(double_counted = ifelse(Pollutant=='NO2', F, double_counted)) %>%
-    add_long_names %>% ungroup %>% select(-Outcome, -Cause) %>% rename(Cause=Cause_long, Outcome=Outcome_long) %>%
+    left_join(hia %>% distinct(scenario, outcome, cause, pollutant, double_counted)) %>%
+    mutate(double_counted = ifelse(pollutant=='NO2', F, double_counted)) %>%
+    add_long_names %>% ungroup %>% select(-outcome, -cause) %>% rename(cause=cause_long, outcome=outcome_long) %>%
     pivot_longer(c(number, cost_mn_currentUSD)) %>%
     spread(estimate, value) %>%
-    arrange(desc(name), scenario, Outcome!='deaths', double_counted) %>%
-    select(scenario, Outcome, Cause, Pollutant,  central, low, high, variable=name, double_counted, year) %>%
+    arrange(desc(name), scenario, outcome!='deaths', double_counted) %>%
+    select(scenario, outcome, cause, pollutant,  central, low, high, variable=name, double_counted, year) %>%
     write_csv(file.path(output_dir, glue::glue('{x}_Yearly.csv')))
 }
 
@@ -208,7 +208,7 @@ for(x in names(years)){
 yearly = read_csv(file.path(output_dir, 'allstack_Yearly.csv'))
 
 Deaths = yearly %>%
-  filter(Outcome == 'deaths' & variable == 'number' & double_counted == 'FALSE') %>%
+  filter(outcome == 'deaths' & variable == 'number' & double_counted == 'FALSE') %>%
   group_by(year) %>%
   summarise(across(c(central),  ~sum(.x, na.rm=T))) %>%
   rename("Deaths" = "central")

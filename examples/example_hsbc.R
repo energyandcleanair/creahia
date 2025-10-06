@@ -59,4 +59,4 @@ bind_rows(hia, hia.lauri) %>%
   filter(region_id %in% c("IND","CHN","PAK", "BGD")) %>%
   ggplot() +
   geom_bar(stat="identity", aes(region_id, central, fill=source), position="dodge") +
-  facet_wrap(~Outcome, scales="free_y")
+  facet_wrap(~outcome, scales="free_y")

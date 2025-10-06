@@ -9,7 +9,7 @@ cur %>% filter(unit_name %in% malut_plants$Plant) %>% write_csv(file.path(output
 fut %>% filter(unit_name %in% malut_plants$Plant) %>% write_csv(file.path(output_dir, 'malut_results_cumulative.csv'))
 
 fut %>% filter(unit_name %in% malut_plants$Plant, !double_counted) %>%
-  mutate(across(starts_with('number'), ~ifelse(grepl('Death', Outcome), .x, 0))) %>%
+  mutate(across(starts_with('number'), ~ifelse(grepl('Death', outcome), .x, 0))) %>%
   group_by(scenario) %>%
   summarise(across(matches('number|cost_mn_currentUSD'), ~sum(.x, na.rm=T)))
 

@@ -8,13 +8,43 @@
 #' @export
 #'
 #' @examples
-get_pm_mortality <- function(paf_scenario, epi_loc){
+multiply_paf_epi <- function(paf_scenario, epi_loc){
 
   z_epi <- qnorm(1 - (1 - 0.95) / 2) # 95% confidence interval: 1.96
   z_paf <- qnorm(1 - (1 - 0.95) / 2) # 95% confidence interval
   z_mort <- qnorm(1 - (1 - 0.95) / 2) # 95% confidence interval
 
-  available_causes <- intersect(unique(paf_scenario$var), names(epi_loc))
+  empty_result <- tibble::tibble(
+    region_id = character(),
+    pollutant = character(),
+    estimate = character(),
+    pop = numeric()
+  )
+
+  if(nrow(paf_scenario) == 0) {
+    return(empty_result)
+  }
+
+  paf_prepared <- paf_scenario %>%
+    # dplyr::filter(pollutant == 'PM25') %>%
+    dplyr::mutate(var = paste(cause, outcome, sep = '_'))
+
+  if(nrow(paf_prepared) == 0) {
+    return(empty_result)
+  }
+
+  available_causes <- intersect(unique(paf_prepared$var), names(epi_loc))
+  
+  # Check for PAF entries that don't have matching EPI data
+  missing_causes <- setdiff(unique(paf_prepared$var), names(epi_loc))
+  if(length(missing_causes) > 0) {
+    warning("Some RR causes/outcomes have no match in epidemiological data: ", 
+            paste(missing_causes, collapse = ", "))
+  }
+
+  if(length(available_causes) == 0) {
+    return(empty_result)
+  }
 
   epi_long <- epi_loc %>%
     filter(estimate %in% c("low", "central", "high")) %>%
@@ -31,7 +61,7 @@ get_pm_mortality <- function(paf_scenario, epi_loc){
     )
 
   # Merge paf_scenario with epi_long on var and region_id = iso3
-  merged_df <- paf_scenario %>%
+  merged_df <- paf_prepared %>%
     rename_at(c("low", "central", "high"), ~ paste0("P_", .)) %>%
     inner_join(epi_long, by = c("var", "region_id"))
 
@@ -40,7 +70,7 @@ get_pm_mortality <- function(paf_scenario, epi_loc){
     warning("Some PAF entries could not be matched with GBD data. Check 'var' and epidemiological metric names.")
   }
 
-  pm_mort <- merged_df %>%
+  impact <- merged_df %>%
 
     # Calculate variances from confidence intervals
     # using Delta method
@@ -75,8 +105,8 @@ get_pm_mortality <- function(paf_scenario, epi_loc){
       #high = central + z_mort * SE_A
 
     )  %>%
-    mutate(var = paste0(var, '_PM25')) %>%
-    select(region_id, pop, var, central, low, high) %>%
+    # mutate(var = paste0(var, '_PM25')) %>%
+    select(region_id, pollutant, pop, var, central, low, high) %>%
 
     # In certain cases, where the perturbation is small, the mortality estimates can be of the opposite sign
     # which is not possible. In such cases, we set the mortality that is the opposite sign of central estimate to 0.
@@ -102,5 +132,5 @@ get_pm_mortality <- function(paf_scenario, epi_loc){
 
 
 
-  return(pm_mort)
+  return(impact)
 }
