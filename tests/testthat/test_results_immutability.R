@@ -272,6 +272,7 @@ test_that("Estimates are compatible with previous versions", {
                                  "0.5.2",
                                  "0.6.0",
                                  "0.6.1",
+                                 "0.7.0",
                                  "current"),
                         param_sets = param_sets,
                         force = F,

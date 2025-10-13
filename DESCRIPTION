@@ -1,7 +1,7 @@
 Package: creahia
 Type: Package
 Title: CREA HIA
-Version: 0.7.0
+Version: 0.7.1
 Authors@R: c(
     person("Hubert", "Thieriot", email = "hubert@energyandcleanair.org", role = c("cre", "aut")),
     person("Lauri", "Myllyvirta", email = "lauri@energyandcleanair.org", role = c("aut")),
@@ -31,7 +31,6 @@ Imports:
     rasterVis,
     foreach,
     priceR,
-    glue,
     terra,
     logger,
     matrixStats,
@@ -41,7 +40,8 @@ Imports:
     here
 Depends:
     tidyverse,
-    creahelpers
+    creahelpers,
+    glue
 Remotes:
     energyandcleanair/creahelpers,
     laurimyllyvirta/lauR,
