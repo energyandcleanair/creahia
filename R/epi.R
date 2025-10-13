@@ -280,14 +280,49 @@ get_asthma_erv <- function(pop.total = NULL) {
 }
 
 
-get_ptb <- function() {
+get_ptb <- function(birth_rate_p1k) {
   PTB <- readxl::read_xlsx("data/epi_update/2014 National preterm birth rates.xlsx", skip = 3, col_names = F, n_max = 300)
   nms <- readxl::read_xlsx("data/epi_update/2014 National preterm birth rates.xlsx", skip = 1, col_names = F, n_max = 2)
   nms[2, ] <- ifelse(is.na(nms[2, ]), nms[1, ], nms[2, ])
   names(PTB) <- unlist(nms[2, ]) %>% make.names(unique = T)
   PTB %<>% filter(!is.na(PTB.rate)) %>% dplyr::rename(country = Country)
-  PTB %<>% dplyr::rename(val = PTB.rate) %>% mutate(var = "PTB.rate")
-  return(PTB)
+  # PTB %<>% dplyr::rename(val = PTB.rate) %>% mutate(var = "PTB.rate")
+
+  # Using birth rate, we convert PTB rate (of births) to PTB rate (of population)
+  PTB %>%
+    add_location_details() %>%
+    left_join(birth_rate_p1k %>% sel(iso3, birth_rate_p1k = val), by = "iso3") %>%
+    mutate(val = PTB.rate / 100 * birth_rate_p1k / 1e3 * 1e5,
+           var = "PTB") %>%
+    select(iso3, var, val)
+}
+
+get_lbw <- function(birth_rate_p1k, lbw_rate_pct){
+  lbw_rate_pct %>%
+    dplyr::rename(lbw_rate_pct = val) %>%
+    add_location_details() %>%
+    left_join(
+      birth_rate_p1k %>% sel(iso3, birth_rate_p1k = val), by = "iso3"
+    ) %>%
+    mutate(
+      val = lbw_rate_pct / 100 * birth_rate_p1k / 1e3 * 1e5,
+      var = "LBW"
+    ) %>%
+    select(iso3, var, val)
+}
+
+get_absences <- function(labor_age_share_pct, labor_partic_pct) {
+  labor_age_share_pct %>%
+    dplyr::rename(labor_age_share_pct = val) %>%
+    left_join(
+      labor_partic_pct %>% dplyr::rename(labor_partic_pct = val) %>% sel(iso3, labor_partic_pct),
+      by = "iso3"
+    ) %>%
+    mutate(var = "Absences",
+           val = labor_age_share_pct / 100 *
+             labor_partic_pct / 100 * 9.4 * 1e5) %>%
+    select(iso3, var, val) %>%
+    filter(!is.na(val))
 }
 
 get_death_all_cause <- function(pop.total, version = "gbd2019") {
@@ -709,7 +744,7 @@ fill_and_add_missing_regions <- function(epi_wide) {
   idx_taiwan <- !is.na(epi_wide$iso3) & epi_wide$iso3 == "TWN"
   idx_japan <- !is.na(epi_wide$iso3) & epi_wide$iso3 == "JPN" & epi_wide$location_level == 3
   epi_wide$country[idx_taiwan] <- "Taiwan"
-  epi_wide$GDP.PPP.2011USD[idx_taiwan] <- epi_wide$GDP.PPP.2011USD[idx_japan] * 53023 / 44227
+  # epi_wide$GDP.PPP.2011USD[idx_taiwan] <- epi_wide$GDP.PPP.2011USD[idx_japan] * 53023 / 44227
   epi_wide[idx_taiwan & epi_wide$estimate == "central", ] %>%
     unlist() %>%
     subset(is.na(.)) %>%
@@ -831,21 +866,22 @@ generate_epi <- function(version = "gbd2019") {
   library(plyr)
   library(zoo)
 
-  # Get data from various soruces
+  # Get data from World Bank
+  lbw_rate_pct <- readWB_online("SH.STA.BRTW.ZS", valuename = "val", var = "lbw_rate_pct")
+  birth_rate_p1k <- readWB_online("SP.DYN.CBRT.IN", valuename = "val", var = "birth_rate_p1k")
+  labor_partic_pct <- readWB_online("SL.TLF.ACTI.ZS", valuename = "val", var = "labor_partic_pct")
+  labor_age_share_pct <- readWB_online("SP.POP.1564.TO.ZS", valuename = "val", var = "labor_age_share_pct")
+
+  # Get data from various sources
   wb_ind <- get_wb_ind()
   pop <- get_epi_pop(version)
   pop.total <- get_pop_total(pop)
   asthma.new <- get_asthma_new()
   asthma.erv <- get_asthma_erv(pop.total = pop.total)
-  ptb <- get_ptb()
+  ptb <- get_ptb(birth_rate_p1k)
+  lbw <- get_lbw(birth_rate_p1k, lbw_rate_pct)
+  absences <- get_absences(labor_age_share_pct, labor_partic_pct)
   locations <- get_locations()
-
-  # Get data from World Bank
-  lbw <- readWB_online("SH.STA.BRTW.ZS", valuename = "val", var = "LBW.rate")
-  birth.rate <- readWB_online("SP.DYN.CBRT.IN", valuename = "val", var = "birth.rate")
-  labor.partic <- readWB_online("SL.TLF.ACTI.ZS", valuename = "val", var = "labor.partic")
-  labor.age.share <- readWB_online("SP.POP.1564.TO.ZS", valuename = "val", var = "working.age.share")
-  GDP <- readWB_online("NY.GDP.PCAP.PP.KD", valuename = "val", var = "GDP.PPP.2011USD")
 
   # Get data from GBD
   death.all.cause <- get_death_all_cause(pop.total = pop.total, version = version)
@@ -854,22 +890,19 @@ generate_epi <- function(version = "gbd2019") {
   yld <- get_yld(pop.total = pop.total, version = version)
   asthma.prev_inc <- get_asthma_prev_and_inc(pop.total = pop.total, version = version)
 
-
   epi <- lapply(list(
     death.all.cause,
     deaths.crude,
     death.child.lri,
     yld,
     pop.total %>% mutate(var = "pop"),
-    birth.rate,
+    # birth_rate_p1k,
     ptb,
     lbw,
+    absences,
     asthma.prev_inc,
     asthma.new,
-    asthma.erv,
-    labor.partic,
-    labor.age.share,
-    GDP
+    asthma.erv
   ), function(x) {
     x %>%
       add_location_details(locations = locations)
@@ -880,7 +913,6 @@ generate_epi <- function(version = "gbd2019") {
     filter(!is.na(location_id), !is.na(val)) %>%
     # To have a single location_name per location_id (which is not necessarily the case otherwise)
     add_location_details()
-
 
   # Check that low <= central <= high
   bad <- epi %>%
@@ -901,7 +933,6 @@ generate_epi <- function(version = "gbd2019") {
     stop("Duplicate rows in epi data")
   }
 
-
   epi %<>% left_join(wb_countries %>% sel(iso3, country, region, income_group), by = "iso3")
   epi %<>% fill_subnational()
   epi %>%
@@ -911,10 +942,6 @@ generate_epi <- function(version = "gbd2019") {
   epi_wide <- fill_and_add_missing_regions(epi_wide)
 
   # add new variables for health impact calculations
-  epi_wide$Absences.per <- epi_wide$working.age.share / 100 *
-    epi_wide$labor.partic / 100 * 9.4 * 1e5
-  epi_wide$PTB.per <- epi_wide$PTB.rate / 100 * epi_wide$birth.rate / 1e3 * 1e5
-  epi_wide$LBW.per <- epi_wide$LBW.rate / 100 * epi_wide$birth.rate / 1e3 * 1e5
   epi_wide$Asthma.Prev.0to17_no2 <- (epi_wide$Asthma.Prev.1to18 / epi_wide$Asthma.Inci.1to18) *
     epi_wide$new.asthma_NO2
 
@@ -922,21 +949,21 @@ generate_epi <- function(version = "gbd2019") {
   list.files(path = "inst/extdata/", pattern = "CRF", full.names = T) %>%
     lapply(read_csv) %>%
     bind_rows() %>%
-    mutate(Incidence = crf_recode_incidence(Incidence, Exposure)) %>%
-    distinct(Incidence, Exposure) -> CRFs
+    # mutate(Incidence = crf_recode_incidence(Incidence, Exposure)) %>%
+    distinct(cause, outcome) -> CRFs
 
-  c("pop", CRFs$Incidence, names(epi_wide) %>% grep("Deaths|YLLs|YLDs|birth|labor", ., value = T)) -> inci.out
+  c("pop", CRFs$cause, names(epi_wide) %>% grep("Deaths|YLLs|YLDs|birth|labor", ., value = T)) -> inci.out
 
   # CRFs$Incidence[CRFs$Exposure %in% c('SO2', 'NO2') & grepl('Deaths|YLLs', CRFs$Incidence)] %<>%
   #   gsub('NCD\\.LRI', 'AllCause', .)
 
 
   epi_wide %>%
-    set_names(names(.) %>%
-      gsub("\\.per|_base", "", .) %>%
-      gsub("_0_17", ".0to17", .) %>%
-      gsub("_1_18|_1to18", ".1to18", .) %>%
-      gsub("_18_99", ".18to99", .)) %>%
+    # set_names(names(.) %>%
+    #   gsub("\\.per|_base", "", .) %>%
+    #   gsub("_0_17", ".0to17", .) %>%
+    #   gsub("_1_18|_1to18", ".1to18", .) %>%
+    #   gsub("_18_99", ".18to99", .)) %>%
     fill_low_high() -> epi_hia
 
 

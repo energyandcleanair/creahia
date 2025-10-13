@@ -125,7 +125,8 @@ fix_epi_cols <- function(epi){
 
   # For causes without outcomes, add default one to be compatible with new (explicit) crfs
   # Select columns that are numeric and have no _ in their name (and not the pop column)
-  causes_wo_outcome <- names(epi)[sapply(epi, is.numeric) & !grepl('_', names(epi)) & !names(epi) %in% c("pop", "birth.rate", "labor.partic")]
+  causes_wo_outcome <- names(epi)[sapply(epi, is.numeric) & !grepl('_', names(epi))
+                                  & !names(epi) %in% c("pop", "birth_rate_p1k", "labor_partic_pct")]
   for(cause in causes_wo_outcome) {
     newname <- paste0(cause, '_', cause)
     colnames(epi)[colnames(epi) == cause] <- newname
