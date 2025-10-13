@@ -23,12 +23,13 @@ CAUSE_LRICHILD = "LRI.child"
 CAUSE_DEMENTIA = "Dementia"
 CAUSE_PTB = "PTB"
 CAUSE_LBW = "LBW"
-
+CAUSE_NCD = "NCD"
 
 # Cause ensembles
 # Watch out for double counting
 CAUSE_NCDLRI = "NCD.LRI"
 CAUSE_NCDLRI_INCLUDED = c(
+    CAUSE_NCD,
     CAUSE_IHD,
     CAUSE_STROKE,
     CAUSE_COPD,

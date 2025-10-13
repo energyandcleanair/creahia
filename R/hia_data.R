@@ -322,7 +322,12 @@ get_ihme <- function(version='gbd2017') {
     gbd2021='gbd2021'
   )
 
-  read_csv(get_hia_path(glue("ihme_{file_version}.csv")), col_types = cols())
+  ihme <- read_csv(get_hia_path(glue("ihme_{file_version}.csv")), col_types = cols())
+  
+  # Validate age completeness (allows both aggregate and split ages to coexist)
+  check_age_completeness(unique(ihme$age), data_name = glue("IHME {file_version}"))
+  
+  return(ihme)
 }
 
 

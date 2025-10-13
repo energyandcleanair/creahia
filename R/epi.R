@@ -22,7 +22,7 @@ download_raw_epi <- function(version, dataset) {
 
   url <- urls[[version]][[dataset]]
 
-  message(glue("Download {dataset} csv files from {url}"))
+  message(glue::glue("Download {dataset} csv files from {url}"))
   message("You will first need to create an account. Then paste the csv files into the data/epi_update folder.")
   stop("Missing data")
 }
@@ -95,7 +95,7 @@ get_epi_location_id <- function(region_id) {
 
 
 get_locations <- function() {
-  raw <- read_xlsx(get_hia_path("IHME_GBD_2019_GBD_LOCATION_HIERARCHY_Y2022M06D29.XLSX"), .name_repair = make.names) %>%
+  raw <- readxl::read_xlsx(get_hia_path("IHME_GBD_2019_GBD_LOCATION_HIERARCHY_Y2022M06D29.XLSX"), .name_repair = make.names) %>%
     sel(
       location_id = matches("location.id", ignore.case = T),
       level = matches("^level$", ignore.case = T),
@@ -236,7 +236,7 @@ get_asthma_new <- function() {
 #'
 #' @returns
 get_asthma_erv <- function(pop.total = NULL) {
-  asthma.erv <- read_xlsx("data/epi_update/Anenberg EHP 2018 results.xlsx", sheet = "pm totconc") %>%
+  asthma.erv <- readxl::read_xlsx("data/epi_update/Anenberg EHP 2018 results.xlsx", sheet = "pm totconc") %>%
     filter(!is.na(ID)) %>%
     dplyr::rename(
       country = Country,
@@ -256,7 +256,7 @@ get_asthma_erv <- function(pop.total = NULL) {
   asthma.erv %>%
     filter(country == "Serbia and Montenegro") %>%
     "["(c(1, 1), T) -> sm.erv
-  sm.erv %<>% mutate_if(is.numeric, multiply_by, sm$val)
+  sm.erv %<>% mutate_if(is.numeric, magrittr::multiply_by, sm$val)
   sm.erv$country <- sm$country
   sm.erv$ID <- NA
 
@@ -270,9 +270,9 @@ get_asthma_erv <- function(pop.total = NULL) {
     sel(country, iso3, starts_with("exac")) %>%
     left_join(pop.total %>% filter(location_level == 3) %>% sel(iso3, pop = val))
 
-  asthma.erv.scaled$exac.0to17 %<>% divide_by(asthma.erv.scaled$pop) %>% multiply_by(1e5)
-  asthma.erv.scaled$exac.18to99 %<>% divide_by(asthma.erv.scaled$pop) %>% multiply_by(1e5)
-  asthma.erv.scaled$exac.0to99 %<>% divide_by(asthma.erv.scaled$pop) %>% multiply_by(1e5)
+  asthma.erv.scaled$exac.0to17 %<>% magrittr::divide_by(asthma.erv.scaled$pop) %>% magrittr::multiply_by(1e5)
+  asthma.erv.scaled$exac.18to99 %<>% magrittr::divide_by(asthma.erv.scaled$pop) %>% magrittr::multiply_by(1e5)
+  asthma.erv.scaled$exac.0to99 %<>% magrittr::divide_by(asthma.erv.scaled$pop) %>% magrittr::multiply_by(1e5)
 
   asthma.erv.scaled %>%
     sel(country, iso3, starts_with("exac")) %>%
@@ -294,7 +294,8 @@ get_ptb <- function(birth_rate_p1k) {
     left_join(birth_rate_p1k %>% sel(iso3, birth_rate_p1k = val), by = "iso3") %>%
     mutate(val = PTB.rate / 100 * birth_rate_p1k / 1e3 * 1e5,
            var = "PTB") %>%
-    select(iso3, var, val)
+    filter(!is.na(val)) %>%
+    select(iso3, country, var, val)
 }
 
 get_lbw <- function(birth_rate_p1k, lbw_rate_pct){
@@ -307,8 +308,9 @@ get_lbw <- function(birth_rate_p1k, lbw_rate_pct){
     mutate(
       val = lbw_rate_pct / 100 * birth_rate_p1k / 1e3 * 1e5,
       var = "LBW"
-    ) %>%
-    select(iso3, var, val)
+    )  %>%
+    filter(!is.na(val)) %>%
+    select(iso3, country, var, val)
 }
 
 get_absences <- function(labor_age_share_pct, labor_partic_pct) {
@@ -321,18 +323,16 @@ get_absences <- function(labor_age_share_pct, labor_partic_pct) {
     mutate(var = "Absences",
            val = labor_age_share_pct / 100 *
              labor_partic_pct / 100 * 9.4 * 1e5) %>%
-    select(iso3, var, val) %>%
-    filter(!is.na(val))
+    filter(!is.na(val)) %>%
+    select(iso3, country, var, val)
+
 }
 
 get_death_all_cause <- function(pop.total, version = "gbd2019") {
   get_gbd_raw(version) %>%
     add_location_details() %>%
-    filter(
-      (cause_name %in% c(
-        "Non-communicable diseases",
-        "Lower respiratory infections"
-      )),
+    mutate(cause = recode_gbd_cause(cause_name)) %>%
+    filter(cause %in% c(CAUSE_NCD, CAUSE_LRI),
       metric_name == "Number"
     ) %>%
     mutate(age_low = get_age_low(age_name)) %>%
@@ -342,7 +342,7 @@ get_death_all_cause <- function(pop.total, version = "gbd2019") {
     group_by(location_id, location_name, location_level, measure_name, metric_name, estimate) %>%
     summarise_at("val", sum) %>%
     ihme_getrate(pop.total = pop.total) %>%
-    mutate(var = paste0("NCD.LRI_", measure_name))
+    mutate(var = paste0(CAUSE_NCDLRI, "_", measure_name))
 }
 
 
@@ -358,18 +358,28 @@ get_death_crude <- function(version = "gbd2019") {
 get_death_child_lri <- function(pop.total, version = "gbd2019") {
   get_gbd_raw(version) %>%
     add_location_details() %>%
+    mutate(cause= recode_gbd_cause(cause_name)) %>%
     filter(
-      cause_name == "Lower respiratory infections",
+      cause == CAUSE_LRI,
       metric_name == "Number",
       age_name %in% c("Under 5", "<5 years")
     ) %>%
+    mutate(age_name = AGE_CHILDREN) %>%
     gather_ihme() %>%
     ihme_getrate(pop.total = pop.total) %>%
-    filter(measure_name %in% c("Deaths", "YLLs")) %>%
-    mutate(var = paste0("LRI.child_", measure_name))
+    filter(measure_name %in% c(MEASURE_DEATHS, MEASURE_YLLS)) %>%
+    mutate(var = paste0(CAUSE_LRICHILD, "_", measure_name))
 }
 
 
+#' Recode GBD cause name to CREAHIA cause name
+#'
+#' @param cause_name
+#'
+#' @returns
+#' @export
+#'
+#' @examples
 recode_gbd_cause <- function(cause_name){
 
   new_cause_names <- case_when(
@@ -380,6 +390,9 @@ recode_gbd_cause <- function(cause_name){
     cause_name == "Tracheal, bronchus, and lung cancer" ~ CAUSE_LUNGCANCER,
     cause_name == "Diabetes mellitus type 2" ~ CAUSE_DIABETES,
     cause_name == "Alzheimer's disease and other dementias" ~ CAUSE_DEMENTIA,
+
+    # NCD
+    cause_name == "Non-communicable diseases" ~ CAUSE_NCD,
 
     # Cardiovascular diseases
     cause_name == "Ischemic heart disease" ~ CAUSE_IHD,
@@ -407,6 +420,7 @@ recode_gbd_cause <- function(cause_name){
                       "Interstitial lung disease and pulmonary sarcoidosis",
                       "Other chronic respiratory diseases") ~ "OthResp",
 
+
     TRUE ~ NA_character_
   )
 
@@ -429,7 +443,7 @@ get_yld <- function(pop.total, version = "gbd2019") {
     add_location_details() %>%
     filter(
       metric_name == "Number",
-      grepl("YLD|Death|YLL", measure_name)
+      measure_name %in% c(MEASURE_YLLS, MEASURE_DEATHS, MEASURE_YLDs)
     ) %>%
     filter(age_name=="25+ years") %>%
     gather_ihme() %>%
@@ -485,7 +499,7 @@ get_yld_gbd2017 <- function(pop.total, version){
     add_location_details() %>%
     filter(
       metric_name == "Number",
-      grepl("YLD|Death|YLL", measure_name)
+      measure_name %in% c(MEASURE_YLLS, MEASURE_DEATHS, MEASURE_YLDs)
     ) %>%
     mutate(age_low = get_age_low(age_name)) %>%
     filter(!is.na(age_low), age_low >= 25) %>%
@@ -798,12 +812,12 @@ fill_subnational <- function(epi) {
 
 
 fill_low_high <- function(indata) {
-  ddply(
-    indata, .(location_id),
+  plyr::ddply(
+    indata, plyr::.(location_id),
     function(df) {
       for (col in names(df)) {
         df[[col]] <- df[[col]] %>%
-          na.fill(df[[col]][df$estimate == "central"])
+          zoo::na.fill(df[[col]][df$estimate == "central"])
       }
       return(df)
     }
@@ -860,11 +874,7 @@ add_location_details <- function(x, locations = get_locations()) {
 
 generate_epi <- function(version = "gbd2019") {
 
-
-  library(readxl)
-  library(magrittr)
-  library(plyr)
-  library(zoo)
+  library(creahia)
 
   # Get data from World Bank
   lbw_rate_pct <- readWB_online("SH.STA.BRTW.ZS", valuename = "val", var = "lbw_rate_pct")
@@ -872,7 +882,7 @@ generate_epi <- function(version = "gbd2019") {
   labor_partic_pct <- readWB_online("SL.TLF.ACTI.ZS", valuename = "val", var = "labor_partic_pct")
   labor_age_share_pct <- readWB_online("SP.POP.1564.TO.ZS", valuename = "val", var = "labor_age_share_pct")
 
-  # Get data from various sources
+  # Get data from other sources or compute them from World Bank data
   wb_ind <- get_wb_ind()
   pop <- get_epi_pop(version)
   pop.total <- get_pop_total(pop)
@@ -891,12 +901,11 @@ generate_epi <- function(version = "gbd2019") {
   asthma.prev_inc <- get_asthma_prev_and_inc(pop.total = pop.total, version = version)
 
   epi <- lapply(list(
+    pop.total %>% mutate(var = "pop"),
     death.all.cause,
     deaths.crude,
     death.child.lri,
     yld,
-    pop.total %>% mutate(var = "pop"),
-    # birth_rate_p1k,
     ptb,
     lbw,
     absences,
@@ -911,9 +920,49 @@ generate_epi <- function(version = "gbd2019") {
     sel(location_id, location_level, iso3, var, val, estimate) %>%
     mutate(estimate = zoo::na.fill(estimate, "central")) %>%
     filter(!is.na(location_id), !is.na(val)) %>%
-    # To have a single location_name per location_id (which is not necessarily the case otherwise)
+    # To ensure a single location_name per location_id (which is not necessarily the case otherwise)
     add_location_details()
 
+  # Some checks
+  check_low_high(epi)
+  check_duplicated(epi)
+
+  # Add information
+  epi <- add_region_and_income_group(epi)
+  epi <- fill_subnational(epi)
+
+  # Move to wide format
+  epi_wide <- epi %>%
+    distinct() %>%
+    pivot_wider(names_from = var, values_from = val)
+
+  # Add missing regions (e.g. Hong Kong, Macau, Kosovo)
+  epi_wide <- fill_and_add_missing_regions(epi)
+
+  # Add new variables for health impact calculations
+  # TODO: Check if still used anywhere
+  epi_wide$Asthma.Prev.0to17_no2 <- (epi_wide$Asthma.Prev.1to18 / epi_wide$Asthma.Inci.1to18) *
+    epi_wide$new.asthma_NO2
+
+  # Last transformations
+  epi_wide <- fill_low_high(epi_wide)
+  epi_wide <- rearrange_epi_wide(epi_wide)
+
+  epi_wide %>%
+    filter(!is.na(location_id)) %>%
+    write_csv(glue::glue("inst/extdata/epi_for_hia_{version}.csv"))
+}
+
+add_region_and_income_group <- function(epi) {
+  wb_countries <- wbstats::wb_countries() %>%
+    sel(iso3 = iso3c, region = region, income_group = income_level, country) %>%
+    filter(income_group != "Aggregates")
+
+  epi %>%
+    left_join(wb_countries %>% sel(iso3, country, region, income_group), by = "iso3")
+}
+
+check_low_high <- function(epi){
   # Check that low <= central <= high
   bad <- epi %>%
     spread(estimate, val) %>%
@@ -922,65 +971,28 @@ generate_epi <- function(version = "gbd2019") {
   if(nrow(bad) > 0) {
     stop(glue("Bad values in {bad$var}"))
   }
+}
 
-  wbstats::wb_countries() %>%
-    sel(iso3 = iso3c, region = region, income_group = income_level, country) %>%
-    filter(income_group != "Aggregates") -> wb_countries
-
-  # Ensure no duplicated row
+check_duplicated <- function(epi){
   duplicated <- any(duplicated(epi[c('location_id', 'var', 'estimate')]))
   if(duplicated) {
     stop("Duplicate rows in epi data")
   }
-
-  epi %<>% left_join(wb_countries %>% sel(iso3, country, region, income_group), by = "iso3")
-  epi %<>% fill_subnational()
-  epi %>%
-    distinct() %>%
-    pivot_wider(names_from = var, values_from = val) -> epi_wide
-
-  epi_wide <- fill_and_add_missing_regions(epi_wide)
-
-  # add new variables for health impact calculations
-  epi_wide$Asthma.Prev.0to17_no2 <- (epi_wide$Asthma.Prev.1to18 / epi_wide$Asthma.Inci.1to18) *
-    epi_wide$new.asthma_NO2
-
-
-  list.files(path = "inst/extdata/", pattern = "CRF", full.names = T) %>%
-    lapply(read_csv) %>%
-    bind_rows() %>%
-    # mutate(Incidence = crf_recode_incidence(Incidence, Exposure)) %>%
-    distinct(cause, outcome) -> CRFs
-
-  c("pop", CRFs$cause, names(epi_wide) %>% grep("Deaths|YLLs|YLDs|birth|labor", ., value = T)) -> inci.out
-
-  # CRFs$Incidence[CRFs$Exposure %in% c('SO2', 'NO2') & grepl('Deaths|YLLs', CRFs$Incidence)] %<>%
-  #   gsub('NCD\\.LRI', 'AllCause', .)
-
-
-  epi_wide %>%
-    # set_names(names(.) %>%
-    #   gsub("\\.per|_base", "", .) %>%
-    #   gsub("_0_17", ".0to17", .) %>%
-    #   gsub("_1_18|_1to18", ".1to18", .) %>%
-    #   gsub("_18_99", ".18to99", .)) %>%
-    fill_low_high() -> epi_hia
-
-
-  bind_cols(
-    select_at(epi_hia, c("location_id", "location_level")),
-    select_if(epi_hia, is.character),
-    select_at(epi_hia, intersect(inci.out, names(epi_hia)))
-  ) %>%
-    filter(!is.na(pop)) %>%
-    arrange(country) ->
-  epi_hia
-
-  epi_hia %>%
-    filter(!is.na(location_id)) %>%
-    write_csv(glue("inst/extdata/epi_for_hia_{version}.csv"))
 }
 
+rearrange_epi_wide <- function(epi_wide){
+  bind_cols(
+    select_at(epi_wide, c("location_id", "location_level")),
+    select_if(epi_wide, is.character),
+    # All remaining columns
+    select_if(epi_wide, is.numeric) %>%
+      select(order(colnames(.))) %>%
+      # Without location_id and lovation_level
+      select(-c(location_id, location_level))
+  ) %>%
+    filter(!is.na(pop)) %>%
+    arrange(country)
+}
 
 get_age_low <- function(age_name) {
   age_low <- stringr::str_extract(age_name, "^\\d+") %>% as.numeric()
@@ -1009,7 +1021,8 @@ fill_young_lungcancer <- function(ihme){
   bind_rows(
     missing %>% mutate(measure_name = "Deaths"),
     missing %>% mutate(measure_name = "YLLs"),
-    ihme)
+    ihme) %>%
+    ungroup()
 }
 
 
@@ -1028,7 +1041,8 @@ generate_ihme <- function(version = "gbd2019") {
     age_name %>%
       gsub(" years", "", .) %>%
       gsub(" to ", "-", .) %>%
-      gsub(" plus", "+", .)
+      gsub(" plus", "+", .) %>%
+      gsub("^<5$", AGE_CHILDREN, .)
   }
 
   ihme$age_low <- get_age_low(ihme$age_name)
@@ -1046,30 +1060,16 @@ generate_ihme <- function(version = "gbd2019") {
     bind_rows(ihme) %>%
     ungroup()
 
-  # ihme2 <- ihme %>% add_location_details()
-
   ihme <- ihme %>%
-    mutate(cause_short = case_when(
-      grepl("Diab", cause_name) ~ CAUSE_DIABETES,
-      grepl("Stroke", cause_name) ~ CAUSE_STROKE,
-      grepl("Lower resp", cause_name) ~ CAUSE_LRI,
-      grepl("Non-comm", cause_name) ~ "NCD",
-      grepl("Isch", cause_name) ~ CAUSE_IHD,
-      grepl("obstr", cause_name) ~ CAUSE_COPD,
-      grepl("lung canc", cause_name) ~ CAUSE_LUNGCANCER,
-      grepl("dementia", cause_name) ~ CAUSE_DEMENTIA,
-      T ~ NA_character_
-    )) %>%
+    mutate(cause_short = recode_gbd_cause(cause_name)) %>%
     filter(!is.na(cause_short))
 
-
   # Check that we have all these
-  if(length(setdiff(c(CAUSE_DIABETES, CAUSE_STROKE, CAUSE_LRI, "NCD", CAUSE_IHD, CAUSE_COPD, CAUSE_LUNGCANCER, CAUSE_DEMENTIA),
+  if(length(setdiff(c(CAUSE_DIABETES, CAUSE_STROKE, CAUSE_LRI, CAUSE_NCD, CAUSE_IHD, CAUSE_COPD, CAUSE_LUNGCANCER, CAUSE_DEMENTIA),
           unique(ihme$cause_short)))>0) stop("Missing data in IHME")
 
-
   ihme <- ihme %>%
-    dplyr::filter(cause_short %in% c("NCD", CAUSE_LRI)) %>%
+    dplyr::filter(cause_short %in% c(CAUSE_NCD, CAUSE_LRI)) %>%
     group_by_at(vars(-val, -starts_with("cause"))) %>%
     dplyr::summarise(val=sum(val),
               n=n()) %>%
@@ -1085,15 +1085,23 @@ generate_ihme <- function(version = "gbd2019") {
 
   ihme <- fill_young_lungcancer(ihme)
 
+  # Add LRI.CHILD
+  ihme <- ihme %>%
+    mutate(cause_short = case_when(cause_short==CAUSE_LRI & age==AGE_CHILDREN ~ CAUSE_LRICHILD,
+                                 T ~ cause_short))
 
+  # Add Kosovo
   ihme <- ihme %>%
     dplyr::filter(iso3 == "ALB", location_level == 3) %>%
     mutate(iso3 = "XKX", location_name = "Kosovo", location_id = NA) %>%
     bind_rows(ihme)
 
+  # Check age completeness (allows both aggregate and split ages to coexist)
+  check_age_completeness(unique(ihme$age), data_name = glue::glue("IHME {version}"))
+
   # Generate a lighter version
   ihme %>%
     sel(location_id, location_name, iso3, location_level, age, measure_name, age_low, age_name, cause_short, cause_name, sex_name, metric_name, estimate, val) %>%
     filter(estimate == "central") %>%
-    write_csv(glue("inst/extdata/ihme_{version}.csv"))
+    write_csv(glue::glue("inst/extdata/ihme_{version}.csv"))
 }
