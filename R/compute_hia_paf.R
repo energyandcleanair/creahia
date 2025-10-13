@@ -23,8 +23,6 @@ compute_hia_paf_rr_curves <- function(conc_map,
                             .mode = 'change') {
 
   paf <- list()
-  adult_ages <- get_adult_ages(ihme)
-
 
   cause_measure_source <- get_cause_source(rr_sources=rr_sources,
                                             add_measure=T)
@@ -75,7 +73,6 @@ compute_hia_paf_rr_curves <- function(conc_map,
                                          cause = cause_,
                                          measure = measure_,
                                          rr_source = rr_source_,
-                                         adult_ages = adult_ages,
                                          epi_version = epi_version,
                                          ihme = ihme,
                                          .region = "inc_China",
@@ -310,7 +307,6 @@ country_paf_perm <- function(pm.base,
                              rr_source,
                              epi_version,
                              ihme = get_ihme(version = epi_version),
-                             adult_ages = get_adult_ages(ihme),
                              .region = "inc_China",
                              .mode = 'change') { # change or attribution?
 
@@ -322,14 +318,11 @@ country_paf_perm <- function(pm.base,
   ages <- unique(rr$age) %>%
     deduplicate_adult_ages()
 
-  stopifnot(
-    !AGE_ADULTS %in% ages | length(intersect(ages, AGE_ADULTS_SPLIT))==0
-  )
+  # Validate that deduplicated ages have no overlap and are complete
+  check_age_coverage_and_uniqueness(ages, data_name = glue("RR {rr_source} for {cause}"))
 
   age_weights <- ihme %>%
     mutate(age=recode_age(age)) %>%
-    mutate(cause_short = case_when(cause_short==CAUSE_LRI & age==AGE_CHILDREN ~ CAUSE_LRICHILD,
-                                   T ~ cause_short)) %>%
     dplyr::filter(location_id==get_epi_location_id(region_id),
                   cause_short == !!cause,
                   measure_name == measure,
@@ -347,24 +340,7 @@ country_paf_perm <- function(pm.base,
 
   # Ensuring ages and age_weights$age are in the same order
   age_weights <- age_weights[match(ages, age_weights$age),]
-#
-#
-#   age.specific <- c('NCD.LRI', 'Stroke', 'IHD')
-#
-#   if(cause %in% age.specific) {
-#     ages <- adult_ages
-#     age_weights <- ihme %>%
-#       dplyr::filter(location_id==get_epi_location_id(region_id),
-#                     cause == !!cause,
-#                     measure_name == measure,
-#                     age %in% ages,
-#                     estimate == 'central')
-#     # Ensuring ages and age_weights$age are in the same order
-#     age_weights <- age_weights[match(ages, age_weights$age),]
-#   } else {
-#     age_weights <- data.frame(val = 1)
-#     if(grepl('child', cause)) ages = 'Under 5' else ages = '25+'
-#   }
+
 
   rr.base <- ages %>% sapply(function(.a) get_hazard_ratio(pm.base, rr = rr, .cause = cause, .age = .a),
                              simplify = 'array')
@@ -372,7 +348,6 @@ country_paf_perm <- function(pm.base,
   if(.mode == 'change') {
     rr.perm <- ages %>% sapply(function(.a) get_hazard_ratio(pm.perm, rr = rr, .cause = cause, .age = .a),
                                simplify = 'array')
-
 
     paf <- get_paf_from_rr_lauri(
       rr_base = rr.base,
