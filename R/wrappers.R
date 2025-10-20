@@ -76,7 +76,6 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                                                     scale_target_year = NULL, # Deprecated
                                                     crfs_version = "default",
                                                     epi_version = "default",
-                                                    ihme_version = epi_version,
                                                     # valuation_version = "default",
                                                     return_concentrations = F,
                                                     pm2.5_to_pm10_ratio = NULL,
@@ -150,9 +149,9 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   concs <- creahia::combine_concs(conc_perturbation, conc_baseline) %>% # combine table
     creahia::flatten_concs() %>% # long to wide
     creahia::add_pop(grid_raster, year_desired=pop_year)
-  
+
   # Extract species from the processed data
-  species <- names(concs) %>% 
+  species <- names(concs) %>%
     grep("^conc_scenario_|^conc_baseline_", ., value = TRUE) %>%
     gsub("^conc_scenario_|^conc_baseline_", "", .) %>%
     unique()
@@ -174,7 +173,6 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                               regions = regions,
                               pop_year = pop_year,
                               epi_version = epi_version,
-                              ihme_version = ihme_version,
                               crfs_version = crfs_version,
                               ...)
 
@@ -222,7 +220,6 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
                                                       scale_target_year = NULL, # No scaling by default
                                                       crfs_version = "default",
                                                       epi_version = "default",
-                                                      ihme_version = epi_version,
                                                       # valuation_version = "default",
                                                       return_concentrations = F,
                                                       output_folder = '.',
@@ -269,7 +266,6 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
                                 regions = regions,
                                 pop_year = pop_year,
                                 epi_version = epi_version,
-                                ihme_version = ihme_version,
                                 crfs_version = crfs_version,
                                 ...)
 

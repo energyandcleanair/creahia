@@ -76,11 +76,11 @@ get_epi_location_id <- function(region_id) {
     iso3 = substr(region_id, 1, 3) %>% country.recode(c(use_as_proxy, merge_into))
   ) %>%
     left_join(
-      locations_w_gadm %>% sel(location_id, gadm_id),
+      locations_w_gadm %>% select(location_id, gadm_id),
       by = c("region_id" = "gadm_id")
     ) %>%
     left_join(
-      locations_w_gadm %>% sel(location_id_iso3 = location_id, gadm_id),
+      locations_w_gadm %>% select(location_id_iso3 = location_id, gadm_id),
       by = c("iso3" = "gadm_id")
     ) %>%
     mutate(location_id = coalesce(
@@ -96,7 +96,7 @@ get_epi_location_id <- function(region_id) {
 
 get_locations <- function() {
   raw <- readxl::read_xlsx(get_hia_path("IHME_GBD_2019_GBD_LOCATION_HIERARCHY_Y2022M06D29.XLSX"), .name_repair = make.names) %>%
-    sel(
+    select(
       location_id = matches("location.id", ignore.case = T),
       level = matches("^level$", ignore.case = T),
       location_name = matches("location.nam", ignore.case = T),
@@ -116,7 +116,7 @@ get_locations <- function() {
         left_join(country_mapping[[level - 1]],
           by = c("parent_id" = "location_id")
         ) %>%
-        sel(location_id, country_id, country_name)
+        select(location_id, country_id, country_name)
     }
   }
   country_mapping %<>% bind_rows()
@@ -124,7 +124,7 @@ get_locations <- function() {
 
   raw %>%
     left_join(country_mapping, by = "location_id") %>%
-    sel(location_id, location_name, location_level = level, country_id, country_name) %>%
+    select(location_id, location_name, location_level = level, country_id, country_name) %>%
     mutate(iso3 = countrycode::countrycode(country_name, "country.name", "iso3c"))
 }
 
@@ -133,12 +133,12 @@ attach_gadm_to_locations <- function(locations = get_locations()) {
   matching_files <- get_hia_paths(pattern = "*.csv", path = "location_matching")
   matching_subnational <- lapply(matching_files, read_csv, col_types = cols()) %>%
     bind_rows() %>%
-    sel(iso3, ihme_level, ihme_location_name, gadm_level, gadm_id, gadm_name)
+    select(iso3, ihme_level, ihme_location_name, gadm_level, gadm_id, gadm_name)
 
   # Create a country matching
   matching_countries <- creahelpers::get_adm(level = 0, res = "low") %>%
     as.data.frame() %>%
-    sel(
+    select(
       iso3 = GID_0,
       gadm_id = GID_0,
       gadm_name = COUNTRY
@@ -216,7 +216,7 @@ get_wb_ind <- function() {
 #' @returns
 get_asthma_new <- function() {
   read.csv("data/epi_update/new asthma cases.csv") %>%
-    sel(country, starts_with("X2ppb")) %>%
+    select(country, starts_with("X2ppb")) %>%
     gather(estimate, val, -country) %>%
     mutate(estimate = estimate %>% gsub(".*_", "", .)) %>%
     mutate(
@@ -262,20 +262,20 @@ get_asthma_erv <- function(pop.total = NULL) {
 
   asthma.erv$country[asthma.erv$ID == 310] <- "Democratic Republic of the Congo"
   asthma.erv$country[asthma.erv$ID == 311] <- "Congo - Brazzaville"
-  asthma.erv %<>% bind_rows(sm.erv) %>% sel(-ID)
+  asthma.erv %<>% bind_rows(sm.erv) %>% select(-ID)
 
   # Scale to population
   asthma.erv.scaled <- asthma.erv %>%
     mutate(iso3 = countrycode::countrycode(country, "country.name", "iso3c")) %>%
-    sel(country, iso3, starts_with("exac")) %>%
-    left_join(pop.total %>% filter(location_level == 3) %>% sel(iso3, pop = val))
+    select(country, iso3, starts_with("exac")) %>%
+    left_join(pop.total %>% filter(location_level == 3) %>% select(iso3, pop = val))
 
   asthma.erv.scaled$exac.0to17 %<>% magrittr::divide_by(asthma.erv.scaled$pop) %>% magrittr::multiply_by(1e5)
   asthma.erv.scaled$exac.18to99 %<>% magrittr::divide_by(asthma.erv.scaled$pop) %>% magrittr::multiply_by(1e5)
   asthma.erv.scaled$exac.0to99 %<>% magrittr::divide_by(asthma.erv.scaled$pop) %>% magrittr::multiply_by(1e5)
 
   asthma.erv.scaled %>%
-    sel(country, iso3, starts_with("exac")) %>%
+    select(country, iso3, starts_with("exac")) %>%
     gather(var, val, -c(country, iso3))
 }
 
@@ -291,7 +291,7 @@ get_ptb <- function(birth_rate_p1k) {
   # Using birth rate, we convert PTB rate (of births) to PTB rate (of population)
   PTB %>%
     add_location_details() %>%
-    left_join(birth_rate_p1k %>% sel(iso3, birth_rate_p1k = val), by = "iso3") %>%
+    left_join(birth_rate_p1k %>% select(iso3, birth_rate_p1k = val), by = "iso3") %>%
     mutate(val = PTB.rate / 100 * birth_rate_p1k / 1e3 * 1e5,
            var = "PTB") %>%
     filter(!is.na(val)) %>%
@@ -303,7 +303,7 @@ get_lbw <- function(birth_rate_p1k, lbw_rate_pct){
     dplyr::rename(lbw_rate_pct = val) %>%
     add_location_details() %>%
     left_join(
-      birth_rate_p1k %>% sel(iso3, birth_rate_p1k = val), by = "iso3"
+      birth_rate_p1k %>% select(iso3, birth_rate_p1k = val), by = "iso3"
     ) %>%
     mutate(
       val = lbw_rate_pct / 100 * birth_rate_p1k / 1e3 * 1e5,
@@ -317,7 +317,7 @@ get_absences <- function(labor_age_share_pct, labor_partic_pct) {
   labor_age_share_pct %>%
     dplyr::rename(labor_age_share_pct = val) %>%
     left_join(
-      labor_partic_pct %>% dplyr::rename(labor_partic_pct = val) %>% sel(iso3, labor_partic_pct),
+      labor_partic_pct %>% dplyr::rename(labor_partic_pct = val) %>% select(iso3, labor_partic_pct),
       by = "iso3"
     ) %>%
     mutate(var = "Absences",
@@ -686,7 +686,7 @@ get_asthma_prev_and_inc <- function(pop.total, version = "gbd2019") {
       metric_name == "Rate"
     ) %>%
     gather_ihme() %>%
-    sel(location_id, location_name, location_level, iso3, year, measure_name, estimate, val) %>%
+    select(location_id, location_name, location_level, iso3, year, measure_name, estimate, val) %>%
     mutate(var = paste0("Asthma.", substr(measure_name, 1, 4), ".0to99")) %>%
     bind_rows(asthma.prev) ->
   asthma.prev
@@ -801,11 +801,11 @@ fill_subnational <- function(epi) {
       left_join(
         epi %>%
           filter(location_level == 3) %>%
-          sel(iso3, var, estimate, val_country = val),
+          select(iso3, var, estimate, val_country = val),
         by = c("iso3", "var", "estimate")
       ) %>%
       mutate(val = coalesce(val, val_country)) %>%
-      sel(-c(val_country))
+      select(-c(val_country))
   )
 }
 
@@ -827,7 +827,7 @@ fill_low_high <- function(indata) {
 
 add_location_details <- function(x, locations = get_locations()) {
   joiner <- locations %>%
-    sel(location_id, location_level, iso3_filler = iso3, location_name_filler = location_name)
+    select(location_id, location_level, iso3_filler = iso3, location_name_filler = location_name)
 
   if (length(intersect(names(x), names(joiner))) == 0) {
     if ("country" %in% names(x)) {
@@ -859,7 +859,7 @@ add_location_details <- function(x, locations = get_locations()) {
       iso3 = coalesce(iso3, iso3_filler),
       location_name = coalesce(location_name, location_name_filler)
     ) %>%
-    sel(-c(iso3_filler, location_name_filler))
+    select(-c(iso3_filler, location_name_filler))
 
   if (nrow(x) != nrow(y)) {
     stop("Adding location details changed dataset")
@@ -917,7 +917,7 @@ generate_epi <- function(version = "gbd2019") {
       add_location_details(locations = locations)
   }) %>%
     bind_rows() %>%
-    sel(location_id, location_level, iso3, var, val, estimate) %>%
+    select(location_id, location_level, iso3, var, val, estimate) %>%
     mutate(estimate = zoo::na.fill(estimate, "central")) %>%
     filter(!is.na(location_id), !is.na(val)) %>%
     # To ensure a single location_name per location_id (which is not necessarily the case otherwise)
@@ -955,11 +955,11 @@ generate_epi <- function(version = "gbd2019") {
 
 add_region_and_income_group <- function(epi) {
   wb_countries <- wbstats::wb_countries() %>%
-    sel(iso3 = iso3c, region = region, income_group = income_level, country) %>%
+    select(iso3 = iso3c, region = region, income_group = income_level, country) %>%
     filter(income_group != "Aggregates")
 
   epi %>%
-    left_join(wb_countries %>% sel(iso3, country, region, income_group), by = "iso3")
+    left_join(wb_countries %>% select(iso3, country, region, income_group), by = "iso3")
 }
 
 check_low_high <- function(epi){
@@ -1007,11 +1007,11 @@ fill_young_lungcancer <- function(ihme){
   # If YLD is 0, assuming Deaths and YLL are as well.
 
   missing <- ihme %>%
-    group_by(location_id, location_name, cause_short, cause_name, age) %>%
+    group_by(location_id, location_name, cause, age) %>%
     # Filter groups that have Deaths but not YLD
     filter(!is.na(val)) %>%
     filter(
-      cause_short %in% c("LC"),
+      cause %in% c("LC"),
       all(unique(measure_name) == "YLDs"),
       any(measure_name == "YLDs" & val == 0),
       age_low <=10
@@ -1019,8 +1019,8 @@ fill_young_lungcancer <- function(ihme){
     filter(measure_name == "YLDs")
 
   bind_rows(
-    missing %>% mutate(measure_name = "Deaths"),
-    missing %>% mutate(measure_name = "YLLs"),
+    missing %>% mutate(measure_name = MEASURE_DEATHS),
+    missing %>% mutate(measure_name = MEASURE_YLLS),
     ihme) %>%
     ungroup()
 }
@@ -1061,15 +1061,15 @@ generate_ihme <- function(version = "gbd2019") {
     ungroup()
 
   ihme <- ihme %>%
-    mutate(cause_short = recode_gbd_cause(cause_name)) %>%
-    filter(!is.na(cause_short))
+    mutate(cause = recode_gbd_cause(cause_name)) %>%
+    filter(!is.na(cause))
 
   # Check that we have all these
   if(length(setdiff(c(CAUSE_DIABETES, CAUSE_STROKE, CAUSE_LRI, CAUSE_NCD, CAUSE_IHD, CAUSE_COPD, CAUSE_LUNGCANCER, CAUSE_DEMENTIA),
-          unique(ihme$cause_short)))>0) stop("Missing data in IHME")
+          unique(ihme$cause)))>0) stop("Missing data in IHME")
 
   ihme <- ihme %>%
-    dplyr::filter(cause_short %in% c(CAUSE_NCD, CAUSE_LRI)) %>%
+    dplyr::filter(cause %in% c(CAUSE_NCD, CAUSE_LRI)) %>%
     group_by_at(vars(-val, -starts_with("cause"))) %>%
     dplyr::summarise(val=sum(val),
               n=n()) %>%
@@ -1077,7 +1077,7 @@ generate_ihme <- function(version = "gbd2019") {
       stopifnot(all(.$n == 2))
       .
     } %>%
-    mutate(cause_name = "NCD+LRI", cause_short = CAUSE_NCDLRI) %>%
+    mutate(cause = CAUSE_NCDLRI) %>%
     bind_rows(ihme) %>%
     ungroup() %>%
     select(-n)
@@ -1087,8 +1087,8 @@ generate_ihme <- function(version = "gbd2019") {
 
   # Add LRI.CHILD
   ihme <- ihme %>%
-    mutate(cause_short = case_when(cause_short==CAUSE_LRI & age==AGE_CHILDREN ~ CAUSE_LRICHILD,
-                                 T ~ cause_short))
+    mutate(cause = case_when(cause==CAUSE_LRI & age==AGE_CHILDREN ~ CAUSE_LRICHILD,
+                                 T ~ cause))
 
   # Add Kosovo
   ihme <- ihme %>%
@@ -1101,7 +1101,7 @@ generate_ihme <- function(version = "gbd2019") {
 
   # Generate a lighter version
   ihme %>%
-    sel(location_id, location_name, iso3, location_level, age, measure_name, age_low, age_name, cause_short, cause_name, sex_name, metric_name, estimate, val) %>%
+    select(location_id, location_name, iso3, location_level, age, measure_name, age_low, age_name, cause, sex_name, metric_name, estimate, val) %>%
     filter(estimate == "central") %>%
     write_csv(glue::glue("inst/extdata/ihme_{version}.csv"))
 }

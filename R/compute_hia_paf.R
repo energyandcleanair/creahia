@@ -16,10 +16,8 @@
 #' @examples
 compute_hia_paf_rr_curves <- function(conc_map,
                             epi_version,
-                            ihme_version,
                             rr_sources,
                             scenarios = names(conc_map),
-                            ihme = get_ihme(ihme_version),
                             .mode = 'change') {
 
   paf <- list()
@@ -74,7 +72,6 @@ compute_hia_paf_rr_curves <- function(conc_map,
                                          measure = measure_,
                                          rr_source = rr_source_,
                                          epi_version = epi_version,
-                                         ihme = ihme,
                                          .region = "inc_China",
                                          .mode = .mode)
 
@@ -219,7 +216,6 @@ compute_hia_paf_crfs <- function(species,
 #' @param regions Spatial regions data
 #' @param scenarios Vector of scenario names
 #' @param epi_version EPI data version
-#' @param ihme_version IHME data version
 #' @param rr_sources Vector of RR sources (for RR-based PAF)
 #' @param ihme IHME data
 #' @param crfs CRF data table (for CRF-based PAF)
@@ -231,9 +227,7 @@ compute_hia_paf <- function(conc_map,
                            regions,
                            scenarios = names(conc_map),
                            epi_version = "default",
-                           ihme_version = epi_version,
                            rr_sources = c(),
-                           ihme = get_ihme(ihme_version),
                            crfs = get_crfs(),
                            .mode = 'change') {
 
@@ -254,9 +248,7 @@ compute_hia_paf <- function(conc_map,
     paf_rr <- compute_hia_paf_rr_curves(conc_map = conc_map,
                                         scenarios = scenarios,
                                         epi_version = epi_version,
-                                        ihme_version = ihme_version,
                                         rr_sources = rr_sources,
-                                        ihme = ihme,
                                         .mode = .mode)
     paf_rr_combined <- paf_rr %>%
       bind_rows(.id = 'scenario')
@@ -306,7 +298,6 @@ country_paf_perm <- function(pm.base,
                              measure,
                              rr_source,
                              epi_version,
-                             ihme = get_ihme(version = epi_version),
                              .region = "inc_China",
                              .mode = 'change') { # change or attribution?
 
@@ -315,31 +306,11 @@ country_paf_perm <- function(pm.base,
     filter(cause == !!cause)
 
   # Get age weights ---
-  ages <- unique(rr$age) %>%
-    deduplicate_adult_ages()
+  age_data <- get_age_weights(region_id, cause, measure, rr_source, epi_version)
+  if(is.null(age_data)) return(NULL)
 
-  # Validate that deduplicated ages have no overlap and are complete
-  check_age_coverage_and_uniqueness(ages, data_name = glue("RR {rr_source} for {cause}"))
-
-  age_weights <- ihme %>%
-    mutate(age=recode_age(age)) %>%
-    dplyr::filter(location_id==get_epi_location_id(region_id),
-                  cause_short == !!cause,
-                  measure_name == measure,
-                  age %in% ages,
-                  estimate == 'central')
-
-  if(nrow(age_weights) == 0) {
-    warning(glue("No age weights found for {region_id} and {cause} and {measure}"))
-    return(NULL)
-  }
-
-  if(length(age_weights$age) != length(ages)) {
-    stop("Unmatching age weights")
-  }
-
-  # Ensuring ages and age_weights$age are in the same order
-  age_weights <- age_weights[match(ages, age_weights$age),]
+  ages <- age_data$ages
+  age_weights <- age_data$age_weights
 
 
   rr.base <- ages %>% sapply(function(.a) get_hazard_ratio(pm.base, rr = rr, .cause = cause, .age = .a),

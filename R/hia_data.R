@@ -312,8 +312,7 @@ get_calc_causes <- function(causes_set = 'GEMM and GBD', filter = NULL) {
   return(causes_out)
 }
 
-get_ihme <- function(version='gbd2017') {
-
+get_ihme_raw <- function(version='gbd2017') {
   file_version <- recode(
     version,
     default='gbd2017',
@@ -323,11 +322,62 @@ get_ihme <- function(version='gbd2017') {
   )
 
   ihme <- read_csv(get_hia_path(glue("ihme_{file_version}.csv")), col_types = cols())
-  
+
+  # Backward compatibility: handle old format with cause_short and cause_name
+  if ("cause_short" %in% names(ihme) && "cause_name" %in% names(ihme)) {
+    ihme <- ihme %>%
+      mutate(cause = cause_short) %>%
+      select(-cause_name, -cause_short)
+  }
+
   # Validate age completeness (allows both aggregate and split ages to coexist)
   check_age_completeness(unique(ihme$age), data_name = glue("IHME {file_version}"))
-  
+
   return(ihme)
+}
+
+# Memoised version to avoid re-reading large CSV files
+get_ihme <- memoise::memoise(get_ihme_raw)
+
+# Helper function to clear IHME cache if needed
+clear_ihme_cache <- function() {
+  memoise::forget(get_ihme)
+}
+
+# Get age weights for a specific region, cause, and measure
+get_age_weights <- function(region_id, cause, measure, rr_source, version = "gbd2019") {
+  ihme <- get_ihme(version)
+
+  ages <- get_rr(rr_source) %>%
+    filter(cause == !!cause) %>%
+    distinct(age) %>%
+    pull(age) %>%
+    deduplicate_adult_ages()
+
+  # Validate that deduplicated ages have no overlap and are complete
+  check_age_coverage_and_uniqueness(ages, data_name = glue("RR {rr_source} for {cause}"))
+
+  age_weights <- ihme %>%
+    mutate(age = recode_age(age)) %>%
+    filter(location_id == get_epi_location_id(region_id),
+           cause == !!cause,
+           measure_name == measure,
+           age %in% ages,
+           estimate == 'central')
+
+  if(nrow(age_weights) == 0) {
+    warning(glue("No age weights found for {region_id} and {cause} and {measure}"))
+    return(NULL)
+  }
+
+  if(length(age_weights$age) != length(ages)) {
+    stop("Unmatching age weights")
+  }
+
+  # Ensuring ages and age_weights$age are in the same order
+  age_weights <- age_weights[match(ages, age_weights$age),]
+
+  return(list(ages = ages, age_weights = age_weights))
 }
 
 
@@ -341,7 +391,7 @@ get_gbd_rr <- function(version="original", gbd_causes=c('LRI.child', 'Diabetes')
   gbd_rr <-read_csv(get_hia_path(glue("gbd_rr_{version}.csv")), col_types = cols())
 
   if(length(gbd_causes) == 0) gbd_causes <- 'none'
-  if(gbd_causes[1] != 'all') gbd_rr <- gbd_rr %>% dplyr::filter(cause_short %in% gbd_causes)
+  if(gbd_causes[1] != 'all') gbd_rr <- gbd_rr %>% dplyr::filter(cause %in% gbd_causes)
   gbd_rr
 }
 

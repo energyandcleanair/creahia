@@ -8,7 +8,6 @@
 #' @param gbd_causes
 #' @param ihme
 #' @param epi_version
-#' @param ihme_version
 #' @param epi
 #' @param crfs_version
 #' @param crfs
@@ -30,9 +29,7 @@ compute_hia <- function(conc_map,
                         regions,
                         scenarios = names(conc_map),
                         rr_sources = c(RR_GEMM, RR_ORIGINAL),
-                        ihme = get_ihme(version = ihme_version),
                         epi_version = "default",
-                        ihme_version = epi_version,
                         epi = get_epi(version = epi_version),
                         crfs_version = "default",
                         crfs = get_crfs(version = crfs_version),
@@ -76,9 +73,7 @@ compute_hia <- function(conc_map,
     regions = regions,
     scenarios = scenarios,
     epi_version = epi_version,
-    ihme_version = ihme_version,
     rr_sources = rr_sources,
-    ihme = ihme,
     crfs = crfs,
     .mode = .mode
   )

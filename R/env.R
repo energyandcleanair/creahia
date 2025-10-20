@@ -18,8 +18,10 @@ get_env <- function(variable){
 #' @examples
 list_env_vars <- function(){
   list(
-    gis_dir="GIS_DIR" #'gis_dir' is the variable name in package environment.
+    gis_dir="GIS_DIR", #'gis_dir' is the variable name in package environment.
     #"GIS_DIR" is the system environment variable it will be initiated with if no variable with this name is found
+    crea_api_key="CREA_API_KEY" #'crea_api_key' is the variable name in package environment.
+    #"CREA_API_KEY" is the system environment variable it will be initiated with if no variable with this name is found
   )
 }
 
