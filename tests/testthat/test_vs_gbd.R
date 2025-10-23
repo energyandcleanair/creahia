@@ -18,7 +18,7 @@ test_that("Deaths causes are similar to GBD2021", {
 
   # Manually collected GBD Dataa
   crea_deaths_gbd2021 <- hia_gbd2021 %>%
-    filter(Outcome=="Deaths",
+    filter(outcome=="Deaths",
            estimate=="central") %>%
     arrange(desc(abs(number))) %>%
     mutate(source="CREA (GBD2021)",
@@ -27,7 +27,7 @@ test_that("Deaths causes are similar to GBD2021", {
 
   # Just for visual check
   crea_deaths_gbd2023 <- hia_gbd2023 %>%
-    filter(Outcome=="Deaths",
+    filter(outcome=="Deaths",
            estimate=="central") %>%
     arrange(desc(abs(number))) %>%
     mutate(source="CREA (GBD2023)",
