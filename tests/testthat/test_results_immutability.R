@@ -102,7 +102,7 @@ generate_fingerprint <- function(ref,
 }
 
 
-generate_fingerprints <- function(refs=c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.5.0", "0.5.1", "0.5.2", "current"),
+generate_fingerprints <- function(refs=c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.5.0", "0.5.1", "current"),
                                  param_sets = list(
                                    list(calc_causes = "GBD only", epi_version = "gbd2019", pop_year = 2020),
                                    list(calc_causes = "GEMM and GBD", epi_version = "gbd2019", pop_year = 2020)
@@ -210,7 +210,7 @@ detect_breaks <- function(data, authorised_breaks) {
 
   # Detect breaks by comparing consecutive versions
   breaks <- central_data %>%
-    group_by(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version) %>%
+    group_by(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version, pop_year) %>%
     arrange(ref) %>%
     mutate(
       prev_number = lag(number),
@@ -259,22 +259,34 @@ test_that("Estimates are compatible with previous versions", {
 
   readRenviron(".Renviron")
 
-  # Define parameter sets to test
-  param_sets <- list(
+  # Define parameter sets for versions before GBD2021 support (< 0.6.0)
+  param_sets_gbd2019 <- list(
     list(calc_causes = "GBD only", epi_version = "gbd2019", pop_year = 2020),
     list(calc_causes = "GEMM and GBD", epi_version = "gbd2019", pop_year = 2020)
   )
 
+  # Define parameter sets for versions with GBD2021 support (>= 0.6.0)
+  param_sets_gbd2021 <- list(
+    list(calc_causes = "GBD only", epi_version = "gbd2021", pop_year = 2020),
+    list(calc_causes = "GEMM and GBD", epi_version = "gbd2021", pop_year = 2020),
+    list(calc_causes = "GEMM and GBD", epi_version = "gbd2021", pop_year = 2021)
+  )
+
+  # Generate fingerprints for older versions (before GBD2021)
   generate_fingerprints(refs = c("0.4.1",
                                  "0.4.4",
                                  "0.5.0",
-                                 "0.5.1",
-                                 "0.5.2",
-                                 "0.6.0",
+                                 "0.5.1"),
+                        param_sets = param_sets_gbd2019,
+                        force = F,
+                        force_current = F)
+
+  # Generate fingerprints for newer versions (with GBD2021)
+  generate_fingerprints(refs = c("0.6.0",
                                  "0.6.1",
                                  "0.7.0",
                                  "current"),
-                        param_sets = param_sets,
+                        param_sets = c(param_sets_gbd2021, param_sets_gbd2019),
                         force = F,
                         force_current = T)
 
@@ -282,7 +294,11 @@ test_that("Estimates are compatible with previous versions", {
   all_fingerprints <- read_fingerprints() %>%
     # We only compare central values
     # Confidence intervals are expected to change more frequently
-    filter(estimate == "central")
+    filter(estimate == "central") %>%
+    # Override ref with version for consistency
+    mutate(version = coalesce(ref, version),
+           ref = version
+           )
 
 
   ####################################################
@@ -290,7 +306,7 @@ test_that("Estimates are compatible with previous versions", {
   ####################################################
 
   # Define authorised missing cause/outcome pairs
-  authorised_missing <- tibble(
+  authorised_missing1 <- tibble(
     outcome = rep("YLLs", 10),
     cause = rep(c("COPD", "IHD", "LC", "LRI", "Stroke"), 2),
     calc_causes = rep("GEMM and GBD", 10),
@@ -299,8 +315,18 @@ test_that("Estimates are compatible with previous versions", {
     description = rep("YLLs that were NA in previous versions but have values in newer versions", 10)
   )
 
+  authorised_missing2 <- tibble(
+    epi_version = "gbd2021",
+    version = c("0.4.1", "0.4.4","0.5.0","0.5.1"),
+    description = "No gbd 2021 for these versions"
+  ) %>%
+    crossing(
+      all_fingerprints %>% distinct(cause, outcome, calc_causes)
+    )
+
   # Detect missing cause/outcome pairs and identify unauthorised ones
-  missing_analysis <- detect_missing(all_fingerprints, authorised_missing)
+  missing_analysis <- detect_missing(all_fingerprints,
+                                    authorised_missing = bind_rows(authorised_missing1, authorised_missing2))
 
   # Show which missing pairs were detected
   if (nrow(missing_analysis) > 0) {
@@ -330,14 +356,22 @@ test_that("Estimates are compatible with previous versions", {
   ####################################################
 
   # Define authorised breaks where values are expected to change between specific versions
-  authorised_breaks <- tibble(
+  authorised_breaks1 <- tibble(
     cause = c("PTB", "LBW", "Absences"),
     from_ref = "0.5.1",
     description = "Epidemiological data update at version 0.5.1"
   )
 
+  authorised_breaks2 <- tibble(
+    from_ref = "0.6.1",
+    description = "Small changes (less than 1%). Updated population projection data."
+  ) %>%
+    crossing(
+      all_fingerprints %>% distinct(cause)
+    )
+
   # Detect all breaks and identify unauthorised ones
-  breaks_analysis <- detect_breaks(all_fingerprints, authorised_breaks)
+  breaks_analysis <- detect_breaks(all_fingerprints, authorised_breaks = bind_rows(authorised_breaks1, authorised_breaks2))
 
   # Show which breaks were detected
   if (nrow(breaks_analysis) > 0) {
@@ -365,11 +399,13 @@ test_that("Estimates are compatible with previous versions", {
   # Show sample data for debugging
   if(F){
     all_fingerprints %>%
+      # filter(version=="0.4.1") %>%
+
       select(-c(filepath, pop, version)) %>%
       filter(region_name=="Dhaka") %>%
       select(-c(estimate, region_id, region_name, scenario, iso3)) %>%
       mutate(number = round(number, 1)) %>%
-      group_by(cause, outcome, age_group, calc_causes) %>%
+      group_by(cause, outcome, age_group, calc_causes, epi_version) %>%
       mutate(ok = n_distinct(round(number)) == 1) %>%
       spread(ref, number) %>%
       View()

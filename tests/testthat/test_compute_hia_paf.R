@@ -132,7 +132,7 @@ test_that("compute_hia_paf_rr_curves returns correct structure", {
   with_mocked_bindings(
     get_ihme = function(...) data.frame(
       location_id = 1,
-      cause_short = "NCD.LRI",
+      cause = "NCD.LRI",
       measure_name = "Deaths",
       age = "25+",
       estimate = "central",
@@ -157,7 +157,6 @@ test_that("compute_hia_paf_rr_curves returns correct structure", {
       result <- compute_hia_paf_rr_curves(
         conc_map = test_data$conc_map,
         epi_version = "gbd2019",
-        ihme_version = "gbd2019",
         rr_sources = test_data$rr_sources,
         scenarios = names(test_data$conc_map)
       )
@@ -182,7 +181,7 @@ test_that("compute_hia_paf coordinator function works", {
     get_crfs = function(...) test_data$crfs,
     get_ihme = function(...) data.frame(
       location_id = 1,
-      cause_short = "NCD.LRI",
+      cause = "NCD.LRI",
       measure_name = "Deaths",
       age = "25+",
       estimate = "central",

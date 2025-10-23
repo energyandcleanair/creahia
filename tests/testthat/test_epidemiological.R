@@ -161,13 +161,13 @@ test_that("GBD2021, GBD2019 and GBD2017 have comparable data - IHME", {
     ihme2021 %>% mutate(version='gbd2021')
   ) %>%
     filter(location_level == 3) %>%
-    select(measure_name, location_id, iso3, location_level, age, cause_short, cause_name, sex_name, estimate, val, version) %>%
+    select(measure_name, location_id, iso3, location_level, age, cause, sex_name, estimate, val, version) %>%
     spread(version, val)
 
   missing_iso3s <- comparison %>%
     filter(location_level==3,
            # COPD for low age NA in new versions
-           ! age %in% c("5-9", "10-14", "<5") | cause_short != "COPD",
+           ! age %in% c("5-9", "10-14", "<5") | cause != "COPD",
            is.na(gbd2017 + gbd2019 + gbd2021)) %>%
     pull(iso3) %>%
     unique()
@@ -201,8 +201,7 @@ test_that("GBD2021, GBD2019 and GBD2017 yield roughly similar results - Philipin
       administrative_level = 0,
       crfs_version = "C40",
       epi_version = epi_version,
-      rr_sources = RR_GBD2021,
-      ihme_version = "gbd2019" # Use for comparable population
+      rr_sources = RR_GBD2021
     ) %>%
       mutate(epi_version = epi_version)
   }) %>%
