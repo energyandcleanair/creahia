@@ -3,7 +3,7 @@
 test_that("get_age_weights returns correct structure with real data", {
 
   region_id <- "BGD"  # Bangladesh
-  cause <- "NCD.LRI"
+  cause <- "LRI"
   measure <- "Deaths"
   rr_source <- "gbd2019"
   version <- "gbd2019"
@@ -56,7 +56,7 @@ test_that("get_age_weights works with different RR sources", {
 test_that("get_age_weights works with different measures", {
 
   region_id <- "BGD"
-  cause <- "NCD.LRI"
+  cause <- "LRI"
   rr_source <- "gbd2019"
   version <- "gbd2019"
 
@@ -76,7 +76,7 @@ test_that("get_age_weights works with different measures", {
 test_that("get_age_weights handles invalid inputs gracefully", {
 
   region_id <- "BGD"
-  cause <- "NCD.LRI"
+  cause <- "LRI"
   measure <- "Deaths"
   rr_source <- "gbd2019"
   version <- "gbd2019"
@@ -97,7 +97,7 @@ test_that("get_age_weights handles invalid inputs gracefully", {
 test_that("get_age_weights caches results correctly", {
 
   region_id <- "BGD"
-  cause <- "NCD.LRI"
+  cause <- "LRI"
   measure <- "Deaths"
   rr_source <- "gbd2019"
   version <- "gbd2019"
@@ -120,7 +120,7 @@ test_that("get_age_weights caches results correctly", {
 test_that("get_age_weights returns NULL for missing data", {
 
   region_id <- "BGD"
-  cause <- "NCD.LRI"
+  cause <- "LRI"
   measure <- "Deaths"
   rr_source <- "gbd2019"
   version <- "gbd2019"
