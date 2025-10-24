@@ -23,7 +23,7 @@ test_that("Deaths causes are similar to GBD2021", {
     arrange(desc(abs(number))) %>%
     mutate(source="CREA (GBD2021)",
            number=-number) %>%
-    select(number, Cause, source)
+    select(number, cause, source)
 
   # Just for visual check
   crea_deaths_gbd2023 <- hia_gbd2023 %>%
@@ -33,13 +33,13 @@ test_that("Deaths causes are similar to GBD2021", {
     mutate(source="CREA (GBD2023)",
            number=-number
     ) %>%
-    select(number, Cause, source)
+    select(number, cause, source)
 
 
   # Expected from PM air pollution
   # https://vizhub.healthdata.org/gbd-results?params=gbd-api-2021-permalink/dfef5c8ac1a77a6caec1c119fb5f3322
   expected <- tibble::tribble(
-    ~Cause, ~number, ~source,
+    ~cause, ~number, ~source,
     "Stroke",   6223,   "GBD2021",
     "IHD",      5973,   "GBD2021",
     "LRI",      5069,   "GBD2021",
@@ -50,14 +50,14 @@ test_that("Deaths causes are similar to GBD2021", {
 
   bind_rows(crea_deaths_gbd2021, crea_deaths_gbd2023, expected) %>%
     ggplot() +
-    geom_col(aes(Cause, abs(number), fill=source), position='dodge')
+    geom_col(aes(cause, abs(number), fill=source), position='dodge')
 
 
   # Test that roughly equal
   comparison <- crea_deaths_gbd2021 %>%
-    left_join(expected, by="Cause") %>%
+    left_join(expected, by="cause") %>%
     mutate(diff = abs(number.x - number.y)/number.y) %>%
-    select(Cause, diff)
+    select(cause, diff)
 
   testthat::expect_true(all(abs(comparison$diff) < 0.07))
 })

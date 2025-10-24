@@ -57,9 +57,26 @@ fillcol <- function(df2, targetcols) {
 
 adddefos <- function(df, exl = c('pop', 'location_id', 'location_level')) {
   targetcols <- names(df)[sapply(df, is.numeric) & (!names(df) %in% exl)]
-  df %>%
-    ddply(.(estimate, region, income_group), fillcol, targetcols) %>%
-    ddply(.(estimate), fillcol, targetcols)
+
+  # First, fill within (estimate, region, income_group)
+  df1 <- df %>%
+    dplyr::group_by(estimate, region, income_group) %>%
+    dplyr::mutate(dplyr::across(
+      dplyr::all_of(targetcols),
+      ~ ifelse(is.na(.x), stats::median(.x, na.rm = TRUE), .x)
+    )) %>%
+    dplyr::ungroup()
+
+  # Then, fill remaining NAs within (estimate)
+  df2 <- df1 %>%
+    dplyr::group_by(estimate) %>%
+    dplyr::mutate(dplyr::across(
+      dplyr::all_of(targetcols),
+      ~ ifelse(is.na(.x), stats::median(.x, na.rm = TRUE), .x)
+    )) %>%
+    dplyr::ungroup()
+
+  df2
 }
 
 

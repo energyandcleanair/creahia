@@ -220,7 +220,7 @@ get_asthma_new <- function() {
     gather(estimate, val, -country) %>%
     mutate(estimate = estimate %>% gsub(".*_", "", .)) %>%
     mutate(
-      var = "new.asthma_NO2",
+      metric_key = "new.asthma_NO2",
       val = val * 1e3
     )
 }
@@ -276,7 +276,7 @@ get_asthma_erv <- function(pop.total = NULL) {
 
   asthma.erv.scaled %>%
     select(country, iso3, starts_with("exac")) %>%
-    gather(var, val, -c(country, iso3))
+    gather(metric_key, val, -c(country, iso3))
 }
 
 
@@ -293,9 +293,9 @@ get_ptb <- function(birth_rate_p1k) {
     add_location_details() %>%
     left_join(birth_rate_p1k %>% select(iso3, birth_rate_p1k = val), by = "iso3") %>%
     mutate(val = PTB.rate / 100 * birth_rate_p1k / 1e3 * 1e5,
-           var = "PTB") %>%
+           metric_key = "PTB") %>%
     filter(!is.na(val)) %>%
-    select(iso3, country, var, val)
+    select(iso3, country, metric_key, val)
 }
 
 get_lbw <- function(birth_rate_p1k, lbw_rate_pct){
@@ -307,10 +307,10 @@ get_lbw <- function(birth_rate_p1k, lbw_rate_pct){
     ) %>%
     mutate(
       val = lbw_rate_pct / 100 * birth_rate_p1k / 1e3 * 1e5,
-      var = "LBW"
+      metric_key = "LBW"
     )  %>%
     filter(!is.na(val)) %>%
-    select(iso3, country, var, val)
+    select(iso3, country, metric_key, val)
 }
 
 get_absences <- function(labor_age_share_pct, labor_partic_pct) {
@@ -320,11 +320,11 @@ get_absences <- function(labor_age_share_pct, labor_partic_pct) {
       labor_partic_pct %>% dplyr::rename(labor_partic_pct = val) %>% select(iso3, labor_partic_pct),
       by = "iso3"
     ) %>%
-    mutate(var = "Absences",
+    mutate(metric_key = "Absences",
            val = labor_age_share_pct / 100 *
              labor_partic_pct / 100 * 9.4 * 1e5) %>%
     filter(!is.na(val)) %>%
-    select(iso3, country, var, val)
+    select(iso3, country, metric_key, val)
 
 }
 
@@ -342,7 +342,7 @@ get_death_all_cause <- function(pop.total, version = "gbd2019") {
     group_by(location_id, location_name, location_level, measure_name, metric_name, estimate) %>%
     summarise_at("val", sum) %>%
     ihme_getrate(pop.total = pop.total) %>%
-    mutate(var = paste0(CAUSE_NCDLRI, "_", measure_name))
+    mutate(metric_key = build_metric_key(CAUSE_NCDLRI, measure_name))
 }
 
 
@@ -351,7 +351,7 @@ get_death_crude <- function(version = "gbd2019") {
     add_location_details() %>%
     filter(age_name == "All ages", cause_name == "All causes", metric_name == "Rate", measure_name == "Deaths") %>%
     gather_ihme() %>%
-    mutate(var = "crude.death.rate")
+    mutate(metric_key = "crude.death.rate")
 }
 
 
@@ -368,7 +368,7 @@ get_death_child_lri <- function(pop.total, version = "gbd2019") {
     gather_ihme() %>%
     ihme_getrate(pop.total = pop.total) %>%
     filter(measure_name %in% c(MEASURE_DEATHS, MEASURE_YLLS)) %>%
-    mutate(var = paste0(CAUSE_LRICHILD, "_", measure_name))
+    mutate(metric_key = build_metric_key(CAUSE_LRICHILD, measure_name))
 }
 
 
@@ -481,7 +481,7 @@ get_yld <- function(pop.total, version = "gbd2019") {
       )
     }) %>%
     filter(!is.na(cause_name)) %>%
-    mutate(var = paste0(cause_name, "_", measure_name))
+    mutate(metric_key = build_metric_key(cause_name, measure_name))
 }
 
 
@@ -523,7 +523,7 @@ get_yld_gbd2017 <- function(pop.total, version){
                                .default = NA_character_
     )) %>%
     filter(!is.na(cause_name)) %>%
-    mutate(var = paste0(cause_name, "_", measure_name))
+    mutate(metric_key = build_metric_key(cause_name, measure_name))
 
 
 
@@ -624,7 +624,7 @@ compute_others <- function(yld, total, grep, newname, metric_name="Number") {
       # Create data frame with results for Other Deaths
       other_df <- data.frame(
         cause_name = newname,
-        var = paste0(newname, "_", unique(group$measure_name)),
+        metric_key = paste0(newname, "_", unique(group$measure_name)),
         estimate = c("central", "low", "high"),
         val = c(value_O, lower_O, upper_O)
       )
@@ -659,7 +659,7 @@ get_asthma_prev_and_inc <- function(pop.total, version = "gbd2019") {
     filter(age_low %in% c(0, 1, 5, 10, 15)) %>% # Some GBD versions have 1-4, others <5 (<1 year is 0), hence the 0 and 1
     group_by(location_id, location_name, location_level, iso3, year, measure_name, estimate) %>%
     summarise_at("val", mean) %>%
-    mutate(var = paste0("Asthma.", substr(measure_name, 1, 3), ".1to18nopopnorm")) %>%
+    mutate(metric_key = paste0("Asthma.", substr(measure_name, 1, 3), ".1to18nopopnorm")) %>%
     ungroup() %>%
     distinct()
 
@@ -674,7 +674,7 @@ get_asthma_prev_and_inc <- function(pop.total, version = "gbd2019") {
     filter(age_low %in% c(0, 1, 5, 10, 15)) %>% # Some GBD versions have 1-4, others <5 (<1 year is 0), hence the 0 and 1
     group_by(location_id, location_name, location_level, iso3, year, measure_name, estimate) %>%
     summarise_at("val", sum) %>%
-    mutate(var = paste0("Asthma.", substr(measure_name, 1, 4), ".1to18")) %>%
+    mutate(metric_key = paste0("Asthma.", substr(measure_name, 1, 4), ".1to18")) %>%
     ihme_getrate(pop.total = pop.total) %>%
     bind_rows(asthma.prev)
 
@@ -687,7 +687,7 @@ get_asthma_prev_and_inc <- function(pop.total, version = "gbd2019") {
     ) %>%
     gather_ihme() %>%
     select(location_id, location_name, location_level, iso3, year, measure_name, estimate, val) %>%
-    mutate(var = paste0("Asthma.", substr(measure_name, 1, 4), ".0to99")) %>%
+    mutate(metric_key = paste0("Asthma.", substr(measure_name, 1, 4), ".0to99")) %>%
     bind_rows(asthma.prev) ->
   asthma.prev
 
@@ -753,7 +753,6 @@ fill_and_add_missing_regions <- function(epi_wide) {
     name = "Kosovo"
   )
 
-
   # Fill Taiwan
   idx_taiwan <- !is.na(epi_wide$iso3) & epi_wide$iso3 == "TWN"
   idx_japan <- !is.na(epi_wide$iso3) & epi_wide$iso3 == "JPN" & epi_wide$location_level == 3
@@ -764,11 +763,6 @@ fill_and_add_missing_regions <- function(epi_wide) {
     subset(is.na(.)) %>%
     names() -> fillcols
   epi_wide[idx_taiwan, fillcols] <- epi_wide[idx_japan, fillcols]
-
-
-  # epi_wide[!is.na(epi_wide$iso3) & epi_wide$iso3=='XKX' & epi_wide$estimate=='central',] %>% unlist %>% subset(is.na(.)) %>%
-  # names -> fillcols
-  # epi_wide[!is.na(epi_wide$iso3) & epi_wide$iso3=='XKX', fillcols] <- epi_wide[epi_wide$iso3=='ALB', fillcols]
 
   # scale Kosovo asthma cases by population
   asthma.cols <- grep("new.asthma|exac\\.", names(epi_wide), value = T)
@@ -794,15 +788,15 @@ fill_subnational <- function(epi) {
       filter(location_level != 4),
     epi %>%
       tidyr::complete(
-        nesting(estimate, var),
+        nesting(estimate, metric_key),
         nesting(location_id, country, iso3, location_name, location_level, region, income_group)
       ) %>%
       filter(location_level == 4) %>%
       left_join(
         epi %>%
           filter(location_level == 3) %>%
-          select(iso3, var, estimate, val_country = val),
-        by = c("iso3", "var", "estimate")
+          select(iso3, metric_key, estimate, val_country = val),
+        by = c("iso3", "metric_key", "estimate")
       ) %>%
       mutate(val = coalesce(val, val_country)) %>%
       select(-c(val_country))
@@ -812,16 +806,22 @@ fill_subnational <- function(epi) {
 
 
 fill_low_high <- function(indata) {
-  plyr::ddply(
-    indata, plyr::.(location_id),
-    function(df) {
-      for (col in names(df)) {
-        df[[col]] <- df[[col]] %>%
-          zoo::na.fill(df[[col]][df$estimate == "central"])
-      }
-      return(df)
-    }
-  )
+  # For each location_id and numeric metric column, fill missing values
+  # in non-central estimates with the central estimate value
+  numeric_cols <- names(indata)[vapply(indata, is.numeric, logical(1))]
+
+  central_vals <- indata %>%
+    dplyr::filter(estimate == "central") %>%
+    dplyr::select(location_id, dplyr::all_of(numeric_cols)) %>%
+    dplyr::rename_with(~ paste0(.x, "__central"), dplyr::all_of(numeric_cols))
+
+  indata %>%
+    dplyr::left_join(central_vals, by = "location_id") %>%
+    dplyr::mutate(dplyr::across(
+      dplyr::all_of(numeric_cols),
+      ~ dplyr::coalesce(.x, .data[[paste0(cur_column(), "__central")]])
+    )) %>%
+    dplyr::select(-dplyr::ends_with("__central"))
 }
 
 
@@ -901,7 +901,7 @@ generate_epi <- function(version = "gbd2019") {
   asthma.prev_inc <- get_asthma_prev_and_inc(pop.total = pop.total, version = version)
 
   epi <- lapply(list(
-    pop.total %>% mutate(var = "pop"),
+    pop.total %>% mutate(metric_key = "pop"),
     death.all.cause,
     deaths.crude,
     death.child.lri,
@@ -917,7 +917,7 @@ generate_epi <- function(version = "gbd2019") {
       add_location_details(locations = locations)
   }) %>%
     bind_rows() %>%
-    select(location_id, location_level, iso3, var, val, estimate) %>%
+    select(location_id, location_level, iso3, metric_key, val, estimate) %>%
     mutate(estimate = zoo::na.fill(estimate, "central")) %>%
     filter(!is.na(location_id), !is.na(val)) %>%
     # To ensure a single location_name per location_id (which is not necessarily the case otherwise)
@@ -934,7 +934,7 @@ generate_epi <- function(version = "gbd2019") {
   # Move to wide format
   epi_wide <- epi %>%
     distinct() %>%
-    pivot_wider(names_from = var, values_from = val)
+    pivot_wider(names_from = metric_key, values_from = val)
 
   # Add missing regions (e.g. Hong Kong, Macau, Kosovo)
   epi_wide <- fill_and_add_missing_regions(epi)
@@ -967,14 +967,14 @@ check_low_high <- function(epi){
   bad <- epi %>%
     spread(estimate, val) %>%
     filter(low>central | low>high | central>high) %>%
-    distinct(var)
+    distinct(metric_key)
   if(nrow(bad) > 0) {
-    stop(glue("Bad values in {bad$var}"))
+    stop(glue("Bad values in {bad$metric_key}"))
   }
 }
 
 check_duplicated <- function(epi){
-  duplicated <- any(duplicated(epi[c('location_id', 'var', 'estimate')]))
+  duplicated <- any(duplicated(epi[c('location_id', 'metric_key', 'estimate')]))
   if(duplicated) {
     stop("Duplicate rows in epi data")
   }

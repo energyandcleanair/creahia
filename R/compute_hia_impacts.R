@@ -30,7 +30,7 @@ compute_hia_impacts <- function(species,
   for(scenario in scenarios) {
 
     conc_scenario <- conc_map[[scenario]]
-    conc_scenario %>% ldply(.id = 'region_id') -> conc_df
+    conc_df <- dplyr::bind_rows(conc_scenario, .id = 'region_id')
 
     if(!all(complete.cases(conc_df))) {
       warning('missing values in concentration or population data')
@@ -79,7 +79,7 @@ compute_hia_impacts <- function(species,
   }
 
   impacts <- impacts %>%
-    ldply(.id='scenario') %>%
+    dplyr::bind_rows(.id='scenario') %>%
     left_join(regions %>%
                 as.data.frame(row.names = NULL) %>%
                 sel(region_id, region_name, iso3 = country_id)) %>%
@@ -87,4 +87,3 @@ compute_hia_impacts <- function(species,
 
   return(impacts)
 }
-

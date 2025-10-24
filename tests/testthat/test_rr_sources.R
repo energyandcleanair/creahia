@@ -26,6 +26,7 @@ test_that("Results with different RR sources are properly ordered", {
   )
 
   hias <- lapply(ordered_sources, function(rr_source) {
+    print(rr_source)
     creahia::wrappers.compute_hia_two_images.default(
       baseline_rasters = list(pm25 = m),
       perturbation_rasters = list(pm25 = p1),

@@ -27,7 +27,7 @@ multiply_paf_epi <- function(paf_scenario, epi_loc){
 
   paf_prepared <- paf_scenario %>%
     # dplyr::filter(pollutant == 'PM25') %>%
-    dplyr::mutate(var = paste(cause, outcome, sep = '_'))
+    dplyr::mutate(var = build_metric_key(cause, outcome))
 
   if(nrow(paf_prepared) == 0) {
     return(empty_result)

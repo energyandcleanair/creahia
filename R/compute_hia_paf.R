@@ -37,12 +37,11 @@ compute_hia_paf_rr_curves <- function(conc_map,
 
   for(scenario in scenarios) {
 
-    conc_scenario <- conc_map[[scenario]] %>%
-      subset(!is.null(.)) %>%
-      subset(!is.na(unique(.))) %>%
-      lapply(data.frame) %>%
-      bind_rows(.id = 'region_id') %>%
-      dlply(.(region_id))
+    conc_scenario <- conc_map[[scenario]]
+    # Flatten and split back by region using dplyr/base instead of plyr
+    conc_df <- purrr::map(conc_scenario, data.frame) %>%
+      dplyr::bind_rows(.id = 'region_id')
+    conc_scenario <- split(conc_df, conc_df$region_id)
 
 
     pg <- progress::progress_bar$new(
@@ -143,15 +142,14 @@ compute_hia_paf_crfs <- function(species,
 
   for(scenario in scenarios) {
     conc_scenario <- conc_map[[scenario]]
-
-    conc_scenario %>% ldply(.id = 'region_id') -> conc_df
+    conc_df <- dplyr::bind_rows(conc_scenario, .id = 'region_id')
 
     if(!all(complete.cases(conc_df))) {
       warning('missing values in concentration or population data')
       conc_df %<>% na.omit
     }
 
-    conc_scenario <- conc_df %>% dlply(.(region_id))
+    conc_scenario <- split(conc_df, conc_df$region_id)
     region_ids <- names(conc_scenario)
 
     scenario_rows <- list()
@@ -282,6 +280,18 @@ get_hazard_ratio <- function(pm,
     # Remove duplicate exposure values to avoid interpolation warnings
     distinct(exposure, .keep_all = TRUE) %>%
     arrange(exposure)
+
+  # Guard against extrapolation beyond RR exposure grid
+  exp_min <- min(rr_filtered$exposure, na.rm = TRUE)
+  exp_max <- max(rr_filtered$exposure, na.rm = TRUE)
+  if (any(pm < exp_min | pm > exp_max, na.rm = TRUE)) {
+    cause_str <- .cause; age_str <- .age
+    req_min <- suppressWarnings(min(pm, na.rm = TRUE))
+    req_max <- suppressWarnings(max(pm, na.rm = TRUE))
+    stop(glue::glue(
+      "Exposure out of RR range for {cause_str} / {age_str}. Allowed: [{exp_min}, {exp_max}], requested: [{req_min}, {req_max}]"
+    ))
+  }
 
   rr_filtered %>% sel(low, central, high) %>%
     apply(2, function(y) approx(x = rr_filtered$exposure, y, xout = pm)$y)

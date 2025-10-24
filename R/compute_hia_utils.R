@@ -247,12 +247,20 @@ to_long_hia <- function(hia) {
   numeric_cols <- names(hia)[sapply(hia, is.numeric)]
   cols_to_pivot <- numeric_cols[numeric_cols != "pop"]
 
+  poll_suffix_pattern <- paste0('_(?:', paste(names(hiapoll_species_corr()), collapse='|'), ')$')
+
   hia %>%
     pivot_longer(all_of(cols_to_pivot),
                  names_to = 'cause_outcome',
                  values_to = 'number') %>%
-    mutate(cause = stringr::word(cause_outcome, 1, sep = "_"),
-           outcome = stringr::word(cause_outcome, 2, sep = "_")) %>%
+    # Robust split using helper to avoid ambiguous parsing
+    {
+      split <- split_metric_key(.$cause_outcome)
+      bind_cols(., split)
+    } %>%
+    # Some keys may have an optional trailing _<pollutant> suffix
+    # Keep cause and the primary outcome only
+    mutate(outcome = sub(poll_suffix_pattern, '', outcome)) %>%
     sel(-cause_outcome)
 }
 
