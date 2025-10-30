@@ -6,7 +6,6 @@
 #' @param scenarios
 #' @param calc_causes
 #' @param gbd_causes
-#' @param ihme
 #' @param epi_version
 #' @param epi
 #' @param crfs_version

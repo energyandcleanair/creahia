@@ -74,7 +74,7 @@ addiso <- function(df, ...) {
 }
 
 
-gather_ihme <- function(df) {
+gather_epi <- function(df) {
   df %>% dplyr::rename(central = val, low = lower, high = upper) %>%
     tidyr::gather(estimate, val, central, low, high) %>%
     dplyr::mutate(measure_name = measure_name %>% gsub(' .*', '', .))

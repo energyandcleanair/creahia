@@ -4,21 +4,20 @@
 #' using RR curves from GBD/GEMM for PM2.5 mortality outcomes
 #'
 #' @param conc_map
+#' @param epi_version
+#' @param rr_sources
 #' @param scenarios
-#' @param calc_causes
-#' @param gemm
-#' @param gbd
-#' @param ihme
+#' @param .mode
 #'
 #' @return
 #' @export
 #'
 #' @examples
 compute_hia_paf_rr_curves <- function(conc_map,
-                            epi_version,
-                            rr_sources,
-                            scenarios = names(conc_map),
-                            .mode = 'change') {
+                                      epi_version,
+                                      rr_sources,
+                                      scenarios = names(conc_map),
+                                      .mode = 'change') {
 
   paf <- list()
 
@@ -92,7 +91,7 @@ compute_hia_paf_rr_curves <- function(conc_map,
 
         dplyr::bind_rows(region_rows)
       }, error = function(e) {
-        # For instance if country iso3 not in ihme$ISO3
+        # For instance if country iso3 not in epi_long$ISO3
         # or paf not well ordered
         logger::log_warn(paste("Failed for region ", region_id, ": ", e$message))
         warning(paste("Failed for region ", region_id, ": ", e$message))
@@ -215,7 +214,6 @@ compute_hia_paf_crfs <- function(species,
 #' @param scenarios Vector of scenario names
 #' @param epi_version EPI data version
 #' @param rr_sources Vector of RR sources (for RR-based PAF)
-#' @param ihme IHME data
 #' @param crfs CRF data table (for CRF-based PAF)
 #' @param .mode Computation mode (default: 'change')
 #' @return Combined dataframe of PAF values from both methods

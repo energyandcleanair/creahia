@@ -338,7 +338,7 @@ get_death_all_cause <- function(pop.total, version = "gbd2019") {
     mutate(age_low = get_age_low(age_name)) %>%
     filter(!is.na(age_low), age_low >= 30) %>%
     filter(location_level %in% c(3, 4)) %>%
-    gather_ihme() %>%
+    gather_epi() %>%
     group_by(location_id, location_name, location_level, measure_name, metric_name, estimate) %>%
     summarise_at("val", sum) %>%
     ihme_getrate(pop.total = pop.total) %>%
@@ -350,7 +350,7 @@ get_death_crude <- function(version = "gbd2019") {
   get_gbd_raw(version) %>%
     add_location_details() %>%
     filter(age_name == "All ages", cause_name == "All causes", metric_name == "Rate", measure_name == "Deaths") %>%
-    gather_ihme() %>%
+    gather_epi() %>%
     mutate(metric_key = "crude.death.rate")
 }
 
@@ -365,7 +365,7 @@ get_death_child_lri <- function(pop.total, version = "gbd2019") {
       age_name %in% c("Under 5", "<5 years")
     ) %>%
     mutate(age_name = AGE_CHILDREN) %>%
-    gather_ihme() %>%
+    gather_epi() %>%
     ihme_getrate(pop.total = pop.total) %>%
     filter(measure_name %in% c(MEASURE_DEATHS, MEASURE_YLLS)) %>%
     mutate(metric_key = build_metric_key(CAUSE_LRICHILD, measure_name))
@@ -446,7 +446,7 @@ get_yld <- function(pop.total, version = "gbd2019") {
       measure_name %in% c(MEASURE_YLLS, MEASURE_DEATHS, MEASURE_YLDs)
     ) %>%
     filter(age_name=="25+ years") %>%
-    gather_ihme() %>%
+    gather_epi() %>%
     ihme_getrate(pop.total = pop.total) %>%
     mutate(cause_name = recode_gbd_cause(cause_name)) %>%
     filter(!is.na(cause_name)) %>%
@@ -503,7 +503,7 @@ get_yld_gbd2017 <- function(pop.total, version){
     ) %>%
     mutate(age_low = get_age_low(age_name)) %>%
     filter(!is.na(age_low), age_low >= 25) %>%
-    gather_ihme() %>%
+    gather_epi() %>%
     group_by(location_id, location_name, location_level, iso3, cause_name, metric_name, measure_name, estimate, year) %>%
     summarise_at("val", sum) %>%
     ihme_getrate(pop.total = pop.total) %>%
@@ -654,7 +654,7 @@ get_asthma_prev_and_inc <- function(pop.total, version = "gbd2019") {
       measure_name %in% c("Incidence", "Prevalence"),
       metric_name == "Rate"
     ) %>%
-    gather_ihme() %>%
+    gather_epi() %>%
     filter(tolower(age_name) != "all ages") %>%
     filter(age_low %in% c(0, 1, 5, 10, 15)) %>% # Some GBD versions have 1-4, others <5 (<1 year is 0), hence the 0 and 1
     group_by(location_id, location_name, location_level, iso3, year, measure_name, estimate) %>%
@@ -669,7 +669,7 @@ get_asthma_prev_and_inc <- function(pop.total, version = "gbd2019") {
       measure_name %in% c("Incidence", "Prevalence"),
       metric_name == "Number"
     ) %>%
-    gather_ihme() %>%
+    gather_epi() %>%
     filter(tolower(age_name) != "all ages") %>%
     filter(age_low %in% c(0, 1, 5, 10, 15)) %>% # Some GBD versions have 1-4, others <5 (<1 year is 0), hence the 0 and 1
     group_by(location_id, location_name, location_level, iso3, year, measure_name, estimate) %>%
@@ -685,7 +685,7 @@ get_asthma_prev_and_inc <- function(pop.total, version = "gbd2019") {
       measure_name == "Prevalence",
       metric_name == "Rate"
     ) %>%
-    gather_ihme() %>%
+    gather_epi() %>%
     select(location_id, location_name, location_level, iso3, year, measure_name, estimate, val) %>%
     mutate(metric_key = paste0("Asthma.", substr(measure_name, 1, 4), ".0to99")) %>%
     bind_rows(asthma.prev) ->
@@ -1035,7 +1035,7 @@ generate_ihme <- function(version = "gbd2019") {
     dplyr::filter(metric_name == "Number") %>%
     # 25+ is redundant with all the various age groups
     dplyr::filter(!grepl("95\\+|25\\+", age_name)) %>%
-    gather_ihme()
+    gather_epi()
 
   homogenise_age_name <- function(age_name) {
     age_name %>%
