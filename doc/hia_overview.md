@@ -9,14 +9,14 @@ This document summarizes how creahia computes Health Impact Assessments (HIA), f
 
 
 ```mermaid
-flowchart LR
+flowchart TD
   subgraph Inputs
     A[Concentrations<br/>Baseline + Scenario<br/>per species]:::inp
-    B[Population rasters<br/>(pop_year)]:::inp
-    C[Regions<br/>(GADM admin)]:::inp
-    D[RR curves<br/>rr/processed/rr_{source}.csv]:::inp
+    B["Population rasters<br/>(pop_year)"]:::inp
+    C["Regions<br/>(GADM admin)"]:::inp
+    D["RR curves<br/>rr/processed/rr_{source}.csv"]:::inp
     E[CRFs<br/>rr/processed/CRFs.csv]:::inp
-    F[Epidemiology (GBD)<br/>epi/processed/epi_rate_wide_*.csv]:::inp
+    F["Epidemiology (GBD)<br/>epi/processed/epi_rate_wide_*.csv"]:::inp
     G[Valuations<br/>inst/extdata/valuations]:::inp
   end
 
@@ -26,21 +26,21 @@ flowchart LR
   end
 
   subgraph PAF
-    J[compute_hia_paf_rr_curves<br/>(PM2.5 mortality via RR)]:::proc
-    K[compute_hia_paf_crfs<br/>(Other pollutants via CRF)]:::proc
-    L[(PAF dataframe)]:::data
+    J["compute_hia_paf_rr_curves<br/>(PM2.5 mortality via RR)"]:::proc
+    K["compute_hia_paf_crfs<br/>(Other pollutants via CRF)"]:::proc
+    L["(PAF dataframe)"]:::data
   end
 
   subgraph Impacts
-    M[compute_hia_impacts<br/>(multiply PAF × EPI)]:::proc
+    M["compute_hia_impacts<br/>(multiply PAF × EPI)"]:::proc
     N[Adjustments<br/>add_double_counted, add_age_group, clean_cause_outcome]:::proc
-    O[(HIA results)]:::data
+    O["(HIA results)"]:::data
   end
 
-  subgraph Economics (optional)
-    P[compute_econ_costs<br/>(get_valuations + totals)]:::proc
-    Q[get_econ_forecast<br/>(pop + GDP scaling)]:::proc
-    R[(Cost results & Forecast)]:::data
+  subgraph "Economics (optional)"
+    P["compute_econ_costs<br/>(get_valuations + totals)"]:::proc
+    Q["get_econ_forecast<br/>(pop + GDP scaling)"]:::proc
+    R["(Cost results & Forecast)"]:::data
   end
 
   A --> H
@@ -80,16 +80,16 @@ creahia computes population attributable fraction (PAF) through two complementar
 flowchart TD
   subgraph RR-based PAF
     A1[conc_map by region_id] --> A2[get_cause_source<br/>rr source preference]
-    A2 --> A3[get_age_weights<br/>(GBD location)]
+    A2 --> A3["get_age_weights<br/>(GBD location)"]
     A1 --> A4[get_hazard_ratio<br/>interp RR per age]
     A3 --> A5[get_paf_from_rr_lauri<br/>combine ages + pop]
-    A4 --> A5 --> A6[(PAF: PM2.5)]
+    A4 --> A5 --> A6["PAF"]
   end
 
   subgraph CRF-based PAF
-    B1[conc_map by region_id] --> B2[delta concentration by pollutant<br/>(scenario - baseline)]
-    B3[CRFs.csv rows<br/>(pollutant,cause,outcome,RR,conc_change,units)] --> B4[PAF ≈ 1 - exp(-ln(RR) * ΔC / conc_change)]
-    B2 --> B4 --> B5[(PAF: other pollutants)]
+    B1[conc_map by region_id] --> B2["delta concentration by pollutant<br/>(scenario - baseline)"]
+    B3["CRFs.csv rows<br/>(pollutant,cause,outcome,RR,conc_change,units)"] --> B4["PAF ≈ 1 - exp(-ln(RR) * ΔC / conc_change)"]
+    B2 --> B4 --> B5["PAF"]
   end
 ```
 
@@ -110,7 +110,7 @@ Key references:
 
 ```mermaid
 flowchart LR
-  A[(PAF by cause/outcome)] --> C[multiply_paf_epi]
+  A["(PAF by cause/outcome)"] --> C[multiply_paf_epi]
   B[(EPI by region_id<br/>var columns match cause_outcome)] --> C
   C --> D[add_double_counted + add_age_group + clean_cause_outcome]
   D --> E[(HIA results: counts per outcome, scenario, region)]
@@ -125,11 +125,11 @@ You can convert HIA counts to costs and project across future years.
 
 ```mermaid
 flowchart TD
-  H[(HIA results)] --> V[compute_econ_costs]
-  W[Valuations\n(inst/extdata/valuations/*)] --> V
-  V --> X[(hia_cost, by_outcome, by_region)]
+  H["(HIA results)"] --> V[compute_econ_costs]
+  W["Valuations<br>(inst/extdata/valuations/*)"] --> V
+  V --> X["(hia_cost, by_outcome, by_region)"]
   X --> Y[get_econ_forecast]
-  Y --> Z[(Forecasted counts & costs by year)]
+  Y --> Z["(Forecasted counts & costs by year)"]
 ```
 
 
