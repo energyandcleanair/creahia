@@ -103,7 +103,7 @@ test_that("get_age_weights caches results correctly", {
   version <- "gbd2019"
 
   # Clear cache first
-  clear_ihme_cache()
+  clear_epi_count_long_cache()
 
   # First call should load IHME data
   result1 <- get_age_weights(region_id, cause, measure, rr_source, version)

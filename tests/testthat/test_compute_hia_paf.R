@@ -130,7 +130,7 @@ test_that("compute_hia_paf_rr_curves returns correct structure", {
 
   # Mock required functions
   with_mocked_bindings(
-    get_ihme = function(...) data.frame(
+    get_epi_count_long = function(...) data.frame(
       location_id = 1,
       cause = "NCD.LRI",
       measure_name = "Deaths",
@@ -179,7 +179,7 @@ test_that("compute_hia_paf coordinator function works", {
 
   with_mocked_bindings(
     get_crfs = function(...) test_data$crfs,
-    get_ihme = function(...) data.frame(
+    get_epi_count_long = function(...) data.frame(
       location_id = 1,
       cause = "NCD.LRI",
       measure_name = "Deaths",

@@ -95,7 +95,7 @@ get_epi_location_id <- function(region_id) {
 
 
 get_locations <- function() {
-  raw <- readxl::read_xlsx(get_hia_path("IHME_GBD_2019_GBD_LOCATION_HIERARCHY_Y2022M06D29.XLSX"), .name_repair = make.names) %>%
+  raw <- readxl::read_xlsx(get_hia_path("epi/raw/IHME_GBD_2019_GBD_LOCATION_HIERARCHY_Y2022M06D29.XLSX"), .name_repair = make.names) %>%
     select(
       location_id = matches("location.id", ignore.case = T),
       level = matches("^level$", ignore.case = T),
@@ -190,7 +190,7 @@ get_epi_pop <- function(version="gbd2019", level = c(3, 4)) {
   )
 
   # CHECK Should we use 2019 pop even with 2017 data?
-  pop <- read_csv(get_hia_path("IHME_GBD_2019_POP_2019_Y2020M10D15.CSV")) %>% # read.csv('2017 data/IHME_GBD_2017_POP_2015_2017.CSV') %>%
+  pop <- read_csv(get_hia_path("epi/raw/IHME_GBD_2019_POP_2019_Y2020M10D15.CSV")) %>% # read.csv('2017 data/IHME_GBD_2017_POP_2015_2017.CSV') %>%
     dplyr::filter(year_id == 2019, tolower(sex_name) == "both") %>%
     dplyr::rename(country = location_name)
 
@@ -950,7 +950,7 @@ generate_epi <- function(version = "gbd2019") {
 
   epi_wide %>%
     filter(!is.na(location_id)) %>%
-    write_csv(glue::glue("inst/extdata/epi_for_hia_{version}.csv"))
+    write_csv(glue::glue("inst/extdata/epi/processed/epi_rate_wide_{version}.csv"))
 }
 
 add_region_and_income_group <- function(epi) {
@@ -1103,5 +1103,5 @@ generate_ihme <- function(version = "gbd2019") {
   ihme %>%
     select(location_id, location_name, iso3, location_level, age, measure_name, age_low, age_name, cause, sex_name, metric_name, estimate, val) %>%
     filter(estimate == "central") %>%
-    write_csv(glue::glue("inst/extdata/ihme_{version}.csv"))
+    write_csv(glue::glue("inst/extdata/epi/processed/epi_count_long_{version}.csv"))
 }

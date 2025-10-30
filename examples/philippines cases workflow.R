@@ -55,7 +55,7 @@ saveRDS(conc_adm, file.path(project_dir, "conc_adm.RDS"))
 # 06: Get HIA data, in case you want to modify them.  ---------------------------------------
 crfs <- get_crfs()
 epi <- get_epi()
-ihme <- get_ihme()
+ihme <- get_epi_count_long()
 gbd_rr <- get_gbd_rr()
 calc_causes <- get_calc_causes()
 

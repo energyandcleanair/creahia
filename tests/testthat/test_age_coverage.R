@@ -106,7 +106,7 @@ test_that("check_age_coverage_and_uniqueness allows no split ages at all", {
 ## Integration test with RR data ##
 
 test_that("RR ages pass uniqueness check after deduplication", {
-  skip_if_not(file.exists("../../inst/extdata/rr_gbd2019.csv"), "RR data not available")
+  skip_if_not(file.exists("../../inst/extdata/rr/processed/rr_gbd2019.csv"), "RR data not available")
   
   rr <- get_rr('gbd2019')
   
@@ -128,4 +128,3 @@ test_that("RR ages pass uniqueness check after deduplication", {
     check_age_coverage_and_uniqueness(ages_lri_child, "RR gbd2019 for LRI.child")
   )
 })
-

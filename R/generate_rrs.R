@@ -48,7 +48,7 @@ generate_rrs <- function(){
       filter(cause %in% causes_to_keep) %>%
       check_rr() %>%
       mutate(source=source) %>%
-      write_csv(file.path('inst','extdata', paste0('rr_', source, '.csv')))
+      write_csv(file.path('inst','extdata','rr','processed', paste0('rr_', source, '.csv')))
 
   }) %>%
     bind_rows()
@@ -198,4 +198,3 @@ add_lri_child <- function(rr){
            age = AGE_CHILDREN) %>%
     bind_rows(rr)
 }
-

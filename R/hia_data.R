@@ -82,9 +82,9 @@ adddefos <- function(df, exl = c('pop', 'location_id', 'location_level')) {
 
 get_crfs_versions <- function() {
   list(
-    "default" = "CRFs.csv",
-    "C40" = "CRFs_C40.csv",
-    "Krewski-South Africa" = "CRFs_Krewski_SouthAfrica.csv"
+    "default" = "rr/processed/CRFs.csv",
+    "C40" = "rr/processed/CRFs_C40.csv",
+    "Krewski-South Africa" = "rr/processed/CRFs_Krewski_SouthAfrica.csv"
   )
 }
 
@@ -155,11 +155,13 @@ fix_epi_cols <- function(epi){
 
 get_epi_versions <- function() {
   list(
-    "default" = "epi_for_hia.csv",
-    "C40" = "epi_for_hia_C40.csv",
-    "gbd2017" = "epi_for_hia_gbd2017.csv",
-    "gbd2019" = "epi_for_hia_gbd2019.csv",
-    "gbd2021" = "epi_for_hia_gbd2021.csv"
+    "original" = "epi/processed/epi_rate_wide_original.csv",
+    "C40" = "epi/processed/epi_rate_wide_C40.csv",
+    "gbd2017" = "epi/processed/epi_rate_wide_gbd2017.csv",
+    "gbd2019" = "epi/processed/epi_rate_wide_gbd2019.csv",
+    "gbd2021" = "epi/processed/epi_rate_wide_gbd2021.csv",
+    # Default is the latest GBD version
+    "default" = "epi/processed/epi_rate_wide_gbd2021.csv"
   )
 }
 
@@ -233,7 +235,7 @@ clean_epi_asthma <- function(epi) {
 
 get_gdp_forecast <- function(pop_proj=NULL) {
   print("Getting GDP forecast")
-  gdp_forecast_file <- get_hia_path('OECD_GDP_forecast.csv')
+  gdp_forecast_file <- get_hia_path('economics/OECD_GDP_forecast.csv')
   if(!file.exists(gdp_forecast_file)) {
     download.file('https://stats.oecd.org/sdmx-json/data/DP_LIVE/.GDPLTFORECAST.../OECD?contentType=csv&detail=code&separator=comma&csv-lang=en',
                   gdp_forecast_file)
@@ -329,16 +331,18 @@ get_calc_causes <- function(causes_set = 'GEMM and GBD', filter = NULL) {
   return(causes_out)
 }
 
-get_ihme_raw <- function(version='gbd2017') {
+get_epi_count_long_raw <- function(version = 'gbd2021') {
   file_version <- recode(
     version,
-    default='gbd2017',
     C40='gbd2017',
+    gbd2017='gbd2017',
     gbd2019='gbd2019',
-    gbd2021='gbd2021'
+    gbd2021='gbd2021',
+    # Default is the latest GBD version
+    default='gbd2021',
   )
 
-  ihme <- read_csv(get_hia_path(glue("ihme_{file_version}.csv")), col_types = cols())
+  ihme <- read_csv(get_hia_path(glue("epi/processed/epi_count_long_{file_version}.csv")), col_types = cols())
 
   # Backward compatibility: handle old format with cause_short and cause_name
   if ("cause_short" %in% names(ihme) && "cause_name" %in% names(ihme)) {
@@ -348,22 +352,22 @@ get_ihme_raw <- function(version='gbd2017') {
   }
 
   # Validate age completeness (allows both aggregate and split ages to coexist)
-  check_age_completeness(unique(ihme$age), data_name = glue("IHME {file_version}"))
+  check_age_completeness(unique(ihme$age), data_name = glue("EPI count long {file_version}"))
 
   return(ihme)
 }
 
 # Memoised version to avoid re-reading large CSV files
-get_ihme <- memoise::memoise(get_ihme_raw)
+get_epi_count_long <- memoise::memoise(get_epi_count_long_raw)
 
-# Helper function to clear IHME cache if needed
-clear_ihme_cache <- function() {
-  memoise::forget(get_ihme)
+# Helper function to clear cache if needed
+clear_epi_count_long_cache <- function() {
+  memoise::forget(get_epi_count_long)
 }
 
 # Get age weights for a specific region, cause, and measure
 get_age_weights <- function(region_id, cause, measure, rr_source, version = "gbd2019") {
-  ihme <- get_ihme(version)
+  ihme <- get_epi_count_long(version)
 
   ages <- get_rr(rr_source) %>%
     filter(cause == !!cause) %>%
@@ -405,7 +409,7 @@ get_adult_ages <- function(ihme) {
 
 get_gbd_rr <- function(version="original", gbd_causes=c('LRI.child', 'Diabetes')){
 
-  gbd_rr <-read_csv(get_hia_path(glue("gbd_rr_{version}.csv")), col_types = cols())
+  gbd_rr <-read_csv(get_hia_path(glue("rr/processed/rr_{version}.csv")), col_types = cols())
 
   if(length(gbd_causes) == 0) gbd_causes <- 'none'
   if(gbd_causes[1] != 'all') gbd_rr <- gbd_rr %>% dplyr::filter(cause %in% gbd_causes)

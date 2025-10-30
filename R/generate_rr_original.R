@@ -1,7 +1,7 @@
 generate_rr_original <- function(){
 
   # Sent to Lauri by email
-  read_csv(get_hia_path('ier_computed_table.csv'), col_types = cols()) %>%
+  read_csv(get_hia_path('rr/raw/ier/ier_computed_table.csv'), col_types = cols()) %>%
     # there's a weird one where rr_upper < rr_mean
     mutate(
       low = rr_lower,
