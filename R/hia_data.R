@@ -57,17 +57,34 @@ fillcol <- function(df2, targetcols) {
 
 adddefos <- function(df, exl = c('pop', 'location_id', 'location_level')) {
   targetcols <- names(df)[sapply(df, is.numeric) & (!names(df) %in% exl)]
-  df %>%
-    ddply(.(estimate, region, income_group), fillcol, targetcols) %>%
-    ddply(.(estimate), fillcol, targetcols)
+
+  # First, fill within (estimate, region, income_group)
+  df1 <- df %>%
+    dplyr::group_by(estimate, region, income_group) %>%
+    dplyr::mutate(dplyr::across(
+      dplyr::all_of(targetcols),
+      ~ ifelse(is.na(.x), stats::median(.x, na.rm = TRUE), .x)
+    )) %>%
+    dplyr::ungroup()
+
+  # Then, fill remaining NAs within (estimate)
+  df2 <- df1 %>%
+    dplyr::group_by(estimate) %>%
+    dplyr::mutate(dplyr::across(
+      dplyr::all_of(targetcols),
+      ~ ifelse(is.na(.x), stats::median(.x, na.rm = TRUE), .x)
+    )) %>%
+    dplyr::ungroup()
+
+  df2
 }
 
 
 get_crfs_versions <- function() {
   list(
-    "default" = "CRFs.csv",
-    "C40" = "CRFs_C40.csv",
-    "Krewski-South Africa" = "CRFs_Krewski_SouthAfrica.csv"
+    "default" = "rr/processed/CRFs.csv",
+    "C40" = "rr/processed/CRFs_C40.csv",
+    "Krewski-South Africa" = "rr/processed/CRFs_Krewski_SouthAfrica.csv"
   )
 }
 
@@ -125,7 +142,8 @@ fix_epi_cols <- function(epi){
 
   # For causes without outcomes, add default one to be compatible with new (explicit) crfs
   # Select columns that are numeric and have no _ in their name (and not the pop column)
-  causes_wo_outcome <- names(epi)[sapply(epi, is.numeric) & !grepl('_', names(epi)) & !names(epi) %in% c("pop", "birth.rate", "labor.partic")]
+  causes_wo_outcome <- names(epi)[sapply(epi, is.numeric) & !grepl('_', names(epi))
+                                  & !names(epi) %in% c("pop", "birth_rate_p1k", "labor_partic_pct")]
   for(cause in causes_wo_outcome) {
     newname <- paste0(cause, '_', cause)
     colnames(epi)[colnames(epi) == cause] <- newname
@@ -137,11 +155,13 @@ fix_epi_cols <- function(epi){
 
 get_epi_versions <- function() {
   list(
-    "default" = "epi_for_hia.csv",
-    "C40" = "epi_for_hia_C40.csv",
-    "gbd2017" = "epi_for_hia_gbd2017.csv",
-    "gbd2019" = "epi_for_hia_gbd2019.csv",
-    "gbd2021" = "epi_for_hia_gbd2021.csv"
+    "original" = "epi/processed/epi_rate_wide_original.csv",
+    "C40" = "epi/processed/epi_rate_wide_C40.csv",
+    "gbd2017" = "epi/processed/epi_rate_wide_gbd2017.csv",
+    "gbd2019" = "epi/processed/epi_rate_wide_gbd2019.csv",
+    "gbd2021" = "epi/processed/epi_rate_wide_gbd2021.csv",
+    # Default is the latest GBD version
+    "default" = "epi/processed/epi_rate_wide_gbd2021.csv"
   )
 }
 
@@ -215,7 +235,7 @@ clean_epi_asthma <- function(epi) {
 
 get_gdp_forecast <- function(pop_proj=NULL) {
   print("Getting GDP forecast")
-  gdp_forecast_file <- get_hia_path('OECD_GDP_forecast.csv')
+  gdp_forecast_file <- get_hia_path('economics/OECD_GDP_forecast.csv')
   if(!file.exists(gdp_forecast_file)) {
     download.file('https://stats.oecd.org/sdmx-json/data/DP_LIVE/.GDPLTFORECAST.../OECD?contentType=csv&detail=code&separator=comma&csv-lang=en',
                   gdp_forecast_file)
@@ -311,17 +331,74 @@ get_calc_causes <- function(causes_set = 'GEMM and GBD', filter = NULL) {
   return(causes_out)
 }
 
-get_ihme <- function(version='gbd2017') {
-
+get_epi_count_long_raw <- function(version = 'gbd2021') {
   file_version <- recode(
     version,
-    default='gbd2017',
     C40='gbd2017',
+    gbd2017='gbd2017',
     gbd2019='gbd2019',
-    gbd2021='gbd2021'
+    gbd2021='gbd2021',
+    # Default is the latest GBD version
+    default='gbd2021',
   )
 
-  read_csv(get_hia_path(glue("ihme_{file_version}.csv")), col_types = cols())
+  ihme <- read_csv(get_hia_path(glue("epi/processed/epi_count_long_{file_version}.csv")), col_types = cols())
+
+  # Backward compatibility: handle old format with cause_short and cause_name
+  if ("cause_short" %in% names(ihme) && "cause_name" %in% names(ihme)) {
+    ihme <- ihme %>%
+      mutate(cause = cause_short) %>%
+      select(-cause_name, -cause_short)
+  }
+
+  # Validate age completeness (allows both aggregate and split ages to coexist)
+  check_age_completeness(unique(ihme$age), data_name = glue("EPI count long {file_version}"))
+
+  return(ihme)
+}
+
+# Memoised version to avoid re-reading large CSV files
+get_epi_count_long <- memoise::memoise(get_epi_count_long_raw)
+
+# Helper function to clear cache if needed
+clear_epi_count_long_cache <- function() {
+  memoise::forget(get_epi_count_long)
+}
+
+# Get age weights for a specific region, cause, and measure
+get_age_weights <- function(region_id, cause, measure, rr_source, version = "gbd2019") {
+  ihme <- get_epi_count_long(version)
+
+  ages <- get_rr(rr_source) %>%
+    filter(cause == !!cause) %>%
+    distinct(age) %>%
+    pull(age) %>%
+    deduplicate_adult_ages()
+
+  # Validate that deduplicated ages have no overlap and are complete
+  check_age_coverage_and_uniqueness(ages, data_name = glue("RR {rr_source} for {cause}"))
+
+  age_weights <- ihme %>%
+    mutate(age = recode_age(age)) %>%
+    filter(location_id == get_epi_location_id(region_id),
+           cause == !!cause,
+           measure_name == measure,
+           age %in% ages,
+           estimate == 'central')
+
+  if(nrow(age_weights) == 0) {
+    warning(glue("No age weights found for {region_id} and {cause} and {measure}"))
+    return(NULL)
+  }
+
+  if(length(age_weights$age) != length(ages)) {
+    stop("Unmatching age weights")
+  }
+
+  # Ensuring ages and age_weights$age are in the same order
+  age_weights <- age_weights[match(ages, age_weights$age),]
+
+  return(list(ages = ages, age_weights = age_weights))
 }
 
 
@@ -332,10 +409,10 @@ get_adult_ages <- function(ihme) {
 
 get_gbd_rr <- function(version="original", gbd_causes=c('LRI.child', 'Diabetes')){
 
-  gbd_rr <-read_csv(get_hia_path(glue("gbd_rr_{version}.csv")), col_types = cols())
+  gbd_rr <-read_csv(get_hia_path(glue("rr/processed/rr_{version}.csv")), col_types = cols())
 
   if(length(gbd_causes) == 0) gbd_causes <- 'none'
-  if(gbd_causes[1] != 'all') gbd_rr <- gbd_rr %>% dplyr::filter(cause_short %in% gbd_causes)
+  if(gbd_causes[1] != 'all') gbd_rr <- gbd_rr %>% dplyr::filter(cause %in% gbd_causes)
   gbd_rr
 }
 

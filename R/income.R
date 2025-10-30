@@ -8,7 +8,7 @@
 #' @examples
 get_income <- function(year = NULL) {
 
-  income <- read_csv(get_hia_path('income.csv'), col_types = cols())
+  income <- read_csv(get_hia_path('economics/income.csv'), col_types = cols())
 
   if (!is.null(year)) {
     income <- income %>% filter(year %in% !!year)
@@ -100,7 +100,7 @@ download_income <- function(start_year = 1980,
 recreate_income <- function(
     start_year = 1980,
     end_year = lubridate::year(lubridate::today()),
-    output_path = "inst/extdata/income.csv") {
+    output_path = "inst/extdata/economics/income.csv") {
 
   income <- download_income(start_year = start_year, end_year = end_year)
   dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)

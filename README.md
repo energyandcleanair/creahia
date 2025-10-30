@@ -10,7 +10,9 @@ remotes::install_github("energyandcleanair/creahia")
 ```
 
 ## Getting started
-See the [vignette](vignettes/example_philippines.md)
+- Read the HIA workflow overview with diagrams: `doc/hia_overview.md`
+- Uncertainty details: `doc/paf_uncertainty.md` and `doc/paf_epi_uncertainty.md`
+- Example (Philippines): `examples/HIA_GEMM_Philippines_clean.R`
 
 
 ## Contact us

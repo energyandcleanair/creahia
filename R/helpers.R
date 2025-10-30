@@ -74,7 +74,7 @@ addiso <- function(df, ...) {
 }
 
 
-gather_ihme <- function(df) {
+gather_epi <- function(df) {
   df %>% dplyr::rename(central = val, low = lower, high = upper) %>%
     tidyr::gather(estimate, val, central, low, high) %>%
     dplyr::mutate(measure_name = measure_name %>% gsub(' .*', '', .))
@@ -221,4 +221,73 @@ get_focal_d <- function(grid_raster){
   } else if(units == 'km'){
     focal_d <- 100
   }
+}
+
+#' Build a stable metric key from cause and outcome
+#'
+#' Creates a single string key that uniquely identifies a cause–outcome pair
+#' using a fixed separator (default: "_"). This function validates that neither
+#' cause nor outcome contains the separator to avoid ambiguous keys.
+#'
+#' @param cause Character vector of causes
+#' @param outcome Character vector of outcomes
+#' @param sep Separator to use between cause and outcome (default: "_")
+#' @param strict If TRUE, stop when `cause` or `outcome` contains `sep` (default: TRUE)
+#' @return Character vector of keys like "Cause_Outcome"
+build_metric_key <- function(cause, outcome, sep = "_", strict = TRUE) {
+  # Recycle if one side is length 1
+  if (length(cause) != length(outcome)) {
+    if (length(cause) == 1) {
+      cause <- rep(cause, length(outcome))
+    } else if (length(outcome) == 1) {
+      outcome <- rep(outcome, length(cause))
+    } else {
+      stop("build_metric_key: 'cause' and 'outcome' must have equal lengths or length 1")
+    }
+  }
+
+  # Basic checks
+  if (any(is.na(cause)) || any(is.na(outcome))) {
+    stop("build_metric_key: 'cause' and 'outcome' must not contain NA")
+  }
+
+  # Ensure no separator appears inside the components
+  if (strict) {
+    has_sep_cause <- grepl(sep, cause, fixed = TRUE)
+    has_sep_outcome <- grepl(sep, outcome, fixed = TRUE)
+    if (any(has_sep_cause) || any(has_sep_outcome)) {
+      offending <- unique(c(cause[has_sep_cause], outcome[has_sep_outcome]))
+      stop(
+        "build_metric_key: cause or outcome contains the separator '",
+        sep, "'. Offending values: ", paste(offending, collapse = ", ")
+      )
+    }
+  }
+
+  paste(cause, outcome, sep = sep)
+}
+
+
+#' Split a metric key back into cause and outcome
+#'
+#' Inverse of `build_metric_key()`. Splits on the first occurrence of the
+#' separator. Assumes neither cause nor outcome contains the separator.
+#'
+#' @param key Character vector of keys like "Cause_Outcome"
+#' @param sep Separator used in the key (default: "_")
+#' @return A data.frame with columns `cause` and `outcome`
+split_metric_key <- function(key, sep = "_") {
+  if (any(is.na(key))) stop("split_metric_key: 'key' must not contain NA")
+
+  pos <- regexpr(sep, key, fixed = TRUE)
+  if (any(pos <= 0)) {
+    bad <- key[pos <= 0]
+    stop("split_metric_key: key(s) missing separator '", sep, "': ", paste(bad, collapse = ", "))
+  }
+
+  ml <- attr(pos, "match.length")
+  cause <- substr(key, 1, pos - 1)
+  outcome <- substr(key, pos + ml, nchar(key))
+
+  data.frame(cause = cause, outcome = outcome, stringsAsFactors = FALSE)
 }

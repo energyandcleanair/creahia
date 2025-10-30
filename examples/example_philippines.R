@@ -48,7 +48,7 @@ conc_regions <- creahia::extract_concs_at_regions(concs, regions, species)
 # These are the values used by default
 # crfs <- get_crfs()
 # epi <- get_epi()
-# ihme <- get_ihme()
+# ihme <- get_epi_count_long()
 # gbd_rr <- get_gbd_rr()
 # calc_causes <- get_calc_causes()
 
@@ -67,6 +67,5 @@ econ_costs <- compute_econ_costs(hia, results_dir=project_dir)
 # 11: Export results
 hia_table <- hia %>% totalise_hia() %>% make_hia_table()
 write_csv(hia_table, file.path(project_dir, 'hia_table.csv'))
-
 
 

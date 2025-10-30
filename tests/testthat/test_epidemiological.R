@@ -31,9 +31,9 @@ test_that("GBD2021, GBD2019 and GBD2017 have comparable data - input", {
   asthma2019 <- get_asthma_prev(pop.total, version='gbd2019')
   asthma2021 <- get_asthma_prev(pop.total, version='gbd2021')
 
-  ihme2017 <- get_ihme(version = "gbd2017")
-  ihme2019 <- get_ihme(version = "gbd2017")
-  ihme2021 <- get_ihme(version = "gbd2021")
+  ihme2017 <- get_epi_count_long(version = "gbd2017")
+  ihme2019 <- get_epi_count_long(version = "gbd2017")
+  ihme2021 <- get_epi_count_long(version = "gbd2021")
 
 
   compare <- function(df2017, df2019, df2021, tolerance=0.1){
@@ -151,9 +151,9 @@ test_that("GBD2021, GBD2019 and GBD2017 have comparable data - output", {
 
 test_that("GBD2021, GBD2019 and GBD2017 have comparable data - IHME", {
 
-  ihme2017 <- get_ihme('gbd2017')
-  ihme2019 <- get_ihme('gbd2019')
-  ihme2021 <- get_ihme('gbd2021')
+  ihme2017 <- get_epi_count_long('gbd2017')
+  ihme2019 <- get_epi_count_long('gbd2019')
+  ihme2021 <- get_epi_count_long('gbd2021')
 
   comparison <- bind_rows(
     ihme2017 %>% mutate(version='gbd2017'),
@@ -161,13 +161,13 @@ test_that("GBD2021, GBD2019 and GBD2017 have comparable data - IHME", {
     ihme2021 %>% mutate(version='gbd2021')
   ) %>%
     filter(location_level == 3) %>%
-    select(measure_name, location_id, iso3, location_level, age, cause_short, cause_name, sex_name, estimate, val, version) %>%
+    select(measure_name, location_id, iso3, location_level, age, cause, sex_name, estimate, val, version) %>%
     spread(version, val)
 
   missing_iso3s <- comparison %>%
     filter(location_level==3,
            # COPD for low age NA in new versions
-           ! age %in% c("5-9", "10-14", "<5") | cause_short != "COPD",
+           ! age %in% c("5-9", "10-14", "<5") | cause != "COPD",
            is.na(gbd2017 + gbd2019 + gbd2021)) %>%
     pull(iso3) %>%
     unique()
@@ -201,8 +201,7 @@ test_that("GBD2021, GBD2019 and GBD2017 yield roughly similar results - Philipin
       administrative_level = 0,
       crfs_version = "C40",
       epi_version = epi_version,
-      rr_sources = RR_GBD2021,
-      ihme_version = "gbd2019" # Use for comparable population
+      rr_sources = RR_GBD2021
     ) %>%
       mutate(epi_version = epi_version)
   }) %>%
@@ -249,7 +248,7 @@ test_that("New epi doesn't differ too much from old one", {
 
   version <- "gbd2019"
 
-  new <- read_csv(glue("inst/extdata/epi_for_hia_{version}.csv"))
+  new <- read_csv(glue("inst/extdata/epi/processed/epi_rate_wide_{version}.csv"))
   old <- read_csv(glue("https://raw.githubusercontent.com/energyandcleanair/creahia/7966ab8f14bda553e4cfbb1eb59dd872d3217c84/inst/extdata/epi_for_hia_{version}.csv"))
 
   # It should not have changed central
@@ -293,4 +292,3 @@ test_that("New epi doesn't differ too much from old one", {
 
   testthat::expect_equal(inversed, 0)
 })
-

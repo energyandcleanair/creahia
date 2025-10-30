@@ -57,7 +57,7 @@ get_gemm <- function() {
   print("Getting GEMM")
 
   # read GEMM function fit parameters
-  infile <- get_hia_path('GEMM Calculator (PNAS)_ab.xlsx')
+  infile <- get_hia_path('rr/raw/gemm/GEMM Calculator (PNAS)_ab.xlsx')
   gemm.china <- suppressMessages(read_xlsx(infile, sheet = 'GEMM fit parameters',
                                            skip = 8, n_max = 14))
   gemm.exchina <- suppressMessages(read_xlsx(infile, sheet = 'GEMM fit parameters',

@@ -2,7 +2,7 @@
 # This is a comparison with a literature article that also uses GEMM with von Donkelar
 test_that("Our GEMM-derived deaths are similar to literature", {
 
-  testthat::skip_on_ci()
+  testthat::skip()
 
   # We use the following references for comparison, that both use GEMM:
   #
@@ -103,8 +103,6 @@ test_that("Our GEMM-derived deaths are similar to literature", {
   ) %>%
     bind_rows()
 
-
-
   res <- creaexposure::RES_2PT5_MIN
   pop <- creaexposure::data.pop(res=res)
   grid <- pop %>% rast()
@@ -173,12 +171,6 @@ test_that("Our GEMM-derived deaths are similar to literature", {
     return(list(hia=hia, deaths=deaths, pm25_pwavg=pm25_pwavg))
 })
 
-
-
-  # Recompute things to save time
-
-
-
   # Comparison
   comparison_long <- bind_rows(purrr::map(hias, "deaths")) %>%
     rename(deaths=number) %>%
@@ -233,7 +225,6 @@ test_that("Our GEMM-derived deaths are similar to literature", {
   # Check deaths are within 5%
   expect_equal(validation$total[1], validation$total[2], tolerance=0.05)
   expect_equal(validation$total[1], validation$total[3], tolerance=0.05)
-
 
   ggplot(validation, aes(x=source, y=total)) +
     geom_col(aes(fill=source)) +

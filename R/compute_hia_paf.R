@@ -4,27 +4,22 @@
 #' using RR curves from GBD/GEMM for PM2.5 mortality outcomes
 #'
 #' @param conc_map
+#' @param epi_version
+#' @param rr_sources
 #' @param scenarios
-#' @param calc_causes
-#' @param gemm
-#' @param gbd
-#' @param ihme
+#' @param .mode
 #'
 #' @return
 #' @export
 #'
 #' @examples
 compute_hia_paf_rr_curves <- function(conc_map,
-                            epi_version,
-                            ihme_version,
-                            rr_sources,
-                            scenarios = names(conc_map),
-                            ihme = get_ihme(ihme_version),
-                            .mode = 'change') {
+                                      epi_version,
+                                      rr_sources,
+                                      scenarios = names(conc_map),
+                                      .mode = 'change') {
 
   paf <- list()
-  adult_ages <- get_adult_ages(ihme)
-
 
   cause_measure_source <- get_cause_source(rr_sources=rr_sources,
                                             add_measure=T)
@@ -41,12 +36,11 @@ compute_hia_paf_rr_curves <- function(conc_map,
 
   for(scenario in scenarios) {
 
-    conc_scenario <- conc_map[[scenario]] %>%
-      subset(!is.null(.)) %>%
-      subset(!is.na(unique(.))) %>%
-      lapply(data.frame) %>%
-      bind_rows(.id = 'region_id') %>%
-      dlply(.(region_id))
+    conc_scenario <- conc_map[[scenario]]
+    # Flatten and split back by region using dplyr/base instead of plyr
+    conc_df <- purrr::map(conc_scenario, data.frame) %>%
+      dplyr::bind_rows(.id = 'region_id')
+    conc_scenario <- split(conc_df, conc_df$region_id)
 
 
     pg <- progress::progress_bar$new(
@@ -75,9 +69,7 @@ compute_hia_paf_rr_curves <- function(conc_map,
                                          cause = cause_,
                                          measure = measure_,
                                          rr_source = rr_source_,
-                                         adult_ages = adult_ages,
                                          epi_version = epi_version,
-                                         ihme = ihme,
                                          .region = "inc_China",
                                          .mode = .mode)
 
@@ -99,7 +91,7 @@ compute_hia_paf_rr_curves <- function(conc_map,
 
         dplyr::bind_rows(region_rows)
       }, error = function(e) {
-        # For instance if country iso3 not in ihme$ISO3
+        # For instance if country iso3 not in epi_long$ISO3
         # or paf not well ordered
         logger::log_warn(paste("Failed for region ", region_id, ": ", e$message))
         warning(paste("Failed for region ", region_id, ": ", e$message))
@@ -149,15 +141,14 @@ compute_hia_paf_crfs <- function(species,
 
   for(scenario in scenarios) {
     conc_scenario <- conc_map[[scenario]]
-
-    conc_scenario %>% ldply(.id = 'region_id') -> conc_df
+    conc_df <- dplyr::bind_rows(conc_scenario, .id = 'region_id')
 
     if(!all(complete.cases(conc_df))) {
       warning('missing values in concentration or population data')
       conc_df %<>% na.omit
     }
 
-    conc_scenario <- conc_df %>% dlply(.(region_id))
+    conc_scenario <- split(conc_df, conc_df$region_id)
     region_ids <- names(conc_scenario)
 
     scenario_rows <- list()
@@ -222,9 +213,7 @@ compute_hia_paf_crfs <- function(species,
 #' @param regions Spatial regions data
 #' @param scenarios Vector of scenario names
 #' @param epi_version EPI data version
-#' @param ihme_version IHME data version
 #' @param rr_sources Vector of RR sources (for RR-based PAF)
-#' @param ihme IHME data
 #' @param crfs CRF data table (for CRF-based PAF)
 #' @param .mode Computation mode (default: 'change')
 #' @return Combined dataframe of PAF values from both methods
@@ -234,9 +223,7 @@ compute_hia_paf <- function(conc_map,
                            regions,
                            scenarios = names(conc_map),
                            epi_version = "default",
-                           ihme_version = epi_version,
                            rr_sources = c(),
-                           ihme = get_ihme(ihme_version),
                            crfs = get_crfs(),
                            .mode = 'change') {
 
@@ -257,9 +244,7 @@ compute_hia_paf <- function(conc_map,
     paf_rr <- compute_hia_paf_rr_curves(conc_map = conc_map,
                                         scenarios = scenarios,
                                         epi_version = epi_version,
-                                        ihme_version = ihme_version,
                                         rr_sources = rr_sources,
-                                        ihme = ihme,
                                         .mode = .mode)
     paf_rr_combined <- paf_rr %>%
       bind_rows(.id = 'scenario')
@@ -294,6 +279,18 @@ get_hazard_ratio <- function(pm,
     distinct(exposure, .keep_all = TRUE) %>%
     arrange(exposure)
 
+  # Guard against extrapolation beyond RR exposure grid
+  exp_min <- min(rr_filtered$exposure, na.rm = TRUE)
+  exp_max <- max(rr_filtered$exposure, na.rm = TRUE)
+  if (any(pm < exp_min | pm > exp_max, na.rm = TRUE)) {
+    cause_str <- .cause; age_str <- .age
+    req_min <- suppressWarnings(min(pm, na.rm = TRUE))
+    req_max <- suppressWarnings(max(pm, na.rm = TRUE))
+    stop(glue::glue(
+      "Exposure out of RR range for {cause_str} / {age_str}. Allowed: [{exp_min}, {exp_max}], requested: [{req_min}, {req_max}]"
+    ))
+  }
+
   rr_filtered %>% sel(low, central, high) %>%
     apply(2, function(y) approx(x = rr_filtered$exposure, y, xout = pm)$y)
 
@@ -309,8 +306,6 @@ country_paf_perm <- function(pm.base,
                              measure,
                              rr_source,
                              epi_version,
-                             ihme = get_ihme(version = epi_version),
-                             adult_ages = get_adult_ages(ihme),
                              .region = "inc_China",
                              .mode = 'change') { # change or attribution?
 
@@ -319,52 +314,12 @@ country_paf_perm <- function(pm.base,
     filter(cause == !!cause)
 
   # Get age weights ---
-  ages <- unique(rr$age) %>%
-    deduplicate_adult_ages()
+  age_data <- get_age_weights(region_id, cause, measure, rr_source, epi_version)
+  if(is.null(age_data)) return(NULL)
 
-  stopifnot(
-    !AGE_ADULTS %in% ages | length(intersect(ages, AGE_ADULTS_SPLIT))==0
-  )
+  ages <- age_data$ages
+  age_weights <- age_data$age_weights
 
-  age_weights <- ihme %>%
-    mutate(age=recode_age(age)) %>%
-    mutate(cause_short = case_when(cause_short==CAUSE_LRI & age==AGE_CHILDREN ~ CAUSE_LRICHILD,
-                                   T ~ cause_short)) %>%
-    dplyr::filter(location_id==get_epi_location_id(region_id),
-                  cause_short == !!cause,
-                  measure_name == measure,
-                  age %in% ages,
-                  estimate == 'central')
-
-  if(nrow(age_weights) == 0) {
-    warning(glue("No age weights found for {region_id} and {cause} and {measure}"))
-    return(NULL)
-  }
-
-  if(length(age_weights$age) != length(ages)) {
-    stop("Unmatching age weights")
-  }
-
-  # Ensuring ages and age_weights$age are in the same order
-  age_weights <- age_weights[match(ages, age_weights$age),]
-#
-#
-#   age.specific <- c('NCD.LRI', 'Stroke', 'IHD')
-#
-#   if(cause %in% age.specific) {
-#     ages <- adult_ages
-#     age_weights <- ihme %>%
-#       dplyr::filter(location_id==get_epi_location_id(region_id),
-#                     cause == !!cause,
-#                     measure_name == measure,
-#                     age %in% ages,
-#                     estimate == 'central')
-#     # Ensuring ages and age_weights$age are in the same order
-#     age_weights <- age_weights[match(ages, age_weights$age),]
-#   } else {
-#     age_weights <- data.frame(val = 1)
-#     if(grepl('child', cause)) ages = 'Under 5' else ages = '25+'
-#   }
 
   rr.base <- ages %>% sapply(function(.a) get_hazard_ratio(pm.base, rr = rr, .cause = cause, .age = .a),
                              simplify = 'array')
@@ -372,7 +327,6 @@ country_paf_perm <- function(pm.base,
   if(.mode == 'change') {
     rr.perm <- ages %>% sapply(function(.a) get_hazard_ratio(pm.perm, rr = rr, .cause = cause, .age = .a),
                                simplify = 'array')
-
 
     paf <- get_paf_from_rr_lauri(
       rr_base = rr.base,

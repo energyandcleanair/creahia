@@ -282,7 +282,7 @@ compute_gdp_scaling <- function(hia_cost, reference_year, forecast_years, discou
 apply_econ_scaling <- function(hia_cost, pop_scaling, gdp_scaling_tbl = NULL, reference_year, forecast_years) {
 
   # set outcome fatal flag: YLLs and Deaths are fatal; YLDs are non-fatal
-  hia_cost <- hia_cost %>% mutate(fatal = grepl('YLLs|Deaths', outcome))
+  hia_cost <- hia_cost %>% mutate(fatal = grepl(paste(MEASURE_YLLS, MEASURE_DEATHS, sep = '|'), outcome))
 
   # ensure unique pop_scaling keys
   key_cols <- c('iso3','age_group','fatal','year')

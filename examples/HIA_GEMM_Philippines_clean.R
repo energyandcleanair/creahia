@@ -449,7 +449,7 @@ if("kml" %in% outputs) {
   library(plotKML)
   if(!file.exists("zip.exe"))
     file.copy(paste0(HIApath, "zip.exe"),"zip.exe")
-  labelF <- "factoryTransp3.png"
+  labelF <- "assets/factoryTransp3.png"
   if(!file.exists(labelF))
     file.copy(paste0(HIApath, labelF),labelF)
 }
@@ -624,11 +624,11 @@ for(file in queue[ifelse(test,1,T)]) {
                 size=1,
                 alpha=1,altitude=0,
                 labels=Source,
-                LabelScale=0.5,sname="labels",shape="factoryTransp3.png")
+                LabelScale=0.5,sname="labels",shape="assets/factoryTransp3.png")
 
       kml_screen(image.file="label.png",position="UL",sname="Label")
       kml_close(file.name=paste0(outL,".kml"))
-      zip(paste0(outL,".kmz"),c(paste0(outL,".kml"),"factoryTransp3.png","label.png"))
+      zip(paste0(outL,".kmz"),c(paste0(outL,".kml"),"assets/factoryTransp3.png","label.png"))
       if(!file.exists(paste0(outL,".kmz"))) stop("creating kmz failed")
       file.remove(paste0(outL,".kml"))
       file.remove("label.png")

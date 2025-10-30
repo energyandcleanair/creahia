@@ -4,7 +4,8 @@ generate_rrs <- function(){
     CAUSE_NCDLRI,
     CAUSE_LRI,
     CAUSE_COPD,
-    CAUSE_LBW,
+    # There is a CRF for LBW. Preventing double-counting for now.
+    # CAUSE_LBW,
     CAUSE_IHD,
     CAUSE_STROKE,
     CAUSE_LUNGCANCER,
@@ -47,28 +48,28 @@ generate_rrs <- function(){
       filter(cause %in% causes_to_keep) %>%
       check_rr() %>%
       mutate(source=source) %>%
-      write_csv(file.path('inst','extdata', paste0('rr_', source, '.csv')))
+      write_csv(file.path('inst','extdata','rr','processed', paste0('rr_', source, '.csv')))
 
   }) %>%
     bind_rows()
 
 
   # Visual check
-  # ggplot(rrs %>%
-  #          filter(exposure < 200) %>%
-  #          filter(age=='25+') %>%
-  #          pivot_longer(cols=c(low, central, high), names_to='rr_type', values_to='rr') %>%
-  #          filter(rr_type=='central',
-  #                 source %in% c("fusion", "gbd2021", "gbd2023")
-  #                 ),
-  #        aes(exposure, rr, col=source,
-  #            # linetype = rr_type
-  #            )) +
-  #   geom_line() +
-  #   facet_wrap(cause~age, scales='free_y')
-  #
-  #
-  #
+  if(F){
+    ggplot(rrs %>%
+             filter(exposure < 200) %>%
+             filter(age=='25+') %>%
+             pivot_longer(cols=c(low, central, high), names_to='rr_type', values_to='rr') %>%
+             filter(rr_type=='central',
+                    source %in% c("fusion", "gbd2021", "gbd2023")
+                    ),
+           aes(exposure, rr, col=source,
+               # linetype = rr_type
+               )) +
+      geom_line() +
+      facet_wrap(cause~age, scales='free_y')
+  }
+
   # # Plot marginal rrs
   # rrs %>%
   #   filter(exposure < 200, source %in% c("fusion", "gemm")) %>%
@@ -197,4 +198,3 @@ add_lri_child <- function(rr){
            age = AGE_CHILDREN) %>%
     bind_rows(rr)
 }
-

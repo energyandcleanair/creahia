@@ -43,7 +43,7 @@ generate_rr_fusion <- function(){
 #' @examples
 generate_rrs_from_excel <- function(){
 
-  filepath <- get_hia_path("fusion/Fusion model RR lookup table.xlsx")
+  filepath <- get_hia_path("rr/raw/fusion/Fusion model RR lookup table.xlsx")
 
   rr_copd_lc_lri_diabetes <- readxl::read_xlsx(filepath,
                     range="Fusion RR!B21:N3021",
@@ -113,7 +113,7 @@ generate_rrs_from_excel <- function(){
 #' Not exactly matching excel file
 generate_rr_fusion_from_code <- function(){
 
-  params <- read.csv(get_hia_path("fusion/Fusion Parameters Jul 7, 2021.csv"), header = T, check.names = F)
+  params <- read.csv(get_hia_path("rr/raw/fusion/Fusion Parameters Jul 7, 2021.csv"), header = T, check.names = F)
   col_indexes <- get_col_indexes(params)
   datatheta <- get_datatheta()
 
@@ -325,7 +325,7 @@ generate_rrs_per_cause_age <- function(cause,
 
 get_datatheta <- function(){
 
-  read.csv(get_hia_path("fusion/LL Fusion Parameters theta eq 97.5.csv"), header = T) %>%
+  read.csv(get_hia_path("rr/raw/fusion/LL Fusion Parameters theta eq 97.5.csv"), header = T) %>%
     rename(cause=COD,
            age=Age) %>%
     # turn empty to NA
@@ -425,4 +425,3 @@ get_col_indexes <- function(params){
     mutate(age = str_split(age, "##")) %>%
     unnest(age)
 }
-
