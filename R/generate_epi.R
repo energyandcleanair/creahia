@@ -17,6 +17,18 @@ download_raw_epi <- function(version, dataset) {
     gbd2021 = list(
       raw = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2021-permalink/951bb3a80e3e0c542986a1be0f32efec",
       asthma = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2021-permalink/428758edc6d75bebf16eb96beee09adc"
+    ),
+    # IHME has new constraints for GBD 2023 volumes of requests. Need to split it.
+    gbd2023 = list(
+      raw = c(
+        "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2023-permalink/a07331966aa79e306604e0410e901038", #Deaths - Rate
+        "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2023-permalink/9a19665b246918a54cb43ac64579079f", #YLD - Rate
+        "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2023-permalink/dbf992902689b33eb12222c8255c88e7", #YLL - Rate
+        "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2023-permalink/314d2e57edd83ee2bf1fd7b2bc48c4a0", #Deaths - Number
+        "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2023-permalink/22254738d5c3f9b72a920ad8ff2a89d3", #YLD - Number
+        "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2023-permalink/42d57710c259ffe1aff7f1c29e3e5a2b"  #YLL - Number
+      ),
+      asthma = "https://vizhub.healthdata.org/gbd-results?params=gbd-api-2023-permalink/229016516ad62c1e6a953aaf07e8af73"
     )
   )
 
@@ -32,7 +44,8 @@ get_gbd_raw <- function(version) {
   filepaths <- list(
     gbd2017 = list.files("data/epi_update", pattern = "IHME-GBD_2017_DATA-\\d.csv", full.names = T),
     gbd2019 = list.files("data/epi_update", pattern = "IHME-GBD_2019_DATA-\\d.csv", full.names = T),
-    gbd2021 = list.files("data/epi_update", pattern = "IHME-GBD_2021_DATA-\\d.csv", full.names = T)
+    gbd2021 = list.files("data/epi_update", pattern = "IHME-GBD_2021_DATA-\\d.csv", full.names = T),
+    gbd2023 = list.files("data/epi_update/gbd2023", pattern = "IHME-GBD_2023_DATA.*.csv", full.names = T)
   )[[version]]
 
   if(!all(file.exists(filepaths))){
@@ -49,7 +62,8 @@ get_gbd_asthma_raw <- function(version) {
   list(
     gbd2017 = c("data/epi_update/IHME-GBD_2017_DATA-asthma.csv"),
     gbd2019 = c("data/epi_update/IHME-GBD_2019_DATA-asthma.csv"),
-    gbd2021 = c("data/epi_update/IHME-GBD_2021_DATA-asthma.csv")
+    gbd2021 = c("data/epi_update/IHME-GBD_2021_DATA-asthma.csv"),
+    gbd2023 = list.files("data/epi_update/gbd2023/asthma", pattern = "IHME-GBD_2023_DATA.*.csv", full.names = T)
   )[[version]] %>%
     lapply(read_csv) %>%
     bind_rows()
@@ -95,7 +109,7 @@ get_epi_location_id <- function(region_id) {
 
 
 get_locations <- function() {
-  raw <- readxl::read_xlsx(get_hia_path("epi/raw/IHME_GBD_2019_GBD_LOCATION_HIERARCHY_Y2022M06D29.XLSX"), .name_repair = make.names) %>%
+  raw <- readxl::read_xlsx(get_hia_path("location_matching/IHME_GBD_2019_GBD_LOCATION_HIERARCHY_Y2022M06D29.XLSX"), .name_repair = make.names) %>%
     select(
       location_id = matches("location.id", ignore.case = T),
       level = matches("^level$", ignore.case = T),
@@ -185,24 +199,31 @@ get_epi_pop <- function(version="gbd2019", level = c(3, 4)) {
   locations <- get_locations()
 
   filepath <- list(
-    "gbd2019" = "IHME_GBD_2019_POP_2019_Y2020M10D15.CSV"
+    "gbd2019" = "IHME_GBD_2019_POP_2019_Y2020M10D15.CSV",
+    "gbd2021" = "IHME-GBD_2021_POP.csv",
+    "gbd2023" = "IHME-GBD_2023_POP.csv"
+  )[[version]]
 
+  # We use latest year available
+  pop <- read_csv(get_hia_path(glue("population/{filepath}")))
+
+  # Recode columns if need be
+  recode_cols <- list(
+    year_id = "year",
+    age_group_name = "age_name"
   )
+  colnames(pop) <- recode(colnames(pop), !!!recode_cols)
 
-  # CHECK Should we use 2019 pop even with 2017 data?
-  pop <- read_csv(get_hia_path("epi/raw/IHME_GBD_2019_POP_2019_Y2020M10D15.CSV")) %>% # read.csv('2017 data/IHME_GBD_2017_POP_2015_2017.CSV') %>%
-    dplyr::filter(year_id == 2019, tolower(sex_name) == "both") %>%
+  pop <- pop %>%
+    dplyr::filter(year == max(year),
+                  tolower(sex_name) == "both",
+                  tolower(age_name) == "all ages") %>%
     dplyr::rename(country = location_name)
 
   locations %>%
     right_join(pop, by = "location_id") %>%
     filter(location_level %in% !!level) %>%
     distinct()
-}
-
-
-get_pop_total <- function(pop) {
-  pop %>% filter(age_group_name == "All Ages")
 }
 
 
@@ -232,10 +253,10 @@ get_asthma_new <- function() {
 #'
 #' and scale it to population
 #'
-#' @param pop.total
+#' @param pop
 #'
 #' @returns
-get_asthma_erv <- function(pop.total = NULL) {
+get_asthma_erv <- function(pop = NULL) {
   asthma.erv <- readxl::read_xlsx("data/epi_update/Anenberg EHP 2018 results.xlsx", sheet = "pm totconc") %>%
     filter(!is.na(ID)) %>%
     dplyr::rename(
@@ -247,9 +268,8 @@ get_asthma_erv <- function(pop.total = NULL) {
 
 
   # add Serbia and Montenegro data to asthma ERV
-  pop.total <- creahelpers::default_if_null(pop.total, get_pop_total())
-  pop.total %<>% addiso()
-  pop.total %>%
+  pop %<>% addiso()
+  pop %>%
     filter(iso3 %in% c("SRB", "MNE")) %>%
     distinct() -> sm
   sm$val <- sm$val / sum(sm$val)
@@ -268,7 +288,7 @@ get_asthma_erv <- function(pop.total = NULL) {
   asthma.erv.scaled <- asthma.erv %>%
     mutate(iso3 = countrycode::countrycode(country, "country.name", "iso3c")) %>%
     select(country, iso3, starts_with("exac")) %>%
-    left_join(pop.total %>% filter(location_level == 3) %>% select(iso3, pop = val))
+    left_join(pop %>% filter(location_level == 3) %>% select(iso3, pop = val))
 
   asthma.erv.scaled$exac.0to17 %<>% magrittr::divide_by(asthma.erv.scaled$pop) %>% magrittr::multiply_by(1e5)
   asthma.erv.scaled$exac.18to99 %<>% magrittr::divide_by(asthma.erv.scaled$pop) %>% magrittr::multiply_by(1e5)
@@ -328,7 +348,7 @@ get_absences <- function(labor_age_share_pct, labor_partic_pct) {
 
 }
 
-get_death_all_cause <- function(pop.total, version = "gbd2019") {
+get_death_all_cause <- function(pop, version = "gbd2019") {
   get_gbd_raw(version) %>%
     add_location_details() %>%
     mutate(cause = recode_gbd_cause(cause_name)) %>%
@@ -341,7 +361,7 @@ get_death_all_cause <- function(pop.total, version = "gbd2019") {
     gather_epi() %>%
     group_by(location_id, location_name, location_level, measure_name, metric_name, estimate) %>%
     summarise_at("val", sum) %>%
-    ihme_getrate(pop.total = pop.total) %>%
+    ihme_getrate(pop = pop) %>%
     mutate(metric_key = build_metric_key(CAUSE_NCDLRI, measure_name))
 }
 
@@ -355,7 +375,7 @@ get_death_crude <- function(version = "gbd2019") {
 }
 
 
-get_death_child_lri <- function(pop.total, version = "gbd2019") {
+get_death_child_lri <- function(pop, version = "gbd2019") {
   get_gbd_raw(version) %>%
     add_location_details() %>%
     mutate(cause= recode_gbd_cause(cause_name)) %>%
@@ -366,7 +386,7 @@ get_death_child_lri <- function(pop.total, version = "gbd2019") {
     ) %>%
     mutate(age_name = AGE_CHILDREN) %>%
     gather_epi() %>%
-    ihme_getrate(pop.total = pop.total) %>%
+    ihme_getrate(pop = pop) %>%
     filter(measure_name %in% c(MEASURE_DEATHS, MEASURE_YLLS)) %>%
     mutate(metric_key = build_metric_key(CAUSE_LRICHILD, measure_name))
 }
@@ -433,21 +453,21 @@ recode_gbd_cause <- function(cause_name){
 }
 
 
-get_yld <- function(pop.total, version = "gbd2019") {
+get_yld <- function(pop, version = "gbd2019") {
 
   if(version == "gbd2017"){
-    return(get_yld_gbd2017(pop.total=pop.total, version=version))
+    return(get_yld_gbd2017(pop=pop, version=version))
   }
 
   get_gbd_raw(version) %>%
     add_location_details() %>%
     filter(
       metric_name == "Number",
-      measure_name %in% c(MEASURE_YLLS, MEASURE_DEATHS, MEASURE_YLDs)
+      measure_name %in% c(MEASURE_YLLS, MEASURE_DEATHS, MEASURE_YLDS)
     ) %>%
     filter(age_name=="25+ years") %>%
     gather_epi() %>%
-    ihme_getrate(pop.total = pop.total) %>%
+    ihme_getrate(pop = pop) %>%
     mutate(cause_name = recode_gbd_cause(cause_name)) %>%
     filter(!is.na(cause_name)) %>%
     filter(!is.na(val)) %>%
@@ -480,8 +500,10 @@ get_yld <- function(pop.total, version = "gbd2019") {
         val = c(df_sum$central, low, high)
       )
     }) %>%
+    ungroup() %>%
     filter(!is.na(cause_name)) %>%
     mutate(metric_key = build_metric_key(cause_name, measure_name))
+
 }
 
 
@@ -493,20 +515,20 @@ get_yld <- function(pop.total, version = "gbd2019") {
 #' @export
 #'
 #' @examples
-get_yld_gbd2017 <- function(pop.total, version){
+get_yld_gbd2017 <- function(pop, version){
 
   yld <- get_gbd_raw(version) %>%
     add_location_details() %>%
     filter(
       metric_name == "Number",
-      measure_name %in% c(MEASURE_YLLS, MEASURE_DEATHS, MEASURE_YLDs)
+      measure_name %in% c(MEASURE_YLLS, MEASURE_DEATHS, MEASURE_YLDS)
     ) %>%
     mutate(age_low = get_age_low(age_name)) %>%
     filter(!is.na(age_low), age_low >= 25) %>%
     gather_epi() %>%
     group_by(location_id, location_name, location_level, iso3, cause_name, metric_name, measure_name, estimate, year) %>%
     summarise_at("val", sum) %>%
-    ihme_getrate(pop.total = pop.total) %>%
+    ihme_getrate(pop = pop) %>%
     mutate(cause_name = recode(cause_name,
                                "Ischemic heart disease" = "IHD",
                                "Lower respiratory infections" = "LRI",
@@ -636,14 +658,14 @@ compute_others <- function(yld, total, grep, newname, metric_name="Number") {
 
 #' Get asthma prevalence and incidence from GBD
 #'
-#' @param pop.total
+#' @param pop
 #' @param version
 #'
 #' @returns
 #' @export
 #'
 #' @examples
-get_asthma_prev_and_inc <- function(pop.total, version = "gbd2019") {
+get_asthma_prev_and_inc <- function(pop, version = "gbd2019") {
 
   asthma_raw_data <- get_gbd_asthma_raw(version = version) %>%
     mutate(age_low = get_age_low(age_name))
@@ -675,7 +697,7 @@ get_asthma_prev_and_inc <- function(pop.total, version = "gbd2019") {
     group_by(location_id, location_name, location_level, iso3, year, measure_name, estimate) %>%
     summarise_at("val", sum) %>%
     mutate(metric_key = paste0("Asthma.", substr(measure_name, 1, 4), ".1to18")) %>%
-    ihme_getrate(pop.total = pop.total) %>%
+    ihme_getrate(pop = pop) %>%
     bind_rows(asthma.prev)
 
   asthma_raw_data %>%
@@ -753,11 +775,10 @@ fill_and_add_missing_regions <- function(epi_wide) {
     name = "Kosovo"
   )
 
-  # Fill Taiwan
+  # Fill Taiwan using Japan data
   idx_taiwan <- !is.na(epi_wide$iso3) & epi_wide$iso3 == "TWN"
   idx_japan <- !is.na(epi_wide$iso3) & epi_wide$iso3 == "JPN" & epi_wide$location_level == 3
   epi_wide$country[idx_taiwan] <- "Taiwan"
-  # epi_wide$GDP.PPP.2011USD[idx_taiwan] <- epi_wide$GDP.PPP.2011USD[idx_japan] * 53023 / 44227
   epi_wide[idx_taiwan & epi_wide$estimate == "central", ] %>%
     unlist() %>%
     subset(is.na(.)) %>%
@@ -804,24 +825,20 @@ fill_subnational <- function(epi) {
 }
 
 
-
 fill_low_high <- function(indata) {
   # For each location_id and numeric metric column, fill missing values
   # in non-central estimates with the central estimate value
-  numeric_cols <- names(indata)[vapply(indata, is.numeric, logical(1))]
 
-  central_vals <- indata %>%
-    dplyr::filter(estimate == "central") %>%
-    dplyr::select(location_id, dplyr::all_of(numeric_cols)) %>%
-    dplyr::rename_with(~ paste0(.x, "__central"), dplyr::all_of(numeric_cols))
+  numeric_cols <- names(indata)[vapply(indata, is.numeric, logical(1))]
+  numeric_cols <- setdiff(numeric_cols, c("location_id", "location_level"))
 
   indata %>%
-    dplyr::left_join(central_vals, by = "location_id") %>%
+    dplyr::group_by(location_id) %>%
     dplyr::mutate(dplyr::across(
       dplyr::all_of(numeric_cols),
-      ~ dplyr::coalesce(.x, .data[[paste0(cur_column(), "__central")]])
+      ~ dplyr::coalesce(.x, .[estimate == "central"][1])
     )) %>%
-    dplyr::select(-dplyr::ends_with("__central"))
+    dplyr::ungroup()
 }
 
 
@@ -872,7 +889,7 @@ add_location_details <- function(x, locations = get_locations()) {
 }
 
 
-generate_epi <- function(version = "gbd2019") {
+generate_epi <- function(version = "gbd2023") {
 
   library(creahia)
 
@@ -885,23 +902,22 @@ generate_epi <- function(version = "gbd2019") {
   # Get data from other sources or compute them from World Bank data
   wb_ind <- get_wb_ind()
   pop <- get_epi_pop(version)
-  pop.total <- get_pop_total(pop)
   asthma.new <- get_asthma_new()
-  asthma.erv <- get_asthma_erv(pop.total = pop.total)
+  asthma.erv <- get_asthma_erv(pop = pop)
   ptb <- get_ptb(birth_rate_p1k)
   lbw <- get_lbw(birth_rate_p1k, lbw_rate_pct)
   absences <- get_absences(labor_age_share_pct, labor_partic_pct)
   locations <- get_locations()
 
   # Get data from GBD
-  death.all.cause <- get_death_all_cause(pop.total = pop.total, version = version)
+  death.all.cause <- get_death_all_cause(pop = pop, version = version)
   deaths.crude <- get_death_crude(version = version)
-  death.child.lri <- get_death_child_lri(pop.total = pop.total, version = version)
-  yld <- get_yld(pop.total = pop.total, version = version)
-  asthma.prev_inc <- get_asthma_prev_and_inc(pop.total = pop.total, version = version)
+  death.child.lri <- get_death_child_lri(pop = pop, version = version)
+  yld <- get_yld(pop = pop, version = version)
+  asthma.prev_inc <- get_asthma_prev_and_inc(pop = pop, version = version)
 
   epi <- lapply(list(
-    pop.total %>% mutate(metric_key = "pop"),
+    pop %>% mutate(metric_key = "pop"),
     death.all.cause,
     deaths.crude,
     death.child.lri,
@@ -937,7 +953,7 @@ generate_epi <- function(version = "gbd2019") {
     pivot_wider(names_from = metric_key, values_from = val)
 
   # Add missing regions (e.g. Hong Kong, Macau, Kosovo)
-  epi_wide <- fill_and_add_missing_regions(epi)
+  epi_wide <- fill_and_add_missing_regions(epi_wide)
 
   # Add new variables for health impact calculations
   # TODO: Check if still used anywhere

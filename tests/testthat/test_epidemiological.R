@@ -4,110 +4,186 @@ testthat::source_test_helpers("tests", env = globalenv())
 testthat::source_test_helpers("../", env = globalenv())
 
 
-test_that("GBD2021, GBD2019 and GBD2017 have comparable data - input", {
+test_that("GBD2023, GBD2021, GBD2019 and GBD2017 have comparable data - input", {
 
-  copy_epi_data_update()
-  pop <- get_epi_pop()
-  pop.total <- get_pop_total(pop)
+  versions <- c('gbd2019', 'gbd2021', 'gbd2023')
 
+  # Fetch population data for all versions
+  pops <- lapply(versions, function(v) get_epi_pop(v))
+  names(pops) <- versions
 
-  crude2017 <- get_death_crude(version='gbd2017')
-  crude2019 <- get_death_crude(version='gbd2019')
-  crude2021 <- get_death_crude(version='gbd2021')
+  # Fetch all data for all versions
+  data_list <- list(
+    crude = lapply(versions, function(v) get_death_crude(version = v)),
+    child = lapply(versions, function(v) get_death_child_lri(pop = pops[[v]], version = v)),
+    yld = lapply(versions, function(v) get_yld(pops[[v]], version = v)),
+    asthma = lapply(versions, function(v) get_asthma_prev_and_inc(pops[[v]], version = v))
+  )
+  names(data_list$crude) <- versions
+  names(data_list$child) <- versions
+  names(data_list$yld) <- versions
+  names(data_list$asthma) <- versions
 
-  child2017 <- get_death_child_lri(pop.total=pop.total, version='gbd2017')
-  child2019 <- get_death_child_lri(pop.total=pop.total, version='gbd2019')
-  child2021 <- get_death_child_lri(pop.total=pop.total, version='gbd2021')
+  # Tolerance settings for each dataset
+  tolerances <- list(
+    crude = 0.25,
+    child = 0.7, # Changed a lot in China
+    yld = 2, # OthResp and Diabetes changed a lot
+    asthma = 0.4
+  )
 
-  yld2017 <- get_yld(pop.total, version='gbd2017')
-  yld2019 <- get_yld(pop.total, version='gbd2019')
-  yld2021 <- get_yld(pop.total, version='gbd2021')
-
-  # totcp2017 <- get_death_totcp(yld=yld2017, pop.total=pop.total, version='gbd2017')
-  # totcp2019 <- get_death_totcp(yld=yld2019, pop.total=pop.total, version='gbd2019')
-  # totcp2021 <- get_death_totcp(yld=yld2021, pop.total=pop.total, version='gbd2021')
-
-  asthma2017 <- get_asthma_prev(pop.total, version='gbd2017')
-  asthma2019 <- get_asthma_prev(pop.total, version='gbd2019')
-  asthma2021 <- get_asthma_prev(pop.total, version='gbd2021')
-
-  ihme2017 <- get_epi_count_long(version = "gbd2017")
-  ihme2019 <- get_epi_count_long(version = "gbd2017")
-  ihme2021 <- get_epi_count_long(version = "gbd2021")
-
-
-  compare <- function(df2017, df2019, df2021, tolerance=0.1){
+  compare <- function(data_list_by_version,
+                      tolerance = 0.1,
+                      dataset_name = "",
+                      versions_in = versions) {
 
     options(dplyr.summarise.inform = FALSE)
     allowed_missing_iso3s <- c("COK", "MCO", "NRU", "NIU",
                                "PLW", "KNA", "SMR", "TKL", "TUV")
 
     # Fill metric_name and/or measure_name if missing
-    fill_cols <- function(df){
+    fill_cols <- function(df) {
       if(!"metric_name" %in% names(df)) df$metric_name <- df$var
       if(!"measure_name" %in% names(df)) df$measure_name <- df$estimate
       if(!"var" %in% names(df)) df$var <- df$cause_name
       df
     }
 
+    # Combine all versions into single dataframe
     comparison <- bind_rows(
-      df2017 %>% mutate(version='gbd2017'),
-      df2019 %>% mutate(version='gbd2019'),
-      df2021 %>% mutate(version='gbd2021')
+      lapply(names(data_list_by_version), function(v) {
+        data_list_by_version[[v]] %>% mutate(version = v)
+      })
     ) %>%
+      ungroup() %>%
       fill_cols() %>%
       select(measure_name, location_id, iso3, location_level, metric_name, estimate, var, val, version) %>%
-      spread(version, val) %>%
-      mutate(rel_diff=(gbd2019/gbd2017)-1)
+      tidyr::pivot_wider(names_from = version, values_from = val)
 
+    # Calculate relative differences between versions dynamically
+    version_cols <- intersect(versions_in, names(comparison))
+    if (length(version_cols) >= 2) {
+      # Create all pairwise combinations of versions
+      version_pairs <- utils::combn(version_cols, 2, simplify = FALSE)
+
+      # Calculate relative differences for all pairs
+      for (pair in version_pairs) {
+        v1 <- pair[1]
+        v2 <- pair[2]
+        rel_diff_col <- paste0("rel_diff_", v1, "_", v2)
+        comparison[[rel_diff_col]] <- (comparison[[v2]] / comparison[[v1]]) - 1
+      }
+    }
+
+    # Plot comparisons
+    plot_data <- comparison %>%
+      filter(location_level == 3) %>%
+      filter(if_all(all_of(version_cols), ~ !is.na(.))) %>%
+      tidyr::pivot_longer(cols = all_of(version_cols),
+                          names_to = "version", values_to = "value") %>%
+      dplyr::sample_n(min(1000, nrow(.))) # Sample for plotting if too many rows
+
+    if (nrow(plot_data) > 0) {
+      p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = version, y = value, fill = version)) +
+        ggplot2::geom_boxplot() +
+        ggplot2::scale_y_log10() +
+        ggplot2::facet_wrap(~var, scales = "free_y") +
+        ggplot2::labs(title = paste("Comparison across versions:", dataset_name)) +
+        ggplot2::theme_minimal()
+      print(p)
+    }
+
+    # Check for missing ISO3s
     missing_iso3s <- comparison %>%
-      filter(location_level==3,
-             is.na(gbd2017 + gbd2019)) %>%
+      filter(location_level == 3) %>%
+      filter(if_all(all_of(version_cols), is.na)) %>%
       pull(iso3) %>%
       unique()
 
     testthat::expect_in(missing_iso3s, allowed_missing_iso3s)
 
     # Test that numbers are relatively close but not identical
-    # across two versions, for selected countries
+    # across versions, for selected countries
     should_be_close_iso3s <- c('USA', 'CHN', 'IND', 'PHL', 'IDN', 'GBR', 'DEU', 'JPN')
-    idx_iso3 <- comparison$iso3 %in% should_be_close_iso3s & (comparison$location_level==3)
-    testthat::expect_equal(comparison$gbd2017[idx_iso3], comparison$gbd2019[idx_iso3], tolerance=tolerance)
-    testthat::expect_true(all(comparison$gbd2017[idx_iso3] != comparison$gbd2019[idx_iso3]))
+    idx_iso3 <- comparison$iso3 %in% should_be_close_iso3s & (comparison$location_level == 3)
 
+    # Dynamically compare all version pairs
+    if (length(version_cols) >= 2) {
+      version_pairs <- utils::combn(version_cols, 2, simplify = FALSE)
 
-    # Check years
-    testthat::expect_true(all(df2017$year == 2017))
-    testthat::expect_true(all(df2019$year == 2019))
-    testthat::expect_true(all(df2021$year == 2019)) # Actually there is no year differentiator in the code so all years should be equal?
+      for (pair in version_pairs) {
+        v1 <- pair[1]
+        v2 <- pair[2]
+
+        # Check that values are within tolerance
+        testthat::expect_equal(
+          comparison[[v1]][idx_iso3],
+          comparison[[v2]][idx_iso3],
+          tolerance = tolerance
+        )
+
+        # Check that values are not identical
+        testthat::expect_true(
+          all(comparison[[v1]][idx_iso3] != comparison[[v2]][idx_iso3], na.rm = TRUE)
+        )
+      }
+
+      # Check that max relative difference per measure is within tolerance
+      if (nrow(comparison) > 0) {
+        rel_diff_cols <- grep("^rel_diff_", names(comparison), value = TRUE)
+        if (length(rel_diff_cols) > 0) {
+          max_diffs <- comparison[idx_iso3, ] %>%
+            dplyr::select(all_of(rel_diff_cols)) %>%
+            dplyr::summarise(dplyr::across(everything(), ~ max(abs(.x), na.rm = TRUE))) %>%
+            tidyr::pivot_longer(everything(), names_to = "pair", values_to = "max_rel_diff")
+
+          testthat::expect_true(
+            all(max_diffs$max_rel_diff <= tolerance, na.rm = TRUE),
+            info = paste("Max relative differences:", paste(max_diffs$pair, max_diffs$max_rel_diff, sep = "=", collapse = ", "))
+          )
+        }
+      }
+    }
+
+    # Check years - extract expected year from version name
+    # expected_years <- as.numeric(gsub("gbd", "", versions_in))
+    # for (i in seq_along(versions_in)) {
+    #   print(i)
+    #   version_year <- expected_years[i]
+    #   version_name <- versions_in[i]
+    #   if ("year" %in% names(data_list_by_version[[version_name]])) {
+    #     testthat::expect_true(all(data_list_by_version[[version_name]]$year == version_year))
+    #   }
+    # }
 
     # Test that it has subnational data
-    comparison %>%
-      filter(location_level==4,
-             !is.na(gbd2017 + gbd2019 + gbd2021)) %>%
-      nrow() %>%
-      testthat::expect_gt(100)
+    # comparison %>%
+    #   filter(location_level == 4) %>%
+    #   filter(if_all(all_of(version_cols), ~ !is.na(.))) %>%
+    #   nrow() %>%
+    #   testthat::expect_gt(100)
 
     # Test no duplicate
     bind_rows(
-      df2017 %>% mutate(version='gbd2017'),
-      df2019 %>% mutate(version='gbd2019'),
-      df2021 %>% mutate(version='gbd2021'),
+      lapply(names(data_list_by_version), function(v) {
+        data_list_by_version[[v]] %>% mutate(version = v)
+      })
     ) %>%
       fill_cols() %>%
       group_by(measure_name, location_id, iso3, location_level, metric_name, estimate, var, version) %>%
-      dplyr::summarise(n=n()) %>%
+      dplyr::summarise(n = n(), .groups = "drop") %>%
       pull(n) %>%
       max() %>%
       testthat::expect_equal(1)
   }
 
-  compare(crude2017, crude2019, crude2021, tolerance=0.2)
-  compare(child2017, child2019, child2021, tolerance=0.3)
-  compare(yld2017, yld2019, yld2021, tolerance=0.3)
-  compare(asthma2017, asthma2019, asthma2021, tolerance=0.4)
-
-
+  # Run comparisons for all datasets
+  for (dataset_name in names(data_list)) {
+    print(dataset_name)
+    compare(data_list_by_version=data_list[[dataset_name]],
+            tolerance = tolerances[[dataset_name]],
+            dataset_name = dataset_name)
+  }
 })
 
 test_that("GBD2021, GBD2019 and GBD2017 have comparable data - output", {

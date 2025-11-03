@@ -81,8 +81,9 @@ gather_epi <- function(df) {
 }
 
 
-ihme_getrate <- function(df, pop.total) {
-  df %>% left_join(pop.total %>% sel(location_id, pop = val), by = "location_id") %>%
+ihme_getrate <- function(df, pop) {
+  df %>%
+    left_join(pop %>% sel(location_id, pop = val), by = "location_id") %>%
     mutate(val = val / pop * 1e5) %>% sel(-pop) %>%
     ungroup %>%
     distinct
