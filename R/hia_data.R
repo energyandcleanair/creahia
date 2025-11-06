@@ -143,12 +143,14 @@ fix_epi_cols <- function(epi){
   # For causes without outcomes, add default one to be compatible with new (explicit) crfs
   # Select columns that are numeric and have no _ in their name (and not the pop column)
   causes_wo_outcome <- names(epi)[sapply(epi, is.numeric) & !grepl('_', names(epi))
-                                  & !names(epi) %in% c("pop", "birth_rate_p1k", "labor_partic_pct")]
+                                  & !names(epi) %in% c("pop", "birth_rate_p1k", "labor_partic_pct",
+                                                       # Old versions still have these unnecessary columns
+                                                       "labor.partic", "birth.rate"
+                                                       )]
   for(cause in causes_wo_outcome) {
     newname <- paste0(cause, '_', cause)
     colnames(epi)[colnames(epi) == cause] <- newname
   }
-
 
   epi
 }
@@ -160,8 +162,9 @@ get_epi_versions <- function() {
     "gbd2017" = "epi/processed/epi_rate_wide_gbd2017.csv",
     "gbd2019" = "epi/processed/epi_rate_wide_gbd2019.csv",
     "gbd2021" = "epi/processed/epi_rate_wide_gbd2021.csv",
+    "gbd2023" = "epi/processed/epi_rate_wide_gbd2023.csv",
     # Default is the latest GBD version
-    "default" = "epi/processed/epi_rate_wide_gbd2021.csv"
+    "default" = "epi/processed/epi_rate_wide_gbd2023.csv"
   )
 }
 
@@ -196,8 +199,6 @@ get_epi <- function(version = "default") {
       income_group = "High income"
     )
   }
-
-
 
   return(epi %>% distinct())
 }
