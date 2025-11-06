@@ -333,6 +333,7 @@ get_calc_causes <- function(causes_set = 'GEMM and GBD', filter = NULL) {
 }
 
 get_epi_count_long_raw <- function(version = 'gbd2021') {
+
   file_version <- recode(
     version,
     C40='gbd2017',
@@ -343,19 +344,26 @@ get_epi_count_long_raw <- function(version = 'gbd2021') {
     default='gbd2021',
   )
 
-  ihme <- read_csv(get_hia_path(glue("epi/processed/epi_count_long_{file_version}.csv")), col_types = cols())
+  epi_long <- read_csv(get_hia_path(glue("epi/processed/epi_count_long_{file_version}.csv")), col_types = cols())
 
   # Backward compatibility: handle old format with cause_short and cause_name
-  if ("cause_short" %in% names(ihme) && "cause_name" %in% names(ihme)) {
-    ihme <- ihme %>%
+  if ("cause_short" %in% names(epi_long) && "cause_name" %in% names(epi_long)) {
+    epi_long <- epi_long %>%
       mutate(cause = cause_short) %>%
       select(-cause_name, -cause_short)
   }
 
-  # Validate age completeness (allows both aggregate and split ages to coexist)
-  check_age_completeness(unique(ihme$age), data_name = glue("EPI count long {file_version}"))
+  # Aggregate to make sure there is no duplicate rows (these happened with OthCV and OthResp for instance)
+  # Now done in generate_epi_long but adding here for backward compatibility
+  epi_long <- epi_long %>%
+    # Group by all but val
+    group_by(across(-val)) %>%
+    summarise(val = sum(val), .groups = 'drop')
 
-  return(ihme)
+  # Validate age completeness (allows both aggregate and split ages to coexist)
+  check_age_completeness(unique(epi_long$age), data_name = glue("EPI count long {file_version}"))
+
+  return(epi_long)
 }
 
 # Memoised version to avoid re-reading large CSV files
@@ -368,7 +376,8 @@ clear_epi_count_long_cache <- function() {
 
 # Get age weights for a specific region, cause, and measure
 get_age_weights <- function(region_id, cause, measure, rr_source, version = "gbd2019") {
-  ihme <- get_epi_count_long(version)
+
+  epi_long <- get_epi_count_long(version)
 
   ages <- get_rr(rr_source) %>%
     filter(cause == !!cause) %>%
@@ -379,7 +388,7 @@ get_age_weights <- function(region_id, cause, measure, rr_source, version = "gbd
   # Validate that deduplicated ages have no overlap and are complete
   check_age_coverage_and_uniqueness(ages, data_name = glue("RR {rr_source} for {cause}"))
 
-  age_weights <- ihme %>%
+  age_weights <- epi_long %>%
     mutate(age = recode_age(age)) %>%
     filter(location_id == get_epi_location_id(region_id),
            cause == !!cause,
@@ -403,8 +412,8 @@ get_age_weights <- function(region_id, cause, measure, rr_source, version = "gbd
 }
 
 
-get_adult_ages <- function(ihme) {
-  ihme$age[ihme$age_low >= 25] %>% subset(!is.na(.)) %>%
+get_adult_ages <- function(epi_long) {
+  epi_long$age[epi_long$age_low >= 25] %>% subset(!is.na(.)) %>%
     unique
 }
 
