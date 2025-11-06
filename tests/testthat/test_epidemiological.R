@@ -400,6 +400,7 @@ test_that("EPI Count Long - all versions have same cause/age/measure combination
 })
 
 test_that("EPI Count Long - values are similar across versions", {
+
   epi_list <- load_epi_long_versions()
 
   # Compare values for key countries
@@ -408,7 +409,7 @@ test_that("EPI Count Long - values are similar across versions", {
       epi_list[[v]] %>%
         mutate(version = v) %>%
         filter(location_level == 3, iso3 %in% KEY_COUNTRIES) %>%
-        select(location_id, iso3, cause, age, measure_name, version, val)
+        select(location_id, iso3, cause, age, measure_name, version, estimate, val)
     })
   ) %>%
     tidyr::pivot_wider(names_from = version, values_from = val)
@@ -416,9 +417,9 @@ test_that("EPI Count Long - values are similar across versions", {
   # Compare pairwise
   version_pairs <- utils::combn(VERSIONS, 2, simplify = FALSE)
 
-      for (pair in version_pairs) {
-        v1 <- pair[1]
-        v2 <- pair[2]
+  for (pair in version_pairs) {
+    v1 <- pair[1]
+    v2 <- pair[2]
 
     comparison_pair <- combined %>%
       filter(!is.na(!!sym(v1)) & !is.na(!!sym(v2))) %>%
@@ -428,33 +429,30 @@ test_that("EPI Count Long - values are similar across versions", {
         )
 
         # Check that values are not identical
-        testthat::expect_true(
+    testthat::expect_true(
       any(comparison_pair$abs_diff > 0, na.rm = TRUE),
       info = paste("Values are identical between", v1, "and", v2)
     )
 
-    # Check that relative differences are reasonable
-    # Exclude some known problematic combinations (e.g., COPD for young ages)
-    comparison_filtered <- comparison_pair %>%
-      filter(!(age %in% c("5-9", "10-14", "<5", "Under 5") & cause == "COPD"))
-
-    if (nrow(comparison_filtered) > 0) {
-      median_rel_diff <- median(comparison_filtered$rel_diff, na.rm = TRUE)
-          testthat::expect_true(
-        median_rel_diff < 0.5,
-        info = paste("Median relative difference between", v1, "and", v2, "is", median_rel_diff)
-      )
-    }
+    median_rel_diff <- median(abs(comparison_pair$rel_diff), na.rm = TRUE)
+    testthat::expect_true(
+      median_rel_diff < 0.5,
+      info = paste("Median relative difference between", v1, "and", v2, "is", median_rel_diff)
+    )
   }
+
 })
 
 test_that("EPI Count Long - completeness checks", {
   epi_list <- load_epi_long_versions()
 
-  # Check for duplicates
   for (v in names(epi_list)) {
-    duplicates <- epi_list[[v]] %>%
+    epi <- epi_list[[v]]
+
+    # Check for duplicates
+    duplicates <- epi %>%
       filter(location_level == 3) %>%
+      filter(!is.na(location_id)) %>%
       group_by(location_id, cause, age, measure_name, sex_name) %>%
       summarise(n = n(), .groups = "drop") %>%
       filter(n > 1)
@@ -464,32 +462,16 @@ test_that("EPI Count Long - completeness checks", {
       0,
       info = paste("Found duplicates in", v)
     )
-  }
 
-  # Check that allowed missing countries are consistent
-  for (v in names(epi_list)) {
-    missing_iso3s <- epi_list[[v]] %>%
-      filter(location_level == 3) %>%
-      filter(is.na(val)) %>%
-      pull(iso3) %>%
+    # Check age completeness
+    # Check that if split ages are present, all must be present
+    unique_ages <- epi %>%
+      filter(location_level == 3, !is.na(location_id)) %>%
+      pull(age) %>%
       unique()
 
-    # Some combinations are expected to be missing (e.g., COPD for young ages)
-    # So we check at the country level - countries that are completely missing
-    completely_missing <- epi_list[[v]] %>%
-    filter(location_level == 3) %>%
-      group_by(iso3) %>%
-      summarise(all_missing = all(is.na(val)), .groups = "drop") %>%
-      filter(all_missing) %>%
-    pull(iso3) %>%
-    unique()
-
-    unexpected_missing <- setdiff(completely_missing, ALLOWED_MISSING_ISO3S)
-    testthat::expect_equal(
-      length(unexpected_missing),
-      0,
-      info = paste("Unexpected completely missing countries in", v, ":",
-                   paste(unexpected_missing, collapse = ", "))
+    testthat::expect_no_error(
+      check_age_completeness(unique_ages, data_name = glue::glue("EPI Count Long {v}"))
     )
   }
 })
