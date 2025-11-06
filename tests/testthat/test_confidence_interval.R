@@ -42,7 +42,7 @@ test_that("Order of estimates is consistent", {
 
 
   # New: Fusion, GBD2019, GEMM
-  rr_sourcess <- c(RR_FUSION, RR_GEMM, RR_GBD2019)
+  rr_sourcess <- c(RR_FUSION, RR_GEMM, RR_GBD2019, RR_GBD2021, RR_GBD2023)
   for(rr_sources in rr_sourcess) {
     hia <- generate_uniform_exposure_hia(list(pm25 = list(baseline = 60, target = 10)), rr_sources=rr_sources)
 

@@ -375,7 +375,7 @@ clear_epi_count_long_cache <- function() {
 }
 
 # Get age weights for a specific region, cause, and measure
-get_age_weights <- function(region_id, cause, measure, rr_source, version = "gbd2019") {
+get_age_weights <- function(region_id, cause, measure, rr_source, version) {
 
   epi_long <- get_epi_count_long(version)
 
