@@ -297,6 +297,17 @@ test_that("EPI Rate Wide - completeness checks", {
     epi <- epi_list[[v]]
     metric_keys <- get_metric_keys(epi)
 
+    # Check that we have location_level 3 and 4 data
+    location_levels <- epi %>%
+      filter(!is.na(location_id)) %>%
+      pull(location_level) %>%
+      unique()
+
+    testthat::expect_true(
+      all(c(3, 4) %in% location_levels),
+      info = paste("Missing location levels in", v, ". Found:", paste(sort(location_levels), collapse = ", "), ". Expected: 3, 4")
+    )
+
     # Check for duplicates
     duplicates <- epi %>%
       filter(location_level == 3) %>%
@@ -448,6 +459,17 @@ test_that("EPI Count Long - completeness checks", {
 
   for (v in names(epi_list)) {
     epi <- epi_list[[v]]
+
+    # Check that we have location_level 3 and 4 data
+    location_levels <- epi %>%
+      filter(!is.na(location_id)) %>%
+      pull(location_level) %>%
+      unique()
+
+    testthat::expect_true(
+      all(c(3, 4) %in% location_levels),
+      info = paste("Missing location levels in", v, ". Found:", paste(sort(location_levels), collapse = ", "), ". Expected: 3, 4")
+    )
 
     # Check for duplicates
     duplicates <- epi %>%
