@@ -9,7 +9,7 @@ generate_rr_original <- function(){
       high = pmax(rr_mean, rr_upper)
     ) %>%
     select(-c(rr_lower, rr_mean, rr_upper)) %>%
-    mutate(cause = recode_gbd_causes(cause)) %>%
+    mutate(cause = recode_rr_causes(cause)) %>%
     group_by(cause) %>%
     group_modify(function(df, key) {
       # if the cause is LRI, we need to add the child risk function

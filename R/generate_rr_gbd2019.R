@@ -22,7 +22,7 @@ generate_rr_gbd2019 <- function(){
     unnest(data) %>%
     filter(exposure_spline <= 300,
            !is.na(age)) %>%
-    mutate(cause = recode_gbd_causes(cause)) %>%
+    mutate(cause = recode_rr_causes(cause)) %>%
     select(cause,
            exposure=exposure_spline,
            age,

@@ -24,7 +24,7 @@ generate_rr_gbd2021 <- function(){
            cause != 'bw',
            cause != 'ga',
            !is.na(age)) %>%
-    mutate(cause = recode_gbd_causes(cause)) %>%
+    mutate(cause = recode_rr_causes(cause)) %>%
     select(cause,
            exposure,
            age,
