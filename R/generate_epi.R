@@ -698,8 +698,6 @@ get_yld_gbd2017 <- function(pop, version){
     filter(!is.na(cause_name)) %>%
     mutate(metric_key = build_metric_key(cause_name, measure_name))
 
-
-
   # Compute others
   other_cv <- compute_others(yld, "TotCV", "IHD|Stroke", "OthCV")
   other_resp <- compute_others(yld, "TotResp", "COPD", "OthResp")
@@ -1124,10 +1122,10 @@ fill_young_lungcancer <- function(ihme){
 #' @export
 #'
 #' @examples
-generate_epi_count_long <- function(version = "gbd2019") {
+generate_epi_count_long <- function(version = "gbd2023") {
 
   # read IHME mortality and morbidity data to enable country calculations
-  ihme <- get_gbd_raw(version) %>%
+  epi_long <- get_gbd_raw(version) %>%
     add_location_details() %>%
     filter(location_level %in% c(3, 4)) %>%
     dplyr::filter(metric_name == "Number") %>%
@@ -1143,30 +1141,33 @@ generate_epi_count_long <- function(version = "gbd2019") {
       gsub("^<5$", AGE_CHILDREN, .)
   }
 
-  ihme$age_low <- get_age_low(ihme$age_name)
-  ihme$age <- homogenise_age_name(ihme$age_name)
+  epi_long$age_low <- get_age_low(epi_long$age_name)
+  epi_long$age <- homogenise_age_name(epi_long$age_name)
 
-  if (ihme %>% group_by(age_low) %>% dplyr::summarise(count = n_distinct(age_name)) %>% pull(count) %>% max() > 1) {
+  if (epi_long %>% group_by(age_low) %>% dplyr::summarise(count = n_distinct(age_name)) %>% pull(count) %>% max() > 1) {
     stop("Two many age categories")
   }
 
-  ihme <- ihme %>%
+  epi_long <- epi_long %>%
     dplyr::filter(age_low >= 25) %>%
     group_by_at(vars(-val, -starts_with("age"))) %>%
     summarise_at("val", sum) %>%
     mutate(age = "25+") %>%
-    bind_rows(ihme) %>%
+    bind_rows(epi_long) %>%
     ungroup()
 
-  ihme <- ihme %>%
+  epi_long <- epi_long %>%
     recode_gbd() %>%
-    filter(!is.na(cause_name))
+    filter(!is.na(cause_name)) %>%
+    # Because multiple causes go into OthCV and OthResp, we aggregate
+    group_by(location_id, location_name, iso3, location_level, age, measure_name, age_low, age_name, cause_name, sex_name, metric_name, estimate) %>%
+    summarise(val = sum(val), .groups = "drop")
 
   # Check that we have all these
   if(length(setdiff(c(CAUSE_DIABETES, CAUSE_STROKE, CAUSE_LRI, CAUSE_NCD, CAUSE_IHD, CAUSE_COPD, CAUSE_LUNGCANCER, CAUSE_DEMENTIA),
-          unique(ihme$cause_name)))>0) stop("Missing data in IHME")
+          unique(epi_long$cause_name)))>0) stop("Missing data in epi_long")
 
-  ihme <- ihme %>%
+  epi_long <- epi_long %>%
     dplyr::filter(cause_name %in% c(CAUSE_NCD, CAUSE_LRI)) %>%
     group_by_at(vars(-val, -starts_with("cause"))) %>%
     dplyr::summarise(val=sum(val),
@@ -1176,29 +1177,29 @@ generate_epi_count_long <- function(version = "gbd2019") {
       .
     } %>%
     mutate(cause_name = CAUSE_NCDLRI) %>%
-    bind_rows(ihme) %>%
+    bind_rows(epi_long) %>%
     ungroup() %>%
     select(-n)
 
 
-  ihme <- fill_young_lungcancer(ihme)
+  epi_long <- fill_young_lungcancer(epi_long)
 
   # Add LRI.CHILD
-  ihme <- ihme %>%
+  epi_long <- epi_long %>%
     mutate(cause_name = case_when(cause_name==CAUSE_LRI & age==AGE_CHILDREN ~ CAUSE_LRICHILD,
                                  T ~ cause_name))
 
   # Add Kosovo
-  ihme <- ihme %>%
+  epi_long <- epi_long %>%
     dplyr::filter(iso3 == "ALB", location_level == 3) %>%
     mutate(iso3 = "XKX", location_name = "Kosovo", location_id = NA) %>%
-    bind_rows(ihme)
+    bind_rows(epi_long)
 
   # Check age completeness (allows both aggregate and split ages to coexist)
-  check_age_completeness(unique(ihme$age), data_name = glue::glue("IHME {version}"))
+  check_age_completeness(unique(epi_long$age), data_name = glue::glue("epi_long {version}"))
 
   # Generate a lighter version
-  ihme %>%
+  epi_long %>%
     select(location_id, location_name, iso3, location_level, age, measure_name, age_low, age_name, cause=cause_name, sex_name, metric_name, estimate, val) %>%
     filter(estimate == "central") %>%
     write_csv(glue::glue("inst/extdata/epi/processed/epi_count_long_{version}.csv"))
