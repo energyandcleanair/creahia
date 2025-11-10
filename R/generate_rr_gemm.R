@@ -11,7 +11,7 @@ generate_rr_gemm <- function(region="inc_China"){
 
   # Filter causes to match those of original IER for now
   rr <- rr %>%
-    mutate(cause=recode_gbd_causes(cause, stop_on_unknown = FALSE)) %>%
+    mutate(cause=recode_rr_causes(cause, stop_on_unknown = FALSE)) %>%
     mutate(age=recode_age(age)) %>%
     filter(!is.na(age))
 

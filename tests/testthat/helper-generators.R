@@ -79,7 +79,7 @@ generate_random_exposure <- function(min, max){
 #' }
 generate_uniform_exposure_hia <- function(exposure_values = list(pm25 = list(baseline = 60, target = 0)),
                                           iso3 = "BGD",
-                                          epi_version = "gbd2019",
+                                          epi_version = "gbd2023",
                                           ...){
 
   library(terra)
@@ -89,7 +89,7 @@ generate_uniform_exposure_hia <- function(exposure_values = list(pm25 = list(bas
 
   # Get PM2.5 exposure raster over country with resolution 0.01deg
   iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')
-  
+
   adm <- creahelpers::get_adm(level = 0, res = "low", iso2s = iso2)
   bbox <- sf::st_bbox(adm)
   res <- 0.01
@@ -158,7 +158,7 @@ generate_uniform_exposure_hia <- function(exposure_values = list(pm25 = list(bas
 generate_random_exposure_hias <- function(levels,
                                           exposure_ranges = list(pm25 = list(min = 10, max = 30)),
                                           target_default = 0,
-                                          epi_version = "gbd2019",
+                                          epi_version = "gbd2023",
                                           administrative_res = "full",
                                           iso3 = "BGD",
                                           res = 0.01,
@@ -268,7 +268,7 @@ generate_donkelaar_exposure_hia <- function(target,
 
   # Get PM2.5 exposure raster over country with resolution 0.01deg
   iso2 <- countrycode::countrycode(iso3, origin='iso3c', destination='iso2c')
-  
+
   adm <- creahelpers::get_adm(level = 0, res = "low", iso2s = iso2)
   bbox <- sf::st_bbox(adm)
   pop <- creaexposure::data.pop(res=creaexposure::RES_30_SEC, bbox = bbox)

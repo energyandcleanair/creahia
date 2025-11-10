@@ -58,12 +58,13 @@ generate_rrs <- function(){
   if(F){
     ggplot(rrs %>%
              filter(exposure < 200) %>%
-             filter(age=='25+') %>%
+             # filter(age=='25+') %>%
              pivot_longer(cols=c(low, central, high), names_to='rr_type', values_to='rr') %>%
              filter(rr_type=='central',
-                    source %in% c("fusion", "gbd2021", "gbd2023")
+                    source %in% c("fusion", "gbd2021", "gbd2023", "gemm")
                     ),
-           aes(exposure, rr, col=source,
+           aes(exposure, rr,
+               col=source,
                # linetype = rr_type
                )) +
       geom_line() +
@@ -137,9 +138,7 @@ check_rr <- function(rr){
 }
 
 
-
-
-recode_gbd_causes <- function(cause, stop_on_unknown = TRUE){
+recode_rr_causes <- function(cause, stop_on_unknown = TRUE){
   result <- recode(tolower(cause),
          lri = CAUSE_LRI,
          lower_respiratory_infections = CAUSE_LRI,

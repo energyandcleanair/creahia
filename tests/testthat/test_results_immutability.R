@@ -31,7 +31,8 @@ get_fingerprint_bgd <- function(params = list(calc_causes = "GBD only", epi_vers
     administrative_res = "low",
     administrative_iso3s = "BGD",
     epi_version = params$epi_version,
-    calc_causes = params$calc_causes
+    calc_causes = params$calc_causes,
+    rr_sources = params$rr_sources
   )
 
   # Add metadata
@@ -39,6 +40,7 @@ get_fingerprint_bgd <- function(params = list(calc_causes = "GBD only", epi_vers
   hia$epi_version <- params$epi_version
   hia$calc_causes <- params$calc_causes
   hia$pop_year <- params$pop_year
+  hia$rr_sources <- params$rr_sources
 
   return(hia)
 }
@@ -62,7 +64,7 @@ load_package_version <- function(ref, force=FALSE) {
 }
 
 generate_fingerprint <- function(ref,
-                                 params = list(calc_causes = "GBD only", epi_version = "gbd2019", pop_year = 2020),
+                                 params,
                                  force = FALSE,
                                  force_current = TRUE){
 
@@ -72,12 +74,15 @@ generate_fingerprint <- function(ref,
   package_root <- here::here()
   fingerprint_dir <- file.path(package_root, "inst", "testdata", "fingerprints")
   filepath <- file.path(fingerprint_dir, glue("{ref}_hia_bgd_{param_string}.csv"))
+  message(filepath)
 
   # Check if file exists and force is FALSE
   current_force <- if(ref == "current") force_current else force
   if (file.exists(filepath) && !current_force) {
     message(glue("Fingerprint for version {ref} with params {param_string} already exists. Skipping."))
     return(NULL)
+  }else{
+    message(glue("Generating fingerprint for version {ref} with params {param_string}"))
   }
 
   # Load the package version
@@ -102,12 +107,10 @@ generate_fingerprint <- function(ref,
 }
 
 
-generate_fingerprints <- function(refs=c("0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.5.0", "0.5.1", "current"),
-                                 param_sets = list(
-                                   list(calc_causes = "GBD only", epi_version = "gbd2019", pop_year = 2020),
-                                   list(calc_causes = "GEMM and GBD", epi_version = "gbd2019", pop_year = 2020)
-                                 ),
-                                 force = FALSE, force_current = TRUE){
+generate_fingerprints <- function(refs,
+                                  param_sets,
+                                  force = FALSE,
+                                  force_current = TRUE){
   generated_files <- list()
 
   # Process each ref version
@@ -210,7 +213,7 @@ detect_breaks <- function(data, authorised_breaks) {
 
   # Detect breaks by comparing consecutive versions
   breaks <- central_data %>%
-    group_by(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version, pop_year) %>%
+    group_by(scenario, region_id, pollutant, outcome, cause, age_group, calc_causes, epi_version, pop_year, rr_sources) %>%
     arrange(ref) %>%
     mutate(
       prev_number = lag(number),
@@ -220,7 +223,7 @@ detect_breaks <- function(data, authorised_breaks) {
     filter(is_break) %>%
     select(
       ref = ref, # from_ref means the ref that introduced the break
-      cause, outcome, calc_causes, epi_version,
+      cause, outcome, calc_causes, epi_version, rr_sources,
       prev_value = prev_number,
       current_value = number
     ) %>%
@@ -259,17 +262,25 @@ test_that("Estimates are compatible with previous versions", {
 
   readRenviron(".Renviron")
 
-  # Define parameter sets for versions before GBD2021 support (< 0.6.0)
+  # Define parameter sets for versions before epi GBD2021 support (< 0.6.0)
   param_sets_gbd2019 <- list(
     list(calc_causes = "GBD only", epi_version = "gbd2019", pop_year = 2020),
     list(calc_causes = "GEMM and GBD", epi_version = "gbd2019", pop_year = 2020)
   )
 
-  # Define parameter sets for versions with GBD2021 support (>= 0.6.0)
+  # Define parameter sets for versions with epi GBD2021 support (>= 0.6.0)
   param_sets_gbd2021 <- list(
     list(calc_causes = "GBD only", epi_version = "gbd2021", pop_year = 2020),
     list(calc_causes = "GEMM and GBD", epi_version = "gbd2021", pop_year = 2020),
-    list(calc_causes = "GEMM and GBD", epi_version = "gbd2021", pop_year = 2021)
+    list(calc_causes = "GEMM and GBD", epi_version = "gbd2021", pop_year = 2021),
+    list(rr_sources = creahia::RR_FUSION, epi_version = "gbd2021", pop_year = 2021),
+    list(rr_sources = creahia::RR_GBD2023, epi_version = "gbd2021", pop_year = 2021)
+  )
+
+  # Define parameter sets for versions with epi GBD2023 support (>= 0.7.1)
+  param_sets_gbd2023 <- list(
+    list(rr_sources = creahia::RR_FUSION, epi_version = "gbd2023", pop_year = 2023),
+    list(rr_sources = creahia::RR_GBD2023, epi_version = "gbd2023", pop_year = 2023)
   )
 
   # Generate fingerprints for older versions (before GBD2021)
@@ -286,7 +297,13 @@ test_that("Estimates are compatible with previous versions", {
                                  "0.6.1",
                                  "0.7.0",
                                  "current"),
-                        param_sets = c(param_sets_gbd2021, param_sets_gbd2019),
+                        param_sets = c(param_sets_gbd2019, param_sets_gbd2021),
+                        force = F,
+                        force_current = T)
+
+  # Generate fingerprints for newer versions (with GBD2023)
+  generate_fingerprints(refs = c("current"),
+                        param_sets = c(param_sets_gbd2019, param_sets_gbd2021, param_sets_gbd2023),
                         force = F,
                         force_current = T)
 
@@ -297,8 +314,7 @@ test_that("Estimates are compatible with previous versions", {
     filter(estimate == "central") %>%
     # Override ref with version for consistency
     mutate(version = coalesce(ref, version),
-           ref = version
-           )
+           ref = version)
 
 
   ####################################################
@@ -324,9 +340,19 @@ test_that("Estimates are compatible with previous versions", {
       all_fingerprints %>% distinct(cause, outcome, calc_causes)
     )
 
+  authorised_missing3 <- tibble(
+    epi_version = "gbd2023",
+    version = c("0.4.1", "0.4.4","0.5.0","0.5.1","0.6.0","0.6.1","0.7.0"),
+    description = "No gbd 2023 for these versions"
+  ) %>%
+    crossing(
+      all_fingerprints %>% distinct(cause, outcome, calc_causes)
+    )
+
+  authorised_missing <- bind_rows(authorised_missing1, authorised_missing2, authorised_missing3)
+
   # Detect missing cause/outcome pairs and identify unauthorised ones
-  missing_analysis <- detect_missing(all_fingerprints,
-                                    authorised_missing = bind_rows(authorised_missing1, authorised_missing2))
+  missing_analysis <- detect_missing(all_fingerprints, authorised_missing)
 
   # Show which missing pairs were detected
   if (nrow(missing_analysis) > 0) {
@@ -371,7 +397,8 @@ test_that("Estimates are compatible with previous versions", {
     )
 
   # Detect all breaks and identify unauthorised ones
-  breaks_analysis <- detect_breaks(all_fingerprints, authorised_breaks = bind_rows(authorised_breaks1, authorised_breaks2))
+  authorised_breaks = bind_rows(authorised_breaks1, authorised_breaks2)
+  breaks_analysis <- detect_breaks(all_fingerprints, authorised_breaks)
 
   # Show which breaks were detected
   if (nrow(breaks_analysis) > 0) {

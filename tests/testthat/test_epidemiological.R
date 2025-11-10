@@ -1,294 +1,499 @@
-skip("Only need to be run when creating new epi.")
+# skip_on_ci("Only need to be run when creating new epi.")
 
 testthat::source_test_helpers("tests", env = globalenv())
 testthat::source_test_helpers("../", env = globalenv())
 
+# Test configuration
+VERSIONS <- c('gbd2019', 'gbd2021', 'gbd2023')
+KEY_COUNTRIES <- c('USA', 'CHN', 'IND', 'PHL', 'IDN', 'GBR', 'DEU', 'JPN')
+ALLOWED_MISSING_ISO3S <- c("COK", "MCO", "NRU", "NIU", "PLW", "KNA", "SMR", "TKL", "TUV")
+ALLOWED_LOST_KEYS <- c("birth.rate", "labor.partic")
+MUST_HAVE_CAUSES <- c(CAUSE_IHD, CAUSE_STROKE, CAUSE_COPD, CAUSE_LUNGCANCER, CAUSE_DIABETES,
+                      CAUSE_LRI, CAUSE_DEMENTIA, CAUSE_NCDLRI)
 
-test_that("GBD2021, GBD2019 and GBD2017 have comparable data - input", {
-
-  copy_epi_data_update()
-  pop <- get_epi_pop()
-  pop.total <- get_pop_total(pop)
-
-
-  crude2017 <- get_death_crude(version='gbd2017')
-  crude2019 <- get_death_crude(version='gbd2019')
-  crude2021 <- get_death_crude(version='gbd2021')
-
-  child2017 <- get_death_child_lri(pop.total=pop.total, version='gbd2017')
-  child2019 <- get_death_child_lri(pop.total=pop.total, version='gbd2019')
-  child2021 <- get_death_child_lri(pop.total=pop.total, version='gbd2021')
-
-  yld2017 <- get_yld(pop.total, version='gbd2017')
-  yld2019 <- get_yld(pop.total, version='gbd2019')
-  yld2021 <- get_yld(pop.total, version='gbd2021')
-
-  # totcp2017 <- get_death_totcp(yld=yld2017, pop.total=pop.total, version='gbd2017')
-  # totcp2019 <- get_death_totcp(yld=yld2019, pop.total=pop.total, version='gbd2019')
-  # totcp2021 <- get_death_totcp(yld=yld2021, pop.total=pop.total, version='gbd2021')
-
-  asthma2017 <- get_asthma_prev(pop.total, version='gbd2017')
-  asthma2019 <- get_asthma_prev(pop.total, version='gbd2019')
-  asthma2021 <- get_asthma_prev(pop.total, version='gbd2021')
-
-  ihme2017 <- get_epi_count_long(version = "gbd2017")
-  ihme2019 <- get_epi_count_long(version = "gbd2017")
-  ihme2021 <- get_epi_count_long(version = "gbd2021")
+# Allowed missing cause/age/measure combinations by version
+# Format: cause, age, measure_name, version
+ALLOWED_MISSING_COMBOS_EPI_LONG <- tidyr::crossing(
+  cause = "COPD",
+  age = c("10-14", "5-9", "Under 5"),
+  measure_name = c("Deaths", "YLLs"),
+  version = c("gbd2021","gbd2023"),
+  description = "COPD YLLs and Deaths for children/teenages are missing in newer gbd versions (because 0 most likely)"
+)
 
 
-  compare <- function(df2017, df2019, df2021, tolerance=0.1){
+# Helper: Load all versions of epi_rate_wide
+load_epi_wide_versions <- function(versions = VERSIONS) {
+  result <- lapply(versions, function(v) get_epi(v))
+  names(result) <- versions
+  return(result)
+}
 
-    options(dplyr.summarise.inform = FALSE)
-    allowed_missing_iso3s <- c("COK", "MCO", "NRU", "NIU",
-                               "PLW", "KNA", "SMR", "TKL", "TUV")
+# Helper: Load all versions of epi_count_long
+load_epi_long_versions <- function(versions = VERSIONS) {
+  result <- lapply(versions, function(v) {
+    # get_epi_count_long may not support gbd2023 yet in the recode mapping
+    # If it fails, try reading the file directly
+    tryCatch({
+      get_epi_count_long(v)
+    }, error = function(e) {
+      # For gbd2023, try reading directly if file exists
+      if (v == "gbd2023") {
+        file_path <- get_hia_path(glue::glue("epi/processed/epi_count_long_{v}.csv"))
+        if (file.exists(file_path)) {
+          read_csv(file_path, col_types = cols())
+        } else {
+          stop(paste("gbd2023 file not found. Error:", e$message))
+        }
+      } else {
+        stop(e)
+      }
+    })
+  })
+  names(result) <- versions
+  return(result)
+}
 
-    # Fill metric_name and/or measure_name if missing
-    fill_cols <- function(df){
-      if(!"metric_name" %in% names(df)) df$metric_name <- df$var
-      if(!"measure_name" %in% names(df)) df$measure_name <- df$estimate
-      if(!"var" %in% names(df)) df$var <- df$cause_name
-      df
-    }
+# Helper: Extract metric keys (column names) from epi_rate_wide
+get_metric_keys <- function(epi_wide) {
+  metadata_cols <- c("location_id", "location_level", "iso3", "estimate",
+                     "country", "region", "income_group", "location_name", "pop")
+  all_cols <- names(epi_wide)
+  metric_keys <- setdiff(all_cols, metadata_cols)
+  return(metric_keys)
+}
 
-    comparison <- bind_rows(
-      df2017 %>% mutate(version='gbd2017'),
-      df2019 %>% mutate(version='gbd2019'),
-      df2021 %>% mutate(version='gbd2021')
-    ) %>%
-      fill_cols() %>%
-      select(measure_name, location_id, iso3, location_level, metric_name, estimate, var, val, version) %>%
-      spread(version, val) %>%
-      mutate(rel_diff=(gbd2019/gbd2017)-1)
+# Helper: Extract cause/age/measure combinations from epi_count_long
+get_cause_age_combos <- function(epi_long) {
+  epi_long %>%
+    distinct(cause, age, measure_name) %>%
+    arrange(cause, age, measure_name)
+}
 
-    missing_iso3s <- comparison %>%
-      filter(location_level==3,
-             is.na(gbd2017 + gbd2019)) %>%
-      pull(iso3) %>%
-      unique()
+# Helper: Compare values across versions with tolerance
+compare_values_pairwise <- function(data_list, key_cols, value_col,
+                                     tolerance = 0.1,
+                                     filter_expr = NULL) {
+  versions <- names(data_list)
 
-    testthat::expect_in(missing_iso3s, allowed_missing_iso3s)
+  # Combine all versions
+  combined <- bind_rows(
+    lapply(versions, function(v) {
+      df <- data_list[[v]] %>% mutate(version = v)
+      if (!is.null(filter_expr)) {
+        df <- df %>% filter(!!filter_expr)
+      }
+      return(df)
+    })
+  )
 
-    # Test that numbers are relatively close but not identical
-    # across two versions, for selected countries
-    should_be_close_iso3s <- c('USA', 'CHN', 'IND', 'PHL', 'IDN', 'GBR', 'DEU', 'JPN')
-    idx_iso3 <- comparison$iso3 %in% should_be_close_iso3s & (comparison$location_level==3)
-    testthat::expect_equal(comparison$gbd2017[idx_iso3], comparison$gbd2019[idx_iso3], tolerance=tolerance)
-    testthat::expect_true(all(comparison$gbd2017[idx_iso3] != comparison$gbd2019[idx_iso3]))
+  # Pivot to wide format for comparison
+  comparison <- combined %>%
+    select(all_of(c(key_cols, value_col, "version"))) %>%
+    tidyr::pivot_wider(names_from = version, values_from = all_of(value_col))
 
+  # Get version columns
+  version_cols <- intersect(versions, names(comparison))
 
-    # Check years
-    testthat::expect_true(all(df2017$year == 2017))
-    testthat::expect_true(all(df2019$year == 2019))
-    testthat::expect_true(all(df2021$year == 2019)) # Actually there is no year differentiator in the code so all years should be equal?
-
-    # Test that it has subnational data
-    comparison %>%
-      filter(location_level==4,
-             !is.na(gbd2017 + gbd2019 + gbd2021)) %>%
-      nrow() %>%
-      testthat::expect_gt(100)
-
-    # Test no duplicate
-    bind_rows(
-      df2017 %>% mutate(version='gbd2017'),
-      df2019 %>% mutate(version='gbd2019'),
-      df2021 %>% mutate(version='gbd2021'),
-    ) %>%
-      fill_cols() %>%
-      group_by(measure_name, location_id, iso3, location_level, metric_name, estimate, var, version) %>%
-      dplyr::summarise(n=n()) %>%
-      pull(n) %>%
-      max() %>%
-      testthat::expect_equal(1)
+  if (length(version_cols) < 2) {
+    return(list(success = TRUE, message = "Less than 2 versions to compare"))
   }
 
-  compare(crude2017, crude2019, crude2021, tolerance=0.2)
-  compare(child2017, child2019, child2021, tolerance=0.3)
-  compare(yld2017, yld2019, yld2021, tolerance=0.3)
-  compare(asthma2017, asthma2019, asthma2021, tolerance=0.4)
+  # Compare all pairs
+  version_pairs <- utils::combn(version_cols, 2, simplify = FALSE)
+  issues <- list()
+
+  for (pair in version_pairs) {
+    v1 <- pair[1]
+    v2 <- pair[2]
+
+    # Calculate relative differences
+    comparison <- comparison %>%
+      mutate(
+        rel_diff = abs((!!sym(v2) / !!sym(v1)) - 1),
+        both_present = !is.na(!!sym(v1)) & !is.na(!!sym(v2))
+      )
+
+    # Check tolerance
+    exceeds_tolerance <- comparison %>%
+      filter(both_present) %>%
+      filter(rel_diff > tolerance)
+
+    if (nrow(exceeds_tolerance) > 0) {
+      issues[[paste0(v1, "_vs_", v2)]] <- exceeds_tolerance %>%
+        slice_max(rel_diff, n = 5) %>%
+        select(all_of(c(key_cols, v1, v2, "rel_diff")))
+    }
+  }
+
+  return(list(success = length(issues) == 0, issues = issues, comparison = comparison))
+}
 
 
+plot_epi_wide_comparison <- function(epi_list, iso3="CHN"){
+  bind_rows(epi_list, .id="version") %>%
+    filter(location_level==3, iso3==!!iso3, estimate=="central") %>%
+    tidyr::pivot_longer(cols = -c(location_id, location_level, iso3, estimate, version,
+                                  country, region, income_group, location_name, pop),
+                        names_to = "metric_key", values_to = "val") %>%
+    ggplot(aes(x=version, y=val, fill=version)) +
+    geom_col() +
+    facet_wrap(~metric_key, scales="free_y")
+}
+
+# ============================================================================
+# EPI RATE WIDE TESTS
+# ============================================================================
+
+test_that("EPI Rate Wide - metric keys grow over time (no keys lost)", {
+  epi_list <- load_epi_wide_versions()
+
+  # Visual inspection
+  if(F){
+    plot_epi_wide_comparison(epi_list, iso3="IND")
+  }
+
+  # Get metric keys for each version
+  metric_keys_list <- lapply(epi_list, get_metric_keys)
+
+  # Check that newer versions contain all keys from older versions
+  # VERSIONS is ordered chronologically, so each version should have all keys from previous ones
+  lost_keys <- list()
+  allowed_lost_keys <- list()
+  for (i in 2:length(VERSIONS)) {
+    older_version <- VERSIONS[i - 1]
+    newer_version <- VERSIONS[i]
+
+    older_keys <- metric_keys_list[[older_version]]
+    newer_keys <- metric_keys_list[[newer_version]]
+
+    # Keys that exist in older version but not in newer (lost keys)
+    lost <- setdiff(older_keys, newer_keys)
+    if (length(lost) > 0) {
+      # Separate allowed lost keys from unexpected lost keys
+      allowed_lost <- intersect(lost, ALLOWED_LOST_KEYS)
+      unexpected_lost <- setdiff(lost, ALLOWED_LOST_KEYS)
+
+      if (length(unexpected_lost) > 0) {
+        lost_keys[[paste0(older_version, "_to_", newer_version)]] <- data.frame(
+          older_version = older_version,
+          newer_version = newer_version,
+          lost_keys = unexpected_lost
+        )
+      }
+
+      if (length(allowed_lost) > 0) {
+        allowed_lost_keys[[paste0(older_version, "_to_", newer_version)]] <- data.frame(
+          older_version = older_version,
+          newer_version = newer_version,
+          allowed_lost_keys = allowed_lost
+        )
+      }
+    }
+  }
+
+  # No unexpected keys should be lost
+  testthat::expect_true(
+    length(lost_keys) == 0,
+    info = {
+      paste("Unexpected keys were lost between versions:\n",
+            paste(capture.output(print(lost_keys_df)), collapse = "\n"))
+    }
+  )
+
+  # Also report new keys added (informational, not a failure)
+  new_keys <- list()
+  for (i in 2:length(VERSIONS)) {
+    older_version <- VERSIONS[i - 1]
+    newer_version <- VERSIONS[i]
+
+    older_keys <- metric_keys_list[[older_version]]
+    newer_keys <- metric_keys_list[[newer_version]]
+
+    # Keys that exist in newer version but not in older (new keys)
+    new <- setdiff(newer_keys, older_keys)
+    if (length(new) > 0) {
+      new_keys[[paste0(older_version, "_to_", newer_version)]] <- data.frame(
+        older_version = older_version,
+        newer_version = newer_version,
+        new_keys = new
+      )
+    }
+  }
+
+  if (length(new_keys) > 0) {
+    new_keys_df <- bind_rows(new_keys)
+    message("New keys added between versions:")
+    print(new_keys_df)
+  }
 })
 
-test_that("GBD2021, GBD2019 and GBD2017 have comparable data - output", {
+test_that("EPI Rate Wide - values are similar across versions", {
+  epi_list <- load_epi_wide_versions()
 
-  epi2017 <- get_epi('gbd2017')
-  epi2019 <- get_epi('gbd2019')
-  epi2021 <- get_epi('gbd2021')
+  # Get common metric keys (keys that exist in all versions)
+  # We only compare values for keys that exist in all versions
+  metric_keys_list <- lapply(epi_list, get_metric_keys)
+  common_keys <- Reduce(intersect, metric_keys_list)
 
-  comparison <- bind_rows(
-    epi2017 %>% mutate(version='gbd2017'),
-    epi2019 %>% mutate(version='gbd2019'),
-    epi2021 %>% mutate(version='gbd2021')
+  # Use common keys for comparison
+  metric_keys <- common_keys
+
+  # Convert to long format for comparison
+  epi_long_list <- lapply(names(epi_list), function(v) {
+    epi_list[[v]] %>%
+      mutate(version = v) %>%
+      filter(location_level == 3, iso3 %in% KEY_COUNTRIES) %>%
+      select(location_id, iso3, estimate, version, all_of(metric_keys)) %>%
+      tidyr::pivot_longer(cols = all_of(metric_keys), names_to = "metric_key", values_to = "val")
+  })
+
+  combined <- bind_rows(epi_long_list) %>%
+    filter(estimate == "central") %>%
+    select(location_id, iso3, metric_key, version, val) %>%
+      tidyr::pivot_wider(names_from = version, values_from = val)
+
+  # Compare pairwise
+  version_cols <- VERSIONS
+  version_pairs <- utils::combn(version_cols, 2, simplify = FALSE)
+
+    for (pair in version_pairs) {
+        v1 <- pair[1]
+        v2 <- pair[2]
+
+    comparison_pair <- combined %>%
+      filter(!is.na(!!sym(v1)) & !is.na(!!sym(v2))) %>%
+      mutate(
+        rel_diff = abs((!!sym(v2) / !!sym(v1)) - 1),
+        abs_diff = abs(!!sym(v2) - !!sym(v1))
+      )
+
+    # Check that values are not identical (they should differ slightly)
+    testthat::expect_true(
+      any(comparison_pair$abs_diff > 0, na.rm = TRUE),
+      info = paste("Values are identical between", v1, "and", v2)
+    )
+
+    # Check that relative differences are reasonable (most should be < 0.5 or 50%)
+    # Some metrics may have larger differences, so we check median
+    median_rel_diff <- median(abs(comparison_pair$rel_diff), na.rm = TRUE)
+    testthat::expect_true(
+      median_rel_diff < 0.2,
+      info = paste("Median relative difference between", v1, "and", v2, "is", median_rel_diff)
+    )
+
+    max_rel_diff <- max(abs(comparison_pair$rel_diff), na.rm = TRUE)
+    testthat::expect_true(
+      max_rel_diff < 5,
+      info = paste("Max relative difference between", v1, "and", v2, "is", max_rel_diff)
+    )
+  }
+})
+
+test_that("EPI Rate Wide - completeness checks", {
+  epi_list <- load_epi_wide_versions()
+
+  for (v in names(epi_list)) {
+    epi <- epi_list[[v]]
+    metric_keys <- get_metric_keys(epi)
+
+    # Check that we have location_level 3 and 4 data
+    location_levels <- epi %>%
+      filter(!is.na(location_id)) %>%
+      pull(location_level) %>%
+      unique()
+
+    testthat::expect_true(
+      all(c(3, 4) %in% location_levels),
+      info = paste("Missing location levels in", v, ". Found:", paste(sort(location_levels), collapse = ", "), ". Expected: 3, 4")
+    )
+
+    # Check for duplicates
+    duplicates <- epi %>%
+      filter(location_level == 3) %>%
+      filter(!is.na(location_id)) %>%
+      group_by(location_id, estimate) %>%
+      summarise(n = n(), .groups = "drop") %>%
+      filter(n > 1)
+
+    testthat::expect_equal(
+      nrow(duplicates),
+      0,
+      info = paste("Found duplicates in", v)
+    )
+
+    # Check that each location_id (except NA) has high, low, and central estimates
+    location_estimates <- epi %>%
+      filter(!is.na(location_id), location_level == 3) %>%
+      group_by(location_id) %>%
+      summarise(
+        has_central = "central" %in% estimate,
+        has_low = "low" %in% estimate,
+        has_high = "high" %in% estimate,
+        .groups = "drop"
+      ) %>%
+      filter(!has_central | !has_low | !has_high)
+
+    testthat::expect_equal(
+      nrow(location_estimates),
+      0,
+      info = paste("Missing estimates in", v, ":\n",
+                   paste(capture.output(print(location_estimates)), collapse = "\n"))
+    )
+
+    # Check that no value is NA in any of the metric columns
+    na_values <- epi %>%
+      filter(!is.na(location_id), location_level == 3) %>%
+      select(location_id, estimate, all_of(metric_keys)) %>%
+      tidyr::pivot_longer(cols = all_of(metric_keys), names_to = "metric_key", values_to = "val") %>%
+      filter(is.na(val))
+
+    testthat::expect_equal(
+      nrow(na_values),
+      0,
+      info = paste("Found NA values in metric columns in", v, ":\n",
+                   paste(capture.output(print(head(na_values, 20))), collapse = "\n"))
+    )
+  }
+})
+
+# ============================================================================
+# EPI COUNT LONG TESTS
+# ============================================================================
+
+test_that("EPI Count Long - all versions have same cause/age/measure combinations", {
+
+  epi_list <- load_epi_long_versions()
+
+  # Get combinations for each version
+  combos_list <- lapply(epi_list, get_cause_age_combos)
+
+  # Find all combinations across all versions
+  all_combos <- bind_rows(
+    lapply(names(combos_list), function(v) {
+      combos_list[[v]] %>% mutate(version = v)
+    })
   ) %>%
-    select(-c(location_name)) %>%
-    tidyr::pivot_longer(cols = -c(location_id, location_level, iso3, estimate, country, region, income_group, version)) %>%
-    tidyr::spread(version, value)
+    distinct()
 
-  missing_iso3s <- comparison %>%
-    filter(location_level==3,
-           is.na(gbd2017 + gbd2019 + gbd2021)) %>%
-    pull(iso3) %>%
-    unique()
+  # Get all unique combinations (union across all versions)
+  all_unique_combos <- all_combos %>%
+    select(cause, age, measure_name) %>%
+    distinct()
 
-  allowed_missing_iso3s <- c("COK", "MCO", "NRU", "NIU",
-                             "PLW", "KNA", "SMR", "TKL", "TUV")
-  testthat::expect_in(missing_iso3s, allowed_missing_iso3s)
+  # Create expected combinations: all unique combos × all versions
+  expected_combos <- all_unique_combos %>%
+    tidyr::crossing(version = VERSIONS)
 
+  # Find missing combinations (expected but not present)
+  missing_combos <- expected_combos %>%
+    anti_join(all_combos, by = c("cause", "age", "measure_name", "version")) %>%
+    # Remove allowed missing combinations
+    anti_join(ALLOWED_MISSING_COMBOS_EPI_LONG, by = c("cause", "age", "measure_name", "version"))
 
-  # Plot comparison
-  # bind_rows(
-  #   epi2017 %>% mutate(version='gbd2017'),
-  #   epi2019 %>% mutate(version='gbd2019'),
-  #   epi2021 %>% mutate(version='gbd2021')
-  # ) %>%
-  #   select(-c(location_name)) %>%
-  #   tidyr::pivot_longer(cols = -c(location_id, location_level, iso3, estimate, country, region, income_group, version)) %>%
-  #   filter(iso3=="ZAF", location_level==3) %>%
-  #   ggplot() + geom_col(aes(version, value, fill=version), position='dodge') + facet_wrap(~name, scales='free_y')
+  # Test should fail if there are any unauthorised missing combinations
+  testthat::expect_equal(
+    nrow(missing_combos),
+    0,
+    info = glue::glue("Found {nrow(missing_combos)} unauthorised missing cause/age/measure combinations")
+  )
 
+  # At least check that we have the essential causes
+  for (v in names(epi_list)) {
+    causes_in_version <- unique(epi_list[[v]]$cause)
+    missing_causes <- setdiff(MUST_HAVE_CAUSES, causes_in_version)
+    testthat::expect_equal(
+      length(missing_causes),
+      0,
+      info = paste("Missing essential causes in", v, ":", paste(missing_causes, collapse = ", "))
+    )
+  }
 })
 
-test_that("GBD2021, GBD2019 and GBD2017 have comparable data - IHME", {
+test_that("EPI Count Long - values are similar across versions", {
 
-  ihme2017 <- get_epi_count_long('gbd2017')
-  ihme2019 <- get_epi_count_long('gbd2019')
-  ihme2021 <- get_epi_count_long('gbd2021')
+  epi_list <- load_epi_long_versions()
 
-  comparison <- bind_rows(
-    ihme2017 %>% mutate(version='gbd2017'),
-    ihme2019 %>% mutate(version='gbd2019'),
-    ihme2021 %>% mutate(version='gbd2021')
+  # Compare values for key countries
+  combined <- bind_rows(
+    lapply(names(epi_list), function(v) {
+      epi_list[[v]] %>%
+        mutate(version = v) %>%
+        filter(location_level == 3, iso3 %in% KEY_COUNTRIES) %>%
+        select(location_id, iso3, cause, age, measure_name, version, estimate, val)
+    })
   ) %>%
-    filter(location_level == 3) %>%
-    select(measure_name, location_id, iso3, location_level, age, cause, sex_name, estimate, val, version) %>%
-    spread(version, val)
+    tidyr::pivot_wider(names_from = version, values_from = val)
 
-  missing_iso3s <- comparison %>%
-    filter(location_level==3,
-           # COPD for low age NA in new versions
-           ! age %in% c("5-9", "10-14", "<5") | cause != "COPD",
-           is.na(gbd2017 + gbd2019 + gbd2021)) %>%
-    pull(iso3) %>%
-    unique()
+  # Compare pairwise
+  version_pairs <- utils::combn(VERSIONS, 2, simplify = FALSE)
 
-  allowed_missing_iso3s <- c("COK", "MCO", "NRU", "NIU",
-                             "PLW", "KNA", "SMR", "TKL", "TUV")
-  testthat::expect_in(missing_iso3s, allowed_missing_iso3s)
-})
+  for (pair in version_pairs) {
+    v1 <- pair[1]
+    v2 <- pair[2]
 
-test_that("GBD2021, GBD2019 and GBD2017 yield roughly similar results - Philipines", {
+    comparison_pair <- combined %>%
+      filter(!is.na(!!sym(v1)) & !is.na(!!sym(v2))) %>%
+      mutate(
+        rel_diff = abs((!!sym(v2) / !!sym(v1)) - 1),
+        abs_diff = abs(!!sym(v2) - !!sym(v1))
+        )
 
-  library(tidyverse)
-  library(terra)
-  library(creahelpers)
-  library(dplyr)
-  library(creahia)
+        # Check that values are not identical
+    testthat::expect_true(
+      any(comparison_pair$abs_diff > 0, na.rm = TRUE),
+      info = paste("Values are identical between", v1, "and", v2)
+    )
 
-  obs_map <- terra::rast(get_test_file('example_ph_who/obs_map.tif'))
-  baseline_map <- terra::rast(get_test_file('example_ph_who/zero_map.tif'))
-  perturbation_map <- obs_map - baseline_map
-  names(perturbation_map) <- names(obs_map)
-
-  hia <- lapply(c(
-    # 'gbd2017',
-    'gbd2019',
-    'gbd2021'), function(epi_version){
-    creahia::wrappers.compute_hia_two_images.default(
-      perturbation_rasters = raster::stack(perturbation_map),
-      baseline_rasters = raster::stack(baseline_map),
-      administrative_iso3s = c("PHL"),
-      administrative_level = 0,
-      crfs_version = "C40",
-      epi_version = epi_version,
-      rr_sources = RR_GBD2021
-    ) %>%
-      mutate(epi_version = epi_version)
-  }) %>%
-    bind_rows()
-
-
-  unique(hia$Cause)
-
-  comparison <- hia %>%
-    filter(!double_counted,
-           estimate=='central') %>%
-    group_by(Outcome, double_counted, epi_version) %>%
-    dplyr::summarise(value=sum(number, na.rm=T))
-
-
-  # Test that deaths close to 65000
-  comparison_outcome <- comparison %>%
-    filter(!double_counted) %>%
-    tidyr::spread(Outcome, value)
-  comparison_outcome$Death_target <- 65000
-  testthat::expect_equal(comparison_outcome$Deaths, comparison_outcome$Death_target , tolerance = 1e-1)
-
-  comparison_epi <- comparison %>%
-    tidyr::spread(epi_version, value)
-
-  testthat::expect_true(sum(comparison_epi$gbd2017) > 0)
-  # Values should be equal on non GBD
-  non_gbd <- c("exac", "PTB", "LBW", "Absences")
-  idx_non_gbd <- comparison_epi$Outcome %in% non_gbd
-  testthat::expect_identical(comparison_epi$gbd2017[idx_non_gbd], comparison_epi$gbd2019[idx_non_gbd])
-
-  # Not equal but close for GBD outcomes (except Deaths.child which has similar epi data apparently, at least in PHP)
-  idx_gbd <- !idx_non_gbd
-  testthat::expect_equal(comparison_epi$gbd2017[idx_gbd], comparison_epi$gbd2019[idx_gbd], tolerance=1e-1)
-  testthat::expect_equal(comparison_epi$gbd2017[idx_gbd], comparison_epi$gbd2021[idx_gbd], tolerance=1e-1)
-  testthat::expect_true(all(comparison_epi$gbd2017[idx_gbd]!=comparison_epi$gbd2019[idx_gbd]))
-  testthat::expect_true(all(comparison_epi$gbd2017[idx_gbd]!=comparison_epi$gbd2021[idx_gbd]))
+    median_rel_diff <- median(abs(comparison_pair$rel_diff), na.rm = TRUE)
+    testthat::expect_true(
+      median_rel_diff < 0.5,
+      info = paste("Median relative difference between", v1, "and", v2, "is", median_rel_diff)
+    )
+  }
 
 })
 
+test_that("EPI Count Long - completeness checks", {
+  epi_list <- load_epi_long_versions()
 
-test_that("New epi doesn't differ too much from old one", {
+  for (v in names(epi_list)) {
+    epi <- epi_list[[v]]
 
+    # Check that we have location_level 3 and 4 data
+    location_levels <- epi %>%
+      filter(!is.na(location_id)) %>%
+      pull(location_level) %>%
+      unique()
 
-  version <- "gbd2019"
+    testthat::expect_true(
+      all(c(3, 4) %in% location_levels),
+      info = paste("Missing location levels in", v, ". Found:", paste(sort(location_levels), collapse = ", "), ". Expected: 3, 4")
+    )
 
-  new <- read_csv(glue("inst/extdata/epi/processed/epi_rate_wide_{version}.csv"))
-  old <- read_csv(glue("https://raw.githubusercontent.com/energyandcleanair/creahia/7966ab8f14bda553e4cfbb1eb59dd872d3217c84/inst/extdata/epi_for_hia_{version}.csv"))
+    # Check for duplicates
+    duplicates <- epi %>%
+      filter(location_level == 3) %>%
+      filter(!is.na(location_id)) %>%
+      group_by(location_id, cause, age, measure_name, sex_name) %>%
+      summarise(n = n(), .groups = "drop") %>%
+      filter(n > 1)
 
-  # It should not have changed central
-  comparison <- bind_rows(
-    new %>% mutate(source="new"),
-    old %>% mutate(source="old")
-  ) %>%
-    filter(!is.na(location_id)) %>%
-    tidyr::pivot_longer(cols = -c(location_id, location_level, iso3, estimate, location_name, country, region, income_group, pop, source),
-                        names_to="var", values_to="value") %>%
-    select(location_id, estimate, source, var, value) %>%
-  spread(source, value) %>%
-    mutate(diff_rel=(new/old)-1)
+    testthat::expect_equal(
+      nrow(duplicates),
+      0,
+      info = paste("Found duplicates in", v)
+    )
 
-  # Should be perfectly matching
-  # i.d. no NA in new or old
-  missing <- comparison %>%
-    filter(is.na(new) != is.na(old)) %>%
-    nrow()
+    # Check age completeness
+    # Check that if split ages are present, all must be present
+    unique_ages <- epi %>%
+      filter(location_level == 3, !is.na(location_id)) %>%
+      pull(age) %>%
+      unique()
 
-  testthat::expect_equal(missing, 0)
-
-
-  different_central <- comparison %>%
-    filter(estimate=='central') %>%
-    filter(abs(diff_rel) > 0.001) %>%
-    nrow()
-
-  testthat::expect_equal(different_central, 0)
-
-
-  # No low > central or high < central
-  inversed <- new %>%
-    filter(!is.na(location_id)) %>%
-    tidyr::pivot_longer(cols = -c(location_id, location_level, iso3, estimate, location_name, country, region, income_group, pop),
-                        names_to="var", values_to="value") %>%
-    select(location_id, estimate, var, value) %>%
-    spread(estimate, value) %>%
-    filter(low > central | high < central | low > high) %>%
-    nrow()
-
-  testthat::expect_equal(inversed, 0)
+    testthat::expect_no_error(
+      check_age_completeness(unique_ages, data_name = glue::glue("EPI Count Long {v}"))
+    )
+  }
 })

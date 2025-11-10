@@ -5,8 +5,8 @@ test_that("get_age_weights returns correct structure with real data", {
   region_id <- "BGD"  # Bangladesh
   cause <- "LRI"
   measure <- "Deaths"
-  rr_source <- "gbd2019"
-  version <- "gbd2019"
+  rr_source <- "gbd2023"
+  version <- "gbd2023"
 
   # Test with real data
   result <- get_age_weights(region_id, cause, measure, rr_source, version)
@@ -31,10 +31,10 @@ test_that("get_age_weights works with different RR sources", {
 
   region_id <- "BGD"
   measure <- "Deaths"
-  version <- "gbd2019"
+  version <- "gbd2023"
 
   # Test with different RR sources
-  rr_sources <- c("gbd2019", "gbd2021", "original")
+  rr_sources <- c("original", "gbd2019", "gbd2021", "gbd2023")
 
   for (rr_source in rr_sources) {
 
@@ -57,8 +57,8 @@ test_that("get_age_weights works with different measures", {
 
   region_id <- "BGD"
   cause <- "LRI"
-  rr_source <- "gbd2019"
-  version <- "gbd2019"
+  rr_source <- "gbd2023"
+  version <- "gbd2023"
 
   measures <- c("Deaths", "YLLs", "YLDs")
 
@@ -78,8 +78,8 @@ test_that("get_age_weights handles invalid inputs gracefully", {
   region_id <- "BGD"
   cause <- "LRI"
   measure <- "Deaths"
-  rr_source <- "gbd2019"
-  version <- "gbd2019"
+  rr_source <- "gbd2023"
+  version <- "gbd2023"
 
   # Test with invalid region_id
   result <- get_age_weights("INVALID_REGION", cause, measure, rr_source, version)
@@ -99,8 +99,8 @@ test_that("get_age_weights caches results correctly", {
   region_id <- "BGD"
   cause <- "LRI"
   measure <- "Deaths"
-  rr_source <- "gbd2019"
-  version <- "gbd2019"
+  rr_source <- "gbd2023"
+  version <- "gbd2023"
 
   # Clear cache first
   clear_epi_count_long_cache()
@@ -122,8 +122,8 @@ test_that("get_age_weights returns NULL for missing data", {
   region_id <- "BGD"
   cause <- "LRI"
   measure <- "Deaths"
-  rr_source <- "gbd2019"
-  version <- "gbd2019"
+  rr_source <- "gbd2023"
+  version <- "gbd2023"
 
   # Test with a region that doesn't exist in IHME data
   result <- get_age_weights("NONEXISTENT", cause, measure, rr_source, version)

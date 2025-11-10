@@ -34,7 +34,7 @@ generate_rr_gbd2023 <- function(){
            cause != 'bw',
            cause != 'ga',
            !is.na(age)) %>%
-    mutate(cause = recode_gbd_causes(cause)) %>%
+    mutate(cause = recode_rr_causes(cause)) %>%
     filter(!is.na(cause)) %>%
     dplyr::group_by(cause) %>%
     # New version seem to be log(RR)

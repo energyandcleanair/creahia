@@ -37,7 +37,7 @@ test_that("GADM level 2 gives similar results to level 1 and level 0 - Indonesia
     administrative_level = 0,
     administrative_res = "low",
     crfs_version = "C40",
-    epi_version = "gbd2019", # Subnational only available with this epi for now
+    epi_version = "gbd2023",
     valuation_version = "viscusi"
   )
 
@@ -48,7 +48,7 @@ test_that("GADM level 2 gives similar results to level 1 and level 0 - Indonesia
     administrative_level = 1,
     administrative_res = "low",
     crfs_version = "C40",
-    epi_version = "gbd2019", # Subnational only available with this epi for now
+    epi_version = "gbd2023",
     valuation_version = "viscusi"
   )
 
