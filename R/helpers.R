@@ -105,6 +105,7 @@ get_adm <- function(grid_raster, shp = NULL, admin_level = 0, iso3s = NULL, ...)
   crs_to <- terra::crs(grid_raster)
 
   grid_4326 <- grid_raster %>%
+    # Add n rows and columns (at each side)
     terra::extend(c(40, 40)) %>%
     terra::project('epsg:4326')
 
