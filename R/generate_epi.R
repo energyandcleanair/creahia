@@ -250,6 +250,7 @@ get_locations <- function() {
 }
 
 
+
 attach_gadm_to_locations <- function(locations = get_locations()) {
   matching_files <- get_hia_paths(pattern = "*.csv", path = "location_matching")
   matching_subnational <- lapply(matching_files, read_csv, col_types = cols()) %>%
@@ -257,8 +258,13 @@ attach_gadm_to_locations <- function(locations = get_locations()) {
     select(iso3, ihme_level, ihme_location_name, gadm_level, gadm_id, gadm_name)
 
   # Create a country matching
-  matching_countries <- creahelpers::get_adm(level = 0, res = "low") %>%
-    as.data.frame() %>%
+  # Rather than relying on creahelpers::get_adm, we embed a gadm0.csv in the package.
+  # It was generated like this:
+  #  creahelpers::get_adm(level = 0, res = "low") %>%
+  #   as.data.frame() %>%
+  #   write.csv("inst/extdata/location_matching/gadm0.csv", row.names = F)
+
+  matching_countries <- read_csv(get_hia_path("location_matching/gadm0.csv"), col_types = cols()) %>%
     select(
       iso3 = GID_0,
       gadm_id = GID_0,
