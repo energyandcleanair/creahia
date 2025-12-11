@@ -90,11 +90,13 @@ compute_hia <- function(conc_map,
   # Population scaling
   # Get the actual population year
   # Ideally it would be in an attribute of hia somewhere
-  pop_year_actual <- get_pop_year(year_desired = pop_year)
-  pop_year_desired <- pop_year
-  if(pop_year_actual != pop_year_desired){
-    message(glue("Scaling population from {pop_year_actual} to {pop_year_desired}"))
-    impacts <- scale_hia_pop(impacts, base_year = pop_year_actual, target_year = pop_year_desired)
+  if(!is.null(pop_year)){
+    pop_year_actual <- get_pop_year(year_desired = pop_year)
+    pop_year_desired <- pop_year
+    if(pop_year_actual != pop_year_desired){
+      message(glue("Scaling population from {pop_year_actual} to {pop_year_desired}"))
+      impacts <- scale_hia_pop(impacts, base_year = pop_year_actual, target_year = pop_year_desired)
+    }
   }
 
   return(impacts)
