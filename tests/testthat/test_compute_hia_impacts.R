@@ -364,6 +364,9 @@ test_that("add_double_counted joins CRF double_counted field correctly", {
   # Check that double_counted field was added correctly
   expect_true("double_counted" %in% names(result))
 
+  # Check that no double_counted values are NA
+  expect_false(any(is.na(result$double_counted)))
+
   # Check specific values
   ncdlri_row <- result[result$cause == "NCD.LRI" & result$outcome == "Deaths", ]
   expect_true(ncdlri_row$double_counted)
@@ -405,6 +408,9 @@ test_that("add_double_counted handles PM25 NCD.LRI double counting correctly", {
   # Check that double_counted field was added
   expect_true("double_counted" %in% names(result))
 
+  # Check that no double_counted values are NA
+  expect_false(any(is.na(result$double_counted)))
+
   # All PM25 NCD.LRI causes should be marked as double_counted = TRUE
   pm25_ncdlri_rows <- result[result$pollutant == "PM25" &
                             result$cause %in% c("IHD", "Stroke", "COPD", "LRI") &
@@ -445,6 +451,9 @@ test_that("add_double_counted handles PM25 CV double counting correctly", {
 
   # Check that double_counted field was added
   expect_true("double_counted" %in% names(result))
+
+  # Check that no double_counted values are NA
+  expect_false(any(is.na(result$double_counted)))
 
   # All PM25 CV causes should be marked as double_counted = TRUE
   pm25_cv_rows <- result[result$pollutant == "PM25" &
@@ -563,4 +572,223 @@ test_that("add_double_counted fails when non-PM25 pollutant has missing double_c
     add_double_counted(hia_data, crfs_no_match, epi_minimal),
     "merged has failed in double counting detection"
   )
+})
+
+test_that("to_long_hia filters out all-NA cause-outcome combinations", {
+  # Create wide format HIA data with some all-NA combinations
+  wide_hia <- data.frame(
+    region_id = c("CHN", "CHN"),
+    pollutant = c("PM25", "NO2"),
+    estimate = c("central", "central"),
+    pop = c(1450141368, 1450141368),
+    IHD_Deaths = c(-100, NA),
+    NCD.LRI_Deaths = c(NA, 10),
+    NCD.LRI_YLLs = c(-200, NA),
+    stringsAsFactors = FALSE
+  )
+
+  result <- creahia::to_long_hia(wide_hia)
+
+  # Check that NO2 are kept for NCD.LRI_Deaths
+  no2_rows <- result %>% dplyr::filter(pollutant == "NO2")
+  expect_equal(no2_rows$cause, "NCD.LRI")
+  expect_equal(no2_rows$outcome, "Deaths")
+
+  # Check that PM25 rows are kept for IHD and NCD.LRI_YLLs
+  pm25_rows <- result %>% dplyr::filter(pollutant == "PM25")
+  expect_equal(nrow(pm25_rows), 2)  # IHD_Deaths and NCD.LRI_YLLs
+  expect_equal(pm25_rows$outcome, c("Deaths", "YLLs"))
+  expect_equal(pm25_rows$cause, c("IHD", "NCD.LRI"))
+
+})
+
+test_that("to_long_hia keeps combinations with partial NA values", {
+  # Create wide format HIA data where some estimates are NA but not all
+  wide_hia <- data.frame(
+    region_id = c("CHN", "CHN", "CHN"),
+    pollutant = c("PM25", "PM25", "PM25"),
+    estimate = c("low", "central", "high"),
+    pop = c(1000000, 1000000, 1000000),
+    IHD_Deaths = c(NA, -100, -150),
+    stringsAsFactors = FALSE
+  )
+
+  result <- creahia::to_long_hia(wide_hia)
+
+  # Check that IHD_Deaths combination is kept (not all NA)
+  ihd_rows <- result %>% dplyr::filter(cause == "IHD", outcome == "Deaths")
+  expect_equal(nrow(ihd_rows), 3)  # All three estimates should be present
+
+  # Check that NA value is preserved in the data
+  expect_true(any(is.na(ihd_rows$number)))
+  # Check that non-NA values are also present
+  expect_true(any(!is.na(ihd_rows$number)))
+})
+
+test_that("add_double_counted does not set double_counted when NCD.LRI has only NA values", {
+  # Create HIA data with NCD.LRI having NA values and individual causes with non-NA values
+  hia_data <- data.frame(
+    cause = c("NCD.LRI", "IHD", "Stroke", "COPD"),
+    outcome = c("Deaths", "Deaths", "Deaths", "Deaths"),
+    pollutant = c("PM25", "PM25", "PM25", "PM25"),
+    number = c(NA, 50, 40, 30),
+    stringsAsFactors = FALSE
+  )
+
+  # Create CRFs without double_counted field for PM25
+  crfs_no_pm25 <- data.frame(
+    pollutant = c("NO2"),
+    cause = c("Asthma.1to18"),
+    outcome = c("AsthmaIncidence"),
+    double_counted = c(FALSE),
+    stringsAsFactors = FALSE
+  )
+
+  # Create minimal EPI data
+  epi_minimal <- data.frame(
+    location_id = 1,
+    estimate = "central",
+    stringsAsFactors = FALSE
+  )
+
+  result <- add_double_counted(hia_data, crfs_no_pm25, epi_minimal)
+
+  # Check that no double_counted values are NA
+  expect_false(any(is.na(result$double_counted)))
+
+  # Since NCD.LRI has only NA values, the individual causes should NOT be marked as double_counted
+  pm25_individual_rows <- result[result$pollutant == "PM25" &
+                                 result$cause %in% c("IHD", "Stroke", "COPD") &
+                                 result$outcome == "Deaths", ]
+
+  expect_false(all(pm25_individual_rows$double_counted))
+})
+
+test_that("add_double_counted sets double_counted when NCD.LRI has non-NA values", {
+  # Create HIA data with NCD.LRI having non-NA values and individual causes
+  hia_data <- data.frame(
+    cause = c("NCD.LRI", "IHD", "Stroke", "COPD"),
+    outcome = c("Deaths", "Deaths", "Deaths", "Deaths"),
+    pollutant = c("PM25", "PM25", "PM25", "PM25"),
+    number = c(100, 50, 40, 30),  # NCD.LRI has a non-NA value
+    stringsAsFactors = FALSE
+  )
+
+  # Create CRFs without double_counted field for PM25
+  crfs_no_pm25 <- data.frame(
+    pollutant = c("NO2"),
+    cause = c("Asthma.1to18"),
+    outcome = c("AsthmaIncidence"),
+    double_counted = c(FALSE),
+    stringsAsFactors = FALSE
+  )
+
+  # Create minimal EPI data
+  epi_minimal <- data.frame(
+    location_id = 1,
+    estimate = "central",
+    stringsAsFactors = FALSE
+  )
+
+  result <- add_double_counted(hia_data, crfs_no_pm25, epi_minimal)
+
+  # Check that no double_counted values are NA
+  expect_false(any(is.na(result$double_counted)))
+
+  # Since NCD.LRI has non-NA values, the individual causes SHOULD be marked as double_counted
+  pm25_individual_rows <- result[result$pollutant == "PM25" &
+                                 result$cause %in% c("IHD", "Stroke", "COPD") &
+                                 result$outcome == "Deaths", ]
+
+  expect_true(all(pm25_individual_rows$double_counted))
+})
+
+test_that("add_double_counted does not set double_counted for PM25 when NCD.LRI only exists for other pollutants", {
+  # Create HIA data with NCD.LRI for NO2 (non-NA) but not for PM25
+  # PM25 individual causes should NOT be marked as double_counted
+  hia_data <- data.frame(
+    cause = c("NCD.LRI", "IHD", "Stroke", "COPD", "IHD", "Stroke"),
+    outcome = c("Deaths", "Deaths", "Deaths", "Deaths", "Deaths", "Deaths"),
+    pollutant = c("NO2", "PM25", "PM25", "PM25", "NO2", "NO2"),
+    number = c(100, 50, 40, 30, 20, 15),  # NCD.LRI exists for NO2, not PM25
+    stringsAsFactors = FALSE
+  )
+
+  # Create CRFs with double_counted for NO2 causes
+  crfs_with_no2 <- data.frame(
+    pollutant = c("NO2", "NO2", "NO2"),
+    cause = c("NCD.LRI", "IHD", "Stroke"),
+    outcome = c("Deaths", "Deaths", "Deaths"),
+    double_counted = c(FALSE, TRUE, TRUE),  # Individual NO2 causes marked as double_counted
+    stringsAsFactors = FALSE
+  )
+
+  # Create minimal EPI data
+  epi_minimal <- data.frame(
+    location_id = 1,
+    estimate = "central",
+    stringsAsFactors = FALSE
+  )
+
+  result <- add_double_counted(hia_data, crfs_with_no2, epi_minimal)
+
+  # Check that no double_counted values are NA
+  expect_false(any(is.na(result$double_counted)))
+
+  # Since NCD.LRI only exists for NO2 (not PM25), PM25 individual causes should NOT be double_counted
+  pm25_individual_rows <- result[result$pollutant == "PM25" &
+                                 result$cause %in% c("IHD", "Stroke", "COPD") &
+                                 result$outcome == "Deaths", ]
+
+  expect_false(all(pm25_individual_rows$double_counted))
+  expect_true(all(!pm25_individual_rows$double_counted))
+
+  # NO2 individual causes SHOULD be marked as double_counted (from CRFs)
+  no2_individual_rows <- result[result$pollutant == "NO2" &
+                                result$cause %in% c("IHD", "Stroke") &
+                                result$outcome == "Deaths", ]
+
+  expect_true(all(no2_individual_rows$double_counted))
+})
+
+test_that("to_long_hia extracts pollutant from column names when not present as a column", {
+  # Create wide format HIA data WITHOUT a pollutant column
+  # The pollutant should be extracted from column names
+  wide_hia <- data.frame(
+    region_id = "CHN",
+    estimate = "central",
+    pop = 1450141368,
+    IHD_Deaths_PM25 = -100,
+    NCD.LRI_Deaths_PM25 = -50,
+    NCD.LRI_YLLs_PM25 = -200,
+    IHD_Deaths_NO2 = -30,
+    NCD.LRI_Deaths_NO2 = NA,
+    NCD.LRI_YLLs_NO2 = NA,
+    stringsAsFactors = FALSE
+  )
+
+  result <- creahia::to_long_hia(wide_hia)
+
+  # Check that pollutant column was created
+  expect_true("pollutant" %in% names(result))
+
+  # Check that pollutants were correctly extracted
+  expect_true("PM25" %in% result$pollutant)
+  expect_true("NO2" %in% result$pollutant)
+
+  # Check that NO2 rows with all NA values were filtered out
+  no2_ncdlri_rows <- result %>%
+    dplyr::filter(pollutant == "NO2", cause == "NCD.LRI")
+  expect_equal(nrow(no2_ncdlri_rows), 0)
+
+  # Check that PM25 rows were preserved
+  pm25_ncdlri_rows <- result %>%
+    dplyr::filter(pollutant == "PM25", cause == "NCD.LRI")
+  expect_gt(nrow(pm25_ncdlri_rows), 0)
+
+  # Check that NO2 IHD was preserved (has non-NA value)
+  no2_ihd_rows <- result %>%
+    dplyr::filter(pollutant == "NO2", cause == "IHD")
+  expect_gt(nrow(no2_ihd_rows), 0)
+  expect_equal(unique(no2_ihd_rows$number), -30)
 })

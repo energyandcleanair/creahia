@@ -174,21 +174,22 @@ add_double_counted <- function(hia, crfs, epi) {
     stop('merged has failed in double counting detection')
   }
 
-  # Manual for epi PM25
-  joined[joined$pollutant == 'PM25' &
-           any(joined$cause == CAUSE_NCDLRI) & # detect if NCD+LRI is being used (e.g. from GEMM or FUSION)
-           joined$cause %in% CAUSE_NCDLRI_INCLUDED &
-           joined$outcome %in% c(MEASURE_YLLS, MEASURE_DEATHS),
-         'double_counted'] <- TRUE
-
-  joined[joined$pollutant == 'PM25' &
-           any(joined$cause == CAUSE_CV) & # detect if NCD+LRI is being used (e.g. from GEMM or FUSION)
-           joined$cause %in% CAUSE_CV_INCLUDED &
-           joined$outcome %in% c(MEASURE_YLLS, MEASURE_DEATHS),
-         'double_counted'] <- TRUE
-
+  # For rows where double_counted is still NA, detect ensemble causes by pollutant/outcome
+  # This handles any pollutant (including PM25) that uses ensemble causes
   joined <- joined %>%
-    mutate(double_counted = tidyr::replace_na(double_counted, FALSE))
+    group_by(pollutant, outcome) %>%
+    mutate(
+      has_ncdlri = any(cause == CAUSE_NCDLRI & !is.na(number)),
+      has_cv = any(cause == CAUSE_CV & !is.na(number)),
+      double_counted = case_when(
+        !is.na(double_counted) ~ double_counted,  # Trust CRFs first
+        has_ncdlri & cause %in% CAUSE_NCDLRI_INCLUDED ~ TRUE,
+        has_cv & cause %in% CAUSE_CV_INCLUDED ~ TRUE,
+        TRUE ~ FALSE
+      )
+    ) %>%
+    select(-has_ncdlri, -has_cv) %>%
+    ungroup()
 
   return(joined)
 }
@@ -259,8 +260,17 @@ to_long_hia <- function(hia) {
       bind_cols(., split)
     } %>%
     # Some keys may have an optional trailing _<pollutant> suffix
-    # Keep cause and the primary outcome only
-    mutate(outcome = sub(poll_suffix_pattern, '', outcome)) %>%
+    # Extract pollutant from outcome name if not already present as a column
+    mutate(
+      pollutant_from_outcome = str_extract(outcome, poll_suffix_pattern) %>% str_remove('^_'),
+      pollutant = if('pollutant' %in% names(.)) pollutant else pollutant_from_outcome,
+      outcome = sub(poll_suffix_pattern, '', outcome)
+    ) %>%
+    sel(-pollutant_from_outcome) %>%
+    # Filter out cause-outcome-pollutant combinations where ALL values are NA
+    group_by(cause, outcome, pollutant) %>%
+    filter(any(!is.na(number))) %>%
+    ungroup() %>%
     sel(-cause_outcome)
 }
 
