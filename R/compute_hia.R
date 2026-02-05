@@ -74,7 +74,8 @@ compute_hia <- function(conc_map,
     epi_version = epi_version,
     rr_sources = rr_sources,
     crfs = crfs,
-    .mode = .mode
+    .mode = .mode,
+    diagnostic_folder = diagnostic_folder
   )
 
   message("Computing impacts")

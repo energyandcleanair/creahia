@@ -79,6 +79,7 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                                                     # valuation_version = "default",
                                                     return_concentrations = F,
                                                     pm2.5_to_pm10_ratio = NULL,
+                                                    diagnostic_folder = "diagnostic",
                                                     ...){
 
   # Fix inputs: if scale_base_year or scale_target_year is not null,
@@ -174,6 +175,7 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                               pop_year = pop_year,
                               epi_version = epi_version,
                               crfs_version = crfs_version,
+                              diagnostic_folder = diagnostic_folder,
                               ...)
 
   if(return_concentrations) {
@@ -223,6 +225,7 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
                                                       # valuation_version = "default",
                                                       return_concentrations = F,
                                                       output_folder = '.',
+                                                      diagnostic_folder = "diagnostic",
                                                       ...){
 
   # Fix inputs: if scale_base_year or scale_target_year is not null,
@@ -267,6 +270,7 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
                                 pop_year = pop_year,
                                 epi_version = epi_version,
                                 crfs_version = crfs_version,
+                                diagnostic_folder = diagnostic_folder,
                                 ...)
 
     if(return_concentrations) {
