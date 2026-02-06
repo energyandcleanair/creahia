@@ -225,7 +225,9 @@ compute_hia_paf <- function(conc_map,
                            epi_version = "default",
                            rr_sources = c(),
                            crfs = get_crfs(),
-                           .mode = 'change') {
+                           .mode = 'change',
+                           diagnostic_folder = "diagnostic"
+                           ) {
 
   paf <- tibble::tibble(
     scenario = character(),
@@ -261,6 +263,10 @@ compute_hia_paf <- function(conc_map,
   paf_crf_combined <- paf_crf %>%
     bind_rows(.id = 'scenario')
   paf <- bind_rows(paf, paf_crf_combined)
+
+
+  # Plot diagnostics
+  diagnose_paf(paf, diagnostic_folder)
 
   return(paf)
 }
@@ -343,4 +349,61 @@ country_paf_perm <- function(pm.base,
   }
 
   return(paf)
+}
+
+
+#' Export PAF diagnostic plots to diagnostic_folder
+#'
+#'
+#' @param paf
+#' @param diagnostic_folder
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+diagnose_paf <- function(paf, diagnostic_folder) {
+
+  if(is.null(diagnostic_folder)) {
+    logger::log_info("No diagnostic folder provided, skipping PAF diagnostics.")
+    return()
+  }
+
+  dir.create(diagnostic_folder, showWarnings = FALSE, recursive = TRUE)
+
+  outcomes <- unique(paf$outcome)
+  regions <- unique(paf$region_id)
+
+  multiple_regions <- length(regions) > 1
+
+  if(multiple_regions) {
+
+    for(outcome in outcomes) {
+      plot <- paf %>%
+        filter(outcome == !!outcome) %>%
+        ggplot() +
+        geom_col(aes(cause, -central, fill=cause), show.legend = F) +
+        facet_wrap(~region_id) +
+        labs(title = paste("PAF for", outcome), y=NULL, x = NULL) +
+        scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+        rcrea::theme_crea_new() +
+        rcrea::scale_fill_crea_d()
+
+      ggsave(filename = file.path(diagnostic_folder, paste0("paf_", tolower(outcome), ".png")), plot = plot, width = 10, height = 6)
+    }
+
+  } else {
+
+    plot <- paf %>%
+      ggplot() +
+      geom_col(aes(cause, -central, fill=cause), show.legend = F) +
+      facet_wrap(~outcome, scales='free') +
+      labs(title = glue("PAF by cause and outcome for {unique(paf$region_id)}"), y=NULL, x = NULL) +
+      scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+      rcrea::theme_crea_new() +
+      rcrea::scale_fill_crea_d()
+
+    ggsave(filename = file.path(diagnostic_folder, "paf_by_outcome.png"), plot = plot, width = 10, height = 6)
+
+  }
 }
