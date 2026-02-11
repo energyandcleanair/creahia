@@ -103,5 +103,10 @@ compute_hia <- function(conc_map,
     impacts <- scale_hia_pop(impacts, base_year = pop_year_actual, target_year = pop_year_desired)
   }
 
-  return(impacts)
+#  return(impacts)
+  results <- list(
+    impacts = impacts,
+    paf = paf
+  )
+  return(results)
 }
