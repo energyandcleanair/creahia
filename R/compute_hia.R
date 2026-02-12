@@ -100,5 +100,11 @@ compute_hia <- function(conc_map,
     }
   }
 
-  return(impacts)
-}
+#  return(impacts)
+  results <- list(
+    impacts = impacts,
+    paf = paf
+  )
+  return(results)
+
+  }
