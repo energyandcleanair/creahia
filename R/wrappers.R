@@ -178,7 +178,7 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                               crfs_version = crfs_version,
                               diagnostic_folder = diagnostic_folder,
                               ...)
-  impacts <- hia_results$impacts
+  hia <- hia_results$impacts
   if(return_concentrations) {
     conc_regions_mean <- conc_regions %>%
       lapply(function(x){
