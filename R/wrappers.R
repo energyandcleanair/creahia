@@ -195,7 +195,20 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   }
   # hia_table <- hia %>% totalise_hia() %>% make_hia_table()
 
-  return(hia)
+  # add PAF to the results, and make sure it is in the same format as hia
+  paf_extracted <- hia_results$paf %>%
+    lapply(function(x){
+      x %>% subset(!is.null(x)) %>%
+        lapply(as_tibble) %>%
+        bind_rows(.id = 'region_id')
+    }) %>%
+    bind_rows(.id = 'scenario')
+
+   hia <- hia %>% left_join(paf_extracted, by = c('scenario', 'region_id', 'species')) %>%
+     select(scenario, region_id, species, everything())
+
+
+    return(hia)
 }
 
 
