@@ -169,7 +169,8 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   conc_regions <- creahia::extract_concs_and_pop(concs, regions, species)
 
   # 06: Compute hia --------------------------------------------------------------------------
-  hia <- creahia::compute_hia(conc_map = conc_regions,
+
+  hia_results <- creahia::compute_hia(conc_map = conc_regions,
                               species = species,
                               regions = regions,
                               pop_year = pop_year,
@@ -177,7 +178,7 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                               crfs_version = crfs_version,
                               diagnostic_folder = diagnostic_folder,
                               ...)
-
+  hia <- hia_results$impacts
   if(return_concentrations) {
     conc_regions_mean <- conc_regions %>%
       lapply(function(x){
@@ -194,7 +195,20 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   }
   # hia_table <- hia %>% totalise_hia() %>% make_hia_table()
 
-  return(hia)
+  # add PAF to the results, and make sure it is in the same format as hia
+  paf_extracted <- hia_results$paf %>%
+    lapply(function(x){
+      x %>% subset(!is.null(x)) %>%
+        lapply(as_tibble) %>%
+        bind_rows(.id = 'region_id')
+    }) %>%
+    bind_rows(.id = 'scenario')
+
+   hia <- hia %>% left_join(paf_extracted, by = c('scenario', 'region_id', 'species')) %>%
+     select(scenario, region_id, species, everything())
+
+
+    return(hia)
 }
 
 
@@ -264,7 +278,7 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
     conc_regions <- creahia::extract_concs_and_pop(concs, regions, pollutants_for_hia)
 
     # 04: Compute hia ----
-    hia <- creahia::compute_hia(conc_map = conc_regions,
+    hia_results <- creahia::compute_hia(conc_map = conc_regions,
                                 species = pollutants_for_hia,
                                 regions = regions,
                                 pop_year = pop_year,
@@ -272,7 +286,7 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
                                 crfs_version = crfs_version,
                                 diagnostic_folder = diagnostic_folder,
                                 ...)
-
+    hia <- hia_results$impacts
     if(return_concentrations) {
       conc_regions_mean <- conc_regions %>%
         lapply(function(x){
