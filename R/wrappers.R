@@ -196,13 +196,7 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   # hia_table <- hia %>% totalise_hia() %>% make_hia_table()
 
   # export paf
-  paf <- hia_results$paf %>%
-    lapply(function(x){
-      x %>% subset(!is.null(x)) %>%
-        lapply(as_tibble) %>%
-        bind_rows(.id = 'region_id')
-    }) %>%
-    bind_rows(.id = 'scenario')
+  paf <- hia_results$paf
 
 
 
