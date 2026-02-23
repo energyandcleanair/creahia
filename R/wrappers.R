@@ -199,10 +199,9 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   paf <- hia_results$paf
 
 
-
-    results <- list(
+  results <- list(
     impacts = hia,
-    paf = hia_results$paf
+    paf = paf
   )
 
 
