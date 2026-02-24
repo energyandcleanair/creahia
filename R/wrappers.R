@@ -196,18 +196,11 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   # hia_table <- hia %>% totalise_hia() %>% make_hia_table()
 
   # export paf
-  paf <- hia_results$paf
-
-
-  results <- list(
-    impacts = hia,
-    paf = paf
-  )
-
+  hia <- list(hia = hia, concentrations = conc_regions_mean, paf = hia_results$paf)
 
 # should change the workflow to save hia impact and paf separately. And keep hia impacts as the same in previous workflow.
-  return(results)
-#    return(hia)
+#  return(results)
+  return(hia)
 }
 
 
