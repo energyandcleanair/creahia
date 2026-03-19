@@ -295,13 +295,14 @@ test_that("Estimates are compatible with previous versions", {
   # Generate fingerprints for newer versions (with GBD2021)
   generate_fingerprints(refs = c("0.6.0",
                                  "0.6.1",
-                                 "0.7.0"),
+                                 "0.7.0",
+                                 "0.7.1"),
                         param_sets = c(param_sets_gbd2019, param_sets_gbd2021),
                         force = F,
                         force_current = T)
 
   # Generate fingerprints for newer versions (with GBD2023)
-  generate_fingerprints(refs = c("0.7.1", "current"),
+  generate_fingerprints(refs = c("0.7.2", "current"),
                         param_sets = c(param_sets_gbd2019, param_sets_gbd2021, param_sets_gbd2023),
                         force = F,
                         force_current = T)
@@ -341,7 +342,7 @@ test_that("Estimates are compatible with previous versions", {
 
   authorised_missing3 <- tibble(
     epi_version = "gbd2023",
-    version = c("0.4.1", "0.4.4","0.5.0","0.5.1","0.6.0","0.6.1","0.7.0"),
+    version = c("0.4.1", "0.4.4","0.5.0","0.5.1","0.6.0","0.6.1","0.7.0","0.7.1"),
     description = "No gbd 2023 for these versions"
   ) %>%
     crossing(
