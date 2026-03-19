@@ -39,7 +39,8 @@ Imports:
     pbapply,
     here,
     httr,
-    jsonlite
+    jsonlite,
+    ggspatial
 Depends:
     tidyverse,
     creahelpers,
