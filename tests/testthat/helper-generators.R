@@ -161,7 +161,7 @@ generate_random_exposure_hias <- function(levels,
                                           epi_version = "gbd2023",
                                           administrative_res = "full",
                                           iso3 = "BGD",
-                                          res = 0.01,
+                                          res = 0.1,
                                           baseline_rast = NULL,
                                           ...
 ){
