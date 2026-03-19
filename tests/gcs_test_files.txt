@@ -1,0 +1,15 @@
+# GCS test data manifest (one entry per line, relative to gs://crea-data/gis/)
+# Used by Dockerfile.ci to download only what's needed for testing.
+#
+# Supported formats:
+#   path/to/file.tif          — download a single file
+#   path/to/folder/*.tif      — download matching files (gsutil glob)
+#   path/to/folder/           — sync entire folder (trailing slash)
+#
+# Required by: test_population.R, test_extract_concs_and_pop.R
+population/gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2015_30_sec.tif
+population/gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_30_sec.tif
+# Required by: test_regions.R, test_extract_concs_and_pop.R
+boundaries/gadm/gadm410_0_low_rgeos.RDS
+boundaries/gadm/gadm410_1_low_rgeos.RDS
+boundaries/gadm/gadm410_2_low_rgeos.RDS

@@ -5,6 +5,7 @@ on:
     branches: [ master, feat/improved_testing_continued ]
     paths:
       - 'Dockerfile.ci'
+      - 'tests/gcs_test_files.txt'
   workflow_dispatch:
 
 jobs:

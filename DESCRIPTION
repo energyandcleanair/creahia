@@ -40,12 +40,14 @@ Imports:
     here,
     httr,
     jsonlite,
-    ggspatial
+    ggspatial,
+    creaexposure
 Depends:
     tidyverse,
     creahelpers,
     glue
 Remotes:
+    energyandcleanair/creaexposure,
     energyandcleanair/creahelpers,
     laurimyllyvirta/lauR,
     nset-ornl/wbstats
