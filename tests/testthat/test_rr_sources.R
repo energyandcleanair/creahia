@@ -1,6 +1,6 @@
 test_that("Results with different RR sources are properly ordered", {
 
-  res <- 0.01
+  res <- 0.1
   m <- terra::rast(
     xmin=88,
     xmax=92,

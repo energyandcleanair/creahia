@@ -6,7 +6,7 @@ get_fingerprint_bgd <- function(params = list(calc_causes = "GBD only", epi_vers
 
   # Get PM2.5 exposure raster over Bangladesh with resolution 0.01deg
   current_version <- as.character(packageVersion("creahia"))
-  res <- 0.01
+  res <- 0.1
   m <- terra::rast(
     xmin=88,
     xmax=92,
@@ -295,14 +295,13 @@ test_that("Estimates are compatible with previous versions", {
   # Generate fingerprints for newer versions (with GBD2021)
   generate_fingerprints(refs = c("0.6.0",
                                  "0.6.1",
-                                 "0.7.0",
-                                 "current"),
+                                 "0.7.0"),
                         param_sets = c(param_sets_gbd2019, param_sets_gbd2021),
                         force = F,
                         force_current = T)
 
   # Generate fingerprints for newer versions (with GBD2023)
-  generate_fingerprints(refs = c("current"),
+  generate_fingerprints(refs = c("0.7.1", "current"),
                         param_sets = c(param_sets_gbd2019, param_sets_gbd2021, param_sets_gbd2023),
                         force = F,
                         force_current = T)
