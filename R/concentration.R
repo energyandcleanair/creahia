@@ -65,85 +65,61 @@ get_conc_baseline_manual <- function(species, folder) {
 
 #' Get PM2.5 baseline concentration for a given year and grid
 #'
+#' Delegates to creaexposure::get_concentration().
+#'
 #' @param target_year
 #' @param grid_raster
 #'
 #' @return SpatRaster
 #' @export
-#'
-#' @examples
 get_conc_baseline_pm25 <- function(target_year = lubridate::year(lubridate::today()),
                                    grid_raster){
-  basemap_year <- get_baseline_pm25_year(target_year) # get latest available basemap year
-
-  pm25_tif <- glue("V5GL0502.HybridPM25.Global.{basemap_year}01-{basemap_year}12.tif")
-  creahelpers::get_concentration_path(pm25_tif) %>% rast %>%
-    cropProj(grid_raster)
+  r <- creaexposure::get_concentration("pm25", source = "vandonkelaar", year = target_year,
+                                       grid_raster = grid_raster)
+  .validate_unit(r, "µg/m3")
+  r
 }
 
 
 get_baseline_pm25_year <- function(year){
-  basemap_years <- seq(2015, 2023)
-  max(basemap_years[basemap_years<=year])
+  creaexposure::get_concentration_closest_year("pm25", source = "vandonkelaar", year = year)
 }
 
 
 #' Get O3 baseline concentration for a given year and grid
 #'
+#' Delegates to creaexposure::get_concentration().
+#'
 #' @param grid_raster
+#' @param species "o3" for M3M layer, "o3_8h" for SM8h layer
 #'
 #' @return SpatRaster
 #' @export
-#'
-#' @examples
 get_conc_baseline_o3 <- function(grid_raster, species){
-  creahelpers::get_concentration_path('O3_77e3b7-xmessy_mmd_kk.nc') %>%
-    rast %>%
-    `[[`(if(species == 'o3') 'M3M_lev31_31=31' else 'SM8h_lev31_31=31') %>%
-    creahelpers::cropProj(grid_raster)
+  variant <- if (species == "o3") "m3m" else "sm8h"
+  creaexposure::get_concentration("o3", source = "geoschem", variant = variant,
+                                  grid_raster = grid_raster)
 }
 
 
 #' Get NO2 baseline concentration for a given year and grid
 #'
+#' Delegates to creaexposure::get_concentration() with temporal scaling.
+#'
 #' @param grid_raster
-#' @param no2_targetyear
+#' @param no2_targetyear target year for temporal scaling via OMI ratio
 #'
 #' @return SpatRaster
 #' @export
-#'
-#' @examples
-get_conc_baseline_no2 <- function(grid_raster, no2_targetyear, no2_min_incr){
-  conc_no2 <- creahelpers::get_concentration_path('no2_agg8.grd') %>%
-    raster %>%
-    creahelpers::cropProj(grid_raster) %>%
-    multiply_by(1.88)
+get_conc_baseline_no2 <- function(grid_raster, no2_targetyear){
+  conc_no2 <- creaexposure::get_concentration(
+    "no2", source = "larkin", grid_raster = grid_raster,
+    scale_year = no2_targetyear
+  )
+  .validate_unit(conc_no2, "µg/m3")
 
-  if(!is.null(no2_targetyear)) {
-    no2_11 <- creahelpers::get_concentration_path("no2_omi_2011.tif") %>%
-      raster %>%
-      creahelpers::cropProj(grid_raster)
-    no2_targetyr <- creahelpers::get_concentration_path(glue("no2_omi_{no2_targetyear}.tif")) %>%
-      raster %>%
-      creahelpers::cropProj(grid_raster)
-
-    focal_d <- get_focal_d(grid_raster)
-
-    no2_11_smooth <- no2_11 %>%
-      focal(focalWeight(., focal_d, "circle"), mean, na.rm = T, pad = T, padValue = NA)
-    no2_targetyr_smooth <- no2_targetyr %>%
-      focal(focalWeight(., focal_d, "circle"), mean, na.rm = T, pad = T, padValue = NA)
-
-    no2_ratio <- no2_targetyr_smooth / no2_11_smooth
-
-    if(!is.null(no2_min_incr)) {
-      no2_ratio <- no2_ratio %>% max(no2_min_incr)
-    }
-
-    conc_no2 <- conc_no2 %>% multiply_by(no2_ratio)
-  }
-
-  conc_no2[] <- conc_no2[] %>% na.approx(maxgap = 5, na.rm = F)
+  conc_no2 <- creahelpers::to_raster(conc_no2)
+  conc_no2[] <- conc_no2[] %>% zoo::na.approx(maxgap = 5, na.rm = F)
   conc_no2
 }
 
@@ -211,6 +187,24 @@ flatten_concs <- function(concs) {
 add_pop <- function(concs, grid_raster, year_desired=2020) {
   concs$pop <- list(get_pop_count(grid_raster, year_desired = year_desired))
   return(concs)
+}
+
+
+.validate_unit <- function(r, expected_unit) {
+  unit <- terra::units(r)
+  if (length(unit) == 0 || unit == "") {
+    stop(glue::glue(
+      "No unit set on raster. Expected '{expected_unit}'. ",
+      "Update creaexposure to a version that sets terra::units()."
+    ))
+  }
+  # Compare raw bytes to avoid UTF-8 vs native encoding mismatches (e.g. µ character)
+  if (!identical(charToRaw(unit), charToRaw(expected_unit))) {
+    stop(glue::glue(
+      "Unexpected unit: got '{unit}', expected '{expected_unit}'. ",
+      "Check the source registry in creaexposure."
+    ))
+  }
 }
 
 

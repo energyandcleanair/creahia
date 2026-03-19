@@ -94,7 +94,8 @@ test_that("Population is properly calculated and scaled- using HIA", {
 
   hia_2015 <- generate_random_exposure_hias(levels=c(0,1),  # Only levels 0 and 1
                                       pop_year=2015,  # Use available year
-                                      iso3=iso3,,
+                                      iso3=iso3,
+                                      res=0.1,
                                       administrative_res="low"
   ) %>%
     mutate(year=2015)
@@ -103,6 +104,7 @@ test_that("Population is properly calculated and scaled- using HIA", {
   hia_2020 <- generate_random_exposure_hias(levels=c(0,1),  # Only levels 0 and 1
                                       pop_year=2020,  # Use available year
                                       iso3=iso3,
+                                      res=0.1,
                                       administrative_res="low") %>%
     mutate(year=2020)
 
@@ -122,11 +124,18 @@ test_that("Population is properly calculated and scaled- using HIA", {
            year=date,
            pop_wb=`SP.POP.TOTL`)
 
+  # Ensure both levels are present
+  expect_true(all(c(0, 1) %in% pop_hia$level))
+
   comparison <- pop_hia %>%
     left_join(pop_wb, by=c("iso3", "year")) %>%
     mutate(pop_diff=(pop_hia-pop_wb)/pop_wb)
 
-  # High resolution because we are using the low resolution boundaries
-  expect_equal(max(abs(comparison$pop_diff)), 0, tolerance=0.1)
+  # Check each level separately
+  for(lvl in c(0, 1)) {
+    comp_lvl <- comparison %>% filter(level == lvl)
+    expect_equal(max(abs(comp_lvl$pop_diff)), 0, tolerance=0.1,
+                 label=paste("Population diff at level", lvl))
+  }
 
 })

@@ -3,7 +3,7 @@ library(testthat)
 test_that("Results using rr_sources is simlar to old way using calc_causes", {
 
 
-  res <- 0.01
+  res <- 0.1
   m <- terra::rast(
     xmin=88,
     xmax=92,

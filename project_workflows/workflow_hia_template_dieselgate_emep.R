@@ -146,7 +146,7 @@ grid_raster <- terra::rast((list.files(file.path(output_folder),
 
 # 02: Get base concentration levels ---------------------------------------
 #pollutants_to_process <- c('O3')
-conc_base <- creahia::wrappers.get_conc_baseline(species = pollutants_to_process %>% tolower(),
+conc_base <- creahia::get_conc_baseline(species = pollutants_to_process %>% tolower(),
                                                  grid_raster = raster(grid_raster),
                                                  no2_targetyear = 2018,
                                                  pm25_to_pm10_ratio = .7)

@@ -76,36 +76,41 @@ RUN mkdir -p $GIS_DIR/population $GIS_DIR/boundaries
 # Add build arguments for GIS data download
 ARG DOWNLOAD_GIS_DATA=false
 
-# Install gsutil and download GIS data if requested
+# Copy the test file manifest so docker can read it
+COPY tests/gcs_test_files.txt /tmp/gcs_test_files.txt
+
+# Download only the files listed in tests/gcs_test_files.txt
+# Supports: exact files, globs (*.tif), and folder sync (trailing /).
 RUN --mount=type=secret,id=gcs-service-account-key \
     if [ "$DOWNLOAD_GIS_DATA" = "true" ]; then \
-        echo "=== TESTING GCS DOWNLOAD ===" && \
+        echo "=== Installing gsutil ===" && \
         apt-get update && apt-get install -y python3-pip curl && \
         pip3 install gsutil && \
-        # Setup GCS authentication and download in one step
         if [ -f /run/secrets/gcs-service-account-key ]; then \
             echo "Decoding service account key..." && \
             cat /run/secrets/gcs-service-account-key | base64 -d > /tmp/gcs-key.json && \
-            echo "Activating service account with gsutil..." && \
-            gsutil config -e < /dev/null || true && \
             export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcs-key.json && \
-            echo "Testing gsutil with explicit credentials..." && \
-            gsutil -o "Credentials:gs_service_key_file=/tmp/gcs-key.json" ls gs://crea-data/gis/ && \
-            echo "Downloading population data..." && \
-            gsutil -o "Credentials:gs_service_key_file=/tmp/gcs-key.json" -m cp \
-                "gs://crea-data/gis/population/gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2015_30_sec.tif" \
-                "gs://crea-data/gis/population/gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_30_sec.tif" \
-                $GIS_DIR/population/ && \
-            echo "Downloading specific boundary data..." && \
-            mkdir -p $GIS_DIR/boundaries/gadm && \
-            gsutil -o "Credentials:gs_service_key_file=/tmp/gcs-key.json" -m cp \
-                "gs://crea-data/gis/boundaries/gadm/gadm410_0_low_rgeos.RDS" \
-                "gs://crea-data/gis/boundaries/gadm/gadm410_1_low_rgeos.RDS" \
-                "gs://crea-data/gis/boundaries/gadm/gadm410_2_low_rgeos.RDS" \
-                $GIS_DIR/boundaries/gadm/ && \
+            GSUTIL="gsutil -o Credentials:gs_service_key_file=/tmp/gcs-key.json" && \
+            echo "Downloading test files from GCS..." && \
+            grep -v '^\s*#' /tmp/gcs_test_files.txt | grep -v '^\s*$' | while read -r entry; do \
+                if echo "$entry" | grep -q '/$'; then \
+                    echo "  [rsync] $entry" && \
+                    mkdir -p "$GIS_DIR/$entry" && \
+                    $GSUTIL -m rsync -r "gs://crea-data/gis/$entry" "$GIS_DIR/$entry" ; \
+                elif echo "$entry" | grep -qE '[*?]'; then \
+                    dir=$(dirname "$entry") && \
+                    echo "  [glob]  $entry" && \
+                    mkdir -p "$GIS_DIR/$dir" && \
+                    $GSUTIL -m cp "gs://crea-data/gis/$entry" "$GIS_DIR/$dir/" ; \
+                else \
+                    dir=$(dirname "$entry") && \
+                    echo "  [file]  $entry" && \
+                    mkdir -p "$GIS_DIR/$dir" && \
+                    $GSUTIL cp "gs://crea-data/gis/$entry" "$GIS_DIR/$dir/" ; \
+                fi ; \
+            done && \
             echo "=== GCS DOWNLOAD COMPLETE ===" && \
-            ls -la $GIS_DIR/population/ && \
-            ls -la $GIS_DIR/boundaries/ && \
+            find $GIS_DIR -type f && \
             rm -f /tmp/gcs-key.json; \
         else \
             echo "No GCS key provided"; \

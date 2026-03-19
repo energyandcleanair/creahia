@@ -2,9 +2,10 @@ name: Build CI Docker Image
 
 on:
   push:
-    branches: [ master, feat/improved_testing_continued ]
+    branches: [ master, feat/improved_testing_continued, feat/new_exposure_split ]
     paths:
       - 'Dockerfile.ci'
+      - 'tests/gcs_test_files.txt'
   workflow_dispatch:
 
 jobs:

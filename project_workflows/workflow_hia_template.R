@@ -48,7 +48,7 @@ calpuff_files %>%
 
 
 # 02: Get base concentration levels ----
-conc_base <- creahia::wrappers.get_conc_baseline(species = unique(calpuff_files$species),
+conc_base <- creahia::get_conc_baseline(species = unique(calpuff_files$species),
                                                  grid_raster = grid_raster,
                                                  no2_targetyear = 2020,
                                                  pm25_to_pm10_ratio = .7)
