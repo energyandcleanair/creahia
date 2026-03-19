@@ -2,15 +2,13 @@
 #'
 #' @param species
 #' @param grid_raster
-#' @param no2_min_incr
 #' @param no2_targetyear
 #'
 #' @return a tibble with `species` (chr) and named `conc_baseline` (RasterLayer) columns
 #' @export
 #'
 #' @examples
-wrappers.get_conc_baseline <- function(species, grid_raster,
-                                       no2_min_incr = NULL,
+get_conc_baseline <- function(species, grid_raster,
                                        no2_targetyear = 2019,
                                        pm25_to_pm10_ratio = .7) {
   avail_species <- c('no2', 'so2', 'pm25', 'tpm10', 'o3', 'o3_8h') # pollutants with available baseline
@@ -20,8 +18,7 @@ wrappers.get_conc_baseline <- function(species, grid_raster,
   conc <- lapply(species, function(spec) {
     if(spec == 'no2') {
       get_conc_baseline_no2(grid_raster = grid_raster,
-                            no2_targetyear = no2_targetyear,
-                            no2_min_incr = no2_min_incr)
+                            no2_targetyear = no2_targetyear)
     } else if(spec == 'so2'){
       grid_raster %>% setValues(10)
     } else if(spec == 'tpm10'){
