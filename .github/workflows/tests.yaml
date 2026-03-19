@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [ master, feat/new_exposure_folder_structure ]
+    branches: [ master, feat/new_exposure_split ]
   pull_request:
     branches: [ master ]
   workflow_dispatch:
