@@ -11,7 +11,6 @@
 #' @param crfs_version
 #' @param crfs
 #' @param diagnostic_folder
-#' @param .mode
 #' @param scale_base_year DEPRECATED
 #' @param scale_target_year
 #' @param ...
@@ -33,7 +32,6 @@ compute_hia <- function(conc_map,
                         crfs_version = "default",
                         crfs = get_crfs(version = crfs_version),
                         diagnostic_folder = 'diagnostic',
-                        .mode = 'change',
                         # Years
                         pop_year = NULL,
                         scale_base_year = NULL,
@@ -74,7 +72,6 @@ compute_hia <- function(conc_map,
     epi_version = epi_version,
     rr_sources = rr_sources,
     crfs = crfs,
-    .mode = .mode,
     diagnostic_folder = diagnostic_folder
   )
 

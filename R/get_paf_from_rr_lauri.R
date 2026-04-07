@@ -1,8 +1,7 @@
-#' Calculate Population Attributable Fraction (PAF) Using the Delta Method
+#' Calculate Population Attributable Fraction (PAF)
 #'
 #' This function computes the Population Attributable Fraction (PAF) for each pixel by
-#' propagating uncertainties from baseline and permuted Risk Ratios (RR) using the Delta Method.
-#' It accounts for multiple age groups with associated weights and population sizes.
+#' propagating uncertainties from baseline and permuted Risk Ratios (RR) using "Lauri's method"
 #'
 #' @param rr_base A 3D numeric array of baseline Risk Ratios with dimensions \[pixel, estimate, agegroup\].
 #'   The `estimate` dimension should include `"low"`, `"central"`, and `"high"` values representing the confidence interval bounds.

@@ -9,7 +9,6 @@
 #' @param regions Spatial regions data
 #' @param epi Epidemiological data
 #' @param crfs CRF data table
-#' @param .mode Computation mode (default: 'change')
 #' @return Health impact assessment results
 #' @export
 compute_hia_impacts <- function(species,
@@ -17,8 +16,7 @@ compute_hia_impacts <- function(species,
                                 conc_map,
                                 regions,
                                 epi = get_epi(),
-                                crfs = get_crfs(),
-                                .mode = 'change') {
+                                crfs = get_crfs()) {
 
   polls <- species_to_hiapoll(species)
   scenarios <- names(conc_map)

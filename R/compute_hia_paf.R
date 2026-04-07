@@ -7,7 +7,6 @@
 #' @param epi_version
 #' @param rr_sources
 #' @param scenarios
-#' @param .mode
 #'
 #' @return
 #' @export
@@ -16,8 +15,7 @@
 compute_hia_paf_rr_curves <- function(conc_map,
                                       epi_version,
                                       rr_sources,
-                                      scenarios = names(conc_map),
-                                      .mode = 'change') {
+                                      scenarios = names(conc_map)) {
 
   paf <- list()
 
@@ -70,8 +68,7 @@ compute_hia_paf_rr_curves <- function(conc_map,
                                          measure = measure_,
                                          rr_source = rr_source_,
                                          epi_version = epi_version,
-                                         .region = "inc_China",
-                                         .mode = .mode)
+                                         .region = "inc_China")
 
           if(is.null(paf_values)) return(NULL)
 
@@ -117,14 +114,12 @@ compute_hia_paf_rr_curves <- function(conc_map,
 #' @param conc_map List of concentration maps by scenario
 #' @param regions Spatial regions data
 #' @param crfs CRF data table
-#' @param .mode Computation mode (default: 'change')
 #' @return List of PAF values by scenario and region
 #' @export
 compute_hia_paf_crfs <- function(species,
                                 conc_map,
                                 regions,
-                                crfs = get_crfs(),
-                                .mode = 'change') {
+                                crfs = get_crfs()) {
   hia_polls <- species_to_hiapoll(species)
   scenarios <- names(conc_map)
   paf_crfs <- list()
@@ -215,7 +210,6 @@ compute_hia_paf_crfs <- function(species,
 #' @param epi_version EPI data version
 #' @param rr_sources Vector of RR sources (for RR-based PAF)
 #' @param crfs CRF data table (for CRF-based PAF)
-#' @param .mode Computation mode (default: 'change')
 #' @return Combined dataframe of PAF values from both methods
 #' @export
 compute_hia_paf <- function(conc_map,
@@ -225,7 +219,6 @@ compute_hia_paf <- function(conc_map,
                            epi_version = "default",
                            rr_sources = c(),
                            crfs = get_crfs(),
-                           .mode = 'change',
                            diagnostic_folder = "diagnostic"
                            ) {
 
@@ -246,8 +239,7 @@ compute_hia_paf <- function(conc_map,
     paf_rr <- compute_hia_paf_rr_curves(conc_map = conc_map,
                                         scenarios = scenarios,
                                         epi_version = epi_version,
-                                        rr_sources = rr_sources,
-                                        .mode = .mode)
+                                        rr_sources = rr_sources)
     paf_rr_combined <- paf_rr %>%
       bind_rows(.id = 'scenario')
     paf <- bind_rows(paf, paf_rr_combined)
@@ -258,8 +250,7 @@ compute_hia_paf <- function(conc_map,
   paf_crf <- compute_hia_paf_crfs(species = species,
                                   conc_map = conc_map,
                                   regions = regions,
-                                  crfs = crfs,
-                                  .mode = .mode)
+                                  crfs = crfs)
   paf_crf_combined <- paf_crf %>%
     bind_rows(.id = 'scenario')
   paf <- bind_rows(paf, paf_crf_combined)
@@ -312,8 +303,7 @@ country_paf_perm <- function(pm.base,
                              measure,
                              rr_source,
                              epi_version,
-                             .region = "inc_China",
-                             .mode = 'change') { # change or attribution?
+                             .region = "inc_China") {
 
 
   rr <- get_rr(rr_source) %>%
@@ -330,23 +320,16 @@ country_paf_perm <- function(pm.base,
   rr.base <- ages %>% sapply(function(.a) get_hazard_ratio(pm.base, rr = rr, .cause = cause, .age = .a),
                              simplify = 'array')
 
-  if(.mode == 'change') {
-    rr.perm <- ages %>% sapply(function(.a) get_hazard_ratio(pm.perm, rr = rr, .cause = cause, .age = .a),
-                               simplify = 'array')
+  rr.perm <- ages %>% sapply(function(.a) get_hazard_ratio(pm.perm, rr = rr, .cause = cause, .age = .a),
+                             simplify = 'array')
 
-    paf <- get_paf_from_rr_lauri(
-      rr_base = rr.base,
-      rr_perm = rr.perm,
-      age_weights = age_weights$val,
-      pop = pop,
-      cause=cause,measure=measure
-    )
-
-  } else {
-    stop("Attribution mode not implemented yet")
-    #TODO implement the method with this formula
-    # paf.perm <- (1 - (1 / rr.base)) * (1 - pm.perm / pm.base)
-  }
+  paf <- get_paf_from_rr_lauri(
+    rr_base = rr.base,
+    rr_perm = rr.perm,
+    age_weights = age_weights$val,
+    pop = pop,
+    cause=cause,measure=measure
+  )
 
   return(paf)
 }
