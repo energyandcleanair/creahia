@@ -9,7 +9,8 @@ library(magrittr)
 library(lubridate)
 
 library(creahia)
-library(creapuff)
+source('../creapuff/R/02_calpuff.R') #library(creapuff)
+source('../creapuff/R/helpers.R') #library(creapuff)
 require(rcrea)
 require(creahelpers)
 
@@ -100,7 +101,7 @@ scenario_colors = function(guide=T) {
 decomm_by_year %>%
   group_by(year, scenario) %>% summarise(across(MW_current, sum)) %>%
   filter(year>=2020, scenario %in% scens_to_plot) %>%
-  write_csv(file.path(output_dir, 'operating coal power capacity.csv')) %>%
+  #write_csv(file.path(output_dir, 'operating coal power capacity.csv')) %>%
   ggplot(aes(year, MW_current, col=scenario)) + geom_line(linewidth=1) +
   theme_crea() + scenario_colors() +
   labs(title='Eskom operating coal power capacity by retirement scenario', y='MW', x='') +
@@ -165,12 +166,12 @@ emissions_data %>%
 hia_fut %>% right_join(emis_byyear) -> hia_scen
 
 hia_scen %<>% mutate(across(c(number, cost_mn_currentUSD), multiply_by, emissions/modeled_emissions)) %>%
-  group_by(region_id, plant, year, scenario, outcome, cause, pollutant, double_counted, estimate) %>%
+  group_by(region_id, plant, year, scenario, Outcome, Cause, Pollutant, double_counted, estimate) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum))
 
 #output
 hia_scen %>%
-  filter(outcome=='Deaths', !double_counted, estimate=='central', scenario %in% scens_to_plot) %>%
+  filter(Outcome=='Deaths', !double_counted, estimate=='central', scenario %in% scens_to_plot) %>%
   group_by(year, scenario) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum)) ->
   plotdata
@@ -198,7 +199,7 @@ quicksave(file.path(output_dir, 'deaths by scenario.png'), plot=p)
 
 
 hia_scen %>%
-  filter(outcome=='Deaths', !double_counted, year %in% 2023:2050, scenario %in% scens_to_plot) %>%
+  filter(Outcome=='Deaths', !double_counted, year %in% 2023:2050, scenario %in% scens_to_plot) %>%
   group_by(scenario, estimate) %>%
   summarise(across(c(number), sum)) %>% #cost_mn_currentUSD
   spread(estimate, number) ->
@@ -218,7 +219,7 @@ quicksave(file.path(output_dir, 'excess deaths by scenario.png'), plot=p, scale=
 
 
 hia_scen %>%
-  filter(outcome=='Deaths', !double_counted) %>%
+  filter(Outcome=='Deaths', !double_counted) %>%
   mutate(across(c(number, cost_mn_currentUSD), ~ifelse(year %in% 2023:2050, .x, 0))) %>%
   group_by(scenario, plant, estimate) %>%
   summarise(across(c(number), sum)) %>% #cost_mn_currentUSD
@@ -270,7 +271,7 @@ hia_scen %>% ungroup %>%
 good_scenario = 'IRP 2019'
 
 hia_out %>%
-  group_by(outcome, cause, pollutant, double_counted, estimate) %>%
+  group_by(Outcome, Cause, Pollutant, double_counted, estimate) %>%
   mutate(number=number - number[scenario==good_scenario]) %>%
   filter(scenario != good_scenario) %>%
   spread(estimate, number) %>%
@@ -278,9 +279,9 @@ hia_out %>%
   mutate(number=paste0(central, ' (', low, ' – ', high, ')')) %>%
   select(-c(low, central, high)) %>%
   spread(scenario, number) %>%
-  arrange(!grepl('deaths', outcome), !grepl('asthma', outcome), !grepl('births', outcome), grepl('economic', outcome),
-          outcome, pollutant != 'all', pollutant!='PM2.5', double_counted, cause, pollutant) %>%
-  select(outcome, cause, pollutant, any_of(scens_to_plot), double_counted) %>% filter(!is.na(outcome)) ->
+  arrange(!grepl('deaths', Outcome), !grepl('asthma', Outcome), !grepl('births', Outcome), grepl('economic', Outcome),
+          Outcome, Pollutant != 'all', Pollutant!='PM2.5', double_counted, Cause, Pollutant) %>%
+  select(Outcome, Cause, Pollutant, any_of(scens_to_plot), double_counted) %>% filter(!is.na(Outcome)) ->
   hia_avoided
 
 hia_avoided %>% write_excel_csv(file.path(output_dir, 'avoided health impacts, all, cumulative.csv'))
