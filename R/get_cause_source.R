@@ -50,14 +50,15 @@ get_cause_source <- function(rr_sources, add_measure=F) {
 #' parse_rr_sources(list(RR_GEMM = c("cause1", "cause2"), RR_ORIGINAL = c("cause3")))
 #'
 #' # Direct tibble input
-#' parse_rr_sources(tibble(cause = c("cause1", "cause2"), source = c("RR_GEMM", "RR_ORIGINAL")))
+#' parse_rr_sources(tibble(cause = c("cause1", "cause2"), source = c(RR_GEMM, RR_ORIGINAL)))
 parse_rr_sources <- function(rr_sources) {
-  # Case 3: If already a tibble with cause and source, return directly
+  
+  # Case 1: If already a tibble with cause and source, return directly
   if (is.data.frame(rr_sources) && all(c("cause", "source") %in% names(rr_sources))) {
     return(rr_sources)
   }
 
-  # Case 1: Character vector of sources
+  # Case 2: Character vector of sources
   if (is.character(rr_sources) || is.factor(rr_sources)) {
     available <- lapply(rr_sources, function(x) get_rr(x)) %>%
       bind_rows() %>%
@@ -73,7 +74,7 @@ parse_rr_sources <- function(rr_sources) {
     return(result)
   }
 
-  # Case 2: Named list mapping sources to causes
+  # Case 3: Named list mapping sources to causes
   # e.g. list(RR_GEMM = c(CAUSE_LRI, CAUSE_LUNGCANCER, CAUSE_DIABETES), RR_ORIGINAL = c(CAUSE_IHD, CAUSE_STROKE, CAUSE_COPD))
   if (is.list(rr_sources)) {
     result <- tibble(cause = character(), source = character())
