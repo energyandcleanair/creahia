@@ -36,8 +36,10 @@ weighted.mean(c[2,],c[3,])
 # save.image()
 
 # 06: Compute hia --------------------------------------------------------------------------
-hia <- creahia::compute_hia(conc_map=conc_adm, species=species, regions=adm,
+hia_results <- creahia::compute_hia(conc_map=conc_adm, species=species, regions=adm,
                    scale_base_year=2015, scale_target_year=2025)
+hia <- hia_results$hia
+paf <- hia_results$paf
 
 hia_table <- hia %>% make_hia_table() %T>% write_csv(file.path(results_dir, 'hia_table.csv'))
 

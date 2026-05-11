@@ -149,7 +149,7 @@ test_that("Our GEMM-derived deaths are similar to literature", {
       administrative_level = 0,
       administrative_res = adm_res,
       rr_sources = c(RR_GEMM),
-      )
+      )$hia
 
     # Extract deaths and population
     deaths <- hia %>%

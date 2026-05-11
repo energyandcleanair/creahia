@@ -111,7 +111,7 @@ for (scenario_prefix in runs) {
                                           scale_target_year=2021,      # 2025 # Population target year (same as no2_targetyear?)
                                           crfs_version="C40",      # crfs_version="C40"
                                           epi_version="C40",       # epi_version="C40"
-                                          valuation_version="default") # valuation_version="viscusi"
+                                          valuation_version="default")$hia # valuation_version="viscusi"
 
 
   saveRDS(hia, file.path(output_dir, paste0('hia','_',scenario_prefix,'.RDS')))

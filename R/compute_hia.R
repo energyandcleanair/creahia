@@ -18,7 +18,9 @@
 #' @param pop_year
 #' @param gbd_rr
 #'
-#' @return
+#' @return A list with two elements: `hia` (the health impact estimates data
+#'   frame) and `paf` (the population attributable fractions used to compute
+#'   them).
 #' @export
 #'
 #' @examples
@@ -76,7 +78,7 @@ compute_hia <- function(conc_map,
   )
 
   message("Computing impacts")
-  impacts <- compute_hia_impacts(
+  hia <- compute_hia_impacts(
     region = regions,
     species = species,
     paf = paf,
@@ -93,15 +95,9 @@ compute_hia <- function(conc_map,
     pop_year_desired <- pop_year
     if(pop_year_actual != pop_year_desired){
       message(glue("Scaling population from {pop_year_actual} to {pop_year_desired}"))
-      impacts <- scale_hia_pop(impacts, base_year = pop_year_actual, target_year = pop_year_desired)
+      hia <- scale_hia_pop(hia, base_year = pop_year_actual, target_year = pop_year_desired)
     }
   }
 
-#  return(impacts)
-  results <- list(
-    impacts = impacts,
-    paf = paf
-  )
-  return(results)
-
-  }
+  list(hia = hia, paf = paf)
+}

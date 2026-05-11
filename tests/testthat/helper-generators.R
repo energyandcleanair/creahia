@@ -125,7 +125,7 @@ generate_uniform_exposure_hia <- function(exposure_values = list(pm25 = list(bas
     administrative_iso3s = iso3,
     epi_version = epi_version,
     ...
-  )
+  )$hia
 
 }
 
@@ -239,7 +239,7 @@ generate_random_exposure_hias <- function(levels,
       administrative_res = administrative_res,
       administrative_iso3s = iso3,
       epi_version = epi_version
-    ) %>%
+    )$hia %>%
       mutate(level=level)
   }) %>%
     bind_rows()
@@ -292,6 +292,6 @@ generate_donkelaar_exposure_hia <- function(target,
     epi_version = epi_version,
     rr_sources = rr_sources,
     ...
-  )
+  )$hia
 
 }

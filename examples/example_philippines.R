@@ -53,9 +53,11 @@ conc_regions <- creahia::extract_concs_at_regions(concs, regions, species)
 # calc_causes <- get_calc_causes()
 
 # 07: HIA Calculations: PAF -----------------------------------------------------------------
-hia <- compute_hia(conc_map=conc_regions,
+hia_results <- compute_hia(conc_map=conc_regions,
                    species=species,
                    regions=regions)
+hia <- hia_results$hia
+paf <- hia_results$paf
 
 
 # 09: Scale with population growth

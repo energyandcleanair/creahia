@@ -35,7 +35,7 @@ test_that("Results with different RR sources are properly ordered", {
       administrative_res = "low",
       administrative_iso3s = "BGD",
       rr_sources = rr_source
-    ) %>%
+    )$hia %>%
       mutate(
         rr_source = rr_source
       )

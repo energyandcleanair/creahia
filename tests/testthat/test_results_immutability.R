@@ -35,6 +35,13 @@ get_fingerprint_bgd <- function(params = list(calc_causes = "GBD only", epi_vers
     rr_sources = params$rr_sources
   )
 
+  # Versions >= the paf-export change return list(hia, paf, ...); older
+  # versions return the hia data frame directly. Normalise here so this
+  # fingerprint generator stays compatible across versions.
+  if(is.list(hia) && !is.data.frame(hia) && "hia" %in% names(hia)) {
+    hia <- hia$hia
+  }
+
   # Add metadata
   hia$version <- current_version
   hia$epi_version <- params$epi_version

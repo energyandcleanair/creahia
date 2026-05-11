@@ -32,7 +32,7 @@ test_that("Results using rr_sources is simlar to old way using calc_causes", {
       calc_causes = 'GEMM and GBD',
       gbd_version = "gbd2019",
       gbd_causes = "default"
-    )
+    )$hia
 
   hia_new <- creahia::wrappers.compute_hia_two_images.default(
     perturbation_rasters = list(pm25 = p1),
@@ -42,7 +42,7 @@ test_that("Results using rr_sources is simlar to old way using calc_causes", {
     administrative_res = "low",
     administrative_iso3s = "BGD",
     rr_source = c(RR_GEMM, RR_ORIGINAL)
-  )
+  )$hia
 
   comparison <- full_join(
     hia_old %>% rename(number_old=number),

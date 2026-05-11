@@ -39,7 +39,7 @@ test_that("GADM level 2 gives similar results to level 1 and level 0 - Indonesia
     crfs_version = "C40",
     epi_version = "gbd2023",
     valuation_version = "viscusi"
-  )
+  )$hia
 
   hia_gadm1 <- creahia::wrappers.compute_hia_two_images.default(
     perturbation_rasters = perturbation_rasters,
@@ -50,7 +50,7 @@ test_that("GADM level 2 gives similar results to level 1 and level 0 - Indonesia
     crfs_version = "C40",
     epi_version = "gbd2023",
     valuation_version = "viscusi"
-  )
+  )$hia
 
 
   # Test that values are roughly equal

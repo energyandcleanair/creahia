@@ -29,11 +29,13 @@ test_that("wrapper 2 images works", {
   perturbation_rasters <- crop_fraction(perturbation_rasters)
   baseline_rasters <- lapply(perturbation_rasters, function(r){r[!is.na(r)] <- 0; r})
 
-  hia <- creahia::wrappers.compute_hia_two_images(perturbation_rasters = perturbation_rasters,
+  hia_results <- creahia::wrappers.compute_hia_two_images(perturbation_rasters = perturbation_rasters,
                                            baseline_rasters = baseline_rasters,
                                            administrative_iso3s = "PHL",
                                            pop_year=2020
                                            )
+  hia <- hia_results$hia
+  paf <- hia_results$paf
 
   dir.create("tmp", showWarnings = F)
   cost <- creahia::compute_econ_costs(hia=hia,

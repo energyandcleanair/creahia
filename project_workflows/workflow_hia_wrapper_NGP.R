@@ -126,7 +126,7 @@ hia <-  wrappers.compute_hia_two_images(conc_perturbation$conc_perturbation,    
                                         scale_target_year=2025,      # 2025 # Population target year (same as no2_targetyear?)
                                         crfs_version="default",      # crfs_version="C40"
                                         epi_version="default",       # epi_version="C40"
-                                        valuation_version="default") # valuation_version="viscusi"
+                                        valuation_version="default")$hia # valuation_version="viscusi"
 
 # To start from here
 # saveRDS(hia, file.path(output_dir, paste0('hia','_',scenario_prefix,'.RDS')))

@@ -15,10 +15,14 @@ wrappers.compute_hia_two_images <- function(obj, ...) {
 #' @param perturbation_rasters
 #' @param baseline_rasters
 #' @param crfs_version
-#' @param return_concentrations include the population-weighted concentrations by admin area in the results. In this case, the function returns a list.
+#' @param return_concentrations if `TRUE`, the returned list also includes a
+#'   `concentrations` element with population-weighted concentrations by admin
+#'   area.
 #' @param pm2.5_to_pm10_ratio if the PM2.5 input data should be used to assess PM10 exposure, provide a ratio to use for calculation of baseline concentrations
 #'
-#' @return
+#' @return A list with elements `hia` (health impact estimates), `paf`
+#'   (population attributable fractions) and, when `return_concentrations =
+#'   TRUE`, `concentrations`.
 #' @export
 #'
 #' @examples
@@ -127,7 +131,6 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   conc_regions <- creahia::extract_concs_and_pop(concs, regions, species)
 
   # 06: Compute hia --------------------------------------------------------------------------
-
   hia_results <- creahia::compute_hia(conc_map = conc_regions,
                               species = species,
                               regions = regions,
@@ -136,9 +139,11 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                               crfs_version = crfs_version,
                               diagnostic_folder = diagnostic_folder,
                               ...)
-  hia <- hia_results$impacts
+
+  result <- list(hia = hia_results$hia, paf = hia_results$paf)
+
   if(return_concentrations) {
-    conc_regions_mean <- conc_regions %>%
+    result$concentrations <- conc_regions %>%
       lapply(function(x){
         x %>% subset(!is.null(x)) %>%
           lapply(as_tibble) %>%
@@ -148,17 +153,9 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
       group_by(scenario, region_id) %>%
       summarise(across(-pop, weighted.mean, w = pop, na.rm = T),
                 across(pop, sum, na.rm = T))
-
-    hia <- list(hia = hia, concentrations = conc_regions_mean)
   }
-  # hia_table <- hia %>% totalise_hia() %>% make_hia_table()
 
-  # export paf
-#  hia <- list(hia = hia, concentrations = conc_regions_mean, paf = hia_results$paf)
-
-# should change the workflow to save hia impact and paf separately. And keep hia impacts as the same in previous workflow.
-#  return(results)
-  return(hia)
+  result
 }
 
 
@@ -169,10 +166,14 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
 #' @param baseline_rasters_table the table from wrapper.get_conc_baseline function.
 #' @param grid_raster grid raster for the model.
 #' @param crfs_version version of the CRFs to use.
-#' @param return_concentrations include the population-weighted concentrations by admin area in the results. In this case, the function returns a list.
+#' @param return_concentrations if `TRUE`, each saved RDS also includes a
+#'   `concentrations` element with population-weighted concentrations by admin
+#'   area.
 #' @param output_folder folder to save the results.
 #'
-#' @return
+#' @return Called for its side effect: writes one RDS file per scenario to
+#'   `output_folder/hia/`. Each file contains a list with `hia`, `paf` and,
+#'   when `return_concentrations = TRUE`, `concentrations`.
 #' @export
 #'
 #' @examples
@@ -236,9 +237,11 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
                                 crfs_version = crfs_version,
                                 diagnostic_folder = diagnostic_folder,
                                 ...)
-    hia <- hia_results$impacts
+
+    result <- list(hia = hia_results$hia, paf = hia_results$paf)
+
     if(return_concentrations) {
-      conc_regions_mean <- conc_regions %>%
+      result$concentrations <- conc_regions %>%
         lapply(function(x){
           x %>% subset(!is.null(x)) %>%
             lapply(as_tibble) %>%
@@ -248,12 +251,10 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
         group_by(scenario, region_id) %>%
         summarise(across(-pop, weighted.mean, w = pop, na.rm = T),
                   across(pop, sum, na.rm = T))
-
-      hia <- list(hia = hia, concentrations = conc_regions_mean)
     }
 
     dir.create(file.path(output_folder, 'hia'), showWarnings = F)
-    saveRDS(hia,
+    saveRDS(result,
             file.path(output_folder, 'hia',
                       glue(if(!is.null(custom_glue)) custom_glue else 'hia_GBD__{scen}.RDS')))
   }, ...)
