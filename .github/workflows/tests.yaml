@@ -8,22 +8,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  resolve-image:
-    runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.tag.outputs.tag }}
-    steps:
-      - name: Compute Docker-safe tag from branch name
-        id: tag
-        run: |
-          TAG=$(echo "${{ github.ref_name }}" | sed 's|/|-|g')
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
   test-creahia:
-    needs: resolve-image
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/energyandcleanair/creahia/ci-image:${{ needs.resolve-image.outputs.tag }}
+      image: ghcr.io/energyandcleanair/creahia/ci-image:master
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
