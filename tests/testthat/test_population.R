@@ -116,13 +116,15 @@ test_that("Population is properly calculated and scaled- using HIA", {
     group_by(iso3, year, level) %>%
     summarise(pop_hia=sum(pop))
 
-  pop_wb <- wbstats::wb_data(indicator="SP.POP.TOTL",
-                             country=iso3,
-                             start_date=min(hias$year),
-                             end_date=max(hias$year)) %>%
-    select(iso3=iso3c,
-           year=date,
-           pop_wb=`SP.POP.TOTL`)
+  # Cached WB SP.POP.TOTL for BEL 2015–2020 (avoids flaky api.worldbank.org in CI)
+  pop_wb <- readr::read_csv(
+    testthat::test_path("..", "..", "inst", "testdata", "worldbank",
+                        "pop_bel_2015_2020.csv"),
+    show_col_types = FALSE
+  ) %>%
+    select(iso3 = iso3c,
+           year = date,
+           pop_wb = `SP.POP.TOTL`)
 
   # Ensure both levels are present
   expect_true(all(c(0, 1) %in% pop_hia$level))

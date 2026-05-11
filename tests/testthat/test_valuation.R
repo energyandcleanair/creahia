@@ -227,15 +227,12 @@ test_that("get_valuations returns correct VSL for ZAF 2019 - Worldbank version",
   vsl_ref_elasticity <- 1.2
   vsl_ref_year <- 2011
 
-  vsls <- creahia::safe_wb_data(c(gdp_current = 'NY.GDP.PCAP.CD',
-                         gdp_ppp_current = 'NY.GDP.PCAP.PP.CD',
-                         gdp_ppp_constant = 'NY.GDP.PCAP.PP.KD',
-                         gdp_constant = 'NY.GDP.PCAP.KD',
-                         gdp_current_lcu = 'NY.GDP.PCAP.CN'
-  ),
-  start_date = vsl_ref_year,
-  end_date = 2019,
-  country=c("ZAF", vsl_ref_iso3)) %>%
+  # Cached WB GDP indicators for ZAF + OED 2011–2019 (avoids flaky api.worldbank.org in CI)
+  vsls <- readr::read_csv(
+    testthat::test_path("..", "..", "inst", "testdata", "worldbank",
+                        "gdp_zaf_oed_2011_2019.csv"),
+    show_col_types = FALSE
+  ) %>%
     select(iso3c, date, gdp_current, gdp_ppp_constant, gdp_current_lcu, gdp_ppp_current) %>%
     mutate(iso3c = if_else(iso3c == vsl_ref_iso3, "REF", iso3c)) %>%
     pivot_wider(names_from = iso3c, values_from = -c(iso3c, date))
@@ -280,19 +277,12 @@ test_that("get_valuations returns correct VSL for ZAF 2019 - Viscusi version", {
   vsl_ref_elasticity <- 1
   vsl_ref_year <- 2015
 
-  vsls <- creahia::safe_wb_data(c(gdp_current = 'NY.GDP.PCAP.CD',
-                         gdp_ppp_current = 'NY.GDP.PCAP.PP.CD',
-                         gdp_ppp_constant = 'NY.GDP.PCAP.PP.KD',
-                         gdp_constant = 'NY.GDP.PCAP.KD',
-                         gdp_current_lcu = 'NY.GDP.PCAP.CN',
-                         gni_current = 'NY.GNP.PCAP.CD',
-                         gni_constant = 'NY.GNP.PCAP.KD',
-                         gni_ppp_constant = 'NY.GNP.PCAP.PP.KD',
-                         gni_ppp_current = 'NY.GNP.PCAP.PP.CD'
-  ),
-  start_date = vsl_ref_year,
-  end_date = 2019,
-  country=c("ZAF", vsl_ref_iso3)) %>%
+  # Cached WB GDP/GNI indicators for ZAF + USA 2015–2019 (avoids flaky api.worldbank.org in CI)
+  vsls <- readr::read_csv(
+    testthat::test_path("..", "..", "inst", "testdata", "worldbank",
+                        "gdp_gni_zaf_usa_2015_2019.csv"),
+    show_col_types = FALSE
+  ) %>%
     select(iso3c, date, gni_constant, gni_current) %>%
     mutate(iso3c = if_else(iso3c == vsl_ref_iso3, "REF", iso3c)) %>%
     pivot_wider(names_from = iso3c, values_from = -c(iso3c, date))

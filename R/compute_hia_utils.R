@@ -279,6 +279,13 @@ to_long_hia <- function(hia) {
 #' Wraps \code{wbstats::wb_data()} with retry logic and configurable timeout
 #' to handle network issues and API timeouts more robustly.
 #'
+#' \code{wbstats::fetch_wb_url_content()} hardcodes \code{httr::timeout(20)} on
+#' every request, which httr's config merge gives precedence over any
+#' \code{set_config()}/\code{with_config()} we set from the outside. To make
+#' \code{timeout_seconds} actually take effect we swap that internal helper
+#' via \code{assignInNamespace()} for the duration of the call and restore it
+#' on exit.
+#'
 #' @param ... Arguments passed to \code{wbstats::wb_data()}
 #' @param max_retries Number of retry attempts (default: 3)
 #' @param timeout_seconds Timeout for each request in seconds (default: 60)
@@ -286,21 +293,46 @@ to_long_hia <- function(hia) {
 #' @return Data frame returned by \code{wbstats::wb_data()}
 #' @export
 safe_wb_data <- function(..., max_retries = 3, timeout_seconds = 60, retry_delay = 2) {
-  for (attempt in seq_len(max_retries)) {
-    tryCatch({
-      # Set longer timeout for httr requests using httr::timeout()
-      old_config <- httr::config()
-      httr::set_config(httr::timeout(timeout_seconds))
-      on.exit(httr::set_config(old_config), add = TRUE)
+  wb_ns <- asNamespace("wbstats")
+  original_fetch <- get("fetch_wb_url_content", envir = wb_ns)
 
-      result <- wbstats::wb_data(...)
-      return(result)
-    }, error = function(e) {
-      if (attempt == max_retries) {
-        stop("Failed to fetch World Bank data after ", max_retries, " attempts. Last error: ", e$message)
+  patched_fetch <- function(url_string, indicator) {
+    indicator <- if (missing(indicator)) NA else indicator
+    ua <- httr::user_agent("https://github.com/nset-ornl/wbstats")
+    get_return <- httr::GET(url_string, ua, httr::timeout(timeout_seconds))
+    if (httr::http_error(get_return)) {
+      error_status <- httr::http_status(get_return)
+      stop(sprintf(
+        "World Bank API request failed for indicator %s\nmessage: %s\ncategory: %s\nreason: %s \nurl: %s",
+        indicator, error_status$message, error_status$category,
+        error_status$reason, url_string
+      ), call. = FALSE)
+    }
+    if (httr::http_type(get_return) != "application/json") {
+      stop("API call executed successfully, but did not return expected json format", call. = FALSE)
+    }
+    httr::content(get_return, as = "text")
+  }
+
+  utils::assignInNamespace("fetch_wb_url_content", patched_fetch, ns = "wbstats")
+  on.exit(
+    utils::assignInNamespace("fetch_wb_url_content", original_fetch, ns = "wbstats"),
+    add = TRUE
+  )
+
+  for (attempt in seq_len(max_retries)) {
+    result <- tryCatch(
+      wbstats::wb_data(...),
+      error = function(e) {
+        if (attempt == max_retries) {
+          stop("Failed to fetch World Bank data after ", max_retries,
+               " attempts. Last error: ", e$message)
+        }
+        message("Attempt ", attempt, " failed, retrying in ", retry_delay, " seconds...")
+        Sys.sleep(retry_delay)
+        NULL
       }
-      message("Attempt ", attempt, " failed, retrying in ", retry_delay, " seconds...")
-      Sys.sleep(retry_delay)
-    })
+    )
+    if (!is.null(result)) return(result)
   }
 }
