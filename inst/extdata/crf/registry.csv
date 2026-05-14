@@ -1,4 +1,4 @@
 crf_id,pollutant,cause,outcome,age_low,age_high,region_applicability,form,rr_central,rr_low,rr_high,conc_ref,counterfact,unit,units_multiplier,data_path,reference_id,notes
 legacy_no2_asthma_1to18_incidence_v1,NO2,Asthma.1to18,AsthmaIncidence,1,18,global,log_linear,1.26,1.1,1.37,10,2,ppb,0.532,,legacy_default_crfs,Migrated from inst/extdata/rr/processed/CRFs.csv
 legacy_no2_ncdlri_deaths_v1,NO2,NCD.LRI,Deaths,25,Inf,global,log_linear,1.037,1.021,1.08,10,20,ug,1,,legacy_default_crfs,Migrated from inst/extdata/rr/processed/CRFs.csv
-test_tabular_pm25_ihd_deaths_v1,PM25,IHD,Deaths,25,99,global,tabular,,,,,,ug,1,crf/tabular/test_tabular_pm25_ihd_deaths_v1.csv,legacy_default_crfs,Minimal tabular CRF fixture for registry validation only
+test_tabular_pm25_ihd_deaths_v1,PM25,IHD,Deaths,25,99,global,tabular,,,,,,ug,1,crf/tabular/test_tabular_pm25_ihd_deaths_v1.csv,registry_fixture,Minimal tabular CRF fixture for registry validation only
