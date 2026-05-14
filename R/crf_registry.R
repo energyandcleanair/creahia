@@ -48,13 +48,16 @@ load_crf_registry <- function(path = NULL, validate = TRUE) {
 }
 
 
-load_crf_references <- function(path = NULL) {
+load_crf_references <- function(path = NULL, validate = TRUE) {
   if (is.null(path)) {
     path <- get_hia_path("crf/references.csv", error_if_not_exists = TRUE)
   }
 
   references <- readr::read_csv(path, col_types = readr::cols())
-  validate_crf_references(references)
+
+  if (validate) {
+    validate_crf_references(references)
+  }
 
   references
 }
@@ -81,12 +84,12 @@ validate_crf_registry <- function(registry, references = load_crf_references()) 
   }
 
   # Check that column form is one of "log-linear" and "tabular"
-  if (!all(registry$form %in% c("log-linear", "tabular"))) {
-    invalid_forms <- unique(registry$form[!registry$form %in% c("log-linear", "tabular")])
+  if (!all(registry$form %in% c("log_linear", "tabular"))) {
+    invalid_forms <- unique(registry$form[!registry$form %in% c("log_linear", "tabular")])
     stop(
       "CRF registry file contains invalid form values: ",
       paste(invalid_forms, collapse = ", "),
-      ". Valid values are 'log-linear' and 'tabular'.",
+      ". Valid values are 'log_linear' and 'tabular'.",
       call. = FALSE
     )
   }
@@ -126,6 +129,8 @@ validate_crf_references <- function(references) {
       call. = FALSE
     )
   }
+
+  invisible(TRUE)
 }
 
 
@@ -174,13 +179,13 @@ validate_log_linear_crfs <- function(registry) {
     )
   }
 
-  # Check that conc_ref, counterfact, and units_multiplier are all > 0
-  bad_conc <- log_linear$conc_ref <= 0 |
-    log_linear$counterfact <= 0 |
-    log_linear$units_multiplier <= 0
+  # Check that conc_ref, counterfact, and units_multiplier are all >= 0
+  bad_conc <- log_linear$conc_ref < 0 |
+    log_linear$counterfact < 0 |
+    log_linear$units_multiplier < 0
   if (any(bad_conc)) {
     stop(
-      "Log-linear CRFs must have positive concentration values and units_multiplier. Problem crf_id values: ",
+      "Log-linear CRFs must have non-negative concentration values and units_multiplier. Problem crf_id values: ",
       paste(log_linear$crf_id[bad_conc], collapse = ", "),
       call. = FALSE
     )
