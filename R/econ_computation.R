@@ -82,11 +82,12 @@ get_hia_cost <- function(hia,
 
   missing_outcome <- hia_cost %>%
     filter(is.na(valuation_current_usd)) %>%
-    distinct(outcome) %>%
-    pull()
+    ungroup() %>%
+    pull(outcome) %>%
+    unique()
 
   if(length(missing_outcome) > 0) {
-    message('The following outome(s) do not have valuations: ',
+    message('The following outcome(s) do not have valuations: ',
             paste(missing_outcome, collapse = ', '))
   }
   return(hia_cost)
