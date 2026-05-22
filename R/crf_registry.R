@@ -84,8 +84,8 @@ validate_crf_registry <- function(registry, references = load_crf_references()) 
   }
 
   # Check that column form is one of "log-linear" and "tabular"
-  if (!all(registry$form %in% c("log_linear", "tabular"))) {
-    invalid_forms <- unique(registry$form[!registry$form %in% c("log_linear", "tabular")])
+  if (!all(registry$form %in% c(CRF_FORM_LOG_LINEAR, CRF_FORM_TABULAR))) {
+    invalid_forms <- unique(registry$form[!registry$form %in% c(CRF_FORM_LOG_LINEAR, CRF_FORM_TABULAR)])
     stop(
       "CRF registry file contains invalid form values: ",
       paste(invalid_forms, collapse = ", "),
@@ -133,10 +133,9 @@ validate_crf_references <- function(references) {
   invisible(TRUE)
 }
 
-
 validate_log_linear_crfs <- function(registry) {
   # Check that for log-linear CRFs, the form is log-linear
-  log_linear <- registry %>% filter(form == "log_linear")
+  log_linear <- registry %>% filter(form == CRF_FORM_LOG_LINEAR) 
 
   if (nrow(log_linear) == 0) {
     return(invisible(TRUE))

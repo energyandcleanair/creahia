@@ -60,3 +60,7 @@ AGE_ADULTS_SPLIT = c(
   "75-79",
   "80+"
 )
+
+# form of CRF
+CRF_FORM_LOG_LINEAR = "log_linear"
+CRF_FORM_TABULAR = "tabular"

@@ -20,7 +20,7 @@ test_that("CRF registry_id and reference_id match correctly", {
 test_that("log-linear CRFs have required numeric fields", {
   registry <- load_crf_registry(validate = FALSE)
 
-  log_linear <- registry %>% filter(form == "log_linear")
+  log_linear <- registry %>% filter(form == CRF_FORM_LOG_LINEAR)
 
   expect_true(all(!is.na(log_linear$rr_central)))
   expect_true(all(!is.na(log_linear$rr_low)))
