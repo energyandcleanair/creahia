@@ -1,5 +1,6 @@
 get_nrt_conc <- function(region_ids, conc_name, nrt, conc_map,
                          units_multiplier = 1, nrt_flag = NULL, nrt_flag_value = 2) {
+  # non risk threshod conc = nrt = counterfact
   conc_map[region_ids] %>%
     lapply(function(m) {
       if(!is.null(nrt_flag)) nrt = ifelse(m[,nrt_flag] == nrt_flag_value, 0, nrt)
