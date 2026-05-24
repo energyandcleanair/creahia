@@ -41,6 +41,7 @@ Imports:
     httr,
     jsonlite,
     ggspatial,
+    doParallel,
     creaexposure
 Depends:
     tidyverse,
