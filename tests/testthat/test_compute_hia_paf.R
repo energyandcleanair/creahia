@@ -477,3 +477,29 @@ test_that("RR-based PAF computation from rr is correct", {
   testthat::expect_true(abs((paf_delta["low"] - paf_bootstrap["low"])/paf_bootstrap["low"]) < 0.1)
   testthat::expect_true(abs((paf_delta["high"] - paf_bootstrap["high"])/paf_bootstrap["high"]) < 0.1)
 })
+
+test_that("diagnose_paf skips gracefully when paf is empty", {
+
+  # Regression test: when all concentration/population rows are dropped
+  # (e.g. CRS mismatch produces NA exposures), paf ends up empty. Previously
+  # this crashed in facet_wrap with "Faceting variables must have at least
+  # one value". diagnose_paf should warn and skip instead of erroring.
+  empty_paf <- tibble::tibble(
+    scenario = character(),
+    pollutant = character(),
+    cause = character(),
+    outcome = character(),
+    region_id = character(),
+    low = numeric(),
+    central = numeric(),
+    high = numeric()
+  )
+
+  diag_dir <- file.path(tempdir(), "diagnose_paf_empty")
+  unlink(diag_dir, recursive = TRUE)
+
+  expect_no_error(diagnose_paf(empty_paf, diag_dir))
+
+  # No plots should have been written
+  expect_false(dir.exists(diag_dir) && length(list.files(diag_dir)) > 0)
+})
