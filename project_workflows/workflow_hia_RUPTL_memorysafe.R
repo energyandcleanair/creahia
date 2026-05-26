@@ -1,5 +1,6 @@
 # library(remotes)
 #remotes::install_github("energyandcleanair/creahia")
+#remotes::install_github("energyandcleanair/creahelpers")
 # devtools::install_github('energyandcleanair/creahia')
 # remotes::install_github("energyandcleanair/creapuff", ref="main", dependencies=T, update=T)
 # devtools::reload(pkgload::inst("creapuff"))
@@ -7,6 +8,7 @@
 # For development only
 library(raster)
 library(sf)
+library(terra)
 #library(plyr)
 library(readxl)
 library(zoo)
@@ -15,17 +17,19 @@ library(magrittr)
 library(lubridate)
 
 library(creahia)
+options(reticulate.conda_binary = "C:\\ProgramData\\anaconda3\\Scripts\\conda.exe")
 library(creapuff)
 require(rcrea)
 require(creahelpers)
 
 #list.files(path='R', full.names=T) %>% sapply(source)
+#list.files(path='~/CALPUFF/creapuff/R', full.names=T) %>% sapply(source)
 
 project_dir="G:/IndonesiaIESR"       # calpuff_external_data-2 persistent disk (project data)
 
 input_dir <- file.path(project_dir,"calpuff_suite") # Where to read all CALPUFF generated files
 output_dir <- file.path(project_dir,"HIA") ; if (!dir.exists(output_dir)) dir.create(output_dir) # Where to write all HIA files
-emissions_dir <- file.path(project_dir,"emissions")
+emissions_dir <- "~/CALPUFF/creapuff/project_workflows/Indonesia_RUPTL2025/data"
 
 #gis_dir <- "~/GIS"                    # The folder where we store general GIS data
 gis_dir <- "H:/gis"
@@ -50,7 +54,9 @@ grids = get_grids_calpuff(calpuff_files, UTMZ, UTMH, map_res=5)
 grid_raster = grids$gridR
 
 #make tifs
-scenarios_to_process=calpuff_files$scenario %>% unique
+read_csv(file.path(emissions_dir, 'emissions, clustered.csv')) -> emissions_data
+
+scenarios_to_process=emissions_data$emission_names %>% tolower %>% unique
 calpuff_files %>% filter(period=='annual', species %in% pollutants_to_process) %>% make_tifs(grids = grids, overwrite = F)
 
 calpuff_files <- get_calpuff_files(ext=".tif", gasunit = 'ug', dir=input_dir, hg_scaling=1e-3)
@@ -68,7 +74,7 @@ names(conc_base$conc_baseline) <- conc_base$species
 # 03: Create support maps (e.g. countries, provinces, cities ) ----------------------------------
 #regions <- creahia::get_adm(grid_raster, admin_level=2, res="low")
 shp=readRDS(file.path(gis_dir, 'boundaries', 'gadm36_2_low.RDS'))
-regions <- creahia::get_adm(grid_raster, shp=shp, admin_level=2)
+regions <- get_adm(grid_raster, admin_level=2)
 
 
 queue <- scenarios_to_process %>% paste0('exp_', .,'.csv') %>% file.path(output_dir, .) %>% file.exists() %>% not
@@ -82,7 +88,7 @@ causes_to_include = get_calc_causes() %>% grep('Death|YLD', ., value=T)
 #Sys.setenv(GIS_DIR='F:/gis')
 
 region_ids <- regions %>% st_drop_geometry() %>% select(region_id)
-pop <- creahia::get_pop(grid_raster)
+pop <- creahia::get_pop_count(grid_raster)
 
 for (scen in scenarios_to_process[queue]) {
   message(scen)
@@ -90,10 +96,11 @@ for (scen in scenarios_to_process[queue]) {
   exposure_rasters <- calpuff_files  %>%
     filter(scenario==scen, period=='annual', species %in% pollutants_to_process)
 
-  exposure_rasters$conc <- lapply(exposure_rasters$path, raster) %>% lapply(multiply_by, pop)
+  exposure_rasters$conc <- lapply(exposure_rasters$path, rast) %>% lapply(multiply_by, pop)
 
-  exposure_rasters$conc %>% stack %>% raster::extract(regions, sum, na.rm=T) %>%
-    as_tibble() %>% set_names(exposure_rasters$species) %>% bind_cols(region_id=region_ids, .) %>%
+  exposure_rasters$conc %>% rast %>% terra::extract(regions, sum, na.rm=T) %>%
+    as_tibble() %>% select(-any_of('ID')) %>%
+    set_names(exposure_rasters$species) %>% bind_cols(region_id=region_ids, .) %>%
     write_csv(file.path(output_dir, paste0('exp_',scen,'.csv')))
 }
 
@@ -104,7 +111,7 @@ concs$conc_baseline %>% lapply(function(r) { r[]<-1; r}) -> concs$conc_perturbat
 pollutants_for_hia = conc_base$species# %>% c('tpm10')
 
 # 04: HIA Calculations:
-hia <-  wrappers.compute_hia_two_images(perturbation_rasters=conc_base$conc_perturbation,       # perturbation_rasters=raster::stack(perturbation_map)
+hia <-  wrappers.compute_hia_two_images(perturbation_rasters=concs$conc_perturbation,       # perturbation_rasters=raster::stack(perturbation_map)
                                         baseline_rasters=conc_base$conc_baseline,  # baseline_rasters=raster::stack(who_map)
                                         regions=regions,
                                         scenario_name='1ug',
@@ -133,7 +140,7 @@ hia$hia %<>%
 # 06: Compute and extract economic costs --------------------------------------------------------
 hia_cost <- get_hia_cost(hia$hia, valuation_version="viscusi")
 
-source('../CALPUFF/creapuff/project_workflows/read_IESR_emissions.R')
+source('../CALPUFF/creapuff/project_workflows/read_RUPTL_emissions.R') #needs to be updated
 
 targetyears = emis$year %>% unique
 hia_fut <- hia_cost %>% get_econ_forecast(years=targetyears, pop_targetyr=2019)
@@ -159,7 +166,7 @@ scenarios_to_process %>%
       mutate(across(c(number, cost_mn_currentUSD), ~.x * exposure/pop/modeled_emissions)) %>%
       group_by(cluster, year, Outcome, Cause, emitted_species, Pollutant, double_counted, estimate, unit) %>%
       summarise(across(c(number, cost_mn_currentUSD), sum, na.rm=T))
-  }) %>% bind_rows %>% ungroup -> hia_per_t_region
+  }) %>% bind_rows %>% ungroup -> hia_per_t
 
 hia_per_t %>% saveRDS(file.path(output_dir, 'hia_per_t.RDS'))
 hia_per_t <- readRDS(file.path(output_dir, 'hia_per_t.RDS'))
