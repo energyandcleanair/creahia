@@ -23,7 +23,7 @@ apply_crf_tabular <- function(
     data_name = glue::glue("CRF {crf$crf_id}")
   )
 
-  # get age weight
+  # get age weight from epi data
   age_weights <- get_crf_age_weights(
     region_id = region_id,
     cause = crf$cause,
