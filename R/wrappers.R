@@ -206,10 +206,11 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
     message('✅ Processing scenario: "', scen, '"')
 
     # 01: Get perturbation concentration levels for the scenario ----
+    # Align each loaded raster onto grid_raster
     conc_perturbation <- perturbation_rasters_table %>%
       filter(scenario == scen, species %in% pollutants_for_hia) %>%
       rowwise() %>%
-      mutate(conc_perturbation = list(species = raster(path))) %>%
+      mutate(conc_perturbation = list(creahelpers::to_raster(align_raster_to_grid(raster(path), grid_raster, name = species)))) %>%
       ungroup() %>%
       select(species, conc_perturbation, scenario)
 

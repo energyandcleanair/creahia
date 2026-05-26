@@ -124,6 +124,42 @@ get_conc_baseline_no2 <- function(grid_raster, no2_targetyear){
 }
 
 
+#' Align a raster onto the model grid
+#'
+#' @param r a raster (raster or terra object); `NULL` is returned as-is
+#' @param grid_raster the model grid raster (raster or terra object)
+#' @param name label used in error/log messages
+#'
+#' @return a `terra::SpatRaster` aligned to `grid_raster`
+#' @export
+align_raster_to_grid <- function(r, grid_raster, name = "raster") {
+
+  if(is.null(r)) return(r)
+
+  r <- creahelpers::to_rast(r)
+  g <- terra::rast(grid_raster)
+
+  # Already aligned (geometry + CRS): nothing to do
+  if(isTRUE(terra::compareGeom(r, g, crs = TRUE, ext = TRUE, rowcol = TRUE,
+                               res = TRUE, stopOnError = FALSE))) {
+    return(r)
+  }
+
+  src_crs <- terra::crs(r)
+
+  if(is.na(src_crs) || src_crs == "") {
+    stop(glue::glue(
+      "{name} has no CRS; cannot align it to grid_raster. ",
+      "Set the CRS on the input raster."))
+  }
+
+  # Valid but different CRS/grid: reproject onto the model grid
+  logger::log_info(glue::glue("Reprojecting {name} onto grid_raster."))
+  terra::project(r, g)
+}
+
+
+
 #' Extract concentration values and population at specified spatial features
 #'
 #' @param concs
@@ -142,16 +178,28 @@ extract_concs_and_pop <- function(concs, regions, species) {
 
     scenario <- concs$scenario[i]
 
-    cols_to_extract <- c(paste0("conc_scenario_", species),
-                         paste0("conc_baseline_", species),
-                         "pop") %>%
+    conc_cols <- c(paste0("conc_scenario_", species),
+                   paste0("conc_baseline_", species)) %>%
       intersect(names(concs))
+    cols_to_extract <- c(conc_cols, "pop") %>% intersect(names(concs))
 
-    concs_stack <- concs[i, cols_to_extract] %>%
+    layers <- concs[i, cols_to_extract] %>%
       purrr::transpose() %>%
       `[[`(1) %>%
-      creahelpers::to_rast() %>%
-      terra::rast()
+      creahelpers::to_rast()
+
+    # Guard against CRS mismatches: pop is reprojected onto grid_raster in add_pop(),
+    # so use it as the reference grid and align the concentration layers to it. This
+    # prevents the `[rast] CRS do not match` warning and the all-NA extraction it causes
+    # when input rasters carry a missing or different CRS.
+    if("pop" %in% names(layers)) {
+      grid_ref <- layers[["pop"]]
+      for(nm in conc_cols) {
+        layers[[nm]] <- align_raster_to_grid(layers[[nm]], grid_ref, name = nm)
+      }
+    }
+
+    concs_stack <- terra::rast(layers)
 
 
     extracted <- terra::extract(concs_stack, terra::vect(regions), weights = T)

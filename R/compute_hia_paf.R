@@ -352,6 +352,11 @@ diagnose_paf <- function(paf, diagnostic_folder) {
     return()
   }
 
+  if(nrow(paf) == 0) {
+    logger::log_warn("PAF table is empty (no concentration/population data to plot), skipping PAF diagnostics.")
+    return()
+  }
+
   dir.create(diagnostic_folder, showWarnings = FALSE, recursive = TRUE)
 
   outcomes <- unique(paf$outcome)

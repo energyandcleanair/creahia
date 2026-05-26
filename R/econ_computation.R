@@ -82,11 +82,12 @@ get_hia_cost <- function(hia,
 
   missing_outcome <- hia_cost %>%
     filter(is.na(valuation_current_usd)) %>%
-    distinct(outcome) %>%
-    pull()
+    ungroup() %>%
+    pull(outcome) %>%
+    unique()
 
   if(length(missing_outcome) > 0) {
-    message('The following outome(s) do not have valuations: ',
+    message('The following outcome(s) do not have valuations: ',
             paste(missing_outcome, collapse = ', '))
   }
   return(hia_cost)
@@ -268,7 +269,8 @@ compute_gdp_scaling <- function(hia_cost, reference_year, forecast_years, discou
 #' Apply population and GDP scaling to HIA rows and expand by year
 #'
 #' @param hia_cost HIA rows at reference year.
-#' @param pop_scaling Output of `compute_population_scaling()`.
+#' @param pop_scaling Output of `compute_population_scaling()` or NULL. When
+#'   NULL, `pop_scaling` is held at 1 for every requested year.
 #' @param gdp_scaling_tbl Output of `compute_gdp_scaling()` or NULL.
 #' @param reference_year Integer.
 #' @param forecast_years Integer vector.
@@ -279,10 +281,19 @@ compute_gdp_scaling <- function(hia_cost, reference_year, forecast_years, discou
 #'   `share_gdp` when GDP totals are available.
 #' @keywords internal
 #' @noRd
-apply_econ_scaling <- function(hia_cost, pop_scaling, gdp_scaling_tbl = NULL, reference_year, forecast_years) {
+apply_econ_scaling <- function(hia_cost, pop_scaling = NULL, gdp_scaling_tbl = NULL, reference_year, forecast_years) {
 
   # set outcome fatal flag: YLLs and Deaths are fatal; YLDs are non-fatal
   hia_cost <- hia_cost %>% mutate(fatal = grepl(paste(MEASURE_YLLS, MEASURE_DEATHS, sep = '|'), outcome))
+
+  # synthesize trivial pop_scaling when not provided (scaling = 1 across years)
+  if(is.null(pop_scaling)) {
+    pop_scaling <- tidyr::crossing(
+      hia_cost %>% sel(iso3, age_group) %>% distinct(),
+      fatal = c(TRUE, FALSE),
+      year = unique(c(reference_year, forecast_years))
+    ) %>% mutate(pop_scaling = 1)
+  }
 
   # ensure unique pop_scaling keys
   key_cols <- c('iso3','age_group','fatal','year')
@@ -377,6 +388,10 @@ apply_econ_scaling <- function(hia_cost, pop_scaling, gdp_scaling_tbl = NULL, re
 #' @param forecast_years Integer vector of target years to produce.
 #' @param reference_year Integer. Base year for scaling (default 2019). The
 #'   output includes this year as well as `forecast_years`.
+#' @param use_pop_scaling Logical. If TRUE (default), apply age-group/cause
+#'   specific population scaling to counts and costs. If FALSE, `pop_scaling` is
+#'   held at 1 for every requested year so counts and costs remain at their
+#'   reference-year values across the forecast horizon.
 #' @param use_gdp_scaling Logical. If TRUE, apply GDP per-capita PPP growth and
 #'   discount to `reference_year` when scaling costs (default FALSE).
 #' @param discount_rate Numeric. Annual discount rate used when
@@ -425,6 +440,7 @@ apply_econ_scaling <- function(hia_cost, pop_scaling, gdp_scaling_tbl = NULL, re
 get_econ_forecast <- function(hia_cost,
                               forecast_years,
                               reference_year = 2019,
+                              use_pop_scaling = TRUE,
                               use_gdp_scaling = FALSE,
                               discount_rate = 0.03) {
 
@@ -439,9 +455,11 @@ get_econ_forecast <- function(hia_cost,
   if(length(missing_cols) > 0) stop(sprintf('hia_cost is missing required columns: %s', paste(missing_cols, collapse = ', ')))
   if(length(forecast_years) < 1) stop('forecast_years must contain at least one year')
 
-  # compute scaling tables
-  pop_scaling_info <- compute_population_scaling(hia_cost, reference_year, forecast_years)
-  pop_scaling <- pop_scaling_info$pop_scaling
+  # compute scaling tables (NULL means: apply_econ_scaling synthesizes pop_scaling = 1)
+  pop_tbl <- NULL
+  if(isTRUE(use_pop_scaling)) {
+    pop_tbl <- compute_population_scaling(hia_cost, reference_year, forecast_years)$pop_scaling
+  }
 
   gdp_tbl <- NULL
   if(isTRUE(use_gdp_scaling)) {
@@ -449,5 +467,5 @@ get_econ_forecast <- function(hia_cost,
   }
 
   # apply scaling and return
-  apply_econ_scaling(hia_cost, pop_scaling, gdp_tbl, reference_year, forecast_years)
+  apply_econ_scaling(hia_cost, pop_tbl, gdp_tbl, reference_year, forecast_years)
 }
