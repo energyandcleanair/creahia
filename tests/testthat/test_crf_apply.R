@@ -92,3 +92,46 @@ test_that("get_hazard_ratio_tabular returns correct interpolated values",{
   expect_equal(unname(result["central"]), 1.2)
   expect_equal(unname(result["high"]), 1.3)
 })
+
+test_that("calculate_log_linear_paf matches closed-form AF", {
+  # As the source_conc = con_ref, the PAF should be 1 - 1/RR
+  expect_equal(
+    calculate_log_linear_paf(rr = 1.037, source_conc = 10, conc_ref = 10),
+    1 - 1 / 1.037,
+    tolerance = 1e-12
+  )
+})
+
+test_that("apply_crf_log_linear computes PAF from weighted concentration delta",{
+  crf <- tibble::tibble(
+    crf_id = "legacy_no2_ncdlri_deaths_v1",
+    pollutant = "NO2",
+    cause = "NCD.LRI",
+    outcome = "Deaths",
+    form = CRF_FORM_LOG_LINEAR,
+    rr_low = 1.021,
+    rr_central = 1.037,
+    rr_high = 1.08,
+    conc_ref = 10,
+    counterfact = 20,
+    units_multiplier = 1
+  )
+
+  conc_base <- c(20, 20, 20)
+  conc_perm <- c(30, 30, 30)
+  pop <- c(100, 200, 300)
+
+  result <- apply_crf_log_linear(
+    crf = crf,
+    conc_base = conc_base,
+    conc_perm = conc_perm,
+    pop = pop,
+    region_id = "TEST"
+  )
+
+  expect_equal(result$central, 1 - 1 / 1.037, tolerance = 1e-12)
+  expect_named(
+    result,
+    c("pollutant", "cause", "outcome", "region_id", "low", "central", "high")
+  )
+})

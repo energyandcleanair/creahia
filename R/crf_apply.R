@@ -1,3 +1,26 @@
+apply_crf <- function(
+  crf,
+  conc_base,
+  conc_perm,
+  pop,
+  region_id,
+  epi_version = "default"
+) {
+  if (nrow(crf) != 1) {
+    stop("apply_crf() expects exactly one CRF row.", call. = FALSE)
+  }
+
+  if (identical(crf$form, CRF_FORM_TABULAR)) {
+    return(apply_crf_tabular(crf, conc_base, conc_perm, pop, region_id, epi_version))
+  }
+
+  if (identical(crf$form, CRF_FORM_LOG_LINEAR)) {
+    return(apply_crf_log_linear(crf, conc_base, conc_perm, pop, region_id))
+  }
+
+  stop("Unsupported CRF form: ", crf$form, call. = FALSE)
+}
+
 apply_crf_tabular <- function(
   crf,
   conc_base,
@@ -60,6 +83,40 @@ apply_crf_tabular <- function(
     low = unname(paf[["low"]]),
     central = unname(paf[["central"]]),
     high = unname(paf[["high"]])
+  )
+
+}
+
+apply_crf_log_linear <- function(
+  crf, 
+  conc_base,
+  conc_perm,
+  pop,
+  region_id
+) {
+  if (nrow(crf) != 1) { 
+    stop("apply_crf_log_linear() expects exactly one CRF row.", call. = FALSE)
+  }
+  if (!identical(crf$form, CRF_FORM_LOG_LINEAR)){ 
+    stop("CRF form must be log-linear.", call. = FALSE)
+  }
+
+  # caculate the source concentration
+  source_conc <- get_log_linear_source_conc(
+    conc = conc_perm,
+    conc_ref = crf$conc_ref,
+    counterfact = crf$counterfact,
+    units_multiplier = crf$units_multiplier
+  )
+
+  tibble::tibble(
+    pollutant = crf$pollutant,
+    cause = crf$cause,
+    outcome = crf$outcome,
+    region_id = region_id,
+    low = calculate_log_linear_paf(crf$rr_low, source_conc, crf$conc_ref),
+    central = calculate_log_linear_paf(crf$rr_central, source_conc, crf$conc_ref),
+    high = calculate_log_linear_paf(crf$rr_high, source_conc, crf$conc_ref)
   )
 
 }
@@ -156,4 +213,27 @@ get_hazard_ratio_tabular <- function(conc, rr, age) {
     })
 
  
+}
+
+get_log_linear_source_conc <- function(conc, conc_ref, counterfact, units_multiplier) {
+  # for log-linear CRFs, calculate the source concentration based on the reference concentration, counterfactual concentration, and units multiplier.
+  # This will be used to calculate PAFs for log-linear CRFs.
+
+  if (length(conc_base) != length(conc_perm) || length(conc_base) != length(pop)) {
+    stop("conc_base, conc_perm, and pop must have the same length.", call. = FALSE)
+  }
+
+  if (all(is.na(pop)) || sum(pop, na.rm = TRUE) <= 0) {
+    stop("Population weights must have a positive sum.", call. = FALSE)
+  }
+
+
+  base_excess <- pmax(conc_base * units_multiplier - counterfact, 0)
+  perm_excess <- pmax(conc_perm * units_multiplier - counterfact, 0)
+
+  weighted.mean(perm_excess, w = pop, na.rm = TRUE) - weighted.mean(base_excess, w = pop, na.rm = TRUE)
+}
+
+calculate_log_linear_paf <- function(rr, source_conc, conc_ref) {
+  1 - exp(-log(rr) * source_conc / conc_ref)
 }
