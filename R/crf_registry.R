@@ -143,15 +143,17 @@ validate_log_linear_crfs <- function(registry) {
 
   required_numeric_cols <- c("rr_low", "rr_central", "rr_high", "conc_ref", "counterfact", "units_multiplier")
 
-  col <- "rr_low"
-  bad_rows <- is.na(log_linear[[col]])
-  if (any(bad_rows)) {
-    stop(
-      "Log-linear CRFs must have non-missing ", col, ". Problem crf_id values: ",
-      paste(log_linear$crf_id[bad_rows], collapse = ", "),
-      call. = FALSE
-    )
+  for(col in required_numeric_cols){
+    bad_rows <- is.na(log_linear[[col]])
+    if (any(bad_rows)) {
+      stop(
+        "Log-linear CRFs must have non-missing ", col, ". Problem crf_id values: ",
+        paste(log_linear$crf_id[bad_rows], collapse = ", "),
+        call. = FALSE
+      )
+    }  
   }
+  
 
   # Check that rr_low, rr_central, and rr_high are all > 0
   bad_rr <- log_linear$rr_central <= 0 |
