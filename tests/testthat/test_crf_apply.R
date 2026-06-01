@@ -116,7 +116,7 @@ test_that("apply_crf_log_linear computes PAF from weighted concentration delta",
     counterfact = 20,
     units_multiplier = 1
   )
-c
+
   conc_base <- c(20, 20, 20)
   conc_perm <- c(30, 30, 30)
   pop <- c(100, 200, 300)

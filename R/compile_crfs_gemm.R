@@ -40,7 +40,7 @@ compile_gemm_ihd_25plus_deaths <- function(
     age_low = 25,
     age_high = Inf,
     region_applicability = "global",
-    form = "tabular",
+    form = CRF_FORM_TABULAR,
     rr_central = NA_real_,
     rr_low = NA_real_,
     rr_high = NA_real_,

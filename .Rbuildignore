@@ -3,3 +3,5 @@
 ^README\.Rmd$
 cache
 validation
+^AGENTS\.md$
+^\.github/prompts$
