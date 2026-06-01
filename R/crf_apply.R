@@ -101,10 +101,11 @@ apply_crf_log_linear <- function(
     stop("CRF form must be log-linear.", call. = FALSE)
   }
 
-  # caculate the source concentration
-  source_conc <- get_log_linear_source_conc(
-    conc = conc_perm,
-    conc_ref = crf$conc_ref,
+  # Calculate the effective concentration change for log-linear PAFs.
+  effective_conc_change <- calculate_effective_conc_change( 
+    conc_base = conc_base,
+    conc_perm = conc_perm,
+    pop = pop,
     counterfact = crf$counterfact,
     units_multiplier = crf$units_multiplier
   )
@@ -114,9 +115,9 @@ apply_crf_log_linear <- function(
     cause = crf$cause,
     outcome = crf$outcome,
     region_id = region_id,
-    low = calculate_log_linear_paf(crf$rr_low, source_conc, crf$conc_ref),
-    central = calculate_log_linear_paf(crf$rr_central, source_conc, crf$conc_ref),
-    high = calculate_log_linear_paf(crf$rr_high, source_conc, crf$conc_ref)
+    low = calculate_log_linear_paf(crf$rr_low, effective_conc_change, crf$conc_change),
+    central = calculate_log_linear_paf(crf$rr_central, effective_conc_change, crf$conc_change),
+    high = calculate_log_linear_paf(crf$rr_high, effective_conc_change, crf$conc_change)
   )
 
 }
@@ -215,9 +216,8 @@ get_hazard_ratio_tabular <- function(conc, rr, age) {
  
 }
 
-get_log_linear_source_conc <- function(conc, conc_ref, counterfact, units_multiplier) {
-  # for log-linear CRFs, calculate the source concentration based on the reference concentration, counterfactual concentration, and units multiplier.
-  # This will be used to calculate PAFs for log-linear CRFs.
+calculate_effective_conc_change <- function(conc_base, conc_perm, pop, counterfact, units_multiplier) {
+  # Calculate the population-weighted effective concentration change for log-linear CRFs.
 
   if (length(conc_base) != length(conc_perm) || length(conc_base) != length(pop)) {
     stop("conc_base, conc_perm, and pop must have the same length.", call. = FALSE)
@@ -234,6 +234,6 @@ get_log_linear_source_conc <- function(conc, conc_ref, counterfact, units_multip
   weighted.mean(perm_excess, w = pop, na.rm = TRUE) - weighted.mean(base_excess, w = pop, na.rm = TRUE)
 }
 
-calculate_log_linear_paf <- function(rr, source_conc, conc_ref) {
-  1 - exp(-log(rr) * source_conc / conc_ref)
+calculate_log_linear_paf <- function(rr, effective_conc_change, conc_change_ref) {
+  1 - exp(-log(rr) * effective_conc_change / conc_change_ref)
 }

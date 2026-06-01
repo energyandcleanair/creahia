@@ -94,9 +94,9 @@ test_that("get_hazard_ratio_tabular returns correct interpolated values",{
 })
 
 test_that("calculate_log_linear_paf matches closed-form AF", {
-  # As the source_conc = con_ref, the PAF should be 1 - 1/RR
+  # When actual and reference concentration changes match, PAF should be 1 - 1/RR.
   expect_equal(
-    calculate_log_linear_paf(rr = 1.037, source_conc = 10, conc_change = 10),
+    calculate_log_linear_paf(rr = 1.037, effective_conc_change = 10, conc_change_ref = 10),
     1 - 1 / 1.037,
     tolerance = 1e-12
   )
