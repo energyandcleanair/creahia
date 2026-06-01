@@ -248,3 +248,88 @@ test_that("Test get_hia_cost end-to-end with new valuation system", {
 })
 
 
+# Minimal hia_cost (reference year only) for get_econ_forecast tests
+make_forecast_input <- function(iso3 = "ZAF") {
+  data.frame(
+    iso3 = iso3,
+    region_id = iso3,
+    outcome = c("Deaths", "YLDs", "LBW", "PTB"),
+    age_group = c("25+", "25+", "Newborn", "Newborn"),
+    year = 2023,
+    number = c(100, 50, 10, 8),
+    cost_mn_currentUSD = c(1, 0.5, 0.1, 0.08),
+    double_counted = FALSE,
+    estimate = "central",
+    stringsAsFactors = FALSE
+  )
+}
+
+
+test_that("get_econ_forecast retains Newborn outcomes (PTB/LBW) and scales them via the 0-4 cohort", {
+
+  hia_cost <- make_forecast_input("ZAF")
+
+  fut <- creahia::get_econ_forecast(hia_cost, forecast_years = c(2030, 2035),
+                                    reference_year = 2023, use_gdp_scaling = FALSE)
+
+  # PTB and LBW must survive forecasting (previously dropped by the inner_join)
+  testthat::expect_true(all(c("LBW", "PTB") %in% fut$outcome))
+
+  # every input outcome is expanded across the reference + forecast years
+  testthat::expect_setequal(unique(fut$year), c(2023, 2030, 2035))
+
+  # Newborn rows use the 0-4 population trend, not held flat at 1
+  ptb <- fut %>% dplyr::filter(outcome == "PTB") %>% dplyr::arrange(year)
+  testthat::expect_equal(ptb$pop_scaling[ptb$year == 2023], 1)            # reference year
+  testthat::expect_false(isTRUE(all.equal(ptb$pop_scaling[ptb$year == 2035], 1)))  # actually scaled
+
+  # counts are reference count * pop_scaling
+  testthat::expect_equal(ptb$number, 8 * ptb$pop_scaling)
+})
+
+
+test_that("get_econ_forecast aborts on missing population scaling instead of silently dropping", {
+
+  hia_cost <- data.frame(
+    iso3 = "XXX",  # no population projection exists for this iso3
+    region_id = "XXX",
+    outcome = "Deaths",
+    age_group = "25+",
+    year = 2023,
+    number = 100,
+    cost_mn_currentUSD = 1,
+    double_counted = FALSE,
+    estimate = "central",
+    stringsAsFactors = FALSE
+  )
+
+  testthat::expect_error(
+    creahia::get_econ_forecast(hia_cost, forecast_years = 2030,
+                               reference_year = 2023, use_gdp_scaling = FALSE),
+    "Missing population scaling"
+  )
+})
+
+
+test_that("apply_econ_scaling reports the offending keys when pop_scaling has duplicates", {
+
+  hia_cost <- make_forecast_input("ZAF") %>% dplyr::filter(outcome == "Deaths")
+
+  # duplicate iso3/age_group/fatal/year key with differing values
+  dup_pop <- data.frame(
+    iso3 = "ZAF",
+    age_group = "25+",
+    fatal = TRUE,
+    year = c(2023, 2023, 2030),
+    pop_scaling = c(1, 1.05, 1.1),
+    stringsAsFactors = FALSE
+  )
+
+  testthat::expect_error(
+    creahia:::apply_econ_scaling(hia_cost, pop_scaling = dup_pop,
+                                 reference_year = 2023, forecast_years = 2030),
+    "duplicate key"
+  )
+})
+
+

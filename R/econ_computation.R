@@ -202,11 +202,16 @@ compute_population_scaling <- function(hia_cost, reference_year, forecast_years)
     filter(iso3 %in% unique(hia_cost$iso3),
            year %in% c(reference_year, forecast_years))
 
-  # add new age groups to population data (heuristic multipliers; subject to revision)
-  add_age_groups <- tibble(age_group = c('25+','0-18','1-18','18-99', '20-65'),
-                           age_start = c(25, 0, 0, 20, 20),
-                           age_end = c(99, 20, 20, 99, 64),
-                           multiplier = c(1, 19/20, 18/20, 82/80, 46/45))
+  # add new age groups to population data (heuristic multipliers; subject to revision).
+  # "Newborn" (PTB/LBW outcomes) has no bin of its own, so we proxy it with the 0-4
+  # cohort, the closest available stand-in for birth volume.
+  # TODO: PTB/LBW scale with births, not the 0-4 cohort. Once generate_pop_proj()
+  # carries births (WPP2024_Demographic_Indicators) or single-age population, switch
+  # the "Newborn" proxy to births (preferred) or the 0-1 cohort.
+  add_age_groups <- tibble(age_group = c('25+','0-18','1-18','18-99', '20-65', 'Newborn'),
+                           age_start = c(25, 0, 0, 20, 20, 0),
+                           age_end = c(99, 20, 20, 99, 64, 4),
+                           multiplier = c(1, 19/20, 18/20, 82/80, 46/45, 1))
 
   popproj_tot <- add_age_groups %>%
     group_by(age_group) %>%
@@ -295,10 +300,13 @@ apply_econ_scaling <- function(hia_cost, pop_scaling = NULL, gdp_scaling_tbl = N
     ) %>% mutate(pop_scaling = 1)
   }
 
-  # ensure unique pop_scaling keys
+  # ensure unique pop_scaling keys; surface the offending keys to aid diagnosis
   key_cols <- c('iso3','age_group','fatal','year')
-  if(nrow(pop_scaling %>% sel(all_of(key_cols)) %>% distinct()) != nrow(pop_scaling)) {
-    stop('Population scaling table contains duplicate keys for iso3/AgeGrp/fatal/year. Aborting.')
+  dup_keys <- pop_scaling %>% dplyr::count(across(all_of(key_cols))) %>% filter(n > 1)
+  if(nrow(dup_keys) > 0) {
+    stop(sprintf('Population scaling table contains %d duplicate key(s) for iso3/age_group/fatal/year. First few:\n%s',
+                 nrow(dup_keys),
+                 paste(utils::capture.output(print(as.data.frame(head(dup_keys, 10)))), collapse = '\n')))
   }
 
   # build combined scaling table (add GDP columns; default to 1)
@@ -308,12 +316,10 @@ apply_econ_scaling <- function(hia_cost, pop_scaling = NULL, gdp_scaling_tbl = N
     scaling <- pop_scaling %>% mutate(gdp_scaling = 1, gdp_pc_scaling = 1)
   }
 
-  # warn on missing iso3s
-  missing_iso3s_pop <- setdiff(unique(hia_cost$iso3), unique(scaling$iso3[scaling$year %in% forecast_years]))
-  if(length(missing_iso3s_pop) > 0) {
-    warning(sprintf('Missing population projection information for %d iso3(s): %s. These rows will be dropped in forecasting.',
-                    length(missing_iso3s_pop), paste(missing_iso3s_pop, collapse = ', ')))
-  }
+  # GDP may legitimately be unavailable for some iso3s -> population-only scaling
+  # (gdp factor = 1) with a warning. Population scaling, by contrast, must be complete:
+  # a missing pop factor is treated as a data problem and aborts below, rather than
+  # being masked with 1.
   if(!is.null(gdp_scaling_tbl)){
     missing_iso3s_gdp <- setdiff(unique(hia_cost$iso3), unique(gdp_scaling_tbl$iso3[gdp_scaling_tbl$year %in% forecast_years]))
     if(length(missing_iso3s_gdp) > 0) {
@@ -322,21 +328,35 @@ apply_econ_scaling <- function(hia_cost, pop_scaling = NULL, gdp_scaling_tbl = N
     }
   }
 
-  # join without year to expand years, safer than many-to-many full_join
+  # expand each input row across all requested years, then attach scaling.
   base_cols <- setdiff(names(hia_cost), 'year')
+  years_all <- unique(c(reference_year, forecast_years))
+
   hia_by_year <- hia_cost %>%
     sel(all_of(base_cols)) %>%
-    inner_join(scaling, by = c('iso3', 'age_group', 'fatal'),
-               relationship = 'many-to-many')
+    dplyr::cross_join(tibble(year = years_all)) %>%
+    left_join(scaling, by = c('iso3', 'age_group', 'fatal', 'year'))
 
+  # Fail loudly on any missing population scaling rather than masking it with 1.
+  if(any(is.na(hia_by_year$pop_scaling))) {
+    miss <- hia_by_year %>% filter(is.na(pop_scaling)) %>%
+      distinct(iso3, age_group, fatal, year)
+    stop(sprintf('Missing population scaling for %d iso3/age_group/fatal/year combination(s); aborting rather than scaling by 1. First few:\n%s',
+                 nrow(miss), paste(utils::capture.output(print(as.data.frame(head(miss, 10)))), collapse = '\n')))
+  }
 
-  # duplication guard: after join, each original row should be replicated exactly length(ref+forecast) times
-  expected_mult <- length(unique(c(reference_year, forecast_years)))
+  # GDP scaling may be NA for iso3s without GDP data -> population-only (factor = 1)
+  hia_by_year <- hia_by_year %>%
+    mutate(gdp_scaling = coalesce(gdp_scaling, 1),
+           gdp_pc_scaling = coalesce(gdp_pc_scaling, 1))
+
+  # duplication guard: each base row must map to exactly the requested years
+  expected_mult <- length(years_all)
   dup_check <- hia_by_year %>%
     group_by(across(all_of(base_cols))) %>%
-    summarise(n_years = n_distinct(year), .groups='drop')
-  if(any(dup_check$n_years != expected_mult)) {
-    stop('Unexpected expansion in join: some rows did not map to all requested years. Check iso3/AgeGrp/fatal coverage.')
+    summarise(n_rows = n(), .groups='drop')
+  if(any(dup_check$n_rows != expected_mult)) {
+    stop('Unexpected expansion in join: some rows did not map to exactly the requested years. Check for duplicate scaling keys.')
   }
 
   # scale metrics
