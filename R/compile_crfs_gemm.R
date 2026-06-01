@@ -44,7 +44,7 @@ compile_gemm_ihd_25plus_deaths <- function(
     rr_central = NA_real_,
     rr_low = NA_real_,
     rr_high = NA_real_,
-    conc_ref = NA_real_,
+    conc_change = NA_real_,
     counterfact = NA_real_,
     unit = "ug",
     units_multiplier = 1,

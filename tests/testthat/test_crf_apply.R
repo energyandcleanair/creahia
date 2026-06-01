@@ -96,7 +96,7 @@ test_that("get_hazard_ratio_tabular returns correct interpolated values",{
 test_that("calculate_log_linear_paf matches closed-form AF", {
   # As the source_conc = con_ref, the PAF should be 1 - 1/RR
   expect_equal(
-    calculate_log_linear_paf(rr = 1.037, source_conc = 10, conc_ref = 10),
+    calculate_log_linear_paf(rr = 1.037, source_conc = 10, conc_change = 10),
     1 - 1 / 1.037,
     tolerance = 1e-12
   )
@@ -112,7 +112,7 @@ test_that("apply_crf_log_linear computes PAF from weighted concentration delta",
     rr_low = 1.021,
     rr_central = 1.037,
     rr_high = 1.08,
-    conc_ref = 10,
+    conc_change = 10,
     counterfact = 20,
     units_multiplier = 1
   )

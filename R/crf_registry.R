@@ -10,7 +10,7 @@ CRF_REGISTRY_REQUIRED_COLUMNS <- c(
   "rr_central",
   "rr_low",
   "rr_high",
-  "conc_ref",
+  "conc_change",
   "counterfact",
   "unit",
   "units_multiplier",
@@ -141,7 +141,7 @@ validate_log_linear_crfs <- function(registry) {
     return(invisible(TRUE))
   }
 
-  required_numeric_cols <- c("rr_low", "rr_central", "rr_high", "conc_ref", "counterfact", "units_multiplier")
+  required_numeric_cols <- c("rr_low", "rr_central", "rr_high", "conc_change", "counterfact", "units_multiplier")
 
   for(col in required_numeric_cols){
     bad_rows <- is.na(log_linear[[col]])
@@ -180,8 +180,8 @@ validate_log_linear_crfs <- function(registry) {
     )
   }
 
-  # Check that conc_ref, counterfact, and units_multiplier are all >= 0
-  bad_conc <- log_linear$conc_ref < 0 |
+  # Check that conc_change, counterfact, and units_multiplier are all >= 0
+  bad_conc <- log_linear$conc_change < 0 |
     log_linear$counterfact < 0 |
     log_linear$units_multiplier < 0
   if (any(bad_conc)) {

@@ -25,14 +25,14 @@ test_that("log-linear CRFs have required numeric fields", {
   expect_true(all(!is.na(log_linear$rr_central)))
   expect_true(all(!is.na(log_linear$rr_low)))
   expect_true(all(!is.na(log_linear$rr_high)))
-  expect_true(all(!is.na(log_linear$conc_ref)))
+  expect_true(all(!is.na(log_linear$conc_change)))
   expect_true(all(!is.na(log_linear$counterfact)))
   expect_true(all(!is.na(log_linear$units_multiplier)))
 
   expect_true(all(log_linear$rr_central > 0))
   expect_true(all(log_linear$rr_low > 0))
   expect_true(all(log_linear$rr_high > 0))
-  expect_true(all(log_linear$conc_ref > 0))
+  expect_true(all(log_linear$conc_change > 0))
   expect_true(all(log_linear$counterfact >= 0))
   expect_true(all(log_linear$units_multiplier >= 0))
 
