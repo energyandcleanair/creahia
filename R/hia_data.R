@@ -98,6 +98,50 @@ get_crfs <- function(version = "default") {
 }
 
 
+#' Warn if CRF cause/outcome combinations have no matching column in the epi data
+#'
+#' Pollutants whose CRF rows reference a `cause_outcome` key absent from `epi`
+#' are silently dropped downstream (the `inner_join` in `multiply_paf_epi()`
+#' just produces zero rows). This check surfaces the mismatch up-front, naming
+#' the affected pollutants so a typo in a CRF file can't quietly remove a
+#' pollutant from the HIA output.
+#'
+#' Only rows for pollutants in `species` are checked, since CRFs for absent
+#' pollutants are never used anyway.
+#'
+#' @param crfs CRFs table from \code{get_crfs()}
+#' @param epi epi table from \code{get_epi()} (already passed through
+#'   \code{fix_epi_cols()})
+#' @param species Character vector of pollutant species being modelled
+#' @return Invisibly, the character vector of missing metric keys (empty if all match)
+validate_crfs_against_epi <- function(crfs, epi, species) {
+
+  hia_polls <- species_to_hiapoll(species)
+  crfs_used <- crfs[crfs$pollutant %in% hia_polls, , drop = FALSE]
+  if(nrow(crfs_used) == 0) return(invisible(character()))
+
+  metric_keys <- build_metric_key(crfs_used$cause, crfs_used$outcome)
+  missing_idx <- which(!metric_keys %in% names(epi))
+  if(length(missing_idx) == 0) return(invisible(character()))
+
+  by_key <- split(crfs_used$pollutant[missing_idx], metric_keys[missing_idx])
+  details <- vapply(names(by_key), function(k) {
+    paste0("  - ", k, " (pollutants: ", paste(unique(by_key[[k]]), collapse = ", "), ")")
+  }, character(1))
+
+  warning(
+    "CRF cause/outcome keys with no matching column in the epi data — ",
+    "rows for these pollutants will be silently dropped:\n",
+    paste(details, collapse = "\n"),
+    "\nCheck the CRFs file for typos (e.g. `AllCauses` vs `AllCause`) or ",
+    "rename the epi column.",
+    call. = FALSE
+  )
+
+  invisible(unique(metric_keys[missing_idx]))
+}
+
+
 fix_epi_cols <- function(epi){
 
   # Old names to new names
