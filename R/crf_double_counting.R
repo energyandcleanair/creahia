@@ -67,6 +67,20 @@ check_dc_conflicts <- function(crfs, dc_groups = load_dc_groups()) {
   )
 }
 
+describe_dc_group <- function(dc_group, dc_groups = load_dc_groups()) {
+  validate_dc_groups(dc_groups)
+
+  result <- dc_groups %>%
+    dplyr::filter(dc_group == !!dc_group) %>%
+    dplyr::arrange(role, pollutant, cause, outcome)
+
+  if (nrow(result) == 0) {
+    stop("Unknown dc_group: ", dc_group, call. = FALSE)
+  }
+
+  result
+}
+
 load_dc_groups <- function(path = NULL, validate = TRUE) {
   if (is.null(path)) {
     path <- get_hia_path("crf/dc_groups.csv", error_if_not_exists = TRUE)
@@ -80,7 +94,6 @@ load_dc_groups <- function(path = NULL, validate = TRUE) {
 
   dc_groups
 }
-
 
 validate_dc_groups <- function(dc_groups) {
   missing_cols <- setdiff(CRF_DC_GROUP_REQUIRED_COLUMNS, names(dc_groups))

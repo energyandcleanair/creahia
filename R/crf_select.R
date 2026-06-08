@@ -156,6 +156,6 @@ validate_crf_selection <- function(
   }
 
   invisible(TRUE)
-}d
+}
 
 
