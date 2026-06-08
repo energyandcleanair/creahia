@@ -117,7 +117,11 @@ select_crfs <- function(selection, registry = load_crf_registry()) {
   selected
 }
 
-validate_crf_selection <- function(crfs) {
+validate_crf_selection <- function(
+  crfs,
+  check_double_counting = TRUE,
+  dc_groups = load_dc_groups()
+) {
   if (nrow(crfs) == 0) {
     stop("CRF selection is empty.", call. = FALSE)
   }
@@ -147,7 +151,11 @@ validate_crf_selection <- function(crfs) {
     )
   }
 
+  if (check_double_counting) {
+    check_dc_conflicts(crfs, dc_groups = dc_groups)
+  }
+
   invisible(TRUE)
-}
+}d
 
 
