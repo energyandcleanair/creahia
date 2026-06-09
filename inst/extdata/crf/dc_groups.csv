@@ -1,14 +1,12 @@
-dc_group,pollutant,cause,outcome,role,notes
-pm25_adult_mortality,PM25,NCD.LRI,Deaths,aggregate,NCD.LRI is an aggregate adult mortality cause
-pm25_adult_mortality,PM25,IHD,Deaths,component,IHD is included in adult NCD.LRI mortality
-pm25_adult_mortality,PM25,Stroke,Deaths,component,Stroke is included in adult NCD.LRI mortality
-pm25_adult_mortality,PM25,COPD,Deaths,component,COPD is included in adult NCD.LRI mortality
-pm25_adult_mortality,PM25,LC,Deaths,component,Lung cancer is included in adult NCD.LRI mortality
-pm25_adult_mortality,PM25,LRI,Deaths,component,LRI is included in adult NCD.LRI mortality
-pm25_adult_mortality,PM25,Diabetes,Deaths,component,Diabetes is included in adult NCD.LRI mortality
-pm25_adult_mortality,PM25,Dementia,Deaths,component,Dementia is included in adult NCD.LRI mortality
-pm25_cv_mortality,PM25,CV,Deaths,aggregate,CV is an aggregate cardiovascular mortality cause
-pm25_cv_mortality,PM25,IHD,Deaths,component,IHD is included in CV mortality
-pm25_cv_mortality,PM25,Stroke,Deaths,component,Stroke is included in CV mortality
-lri_age_partition,PM25,LRI,Deaths,member,Adult LRI can coexist with child LRI if age ranges do not overlap
-lri_age_partition,PM25,LRI.child,Deaths,member,Child LRI can coexist with adult LRI if age ranges do not overlap
+dc_group,cause,role,notes
+adult_mortality,NCD.LRI,aggregate,Non-communicable diseases plus lower respiratory infections aggregate mortality group
+adult_mortality,IHD,component,Component cause included in NCD.LRI aggregate
+adult_mortality,Stroke,component,Component cause included in NCD.LRI aggregate
+adult_mortality,COPD,component,Component cause included in NCD.LRI aggregate
+adult_mortality,LC,component,Component cause included in NCD.LRI aggregate
+adult_mortality,LRI,component,Component cause included in NCD.LRI aggregate
+adult_mortality,Diabetes,component,Component cause included in NCD.LRI aggregate
+adult_mortality,Dementia,component,Component cause included in NCD.LRI aggregate
+cv_mortality,CV,aggregate,Cardiovascular aggregate mortality group
+cv_mortality,IHD,component,Component cause included in CV aggregate
+cv_mortality,Stroke,component,Component cause included in CV aggregate
