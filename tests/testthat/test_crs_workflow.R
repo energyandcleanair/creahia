@@ -8,16 +8,16 @@ library(testthat)
 # the grid's CRS (e.g. a UTM grid from a CALPUFF workflow) rather than requiring
 # the grid to already be in the source lon/lat CRS.
 #
-# This test verifies that:
-#   1. get_concentration() honours the grid CRS (lon/lat AND UTM).
-#   2. The full creahia extraction pipeline (add_pop -> get_adm ->
-#      extract_concs_and_pop) runs end-to-end on a non-lon/lat grid.
-#   3. Results (total population and population-weighted mean concentration) are
-#      consistent between the lon/lat and UTM workflows, i.e. switching to
-#      project() does not distort the HIA inputs.
+# This test verifies that the full creahia extraction/HIA pipeline (add_pop ->
+# get_adm -> extract_concs_and_pop -> compute_hia) runs end-to-end on a non
+# lon/lat grid, and that the results are consistent between an equivalent lon/lat
+# and UTM workflow, i.e. switching to project() does not distort the HIA inputs.
 #
-# Requires GIS_DIR with pm25/vandonkelaar concentration + GPW population data,
-# so it is skipped when that data is unavailable.
+# The exposure field is synthesised here (a smooth, deterministic PM2.5 map
+# projected from lon/lat to UTM) rather than fetched via creaexposure, so the
+# test does not depend on the vandonkelaar concentration data (which is not part
+# of the CI image). It still requires the GPW population and GADM boundary data,
+# both of which ARE bundled into the CI image (see tests/gcs_test_files.txt).
 # ==============================================================================
 
 library(terra)
@@ -25,11 +25,9 @@ library(dplyr)
 
 skip_if_no_gis_data <- function() {
   ok <- tryCatch({
-    length(creaexposure::get_concentration_available_years(
-      "pm25", source = "vandonkelaar")) > 0 &&
-      length(creahia:::get_pop_years_available()) > 0
+    length(creahia:::get_pop_years_available()) > 0
   }, error = function(e) FALSE)
-  testthat::skip_if(!isTRUE(ok), "GIS_DIR concentration/population data not available")
+  testthat::skip_if(!isTRUE(ok), "GIS_DIR population/boundary data not available")
 }
 
 # Bangladesh bounding box, UTM zone 46N == EPSG:32646
@@ -39,6 +37,20 @@ make_grid_lonlat <- function(res = 0.02) {
 }
 make_grid_utm <- function(res_m = 2000) {
   terra::project(make_grid_lonlat(), "epsg:32646", res = res_m)
+}
+
+# Synthesise a smooth, deterministic PM2.5 baseline (~20-80 ug/m3) on a lon/lat
+# grid. A coarse random field bilinearly resampled to the grid gives a spatially
+# varying but smooth surface that reprojects near-losslessly, so the cross-CRS
+# consistency checks reflect the pop/region CRS plumbing rather than artefacts of
+# interpolating white noise.
+make_conc_lonlat <- function(grid_ll) {
+  coarse <- terra::rast(terra::ext(grid_ll), resolution = 0.5, crs = "epsg:4326")
+  set.seed(42)
+  terra::values(coarse) <- runif(terra::ncell(coarse), min = 20, max = 80)
+  conc <- terra::resample(coarse, grid_ll, method = "bilinear")
+  names(conc) <- "pm25"
+  conc
 }
 
 # Run the full extraction pipeline for a given grid, returning the per-region
@@ -72,38 +84,15 @@ summarise_extract <- function(conc_regions) {
 }
 
 
-test_that("get_concentration returns rasters in the grid CRS (lon/lat and UTM)", {
-  skip_if_no_gis_data()
-
-  g_ll  <- make_grid_lonlat()
-  g_utm <- make_grid_utm()
-
-  conc_ll  <- creaexposure::get_concentration("pm25", source = "vandonkelaar",
-                                              year = 2020, grid_raster = g_ll)
-  conc_utm <- creaexposure::get_concentration("pm25", source = "vandonkelaar",
-                                              year = 2020, grid_raster = g_utm)
-
-  # The core of the resample -> project change: output adopts the grid CRS.
-  expect_true(terra::same.crs(conc_ll,  g_ll))
-  expect_true(terra::same.crs(conc_utm, g_utm))
-  expect_false(terra::same.crs(conc_utm, conc_ll))
-
-  # Sanity: plausible PM2.5 values, not all-NA (the failure mode project() fixes).
-  expect_gt(mean(terra::values(conc_utm), na.rm = TRUE), 0)
-  expect_false(all(is.na(terra::values(conc_utm))))
-})
-
-
 test_that("HIA extraction is consistent across lon/lat and UTM grids", {
   skip_if_no_gis_data()
 
   g_ll  <- make_grid_lonlat()
   g_utm <- make_grid_utm()
 
-  conc_ll  <- creaexposure::get_concentration("pm25", source = "vandonkelaar",
-                                              year = 2020, grid_raster = g_ll)
-  conc_utm <- creaexposure::get_concentration("pm25", source = "vandonkelaar",
-                                              year = 2020, grid_raster = g_utm)
+  # Same underlying exposure field, expressed on each grid's CRS.
+  conc_ll  <- make_conc_lonlat(g_ll)
+  conc_utm <- terra::project(conc_ll, g_utm)
 
   # The UTM workflow must run end-to-end without error.
   res_ll  <- run_extract(g_ll,  conc_ll)
