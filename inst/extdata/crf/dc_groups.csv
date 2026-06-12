@@ -1,12 +1,12 @@
 dc_group,cause,role,notes
-adult_mortality,NCD.LRI,aggregate,Non-communicable diseases plus lower respiratory infections aggregate mortality group
-adult_mortality,IHD,component,Component cause included in NCD.LRI aggregate
-adult_mortality,Stroke,component,Component cause included in NCD.LRI aggregate
-adult_mortality,COPD,component,Component cause included in NCD.LRI aggregate
-adult_mortality,LC,component,Component cause included in NCD.LRI aggregate
-adult_mortality,LRI,component,Component cause included in NCD.LRI aggregate
-adult_mortality,Diabetes,component,Component cause included in NCD.LRI aggregate
-adult_mortality,Dementia,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,NCD.LRI,aggregate,Non-communicable diseases plus lower respiratory infections aggregate mortality group
+ncdlri_mortality,IHD,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,Stroke,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,COPD,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,LC,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,LRI,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,Diabetes,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,Dementia,component,Component cause included in NCD.LRI aggregate
 cv_mortality,CV,aggregate,Cardiovascular aggregate mortality group
 cv_mortality,IHD,component,Component cause included in CV aggregate
 cv_mortality,Stroke,component,Component cause included in CV aggregate
