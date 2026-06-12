@@ -164,35 +164,70 @@ hiapoll_to_species <- function(hiapoll) {
 #' @examples
 add_double_counted <- function(hia, crfs, epi) {
 
+  dc_groups <- load_dc_groups()
+
+  dc_aggregates <- dc_groups %>%
+    dplyr::filter(role == CRF_DC_ROLE_AGGREGATE) %>%
+    dplyr::select(dc_group, aggregate_cause = cause) 
+
+  dc_components <- dc_groups %>%
+    dplyr::filter(role == CRF_DC_ROLE_COMPONENT) %>%
+    dplyr::select(dc_group, component_cause = cause) 
+
   # Use CRFS double counted field first
   joined <- hia %>%
-    left_join(crfs %>%
-                select(cause, outcome, pollutant, double_counted),
-              by = c('cause', 'outcome', 'pollutant'))
+    dplyr::mutate(.hia_row_id = dplyr::row_number()) %>%
+    dplyr::left_join(
+        crfs %>% select(cause, outcome, pollutant, double_counted),
+        by = c('cause', 'outcome', 'pollutant')
+      )
 
   # Except PM25, all of them should have been found in CRFs
   if(nrow(joined %>% filter(is.na(double_counted) & pollutant != 'PM25' & number > 0)) > 0) {
     stop('merged has failed in double counting detection')
   }
 
-  # For rows where double_counted is still NA, detect ensemble causes by pollutant/outcome
-  # This handles any pollutant (including PM25) that uses ensemble causes
+  # Find aggregate causes that are present within each pollutant/outcome group.
+  aggregate_presence <- joined %>%
+    dplyr::inner_join(
+      dc_aggregates, 
+      by = c("cause" = "aggregate_cause"),
+      relationship = "many-to-many"
+    ) %>%
+    filter(!is.na(number)) %>%
+    distinct(pollutant, outcome, dc_group)
+
+  # Mark component causes as double-counted only when their aggregate is present
+  # in the same pollutant/outcome group.
+  inferred_double_counted <- joined %>%
+    filter(is.na(double_counted)) %>%
+    inner_join(
+      dc_components,
+      by = c("cause" = "component_cause"),
+      relationship = "many-to-many"
+    ) %>%
+    inner_join(
+      aggregate_presence,
+      by = c("pollutant", "outcome", "dc_group"),
+      relationship = "many-to-many"
+    ) %>%
+    distinct(.hia_row_id) %>%
+    mutate(inferred_double_counted = TRUE)
+
+
   joined <- joined %>%
-    group_by(pollutant, outcome) %>%
+    left_join(inferred_double_counted, by = ".hia_row_id") %>%
     mutate(
-      has_ncdlri = any(cause == CAUSE_NCDLRI & !is.na(number)),
-      has_cv = any(cause == CAUSE_CV & !is.na(number)),
       double_counted = case_when(
-        !is.na(double_counted) ~ double_counted,  # Trust CRFs first
-        has_ncdlri & cause %in% CAUSE_NCDLRI_INCLUDED ~ TRUE,
-        has_cv & cause %in% CAUSE_CV_INCLUDED ~ TRUE,
+        !is.na(double_counted) ~ double_counted,
+        dplyr::coalesce(inferred_double_counted, FALSE) ~ TRUE,
         TRUE ~ FALSE
       )
     ) %>%
-    select(-has_ncdlri, -has_cv) %>%
-    ungroup()
+    select(-.hia_row_id, -inferred_double_counted)
 
   return(joined)
+
 }
 
 
