@@ -43,11 +43,11 @@ crfs_preset <- function(name = "experimental_default", registry = load_crf_regis
     dplyr::select(dplyr::all_of(CRF_SELECTION_REQUIRED_COLUMNS))
 
 
-  select_crfs(selection, registry = registry)
+  resolve_crf_selection(selection, registry = registry)
   
 }
 
-select_crfs <- function(selection, registry = load_crf_registry()) {
+resolve_crf_selection <- function(selection, registry = load_crf_registry()) {
   missing_cols <- setdiff(CRF_SELECTION_REQUIRED_COLUMNS, names(selection))
   if (length(missing_cols) > 0) {
     stop(
@@ -110,7 +110,7 @@ select_crfs <- function(selection, registry = load_crf_registry()) {
 }
 
 crfs_override <- function(crfs, pollutant, cause, crf_id, registry = load_crf_registry()) {
-  replacement <- select_crfs(
+  replacement <- resolve_crf_selection(
     tibble::tibble(
       pollutant = pollutant,
       cause = cause,
