@@ -503,3 +503,140 @@ test_that("diagnose_paf skips gracefully when paf is empty", {
   # No plots should have been written
   expect_false(dir.exists(diag_dir) && length(list.files(diag_dir)) > 0)
 })
+
+test_that("compute_hia_paf_crfs_registry matches legacy log-linear CRF path", {
+  test_data <- setup_test_data()
+
+  legacy_crfs <- test_data$crfs %>%
+    dplyr::filter(pollutant == "NO2")
+
+  registry_crfs <- legacy_crfs %>%
+    dplyr::mutate(
+      crf_id = "test_no2_asthma_log_linear_v1",
+      form = CRF_FORM_LOG_LINEAR
+    )
+
+  legacy_result <- compute_hia_paf_crfs(
+    species = "no2",
+    conc_map = test_data$conc_map,
+    regions = test_data$regions,
+    crfs = legacy_crfs
+  )$scenario1
+
+  registry_result <- compute_hia_paf_crfs_registry(
+    species = "no2",
+    conc_map = test_data$conc_map,
+    regions = test_data$regions,
+    crfs = registry_crfs
+  )$scenario1
+
+  expect_equal(
+    registry_result %>% dplyr::select(pollutant, cause, outcome, region_id),
+    legacy_result %>% dplyr::select(pollutant, cause, outcome, region_id)
+  )
+
+  expect_equal(
+    registry_result %>% dplyr::select(low, central, high),
+    legacy_result %>% dplyr::select(low, central, high),
+    tolerance = 1e-12
+  )
+})
+
+test_that("compute_hia_paf_crfs_registry dispatches tabular CRFs through apply_crf", {
+  conc_map <- list(
+    scenario1 = list(
+      BGD = data.frame(
+        conc_baseline_pm25 = c(20, 25),
+        conc_scenario_pm25 = c(15, 20),
+        pop = c(1000, 2000)
+      )
+    )
+  )
+
+  regions <- data.frame(
+    region_id = "BGD",
+    region_name = "Bangladesh",
+    country_id = "BGD"
+  )
+
+  crfs <- tibble::tibble(
+    crf_id = "test_tabular_pm25_ihd_deaths_v1",
+    pollutant = "PM25",
+    cause = "IHD",
+    outcome = "Deaths",
+    form = CRF_FORM_TABULAR,
+    data_path = "unused.csv"
+  )
+
+  with_mocked_bindings(
+    apply_crf = function(crf, conc_base, conc_perm, pop, region_id, epi_version = "default") {
+      expect_equal(crf$crf_id, "test_tabular_pm25_ihd_deaths_v1")
+      expect_equal(conc_base, c(20, 25))
+      expect_equal(conc_perm, c(15, 20))
+      expect_equal(pop, c(1000, 2000))
+      expect_equal(region_id, "BGD")
+      expect_equal(epi_version, "gbd2019")
+
+      tibble::tibble(
+        pollutant = crf$pollutant,
+        cause = crf$cause,
+        outcome = crf$outcome,
+        region_id = region_id,
+        low = -0.1,
+        central = -0.2,
+        high = -0.3
+      )
+    },
+    {
+      result <- compute_hia_paf_crfs_registry(
+        species = "pm25",
+        conc_map = conc_map,
+        regions = regions,
+        crfs = crfs,
+        epi_version = "gbd2019"
+      )
+    }
+  )
+
+  expect_true(is.list(result))
+  expect_true("scenario1" %in% names(result))
+  expect_named(
+    result$scenario1,
+    c("pollutant", "cause", "outcome", "region_id", "low", "central", "high")
+  )
+  expect_equal(result$scenario1$central, -0.2)
+})
+
+test_that("compute_hia_paf can use registry CRF compute path", {
+  test_data <- setup_test_data()
+
+  registry_crfs <- test_data$crfs %>%
+    dplyr::filter(pollutant == "NO2") %>%
+    dplyr::mutate(
+      crf_id = "test_no2_asthma_log_linear_v1",
+      form = CRF_FORM_LOG_LINEAR
+    )
+
+  with_mocked_bindings(
+    diagnose_paf = function(...) NULL,
+    {
+      result <- compute_hia_paf(
+        conc_map = test_data$conc_map,
+        species = "no2",
+        regions = test_data$regions,
+        rr_sources = c(),
+        crfs = registry_crfs,
+        crf_compute = "registry"
+      )
+    }
+  )
+
+  expect_true(is.data.frame(result))
+  expect_true("scenario" %in% names(result))
+  expect_true("scenario1" %in% result$scenario)
+  expect_equal(unique(result$pollutant), "NO2")
+  expect_named(
+    result,
+    c("scenario", "pollutant", "cause", "outcome", "region_id", "low", "central", "high")
+  )
+})

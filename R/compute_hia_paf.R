@@ -219,9 +219,12 @@ compute_hia_paf <- function(conc_map,
                            epi_version = "default",
                            rr_sources = c(),
                            crfs = get_crfs(),
-                           diagnostic_folder = "diagnostic"
+                           diagnostic_folder = "diagnostic",
+                           crf_compute = c("legacy", "registry")
                            ) {
-
+  
+  crf_compute <- match.arg(crf_compute)
+  
   paf <- tibble::tibble(
     scenario = character(),
     pollutant = character(),
@@ -247,12 +250,23 @@ compute_hia_paf <- function(conc_map,
 
   # Compute CRF-based PAF
   print("Computing CRF-based PAF")
-  paf_crf <- compute_hia_paf_crfs(species = species,
+
+  if (identical(crf_compute, "registry")) {
+    paf_crf <- compute_hia_paf_crfs_registry(species = species,
+                                            conc_map = conc_map,
+                                            regions = regions,
+                                            crfs = crfs,
+                                            epi_version = epi_version)
+  } else {
+    paf_crf <- compute_hia_paf_crfs(species = species,
                                   conc_map = conc_map,
                                   regions = regions,
                                   crfs = crfs)
+  }
+
   paf_crf_combined <- paf_crf %>%
     bind_rows(.id = 'scenario')
+  
   paf <- bind_rows(paf, paf_crf_combined)
 
 
@@ -262,6 +276,88 @@ compute_hia_paf <- function(conc_map,
   return(paf)
 }
 
+compute_hia_paf_crfs_registry <- function(species,
+                                          conc_map,
+                                          regions,
+                                          crfs,
+                                          epi_version = "default") {
+  hia_polls <- species_to_hiapoll(species)
+  scenarios <- names(conc_map)
+
+  empty_crf_df <- tibble::tibble(
+    pollutant = character(),
+    cause = character(),
+    outcome = character(),
+    region_id = character(),
+    low = numeric(),
+    central = numeric(),
+    high = numeric()
+  )
+
+  selected_crfs <- crfs[crfs$pollutant %in% hia_polls, , drop = FALSE]
+  paf_crfs <- list()
+
+  for (scenario in scenarios) {
+    conc_scenario <- conc_map[[scenario]]
+    conc_df <- dplyr::bind_rows(conc_scenario, .id = "region_id")
+
+    if (!all(complete.cases(conc_df))) {
+      warning("missing values in concentration or population data")
+      conc_df <- stats::na.omit(conc_df)
+    }
+
+    conc_scenario <- split(conc_df, conc_df$region_id)
+    scenario_rows <- list()
+
+    for (crf_i in seq_len(nrow(selected_crfs))) {
+      crf <- selected_crfs[crf_i, , drop = FALSE]
+      species_name <- hiapoll_to_species(crf$pollutant)
+
+      if (length(species_name) != 1 || is.na(species_name)) {
+        stop("No concentration species mapping found for pollutant: ", crf$pollutant, call. = FALSE)
+      }
+
+      base_name <- paste0("conc_baseline_", species_name)
+      perm_name <- paste0("conc_scenario_", species_name)
+
+      for (region_id in names(conc_scenario)) {
+        region_conc <- conc_scenario[[region_id]]
+        required_cols <- c(base_name, perm_name, "pop")
+        missing_cols <- setdiff(required_cols, names(region_conc))
+
+        if (length(missing_cols) > 0) {
+          stop(
+            "Concentration data for region ", region_id,
+            " is missing required columns: ",
+            paste(missing_cols, collapse = ", "),
+            call. = FALSE
+          )
+        }
+
+        effect_df <- apply_crf(
+          crf = crf,
+          conc_base = region_conc[[base_name]],
+          conc_perm = region_conc[[perm_name]],
+          pop = region_conc[["pop"]],
+          region_id = region_id,
+          epi_version = epi_version
+        )
+
+        if (!is.null(effect_df)) {
+          scenario_rows[[length(scenario_rows) + 1]] <- effect_df
+        }
+      }
+    }
+
+    paf_crfs[[scenario]] <- if (length(scenario_rows) == 0) {
+      empty_crf_df
+    } else {
+      dplyr::bind_rows(scenario_rows)
+    }
+  }
+
+  paf_crfs
+}
 
 # define a function to calculate the hazard ratio for a specific concentration, cause and age group
 get_hazard_ratio <- function(pm,
