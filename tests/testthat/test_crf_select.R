@@ -1,5 +1,5 @@
-test_that("select_crfs selects requested registry rows", {
-  crfs <- select_crfs(tibble::tribble(
+test_that("resolve_crf_selection selects requested registry rows", {
+  crfs <- resolve_crf_selection(tibble::tribble(
     ~pollutant, ~cause,     ~crf_id,
     "PM25",     "IHD",      "gemm_pm25_ihd_25plus_deaths_v1",
     "NO2",      "NCD.LRI",  "legacy_no2_ncdlri_deaths_v1"
@@ -11,9 +11,9 @@ test_that("select_crfs selects requested registry rows", {
   expect_true("legacy_no2_ncdlri_deaths_v1" %in% crfs$crf_id)
 })
 
-test_that("select_crfs errors on unknown crf_id", {
+test_that("resolve_crf_selection errors on unknown crf_id", {
   expect_error(
-    select_crfs(tibble::tribble(
+    resolve_crf_selection(tibble::tribble(
       ~pollutant, ~cause, ~crf_id,
       "PM25", "IHD", "missing_crf"
     )),
@@ -21,9 +21,9 @@ test_that("select_crfs errors on unknown crf_id", {
   )
 })
 
-test_that("select_crfs errors when one pollutant/cause has multiple sources", {
+test_that("resolve_crf_selection errors when one pollutant/cause has multiple sources", {
   expect_error(
-    select_crfs(tibble::tribble(
+    resolve_crf_selection(tibble::tribble(
       ~pollutant, ~cause, ~crf_id,
       "PM25", "IHD", "gemm_pm25_ihd_25plus_deaths_v1",
       "PM25", "IHD", "test_tabular_pm25_ihd_deaths_v1"
@@ -32,8 +32,8 @@ test_that("select_crfs errors when one pollutant/cause has multiple sources", {
   )
 })
 
-test_that("crfs_bundle loads experimental default", {
-  crfs <- crfs_bundle("experimental_default")
+test_that("crfs_preset loads experimental default", {
+  crfs <- crfs_preset("experimental_default")
 
   expect_equal(nrow(crfs), 2)
   expect_equal(
@@ -45,15 +45,15 @@ test_that("crfs_bundle loads experimental default", {
   )
 })
 
-test_that("crfs_bundle errors on unknown bundle", {
+test_that("crfs_preset errors on unknown preset", {
   expect_error(
-    crfs_bundle("missing_bundle"),
-    "Unknown CRF bundle"
+    crfs_preset("missing_preset"),
+    "Unknown CRF preset"
   )
 })
 
 test_that("crfs_override replaces selected pollutant/cause row", {
-  crfs <- crfs_bundle("experimental_default")
+  crfs <- crfs_preset("experimental_default")
 
   updated <- crfs_override(
     crfs,
@@ -68,7 +68,7 @@ test_that("crfs_override replaces selected pollutant/cause row", {
 })
 
 test_that("crfs_override errors on unknown replacement crf_id", {
-  crfs <- crfs_bundle("experimental_default")
+  crfs <- crfs_preset("experimental_default")
 
   expect_error(
     crfs_override(
@@ -79,4 +79,48 @@ test_that("crfs_override errors on unknown replacement crf_id", {
     ),
     "Unknown crf_id"
   )
+})
+
+test_that("available_crf_presets includes experimental_default", {
+  expect_true("experimental_default" %in% available_crf_presets())
+})
+
+test_that("load_crf_preset loads required columns", {
+  preset <- load_crf_preset("experimental_default")
+
+  expect_true(all(CRF_PRESET_REQUIRED_COLUMNS %in% names(preset)))
+  expect_equal(nrow(preset), 2)
+})
+
+test_that("all packaged CRF presets load without error", {
+  for (preset_name in available_crf_presets()) {
+    expect_no_error(load_crf_preset(preset_name))
+  }
+})
+
+test_that("all packaged CRF presets have required columns", {
+  preset_names <- available_crf_presets()
+ 
+  expect_gt(length(preset_names), 0)
+
+  for (preset_name in preset_names) {
+    preset <- load_crf_preset(preset_name)
+    expect_true(
+      all(CRF_PRESET_REQUIRED_COLUMNS %in% names(preset)),
+      info = paste("Preset missing required columns:", preset_name)
+    )
+  }
+})
+
+test_that("all packaged CRF presets resolve to registry rows without error", {
+  preset_names <- available_crf_presets()
+ 
+  expect_gt(length(preset_names), 0)
+
+  for (preset_name in preset_names) {
+    crfs <- crfs_preset(preset_name)
+
+    expect_s3_class(crfs, "data.frame")
+    expect_gt(nrow(crfs), 0)
+  }
 })

@@ -1,58 +1,50 @@
 CRF_SELECTION_REQUIRED_COLUMNS <- c("pollutant", "cause", "crf_id")
+CRF_PRESET_REQUIRED_COLUMNS <- c("pollutant", "cause", "crf_id", "notes")
 
-# specs for testing purposes, not intended for general use
-crf_bundle_specs <- function() {
-  tibble::tribble(
-    ~bundle, ~pollutant, ~cause,     ~crf_id,
-    # The "experimental_default" bundle is intended for testing and experimentation, and may change without warning. It is not intended for general use.
-    "experimental_default", "PM25", "IHD",     "gemm_pm25_ihd_25plus_deaths_v1",
-    "experimental_default", "NO2",  "NCD.LRI", "legacy_no2_ncdlri_deaths_v1",
+available_crf_presets <- function() {
+  preset_dir <- get_hia_path("crf/presets", error_if_not_exists = TRUE)
+  preset_files <- list.files(preset_dir, pattern = "\\.csv$", full.names = FALSE)
 
-    # Temporary alias while the registry is still incomplete.
-    "default", "PM25", "IHD",     "gemm_pm25_ihd_25plus_deaths_v1",
-    "default", "NO2",  "NCD.LRI", "legacy_no2_ncdlri_deaths_v1"
-  )
+  sort(sub("\\.csv$", "", preset_files))
 }
 
-crfs_bundle <- function(name = "experimental_default", registry = load_crf_registry()) {
-  specs <- crf_bundle_specs()
+load_crf_preset <- function(name = "experimental_default") {
+  path <- get_hia_path(
+    file.path("crf/presets", paste0(name, ".csv")),
+    error_if_not_exists = TRUE
+  )
 
-  available_bundles <- sort(unique(specs$bundle))
+  preset <- readr::read_csv(path, col_types = readr::cols())
 
-  if (!name %in% available_bundles) {
+  missing_cols <- setdiff(CRF_PRESET_REQUIRED_COLUMNS, names(preset))
+  if (length(missing_cols) > 0) {
     stop(
-      "Unknown CRF bundle: ",
-      name,
-      ". Available bundles: ",
-      paste(available_bundles, collapse = ", "),
+      "CRF preset is missing required columns: ",
+      paste(missing_cols, collapse = ", "),
       call. = FALSE
     )
   }
 
-  selection <- specs %>%
-    dplyr::filter(bundle == name) %>%
-    dplyr::select(pollutant, cause, crf_id)
-
-  select_crfs(selection, registry = registry)
+  preset
 }
 
-crfs_override <- function(crfs, pollutant, cause, crf_id, registry = load_crf_registry()) {
-  replacement <- select_crfs(
-    tibble::tibble(
-      pollutant = pollutant,
-      cause = cause,
-      crf_id = crf_id
-    ),
-    registry = registry
-  )
+crfs_preset <- function(name = "experimental_default", registry = load_crf_registry()) {
+  available_presets <- available_crf_presets()
 
-  updated <- crfs %>%
-    dplyr::filter(!(pollutant == !!pollutant & cause == !!cause)) %>%
-    dplyr::bind_rows(replacement)
+  if (!name %in% available_presets) {
+    stop(
+      "Unknown CRF preset: ", name,
+      ". Available presets: ", paste(available_presets, collapse = ", "),
+      call. = FALSE
+    )
+  }
 
-  validate_crf_selection(updated)
+  selection <- load_crf_preset(name) %>%
+    dplyr::select(dplyr::all_of(CRF_SELECTION_REQUIRED_COLUMNS))
 
-  updated
+
+  select_crfs(selection, registry = registry)
+  
 }
 
 select_crfs <- function(selection, registry = load_crf_registry()) {
@@ -115,6 +107,25 @@ select_crfs <- function(selection, registry = load_crf_registry()) {
   validate_crf_selection(selected)
 
   selected
+}
+
+crfs_override <- function(crfs, pollutant, cause, crf_id, registry = load_crf_registry()) {
+  replacement <- select_crfs(
+    tibble::tibble(
+      pollutant = pollutant,
+      cause = cause,
+      crf_id = crf_id
+    ),
+    registry = registry
+  )
+
+  updated <- crfs %>%
+    dplyr::filter(!(pollutant == !!pollutant & cause == !!cause)) %>%
+    dplyr::bind_rows(replacement)
+
+  validate_crf_selection(updated)
+
+  updated
 }
 
 validate_crf_selection <- function(
