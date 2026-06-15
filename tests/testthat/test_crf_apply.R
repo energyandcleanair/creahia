@@ -135,3 +135,104 @@ test_that("apply_crf_log_linear computes PAF from weighted concentration delta",
     c("pollutant", "cause", "outcome", "region_id", "low", "central", "high")
   )
 })
+
+test_that("apply_crf_log_linear correctly routes parameters to internal PAF calculators", {
+  crf <- tibble::tibble(
+    crf_id = "legacy_no2_ncdlri_deaths_v1",
+    pollutant = "NO2",
+    cause = "NCD.LRI",
+    outcome = "Deaths",
+    form = CRF_FORM_LOG_LINEAR,
+    rr_low = 1.021,
+    rr_central = 1.037,
+    rr_high = 1.08,
+    conc_change = 10,
+    counterfact = 20,
+    units_multiplier = 1
+  )
+
+  conc_base <- c(20, 20, 20)
+  conc_perm <- c(30, 30, 30)
+  pop <- c(100, 200, 300)
+
+  with_mocked_bindings(
+    calculate_effective_conc_change = function(...) 10,
+    calculate_log_linear_paf = function(rr, effective_conc_change, conc_change_ref) {
+      # Check that the effective_conc_change is being passed correctly to the log-linear PAF calculator
+      expect_equal(effective_conc_change, 10)
+      return(1 - 1 / rr)
+    },
+    {
+      new_result <- apply_crf_log_linear(crf, conc_base, conc_perm, pop, "TEST")
+
+      # The central PAF should be 1 - 1/RR_central based on our mock calculate_log_linear_paf
+      expected_central <- 1 - 1 / crf$rr_central
+      
+      expect_equal(new_result$central, expected_central, tolerance = 1e-12)
+      expect_named(
+        new_result,
+        c("pollutant", "cause", "outcome", "region_id", "low", "central", "high")
+      )
+    }
+  )
+})
+
+test_that("apply_crf_log_linear produces numerical results consistent with legacy HIA helpers", {
+  conc_region <- data.frame(
+    conc_baseline_no2 = c(10, 12, 15),
+    conc_scenario_no2 = c(8, 10, 12),
+    pop = c(1000, 1500, 2000)
+  )
+
+  conc_map <- list(
+    scenario1 = list(
+      BGD = conc_region
+    )
+  )
+
+  regions <- data.frame(
+    region_id = "BGD",
+    region_name = "Bangladesh",
+    country_id = "BGD"
+  )
+
+  legacy_crf <- tibble::tibble(
+    pollutant = "NO2",
+    cause = "Asthma.1to18",
+    outcome = "AsthmaIncidence",
+    counterfact = 0,
+    conc_change = 10,
+    units_multiplier = 1,
+    rr_low = 1.01,
+    rr_central = 1.05,
+    rr_high = 1.09,
+    double_counted = FALSE
+  )
+
+  registry_crf <- legacy_crf %>%
+    dplyr::mutate(
+      crf_id = "test_no2_asthma_log_linear_v1",
+      form = CRF_FORM_LOG_LINEAR
+    )
+
+  legacy_result <- compute_hia_paf_crfs(
+    species = "no2",
+    conc_map = conc_map,
+    regions = regions,
+    crfs = legacy_crf
+  )$scenario1
+
+  new_result <- apply_crf_log_linear(
+    crf = registry_crf,
+    conc_base = conc_region$conc_baseline_no2,
+    conc_perm = conc_region$conc_scenario_no2,
+    pop = conc_region$pop,
+    region_id = "BGD"
+  )
+
+  expect_equal(
+    new_result %>% dplyr::select(low, central, high),
+    legacy_result %>% dplyr::select(low, central, high),
+    tolerance = 1e-12
+  )
+})
