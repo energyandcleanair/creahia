@@ -130,7 +130,7 @@ crfs_override <- function(crfs, pollutant, cause, crf_id, registry = load_crf_re
 
 validate_crf_selection <- function(
   crfs,
-  check_double_counting = TRUE,
+  check_double_counting = FALSE,
   dc_groups = load_dc_groups()
 ) {
   if (nrow(crfs) == 0) {

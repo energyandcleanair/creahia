@@ -124,3 +124,26 @@ test_that("all packaged CRF presets resolve to registry rows without error", {
     expect_gt(nrow(crfs), 0)
   }
 })
+
+test_that("validate_crf_selection allows double-counting conflicts by default", {
+  crfs <- tibble::tribble(
+    ~crf_id, ~pollutant, ~cause, ~outcome,
+    "crf_ncdlri", "PM25", "NCD.LRI", "Deaths",
+    "crf_ihd", "PM25", "IHD", "Deaths"
+  )
+
+  expect_no_error(validate_crf_selection(crfs))
+})
+
+test_that("validate_crf_selection can still check double-counting conflicts when requested", {
+  crfs <- tibble::tribble(
+    ~crf_id, ~pollutant, ~cause, ~outcome,
+    "crf_ncdlri", "PM25", "NCD.LRI", "Deaths",
+    "crf_ihd", "PM25", "IHD", "Deaths"
+  )
+
+  expect_error(
+    validate_crf_selection(crfs, check_double_counting = TRUE),
+    "ncdlri_mortality"
+  )
+})
