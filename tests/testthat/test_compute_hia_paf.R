@@ -535,11 +535,19 @@ test_that("compute_hia_paf_crfs_registry matches legacy log-linear CRF path", {
     legacy_result %>% dplyr::select(pollutant, cause, outcome, region_id)
   )
 
+  registry_values <- registry_result %>% dplyr::select(low, central, high)
+  legacy_values <- legacy_result %>% dplyr::select(low, central, high)
+
   expect_equal(
-    registry_result %>% dplyr::select(low, central, high),
-    legacy_result %>% dplyr::select(low, central, high),
+    registry_values,
+    legacy_values,
     tolerance = 1e-12
   )
+  expect_true(all(!is.na(registry_values)))
+  expect_true(all(!is.na(legacy_values)))
+  expect_true(any(registry_values != 0))
+  expect_true(any(legacy_values != 0))
+
 })
 
 test_that("compute_hia_paf_crfs_registry dispatches tabular CRFs through apply_crf", {

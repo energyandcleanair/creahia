@@ -220,7 +220,10 @@ test_that("apply_crf_log_linear produces numerical results consistent with legac
     conc_map = conc_map,
     regions = regions,
     crfs = legacy_crf
-  )$scenario1
+  )$scenario1 %>%
+    dplyr::select(low, central, high) %>%
+    unlist() %>%
+    unname()
 
   new_result <- apply_crf_log_linear(
     crf = registry_crf,
@@ -228,11 +231,15 @@ test_that("apply_crf_log_linear produces numerical results consistent with legac
     conc_perm = conc_region$conc_scenario_no2,
     pop = conc_region$pop,
     region_id = "BGD"
-  )
+  ) %>%
+    dplyr::select(low, central, high) %>%
+    unlist() %>%
+    unname()
 
-  expect_equal(
-    new_result %>% dplyr::select(low, central, high),
-    legacy_result %>% dplyr::select(low, central, high),
-    tolerance = 1e-12
-  )
+  expect_equal(new_result, legacy_result, tolerance = 1e-12)
+  expect_true(all(!is.na(new_result)))
+  expect_true(all(!is.na(legacy_result)))
+  expect_true(any(new_result != 0))
+  expect_true(any(legacy_result != 0))
+  
 })
