@@ -266,7 +266,7 @@ compute_hia_paf <- function(conc_map,
 
   paf_crf_combined <- paf_crf %>%
     bind_rows(.id = 'scenario')
-  
+
   paf <- bind_rows(paf, paf_crf_combined)
 
 
@@ -294,7 +294,7 @@ compute_hia_paf_crfs_registry <- function(species,
     high = numeric()
   )
 
-  selected_crfs <- crfs[crfs$pollutant %in% hia_polls, , drop = FALSE]
+  selected_crfs <- crfs %>% filter(pollutant %in% hia_polls)
   paf_crfs <- list()
 
   for (scenario in scenarios) {
