@@ -615,6 +615,105 @@ test_that("compute_hia_paf_crfs_registry dispatches tabular CRFs through apply_c
   expect_equal(result$scenario1$central, -0.2)
 })
 
+test_that("compute_hia_paf_crfs_registry matches legacy tabular PAF helper", {
+  fake_rr <- tibble::tibble(
+    cause = "IHD",
+    age = "25+",
+    exposure = c(0, 10, 20, 30, 40),
+    low = c(1.00, 1.05, 1.10, 1.15, 1.20),
+    central = c(1.00, 1.08, 1.16, 1.24, 1.32),
+    high = c(1.00, 1.12, 1.24, 1.36, 1.48)
+  )
+
+  fake_epi <- tibble::tibble(
+    location_id = 1,
+    cause = "IHD",
+    measure_name = "Deaths",
+    age = "25+",
+    estimate = "central",
+    val = 100
+  )
+
+  conc_region <- data.frame(
+    conc_baseline_pm25 = c(20, 25, 30),
+    conc_scenario_pm25 = c(15, 20, 25),
+    pop = c(1000, 1500, 2000)
+  )
+
+  conc_map <- list(
+    scenario1 = list(
+      BGD = conc_region
+    )
+  )
+
+  regions <- data.frame(
+    region_id = "BGD",
+    region_name = "Bangladesh",
+    country_id = "BGD"
+  )
+
+  registry_crf <- tibble::tibble(
+    crf_id = "test_tabular_pm25_ihd_deaths_v1",
+    pollutant = "PM25",
+    cause = "IHD",
+    outcome = "Deaths",
+    form = CRF_FORM_TABULAR,
+    data_path = "unused.csv"
+  )
+
+  with_mocked_bindings(
+    load_crf_tabular = function(...) fake_rr %>% dplyr::select(-cause),
+    get_rr = function(...) fake_rr,
+    get_epi_count_long = function(...) fake_epi,
+    get_epi_location_id = function(...) 1,
+    {
+      registry_result <- compute_hia_paf_crfs_registry(
+        species = "pm25",
+        conc_map = conc_map,
+        regions = regions,
+        crfs = registry_crf,
+        epi_version = "gbd2019"
+      )$scenario1
+
+      legacy_result <- country_paf_perm(
+        pm.base = conc_region$conc_baseline_pm25,
+        pm.perm = conc_region$conc_scenario_pm25,
+        pop = conc_region$pop,
+        region_id = "BGD",
+        cause = "IHD",
+        measure = "Deaths",
+        rr_source = "test",
+        epi_version = "gbd2019"
+      )
+
+      registry_values <- registry_result %>%
+        dplyr::select(low, central, high) %>%
+        unlist() %>%
+        unname()
+
+      legacy_values <- legacy_result %>%
+        unname()
+
+      expect_equal(registry_values, legacy_values, tolerance = 1e-12)
+
+      expect_named(
+        registry_result,
+        c("pollutant", "cause", "outcome", "region_id", "low", "central", "high")
+      )
+      expect_equal(registry_result$pollutant, "PM25")
+      expect_equal(registry_result$cause, "IHD")
+      expect_equal(registry_result$outcome, "Deaths")
+      expect_equal(registry_result$region_id, "BGD")
+
+      expect_true(all(!is.na(registry_values)))
+      expect_true(all(!is.na(legacy_values)))
+      expect_true(any(registry_values != 0))
+      expect_true(any(legacy_values != 0))
+
+    }
+  )
+})
+
 test_that("compute_hia_paf can use registry CRF compute path", {
   test_data <- setup_test_data()
 
