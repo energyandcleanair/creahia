@@ -629,11 +629,11 @@ test_that("apply_econ_scaling: duplicate pop_scaling keys stop with informative 
       reference_year = 2019,
       forecast_years = 2025
     ),
-    regexp = "duplicate keys"
+    regexp = "duplicate key"
   )
 })
 
-test_that("apply_econ_scaling: missing iso3 in pop_scaling triggers a warning", {
+test_that("apply_econ_scaling: missing iso3 in pop_scaling stops with informative error", {
 
   hia_cost <- make_apply_input()  # USA + ZAF
 
@@ -644,7 +644,7 @@ test_that("apply_econ_scaling: missing iso3 in pop_scaling triggers a warning", 
     year = c(2019, 2025)
   ) %>% dplyr::mutate(pop_scaling = ifelse(year == 2019, 1, 1.05))
 
-  testthat::expect_warning(
+  testthat::expect_error(
     creahia:::apply_econ_scaling(
       hia_cost,
       pop_scaling = pop_scaling_usa_only,
@@ -652,6 +652,6 @@ test_that("apply_econ_scaling: missing iso3 in pop_scaling triggers a warning", 
       reference_year = 2019,
       forecast_years = 2025
     ),
-    regexp = "Missing population projection.*ZAF"
+    regexp = "Missing population scaling"
   )
 })

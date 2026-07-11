@@ -24,6 +24,7 @@ CAUSE_DEMENTIA = "Dementia"
 CAUSE_PTB = "PTB"
 CAUSE_LBW = "LBW"
 CAUSE_NCD = "NCD"
+CAUSE_ALLCAUSE = "AllCause"
 
 # Cause ensembles
 # Watch out for double counting

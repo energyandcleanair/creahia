@@ -9,13 +9,13 @@ PTB,PTB,PM2.5,FALSE,Newborn,0,0,1.15,1.07,1.16,10,8.8,ug,1,
 LBW,LBW,PM2.5,FALSE,Newborn,0,0,1.1,1.03,1.18,10,4,ug,1,
 COPD,Deaths,O3_8h,FALSE,25-99,25,99,1.12,1.08,1.16,10,35,ppb,0.51,
 COPD,YLLs,O3_8h,FALSE,25-99,25,99,1.12,1.08,1.16,10,35,ppb,0.51,
-AllCauses,Deaths,NO2,FALSE,25-99,25,99,1.04,1.02,1.06,10,4.5,ug,1,Faustini et al 2014
-AllCauses,YLLs,NO2,FALSE,25-99,25,99,1.04,1.02,1.06,10,4.5,ug,1,Faustini et al 2014
+AllCause,Deaths,NO2,FALSE,25-99,25,99,1.04,1.02,1.06,10,4.5,ug,1,Faustini et al 2014
+AllCause,YLLs,NO2,FALSE,25-99,25,99,1.04,1.02,1.06,10,4.5,ug,1,Faustini et al 2014
 Absences,Absences,PM2.5,FALSE,20-65,20,65,1.046,1.039,1.053,10,0,ug,1,
-AllCauses,Deaths,SO2,FALSE,25-99,25,99,1.02,1.014,1.026,5,0.02,ppb,0.381679389,Krewski et al 2009
-AllCauses_,YLLs,SO2,FALSE,25-99,25,99,1.02,1.014,1.026,5,0.02,ppb,0.381679389,Krewski et al 2009
+AllCause,Deaths,SO2,FALSE,25-99,25,99,1.02,1.014,1.026,5,0.02,ppb,0.381679389,Krewski et al 2009
+AllCause,YLLs,SO2,FALSE,25-99,25,99,1.02,1.014,1.026,5,0.02,ppb,0.381679389,Krewski et al 2009
 TotCV,Deaths,NO2,TRUE,25-99,25,99,1.13,1.09,1.18,10,4.5,ug,1,Faustini et al 2014
 TotResp,Deaths,NO2,TRUE,25-99,25,99,1.03,1.02,1.03,10,4.5,ug,1,Faustini et al 2014
 TotCV,YLLs,NO2,TRUE,25-99,25,99,1.13,1.09,1.18,10,4.5,ug,1,Faustini et al 2014
 TotResp,YLLs,NO2,TRUE,25-99,25,99,1.03,1.02,1.03,10,4.5,ug,1,Faustini et al 2014
-AllCauses,Deaths,PM2.5,FALSE,25-99,25,99,1.08,1.06,1.09,10,10,ug,1,Chen, J., & Hoek, G. (2020)
+AllCause,Deaths,PM2.5,FALSE,25-99,25,99,1.08,1.06,1.09,10,10,ug,1,Chen, J., & Hoek, G. (2020)

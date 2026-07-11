@@ -63,6 +63,8 @@ compute_hia <- function(conc_map,
   # Parse sources of relative risk
   rr_sources <- parse_rr_sources(rr_sources)
 
+  validate_crfs_against_epi(crfs = crfs, epi = epi, species = species)
+
   message("Computing PAF")
   paf <- compute_hia_paf(
     conc_map = conc_map,

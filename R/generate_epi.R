@@ -588,7 +588,7 @@ get_yld_gbd2017 <- function(pop, version){
                                "Tracheal, bronchus, and lung cancer" = "LC",
                                "Chronic obstructive pulmonary disease" = "COPD",
                                "Diabetes mellitus type 2" = "Diabetes",
-                               "All causes" = "AllCause",
+                               "All causes" = CAUSE_ALLCAUSE,
                                "Stroke" = "Stroke",
 
                                # Add totals to deduct from

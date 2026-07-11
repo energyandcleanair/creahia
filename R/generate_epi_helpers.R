@@ -27,7 +27,7 @@ recode_gbd_cause <- function(cause_name){
   new_cause_names <- case_when(
 
     # General
-    cause_name == "All causes" ~ "AllCause",
+    cause_name == "All causes" ~ CAUSE_ALLCAUSE,
     cause_name == "Lower respiratory infections" ~ CAUSE_LRI,
     cause_name == "Tracheal, bronchus, and lung cancer" ~ CAUSE_LUNGCANCER,
     cause_name == "Diabetes mellitus type 2" ~ CAUSE_DIABETES,
