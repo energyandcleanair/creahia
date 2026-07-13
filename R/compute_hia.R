@@ -32,6 +32,7 @@ compute_hia <- function(conc_map,
                         crfs_version = "default",
                         crfs = get_crfs(version = crfs_version),
                         diagnostic_folder = 'diagnostic',
+                        crf_compute = c("legacy", "registry"),
                         # Years
                         pop_year = NULL,
                         scale_base_year = NULL,
@@ -40,7 +41,8 @@ compute_hia <- function(conc_map,
                         calc_causes = NULL,
                         gbd_causes = NULL,
                         ...){
-
+  
+  crf_compute <- match.arg(crf_compute)
 
   # Fix inputs: if scale_base_year or scale_target_year is not null,
   # warn user
@@ -74,7 +76,8 @@ compute_hia <- function(conc_map,
     epi_version = epi_version,
     rr_sources = rr_sources,
     crfs = crfs,
-    diagnostic_folder = diagnostic_folder
+    diagnostic_folder = diagnostic_folder,
+    crf_compute = crf_compute
   )
 
   message("Computing impacts")
