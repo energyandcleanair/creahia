@@ -236,44 +236,51 @@ compute_hia_paf <- function(conc_map,
     high = numeric()
   )
 
-  # Compute RR-based PAF if rr_sources are provided
-  if(length(rr_sources) > 0) {
-    print("Computing RR-based PAF")
-    paf_rr <- compute_hia_paf_rr_curves(conc_map = conc_map,
-                                        scenarios = scenarios,
-                                        epi_version = epi_version,
-                                        rr_sources = rr_sources)
-    paf_rr_combined <- paf_rr %>%
-      bind_rows(.id = 'scenario')
-    paf <- bind_rows(paf, paf_rr_combined)
-  }
-
+  
   # Compute CRF-based PAF
   print("Computing CRF-based PAF")
 
   if (identical(crf_compute, "registry")) {
-    paf_crf <- compute_hia_paf_crfs_registry(species = species,
-                                            conc_map = conc_map,
-                                            regions = regions,
-                                            crfs = crfs,
-                                            epi_version = epi_version)
+    paf_crf <- compute_hia_paf_crfs_registry(
+      species = species,
+      conc_map = conc_map,
+      regions = regions,
+      crfs = crfs,
+      epi_version = epi_version
+    )
   } else {
-    paf_crf <- compute_hia_paf_crfs(species = species,
-                                  conc_map = conc_map,
-                                  regions = regions,
-                                  crfs = crfs)
+    paf_crf <- compute_hia_paf_crfs(
+      species = species,
+      conc_map = conc_map,
+      regions = regions,
+      crfs = crfs
+    )
   }
 
-  paf_crf_combined <- paf_crf %>%
-    bind_rows(.id = 'scenario')
+  paf <- bind_rows(
+    paf,
+    bind_rows(paf_crf, .id = "scenario")
+  )
 
-  paf <- bind_rows(paf, paf_crf_combined)
+  if (length(rr_sources) > 0) {
+    print("Computing RR-based PAF")
 
+    paf_rr <- compute_hia_paf_rr_curves(
+      conc_map = conc_map,
+      scenarios = scenarios,
+      epi_version = epi_version,
+      rr_sources = rr_sources
+    )
 
-  # Plot diagnostics
+    paf <- bind_rows(
+      paf,
+      bind_rows(paf_rr, .id = "scenario")
+    )
+  }
+
   diagnose_paf(paf, diagnostic_folder)
 
-  return(paf)
+  paf
 }
 
 compute_hia_paf_crfs_registry <- function(species,
