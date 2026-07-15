@@ -1,5 +1,5 @@
-CRF_SELECTION_REQUIRED_COLUMNS <- c("pollutant", "cause", "crf_id")
-CRF_PRESET_REQUIRED_COLUMNS <- c("pollutant", "cause", "crf_id", "notes")
+CRF_SELECTION_REQUIRED_COLUMNS <- c("pollutant", "cause", "outcome", "crf_id")
+CRF_PRESET_REQUIRED_COLUMNS <- c("pollutant", "cause", "outcome", "crf_id", "notes")
 
 available_crf_presets <- function() {
   preset_dir <- get_hia_path("crf/presets", error_if_not_exists = TRUE)
@@ -67,14 +67,14 @@ resolve_crf_selection <- function(selection, registry = load_crf_registry()) {
   }
 
   duplicated_keys <- selection %>%
-    dplyr::count(pollutant, cause) %>%
+    dplyr::count(pollutant, cause, outcome) %>%
     dplyr::filter(n > 1)
 
   if (nrow(duplicated_keys) > 0) {
     stop(
-      "Each pollutant/cause pair must select exactly one CRF source. Duplicated pairs: ",
+      "Each pollutant/cause/outcome triplet must select exactly one CRF source. Duplicated triplets: ",
       paste(
-        paste(duplicated_keys$pollutant, duplicated_keys$cause, sep = "/"),
+        paste(duplicated_keys$pollutant, duplicated_keys$cause, duplicated_keys$outcome, sep = "/"),
         collapse = ", "
       ),
       call. = FALSE
@@ -84,20 +84,20 @@ resolve_crf_selection <- function(selection, registry = load_crf_registry()) {
   selected <- registry %>%
     dplyr::inner_join(
       selection,
-      by = c("pollutant", "cause", "crf_id")
+      by = c("pollutant", "cause", "outcome", "crf_id")
     )
 
   missing_matches <- dplyr::anti_join(
     selection,
     registry,
-    by = c("pollutant", "cause", "crf_id")
+    by = c("pollutant", "cause", "outcome", "crf_id")
   )
 
   if (nrow(missing_matches) > 0) {
     stop(
-      "Some selections do not match registry pollutant/cause/crf_id rows: ",
+      "Some selections do not match registry pollutant/cause/outcome/crf_id rows: ",
       paste(
-        paste(missing_matches$pollutant, missing_matches$cause, missing_matches$crf_id, sep = "/"),
+        paste(missing_matches$pollutant, missing_matches$cause, missing_matches$outcome, missing_matches$crf_id, sep = "/"),
         collapse = ", "
       ),
       call. = FALSE
@@ -109,18 +109,19 @@ resolve_crf_selection <- function(selection, registry = load_crf_registry()) {
   selected
 }
 
-crfs_override <- function(crfs, pollutant, cause, crf_id, registry = load_crf_registry()) {
+crfs_override <- function(crfs, pollutant, cause, outcome, crf_id, registry = load_crf_registry()) {
   replacement <- resolve_crf_selection(
     tibble::tibble(
       pollutant = pollutant,
       cause = cause,
+      outcome = outcome,
       crf_id = crf_id
     ),
     registry = registry
   )
 
   updated <- crfs %>%
-    dplyr::filter(!(pollutant == !!pollutant & cause == !!cause)) %>%
+    dplyr::filter(!(pollutant == !!pollutant & cause == !!cause & outcome == !!outcome)) %>%
     dplyr::bind_rows(replacement)
 
   validate_crf_selection(updated)
@@ -147,15 +148,15 @@ validate_crf_selection <- function(
   }
 
   source_count <- crfs %>%
-    dplyr::distinct(pollutant, cause, crf_id) %>%
-    dplyr::count(pollutant, cause) %>%
+    dplyr::distinct(pollutant, cause, outcome, crf_id) %>%
+    dplyr::count(pollutant, cause, outcome) %>%
     dplyr::filter(n > 1)
 
   if (nrow(source_count) > 0) {
     stop(
-      "CRF selection has multiple sources for the same pollutant/cause pair: ",
+      "CRF selection has multiple sources for the same pollutant/cause/outcome triplet: ",
       paste(
-        paste(source_count$pollutant, source_count$cause, sep = "/"),
+        paste(source_count$pollutant, source_count$cause, source_count$outcome, sep = "/"),
         collapse = ", "
       ),
       call. = FALSE
@@ -170,3 +171,59 @@ validate_crf_selection <- function(
 }
 
 
+describe_crf_preset <- function(name, registry = load_crf_registry()) {
+  available_presets <- available_crf_presets()
+
+  if (!name %in% available_presets) {
+    stop(
+      "Unknown CRF preset: ", name,
+      ". Available presets: ", paste(available_presets, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  preset <- load_crf_preset(name) %>%
+    dplyr::rename(preset_notes = notes)
+
+  described <- registry %>%
+    dplyr::inner_join(
+      preset,
+      by = c("pollutant", "cause", "outcome", "crf_id")
+    )
+
+  missing_matches <- dplyr::anti_join(
+    preset,
+    registry,
+    by = c("pollutant", "cause", "outcome", "crf_id")
+  )
+
+  if (nrow(missing_matches) > 0) {
+    stop(
+      "Some preset rows do not match registry pollutant/cause/outcome/crf_id rows: ",
+      paste(
+        paste(
+          missing_matches$pollutant,
+          missing_matches$cause,
+          missing_matches$outcome,
+          missing_matches$crf_id,
+          sep = "/"
+        ),
+        collapse = ", "
+      ),
+      call. = FALSE
+    )
+  }
+
+  described %>%
+    dplyr::mutate(preset = name) %>%
+    dplyr::select(
+      preset,
+      pollutant,
+      cause,
+      outcome,
+      crf_id,
+      reference_id,
+      form,
+      notes = preset_notes
+    )
+}

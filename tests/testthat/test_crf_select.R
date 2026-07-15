@@ -1,8 +1,8 @@
 test_that("resolve_crf_selection selects requested registry rows", {
   crfs <- resolve_crf_selection(tibble::tribble(
-    ~pollutant, ~cause,     ~crf_id,
-    "PM25",     "IHD",      "gemm_pm25_ihd_25plus_deaths_v1",
-    "NO2",      "NCD.LRI",  "legacy_no2_ncdlri_deaths_v1"
+    ~pollutant, ~cause,     ~outcome, ~crf_id,
+    "PM25",     "IHD",      "Deaths", "gemm_pm25_ihd_25plus_deaths_v1",
+    "NO2",      "NCD.LRI",  "Deaths", "legacy_no2_ncdlri_deaths_v1"
   ))
 
   expect_s3_class(crfs, "data.frame")
@@ -14,8 +14,8 @@ test_that("resolve_crf_selection selects requested registry rows", {
 test_that("resolve_crf_selection errors on unknown crf_id", {
   expect_error(
     resolve_crf_selection(tibble::tribble(
-      ~pollutant, ~cause, ~crf_id,
-      "PM25", "IHD", "missing_crf"
+      ~pollutant, ~cause, ~outcome, ~crf_id,
+      "PM25", "IHD", "Deaths", "missing_crf"
     )),
     "Unknown crf_id"
   )
@@ -24,9 +24,9 @@ test_that("resolve_crf_selection errors on unknown crf_id", {
 test_that("resolve_crf_selection errors when one pollutant/cause has multiple sources", {
   expect_error(
     resolve_crf_selection(tibble::tribble(
-      ~pollutant, ~cause, ~crf_id,
-      "PM25", "IHD", "gemm_pm25_ihd_25plus_deaths_v1",
-      "PM25", "IHD", "test_tabular_pm25_ihd_deaths_v1"
+      ~pollutant, ~cause, ~outcome, ~crf_id,
+      "PM25", "IHD", "Deaths", "gemm_pm25_ihd_25plus_deaths_v1",
+      "PM25", "IHD", "Deaths", "test_tabular_pm25_ihd_deaths_v1"
     )),
     "exactly one CRF source"
   )
@@ -52,6 +52,35 @@ test_that("crfs_preset errors on unknown preset", {
   )
 })
 
+test_that("describe_crf_preset returns human-readable registry-backed rows", {
+  described <- describe_crf_preset("experimental_default")
+
+  expect_s3_class(described, "data.frame")
+  expect_equal(nrow(described), 2)
+
+  expect_true(all(c(
+    "preset",
+    "pollutant",
+    "cause",
+    "outcome",
+    "crf_id",
+    "reference_id",
+    "form",
+    "notes"
+  ) %in% names(described)))
+
+  expect_true(all(described$preset == "experimental_default"))
+  expect_true("burnett_2018_gemm" %in% described$reference_id)
+  expect_true("legacy_default_crfs" %in% described$reference_id)
+})
+
+test_that("describe_crf_preset errors on unknown preset", {
+  expect_error(
+    describe_crf_preset("missing_preset"),
+    "Unknown CRF preset"
+  )
+})
+
 test_that("crfs_override replaces selected pollutant/cause row", {
   crfs <- crfs_preset("experimental_default")
 
@@ -59,6 +88,7 @@ test_that("crfs_override replaces selected pollutant/cause row", {
     crfs,
     pollutant = "PM25",
     cause = "IHD",
+    outcome = "Deaths",
     crf_id = "test_tabular_pm25_ihd_deaths_v1"
   )
 
@@ -75,6 +105,7 @@ test_that("crfs_override errors on unknown replacement crf_id", {
       crfs,
       pollutant = "PM25",
       cause = "IHD",
+      outcome = "Deaths",
       crf_id = "missing_crf"
     ),
     "Unknown crf_id"
