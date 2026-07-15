@@ -446,10 +446,6 @@ preview_crf_set <- function(
     stop("`presets` must contain at least one CRF preset name.", call. = FALSE)
   }
 
-  if (!is.null(add)) {
-    stop("`add` is not supported yet in preview_crf_set().", call. = FALSE)
-  }
-
   selected <- dplyr::bind_rows(
     lapply(
       presets,
@@ -480,6 +476,14 @@ preview_crf_set <- function(
     preview <- apply_crf_preview_removals(
       preview = preview,
       remove = remove
+    )
+  }
+
+  if (!is.null(add)) {
+    preview <- apply_crf_preview_additions(
+      preview = preview,
+      add = add,
+      registry = registry
     )
   }
 
@@ -603,6 +607,120 @@ resolve_crf_removal <- function(removal) {
     cause = removal$cause,
     outcome = removal$outcome
   )
+}
+
+apply_crf_preview_additions <- function(preview, add, registry) {
+  if (!is.list(add) || length(add) == 0) {
+    stop("`add` must be a non-empty list of addition entries.", call. = FALSE)
+  }
+
+  for (addition in add) {
+    addition_row <- resolve_crf_addition(addition, registry = registry)
+
+    slot_exists <- preview %>%
+      dplyr::filter(
+        .data$pollutant == addition_row$pollutant,
+        .data$cause == addition_row$cause,
+        .data$outcome == addition_row$outcome
+      )
+
+    if (nrow(slot_exists) > 0) {
+      stop(
+        "Cannot add a slot that is already selected by the current preview. Use `replace` instead: ",
+        paste(addition_row$pollutant, addition_row$cause, addition_row$outcome, sep = "/"),
+        call. = FALSE
+      )
+    }
+
+    preview <- preview %>%
+      dplyr::bind_rows(
+        addition_row %>%
+          dplyr::mutate(
+            action = "added",
+            selected_by_preset = NA_character_
+          ) %>%
+          dplyr::select(
+            pollutant,
+            cause,
+            outcome,
+            crf_id,
+            reference_id,
+            form,
+            notes,
+            selected_by_preset,
+            action
+          )
+      )
+  }
+
+  preview
+}
+
+resolve_crf_addition <- function(addition, registry) {
+  if (!is.list(addition)) {
+    stop("Each `add` entry must be a list.", call. = FALSE)
+  }
+
+  if (!is.null(addition$crf_id)) {
+    addition_row <- registry %>%
+      dplyr::filter(.data$crf_id == addition$crf_id)
+
+    if (nrow(addition_row) == 0) {
+      stop("Unknown addition crf_id: ", addition$crf_id, call. = FALSE)
+    }
+
+    if (nrow(addition_row) > 1) {
+      stop("Addition crf_id must identify exactly one registry row.", call. = FALSE)
+    }
+
+    return(addition_row)
+  }
+
+  required_cols <- c("pollutant", "cause", "outcome", "reference_id")
+  missing_cols <- required_cols[
+    !vapply(required_cols, function(col) !is.null(addition[[col]]), logical(1))
+  ]
+
+  if (length(missing_cols) > 0) {
+    stop(
+      "Source-based addition entries must include: ",
+      paste(required_cols, collapse = ", "),
+      ". Missing: ",
+      paste(missing_cols, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  addition_row <- registry %>%
+    dplyr::filter(
+      .data$pollutant == addition$pollutant,
+      .data$cause == addition$cause,
+      .data$outcome == addition$outcome,
+      .data$reference_id == addition$reference_id
+    )
+
+  if (nrow(addition_row) == 0) {
+    stop(
+      "No registry CRF matches addition request: ",
+      paste(
+        addition$pollutant,
+        addition$cause,
+        addition$outcome,
+        addition$reference_id,
+        sep = "/"
+      ),
+      call. = FALSE
+    )
+  }
+
+  if (nrow(addition_row) > 1) {
+    stop(
+      "Addition request matches multiple registry CRFs. Use `crf_id` to disambiguate.",
+      call. = FALSE
+    )
+  }
+
+  addition_row
 }
 
 apply_crf_preview_replacements <- function(preview, replace, registry) {

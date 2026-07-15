@@ -560,3 +560,89 @@ test_that("preview_crf_set errors when replacing a removed slot", {
     "Cannot replace a slot that is not selected by the current presets"
   )
 })
+
+test_that("preview_crf_set previews source-based addition", {
+  preview <- preview_crf_set(
+    presets = "experimental_default",
+    add = list(
+      list(
+        pollutant = "NO2",
+        cause = "Asthma.1to18",
+        outcome = "AsthmaIncidence",
+        reference_id = "legacy_default_crfs"
+      )
+    )
+  )
+
+  added <- preview %>%
+    dplyr::filter(
+      pollutant == "NO2",
+      cause == "Asthma.1to18",
+      outcome == "AsthmaIncidence"
+    )
+
+  expect_equal(nrow(added), 1)
+  expect_equal(added$action, "added")
+  expect_equal(added$crf_id, "legacy_no2_asthma_1to18_incidence_v1")
+  expect_equal(added$reference_id, "legacy_default_crfs")
+  expect_true(is.na(added$selected_by_preset))
+})
+
+test_that("preview_crf_set previews crf_id addition", {
+  preview <- preview_crf_set(
+    presets = "experimental_default",
+    add = list(
+      list(crf_id = "legacy_no2_asthma_1to18_incidence_v1")
+    )
+  )
+
+  added <- preview %>%
+    dplyr::filter(crf_id == "legacy_no2_asthma_1to18_incidence_v1")
+
+  expect_equal(nrow(added), 1)
+  expect_equal(added$action, "added")
+})
+
+test_that("preview_crf_set errors when adding an already selected slot", {
+  expect_error(
+    preview_crf_set(
+      presets = "experimental_default",
+      add = list(
+        list(
+          pollutant = "PM25",
+          cause = "IHD",
+          outcome = "Deaths",
+          reference_id = "burnett_2018_gemm"
+        )
+      )
+    ),
+    "Cannot add a slot that is already selected"
+  )
+})
+
+test_that("preview_crf_set errors on incomplete addition entry", {
+  expect_error(
+    preview_crf_set(
+      presets = "experimental_default",
+      add = list(
+        list(
+          pollutant = "NO2",
+          cause = "Asthma.1to18"
+        )
+      )
+    ),
+    "Source-based addition entries must include"
+  )
+})
+
+test_that("preview_crf_set errors on unknown addition crf_id", {
+  expect_error(
+    preview_crf_set(
+      presets = "experimental_default",
+      add = list(
+        list(crf_id = "missing_crf")
+      )
+    ),
+    "Unknown addition crf_id"
+  )
+})
