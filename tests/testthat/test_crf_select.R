@@ -481,3 +481,82 @@ test_that("preview_crf_set errors on unknown replacement crf_id", {
     "Unknown replacement crf_id"
   )
 })
+
+test_that("preview_crf_set previews removed slots", {
+  preview <- preview_crf_set(
+    presets = "experimental_default",
+    remove = list(
+      list(
+        pollutant = "NO2",
+        cause = "NCD.LRI",
+        outcome = "Deaths"
+      )
+    )
+  )
+
+  removed <- preview %>%
+    dplyr::filter(
+      pollutant == "NO2",
+      cause == "NCD.LRI",
+      outcome == "Deaths"
+    )
+
+  expect_equal(nrow(removed), 1)
+  expect_equal(removed$action, "removed")
+  expect_equal(removed$crf_id, "legacy_no2_ncdlri_deaths_v1")
+
+  selected <- preview %>%
+    dplyr::filter(action == "selected")
+
+  expect_true("gemm_pm25_ihd_25plus_deaths_v1" %in% selected$crf_id)
+})
+
+test_that("preview_crf_set errors on removal for unselected slot", {
+  expect_error(
+    preview_crf_set(
+      presets = "experimental_default",
+      remove = list(
+        list(
+          pollutant = "NO2",
+          cause = "Asthma.1to18",
+          outcome = "AsthmaIncidence"
+        )
+      )
+    ),
+    "Cannot remove a slot that is not selected by the current presets"
+  )
+})
+
+test_that("preview_crf_set errors on incomplete removal entry", {
+  expect_error(
+    preview_crf_set(
+      presets = "experimental_default",
+      remove = list(
+        list(
+          pollutant = "NO2",
+          cause = "NCD.LRI"
+        )
+      )
+    ),
+    "Removal entries must include"
+  )
+})
+
+test_that("preview_crf_set errors when replacing a removed slot", {
+  expect_error(
+    preview_crf_set(
+      presets = "experimental_default",
+      remove = list(
+        list(
+          pollutant = "PM25",
+          cause = "IHD",
+          outcome = "Deaths"
+        )
+      ),
+      replace = list(
+        list(crf_id = "test_tabular_pm25_ihd_deaths_v1")
+      )
+    ),
+    "Cannot replace a slot that is not selected by the current presets"
+  )
+})

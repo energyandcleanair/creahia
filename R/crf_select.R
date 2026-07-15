@@ -450,10 +450,6 @@ preview_crf_set <- function(
     stop("`add` is not supported yet in preview_crf_set().", call. = FALSE)
   }
 
-  if (!is.null(remove)) {
-    stop("`remove` is not supported yet in preview_crf_set().", call. = FALSE)
-  }
-
   selected <- dplyr::bind_rows(
     lapply(
       presets,
@@ -479,6 +475,13 @@ preview_crf_set <- function(
       .groups = "drop"
     ) %>%
     dplyr::mutate(action = "selected")
+
+  if (!is.null(remove)) {
+    preview <- apply_crf_preview_removals(
+      preview = preview,
+      remove = remove
+    )
+  }
 
   if (!is.null(replace)) {
     preview <- apply_crf_preview_replacements(
@@ -537,6 +540,71 @@ validate_preview_slots <- function(selected) {
   invisible(TRUE)
 }
 
+apply_crf_preview_removals <- function(preview, remove) {
+  if (!is.list(remove) || length(remove) == 0) {
+    stop("`remove` must be a non-empty list of removal entries.", call. = FALSE)
+  }
+
+  for (removal in remove) {
+    removal_slot <- resolve_crf_removal(removal)
+
+    matched_rows <- preview %>%
+      dplyr::filter(
+        .data$pollutant == removal_slot$pollutant,
+        .data$cause == removal_slot$cause,
+        .data$outcome == removal_slot$outcome
+      )
+
+    if (nrow(matched_rows) == 0) {
+      stop(
+        "Cannot remove a slot that is not selected by the current presets: ",
+        paste(removal_slot$pollutant, removal_slot$cause, removal_slot$outcome, sep = "/"),
+        call. = FALSE
+      )
+    }
+
+    preview <- preview %>%
+      dplyr::mutate(
+        action = dplyr::if_else(
+          .data$pollutant == removal_slot$pollutant &
+            .data$cause == removal_slot$cause &
+            .data$outcome == removal_slot$outcome,
+          "removed",
+          .data$action
+        )
+      )
+  }
+
+  preview
+}
+
+resolve_crf_removal <- function(removal) {
+  if (!is.list(removal)) {
+    stop("Each `remove` entry must be a list.", call. = FALSE)
+  }
+
+  required_cols <- c("pollutant", "cause", "outcome")
+  missing_cols <- required_cols[
+    !vapply(required_cols, function(col) !is.null(removal[[col]]), logical(1))
+  ]
+
+  if (length(missing_cols) > 0) {
+    stop(
+      "Removal entries must include: ",
+      paste(required_cols, collapse = ", "),
+      ". Missing: ",
+      paste(missing_cols, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  tibble::tibble(
+    pollutant = removal$pollutant,
+    cause = removal$cause,
+    outcome = removal$outcome
+  )
+}
+
 apply_crf_preview_replacements <- function(preview, replace, registry) {
   if (!is.list(replace) || length(replace) == 0) {
     stop("`replace` must be a non-empty list of replacement entries.", call. = FALSE)
@@ -549,7 +617,8 @@ apply_crf_preview_replacements <- function(preview, replace, registry) {
       dplyr::filter(
         .data$pollutant == replacement_row$pollutant,
         .data$cause == replacement_row$cause,
-        .data$outcome == replacement_row$outcome
+        .data$outcome == replacement_row$outcome,
+        .data$action != "removed"
       )
 
     if (nrow(slot_exists) == 0) {
