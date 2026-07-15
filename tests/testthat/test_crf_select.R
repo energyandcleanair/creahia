@@ -221,6 +221,29 @@ test_that("crf_override_options errors when selected presets do not contain slot
   )
 })
 
+test_that("crf_override_options errors when presets are missing or empty", {
+  expect_error(
+    crf_override_options(
+      pollutant = "PM25",
+      cause = "IHD",
+      outcome = "Deaths"
+    ),
+    "`presets` must contain at least one CRF preset name",
+    fixed = TRUE
+  )
+
+  expect_error(
+    crf_override_options(
+      presets = character(0),
+      pollutant = "PM25",
+      cause = "IHD",
+      outcome = "Deaths"
+    ),
+    "`presets` must contain at least one CRF preset name",
+    fixed = TRUE
+  )
+})
+
 test_that("crfs_override replaces selected pollutant/cause row", {
   crfs <- crfs_preset("experimental_default")
 

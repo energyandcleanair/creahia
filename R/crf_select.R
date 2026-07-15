@@ -306,6 +306,10 @@ crf_override_options <- function(
   registry = load_crf_registry()
 ){
 
+  if (missing(presets) || length(presets) == 0) {
+    stop("`presets` must contain at least one CRF preset name.", call. = FALSE)
+  }
+
   available_presets <- available_crf_presets()
   unknown_presets <- setdiff(presets, available_presets)
 
