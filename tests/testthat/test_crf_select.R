@@ -81,6 +81,64 @@ test_that("describe_crf_preset errors on unknown preset", {
   )
 })
 
+test_that("search_crf_registry filters by user-facing registry fields", {
+  result <- search_crf_registry(
+    pollutant = "PM25",
+    cause = "IHD",
+    outcome = "Deaths"
+  )
+
+  expect_s3_class(result, "data.frame")
+  expect_gt(nrow(result), 0)
+  expect_true(all(result$pollutant == "PM25"))
+  expect_true(all(result$cause == "IHD"))
+  expect_true(all(result$outcome == "Deaths"))
+
+  expect_true(all(c(
+    "pollutant",
+    "cause",
+    "outcome",
+    "crf_id",
+    "reference_id",
+    "form",
+    "notes"
+  ) %in% names(result)))
+})
+
+test_that("search_crf_registry filters by reference_id and form", {
+  result <- search_crf_registry(
+    reference_id = "burnett_2018_gemm",
+    form = CRF_FORM_TABULAR
+  )
+
+  expect_gt(nrow(result), 0)
+  expect_true(all(result$reference_id == "burnett_2018_gemm"))
+  expect_true(all(result$form == CRF_FORM_TABULAR))
+})
+
+test_that("search_crf_registry supports text query", {
+  result <- search_crf_registry(query = "gemm")
+
+  expect_gt(nrow(result), 0)
+  expect_true("gemm_pm25_ihd_25plus_deaths_v1" %in% result$crf_id)
+})
+
+test_that("search_crf_registry returns empty result for unmatched filter values", {
+  result <- search_crf_registry(pollutant = "missing_pollutant")
+
+  expect_s3_class(result, "data.frame")
+  expect_equal(nrow(result), 0)
+  expect_true(all(c(
+    "pollutant",
+    "cause",
+    "outcome",
+    "crf_id",
+    "reference_id",
+    "form",
+    "notes"
+  ) %in% names(result)))
+})
+
 test_that("crfs_override replaces selected pollutant/cause row", {
   crfs <- crfs_preset("experimental_default")
 

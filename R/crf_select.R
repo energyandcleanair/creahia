@@ -227,3 +227,61 @@ describe_crf_preset <- function(name, registry = load_crf_registry()) {
       notes = preset_notes
     )
 }
+
+search_crf_registry <- function(
+  pollutant = NULL,
+  cause = NULL,
+  outcome = NULL,
+  reference_id = NULL,
+  form = NULL,
+  query = NULL,
+  registry = load_crf_registry()
+) {
+  
+  result <- registry
+  
+  filters <- list(
+    pollutant = pollutant,
+    cause = cause,
+    outcome = outcome,
+    reference_id = reference_id,
+    form = form
+  )
+
+  for (name in names(filters)) {
+    value <- filters[[name]]
+
+    if (!is.null(value)) {
+      result <- dplyr::filter(
+        result,
+        .data[[name]] %in% value
+      )
+    }
+  }
+
+  if (!is.null(query)) {
+    query_pattern <- paste(query, collapse = "|")
+
+    result <- result %>%
+      dplyr::filter(
+        grepl(query_pattern, .data$crf_id, ignore.case = TRUE) |
+          grepl(query_pattern, .data$pollutant, ignore.case = TRUE) |
+          grepl(query_pattern, .data$cause, ignore.case = TRUE) |
+          grepl(query_pattern, .data$outcome, ignore.case = TRUE) |
+          grepl(query_pattern, .data$reference_id, ignore.case = TRUE) |
+          grepl(query_pattern, .data$form, ignore.case = TRUE) |
+          grepl(query_pattern, .data$notes, ignore.case = TRUE)
+      )
+  }
+
+  result %>%
+    dplyr::select(
+      pollutant,
+      cause,
+      outcome,
+      crf_id,
+      reference_id,
+      form,
+      notes
+    )
+}
