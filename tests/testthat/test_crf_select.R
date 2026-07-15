@@ -139,6 +139,13 @@ test_that("search_crf_registry returns empty result for unmatched filter values"
   ) %in% names(result)))
 })
 
+test_that("search_crf_registry treats query as literal text", {
+  result <- search_crf_registry(query = "IHD 25+ GEMM curve")
+
+  expect_gt(nrow(result), 0)
+  expect_true("gemm_pm25_ihd_25plus_deaths_v1" %in% result$crf_id)
+})
+
 test_that("available_crf_references returns human-readable reference fields", {
   references <- available_crf_references()
 

@@ -260,17 +260,17 @@ search_crf_registry <- function(
   }
 
   if (!is.null(query)) {
-    query_pattern <- paste(query, collapse = "|")
+    query_terms <- as.character(query)
 
     result <- result %>%
       dplyr::filter(
-        grepl(query_pattern, .data$crf_id, ignore.case = TRUE) |
-          grepl(query_pattern, .data$pollutant, ignore.case = TRUE) |
-          grepl(query_pattern, .data$cause, ignore.case = TRUE) |
-          grepl(query_pattern, .data$outcome, ignore.case = TRUE) |
-          grepl(query_pattern, .data$reference_id, ignore.case = TRUE) |
-          grepl(query_pattern, .data$form, ignore.case = TRUE) |
-          grepl(query_pattern, .data$notes, ignore.case = TRUE)
+        crf_filter_matches(.data$crf_id, query_terms) |
+          crf_filter_matches(.data$pollutant, query_terms) |
+          crf_filter_matches(.data$cause, query_terms) |
+          crf_filter_matches(.data$outcome, query_terms) |
+          crf_filter_matches(.data$reference_id, query_terms) |
+          crf_filter_matches(.data$form, query_terms) |
+          crf_filter_matches(.data$notes, query_terms)
       )
   }
 
@@ -420,12 +420,15 @@ crf_override_options <- function(
 }
 
 crf_filter_matches <- function(values, filters) {
+  values_lower <- tolower(as.character(values))
+  filters_lower <- tolower(as.character(filters))
+
   Reduce(
     `|`,
     lapply(
-      filters,
+      filters_lower,
       function(filter) {
-        grepl(filter, values, ignore.case = TRUE)
+        grepl(filter, values_lower, fixed = TRUE)
       }
     )
   )
