@@ -358,3 +358,126 @@ test_that("validate_crf_selection can still check double-counting conflicts when
     "ncdlri_mortality"
   )
 })
+
+test_that("preview_crf_set previews selected CRFs from presets", {
+  preview <- preview_crf_set(presets = "experimental_default")
+
+  expect_s3_class(preview, "data.frame")
+  expect_equal(nrow(preview), 2)
+
+  expect_true(all(c(
+    "pollutant",
+    "cause",
+    "outcome",
+    "action",
+    "crf_id",
+    "reference_id",
+    "form",
+    "selected_by_preset",
+    "notes"
+  ) %in% names(preview)))
+
+  expect_true(all(preview$action == "selected"))
+  expect_true(all(preview$selected_by_preset == "experimental_default"))
+
+  expect_true("gemm_pm25_ihd_25plus_deaths_v1" %in% preview$crf_id)
+  expect_true("legacy_no2_ncdlri_deaths_v1" %in% preview$crf_id)
+})
+
+test_that("preview_crf_set errors when presets are missing or empty", {
+  expect_error(
+    preview_crf_set(),
+    "`presets` must contain at least one CRF preset name",
+    fixed = TRUE
+  )
+
+  expect_error(
+    preview_crf_set(presets = character(0)),
+    "`presets` must contain at least one CRF preset name",
+    fixed = TRUE
+  )
+})
+
+test_that("preview_crf_set errors on unknown preset", {
+  expect_error(
+    preview_crf_set(presets = "missing_preset"),
+    "Unknown CRF preset"
+  )
+})
+
+test_that("preview_crf_set previews source-based replacement", {
+  preview <- preview_crf_set(
+    presets = "experimental_default",
+    replace = list(
+      list(
+        pollutant = "PM25",
+        cause = "IHD",
+        outcome = "Deaths",
+        reference_id = "registry_fixture"
+      )
+    )
+  )
+
+  replaced <- preview %>%
+    dplyr::filter(
+      pollutant == "PM25",
+      cause == "IHD",
+      outcome == "Deaths"
+    )
+
+  expect_equal(nrow(replaced), 1)
+  expect_equal(replaced$action, "replaced")
+  expect_equal(replaced$crf_id, "test_tabular_pm25_ihd_deaths_v1")
+  expect_equal(replaced$reference_id, "registry_fixture")
+
+  expect_false("gemm_pm25_ihd_25plus_deaths_v1" %in% preview$crf_id)
+})
+
+test_that("preview_crf_set previews crf_id replacement", {
+  preview <- preview_crf_set(
+    presets = "experimental_default",
+    replace = list(
+      list(crf_id = "test_tabular_pm25_ihd_deaths_v1")
+    )
+  )
+
+  replaced <- preview %>%
+    dplyr::filter(
+      pollutant == "PM25",
+      cause == "IHD",
+      outcome == "Deaths"
+    )
+
+  expect_equal(nrow(replaced), 1)
+  expect_equal(replaced$action, "replaced")
+  expect_equal(replaced$crf_id, "test_tabular_pm25_ihd_deaths_v1")
+})
+
+test_that("preview_crf_set errors on replacement for unselected slot", {
+  expect_error(
+    preview_crf_set(
+      presets = "experimental_default",
+      replace = list(
+        list(
+          pollutant = "NO2",
+          cause = "Asthma.1to18",
+          outcome = "AsthmaIncidence",
+          reference_id = "legacy_default_crfs"
+        )
+      )
+    ),
+    "Cannot replace a slot that is not selected by the current presets"
+  )
+})
+
+test_that("preview_crf_set errors on unknown replacement crf_id", {
+  expect_error(
+    preview_crf_set(
+      presets = "experimental_default",
+      replace = list(
+        list(crf_id = "missing_crf")
+      )
+    ),
+    "Unknown replacement crf_id"
+  )
+})

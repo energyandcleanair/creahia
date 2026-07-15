@@ -433,3 +433,227 @@ crf_filter_matches <- function(values, filters) {
     )
   )
 }
+
+
+preview_crf_set <- function(
+  presets,
+  add = NULL,
+  remove = NULL,
+  replace = NULL,
+  registry = load_crf_registry()
+) {
+  if (missing(presets) || length(presets) == 0) {
+    stop("`presets` must contain at least one CRF preset name.", call. = FALSE)
+  }
+
+  if (!is.null(add)) {
+    stop("`add` is not supported yet in preview_crf_set().", call. = FALSE)
+  }
+
+  if (!is.null(remove)) {
+    stop("`remove` is not supported yet in preview_crf_set().", call. = FALSE)
+  }
+
+  selected <- dplyr::bind_rows(
+    lapply(
+      presets,
+      describe_crf_preset,
+      registry = registry
+    )
+  )
+
+  validate_preview_slots(selected)
+
+  preview <- selected %>%
+    dplyr::group_by(
+      pollutant,
+      cause,
+      outcome,
+      crf_id,
+      reference_id,
+      form,
+      notes
+    ) %>%
+    dplyr::summarise(
+      selected_by_preset = paste(unique(.data$preset), collapse = ", "),
+      .groups = "drop"
+    ) %>%
+    dplyr::mutate(action = "selected")
+
+  if (!is.null(replace)) {
+    preview <- apply_crf_preview_replacements(
+      preview = preview,
+      replace = replace,
+      registry = registry
+    )
+  }
+
+  preview %>%
+    dplyr::arrange(
+      pollutant,
+      cause,
+      outcome,
+      reference_id,
+      crf_id
+    ) %>%
+    dplyr::select(
+      pollutant,
+      cause,
+      outcome,
+      action,
+      crf_id,
+      reference_id,
+      form,
+      selected_by_preset,
+      notes
+    )
+}
+
+validate_preview_slots <- function(selected) {
+  slot_cols <- c("pollutant", "cause", "outcome")
+
+  conflicts <- selected %>%
+    dplyr::distinct(
+      dplyr::across(dplyr::all_of(slot_cols)),
+      crf_id
+    ) %>%
+    dplyr::count(
+      dplyr::across(dplyr::all_of(slot_cols)),
+      name = "n_crfs"
+    ) %>%
+    dplyr::filter(.data$n_crfs > 1)
+
+  if (nrow(conflicts) > 0) {
+    stop(
+      "Selected presets contain conflicting CRFs for the same pollutant/cause/outcome slot: ",
+      paste(
+        paste(conflicts$pollutant, conflicts$cause, conflicts$outcome, sep = "/"),
+        collapse = ", "
+      ),
+      call. = FALSE
+    )
+  }
+
+  invisible(TRUE)
+}
+
+apply_crf_preview_replacements <- function(preview, replace, registry) {
+  if (!is.list(replace) || length(replace) == 0) {
+    stop("`replace` must be a non-empty list of replacement entries.", call. = FALSE)
+  }
+
+  for (replacement in replace) {
+    replacement_row <- resolve_crf_replacement(replacement, registry = registry)
+
+    slot_exists <- preview %>%
+      dplyr::filter(
+        .data$pollutant == replacement_row$pollutant,
+        .data$cause == replacement_row$cause,
+        .data$outcome == replacement_row$outcome
+      )
+
+    if (nrow(slot_exists) == 0) {
+      stop(
+        "Cannot replace a slot that is not selected by the current presets: ",
+        paste(replacement_row$pollutant, replacement_row$cause, replacement_row$outcome, sep = "/"),
+        call. = FALSE
+      )
+    }
+
+    preview <- preview %>%
+      dplyr::filter(
+        !(
+          .data$pollutant == replacement_row$pollutant &
+            .data$cause == replacement_row$cause &
+            .data$outcome == replacement_row$outcome
+        )
+      ) %>%
+      dplyr::bind_rows(
+        replacement_row %>%
+          dplyr::mutate(
+            action = "replaced",
+            selected_by_preset = NA_character_
+          ) %>%
+          dplyr::select(
+            pollutant,
+            cause,
+            outcome,
+            crf_id,
+            reference_id,
+            form,
+            notes,
+            selected_by_preset,
+            action
+          )
+      )
+  }
+
+  preview
+}
+
+resolve_crf_replacement <- function(replacement, registry) {
+  if (!is.list(replacement)) {
+    stop("Each `replace` entry must be a list.", call. = FALSE)
+  }
+
+  if (!is.null(replacement$crf_id)) {
+    replacement_row <- registry %>%
+      dplyr::filter(.data$crf_id == replacement$crf_id)
+
+    if (nrow(replacement_row) == 0) {
+      stop("Unknown replacement crf_id: ", replacement$crf_id, call. = FALSE)
+    }
+
+    if (nrow(replacement_row) > 1) {
+      stop("Replacement crf_id must identify exactly one registry row.", call. = FALSE)
+    }
+
+    return(replacement_row)
+  }
+
+  required_cols <- c("pollutant", "cause", "outcome", "reference_id")
+  missing_cols <- required_cols[
+    !vapply(required_cols, function(col) !is.null(replacement[[col]]), logical(1))
+  ]
+
+  if (length(missing_cols) > 0) {
+    stop(
+      "Source-based replacement entries must include: ",
+      paste(required_cols, collapse = ", "),
+      ". Missing: ",
+      paste(missing_cols, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  replacement_row <- registry %>%
+    dplyr::filter(
+      .data$pollutant == replacement$pollutant,
+      .data$cause == replacement$cause,
+      .data$outcome == replacement$outcome,
+      .data$reference_id == replacement$reference_id
+    )
+
+  if (nrow(replacement_row) == 0) {
+    stop(
+      "No registry CRF matches replacement request: ",
+      paste(
+        replacement$pollutant,
+        replacement$cause,
+        replacement$outcome,
+        replacement$reference_id,
+        sep = "/"
+      ),
+      call. = FALSE
+    )
+  }
+
+  if (nrow(replacement_row) > 1) {
+    stop(
+      "Replacement request matches multiple registry CRFs. Use `crf_id` to disambiguate.",
+      call. = FALSE
+    )
+  }
+
+  replacement_row
+}
