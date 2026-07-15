@@ -285,3 +285,15 @@ search_crf_registry <- function(
       notes
     )
 }
+
+available_crf_references <- function(references = load_crf_references()) {
+  references %>%
+    dplyr::select(
+      reference_id,
+      author,
+      year,
+      title,
+      notes
+    ) %>%
+    dplyr::arrange(reference_id)
+}

@@ -139,6 +139,31 @@ test_that("search_crf_registry returns empty result for unmatched filter values"
   ) %in% names(result)))
 })
 
+test_that("available_crf_references returns human-readable reference fields", {
+  references <- available_crf_references()
+
+  expect_s3_class(references, "data.frame")
+  expect_gt(nrow(references), 0)
+
+  expect_true(all(c(
+    "reference_id",
+    "author",
+    "year",
+    "title",
+    "notes"
+  ) %in% names(references)))
+
+  expect_true("burnett_2018_gemm" %in% references$reference_id)
+  expect_true("legacy_default_crfs" %in% references$reference_id)
+})
+
+test_that("available_crf_references includes registry reference IDs", {
+  registry <- load_crf_registry()
+  references <- available_crf_references()
+
+  expect_true(all(unique(registry$reference_id) %in% references$reference_id))
+})
+
 test_that("crfs_override replaces selected pollutant/cause row", {
   crfs <- crfs_preset("experimental_default")
 
