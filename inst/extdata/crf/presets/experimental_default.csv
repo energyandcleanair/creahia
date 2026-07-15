@@ -1,3 +1,3 @@
-pollutant,cause,crf_id,notes
-PM25,IHD,gemm_pm25_ihd_25plus_deaths_v1,Experimental default PM25 IHD GEMM tabular CRF
-NO2,NCD.LRI,legacy_no2_ncdlri_deaths_v1,Experimental default legacy NO2 NCD.LRI log-linear CRF
+pollutant,cause,outcome,crf_id,notes
+PM25,IHD,Deaths,gemm_pm25_ihd_25plus_deaths_v1,Experimental default PM25 IHD GEMM tabular CRF
+NO2,NCD.LRI,Deaths,legacy_no2_ncdlri_deaths_v1,Experimental default legacy NO2 NCD.LRI log-linear CRF
