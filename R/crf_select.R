@@ -300,14 +300,41 @@ available_crf_references <- function(references = load_crf_references()) {
 
 crf_override_options <- function(
   presets,
-  pollutant,
-  cause,
-  outcome,
+  pollutant = NULL,
+  cause = NULL,
+  outcome = NULL,
   registry = load_crf_registry()
-){
-
+) {
   if (missing(presets) || length(presets) == 0) {
     stop("`presets` must contain at least one CRF preset name.", call. = FALSE)
+  }
+
+  filters <- list(
+    pollutant = pollutant,
+    cause = cause,
+    outcome = outcome
+  )
+
+  invalid_filters <- names(filters)[
+    vapply(
+      filters,
+      function(value) {
+        !is.null(value) && (
+          length(value) == 0 ||
+            any(is.na(value)) ||
+            any(value == "")
+        )
+      },
+      logical(1)
+    )
+  ]
+
+  if (length(invalid_filters) > 0) {
+    stop(
+      "CRF override option filters must be non-empty when provided: ",
+      paste(invalid_filters, collapse = ", "),
+      call. = FALSE
+    )
   }
 
   available_presets <- available_crf_presets()
@@ -331,49 +358,54 @@ crf_override_options <- function(
     )
   )
 
-  current <- selected %>%
-    dplyr::filter(
-      .data$pollutant == !!pollutant,
-      .data$cause == !!cause,
-      .data$outcome == !!outcome
-    )
-    
-  if (nrow(current) == 0) {
-    stop(
-      "Selected presets do not contain this pollutant/cause/outcome slot: ",
-      paste(pollutant, cause, outcome, sep = "/"),
-      call. = FALSE
-    )
+  matching_selected <- selected
+
+  for (name in names(filters)) {
+    value <- filters[[name]]
+
+    if (!is.null(value)) {
+      matching_selected <- matching_selected %>%
+        dplyr::filter(crf_filter_matches(.data[[name]], value))
+    }
   }
 
-  current_sources <- current %>%
-    dplyr::distinct(pollutant, cause, outcome, crf_id)
+  slot_cols <- c("pollutant", "cause", "outcome")
 
-  if (nrow(current_sources) > 1) {
-    stop(
-      "Selected presets contain multiple CRFs for this pollutant/cause/outcome slot: ",
-      paste(pollutant, cause, outcome, sep = "/"),
-      ". Resolve this conflict before choosing override options.",
-      call. = FALSE
-    )
-  }
+  matching_slots <- matching_selected %>%
+    dplyr::distinct(dplyr::across(dplyr::all_of(slot_cols)))
 
-  current_by_crf <- current %>%
-    dplyr::group_by(crf_id) %>%
+  selected_by_crf <- matching_selected %>%
+    dplyr::group_by(
+      pollutant,
+      cause,
+      outcome,
+      crf_id
+    ) %>%
     dplyr::summarise(
       selected_by_preset = paste(unique(.data$preset), collapse = ", "),
       .groups = "drop"
     )
 
-  search_crf_registry(
-    pollutant = pollutant,
-    cause = cause,
-    outcome = outcome,
-    registry = registry
-  ) %>%
-    dplyr::left_join(current_by_crf, by = "crf_id") %>%
-    dplyr::mutate(selected = !is.na(.data$selected_by_preset)) %>%
-    dplyr::arrange(dplyr::desc(.data$selected), .data$reference_id, .data$crf_id) %>%
+  search_crf_registry(registry = registry) %>%
+    dplyr::semi_join(
+      matching_slots,
+      by = slot_cols
+    ) %>%
+    dplyr::left_join(
+      selected_by_crf,
+      by = c("pollutant", "cause", "outcome", "crf_id")
+    ) %>%
+    dplyr::mutate(
+      selected = !is.na(.data$selected_by_preset)
+    ) %>%
+    dplyr::arrange(
+      .data$pollutant,
+      .data$cause,
+      .data$outcome,
+      dplyr::desc(.data$selected),
+      .data$reference_id,
+      .data$crf_id
+    ) %>%
     dplyr::select(
       pollutant,
       cause,
@@ -385,5 +417,16 @@ crf_override_options <- function(
       form,
       notes
     )
+}
 
+crf_filter_matches <- function(values, filters) {
+  Reduce(
+    `|`,
+    lapply(
+      filters,
+      function(filter) {
+        grepl(filter, values, ignore.case = TRUE)
+      }
+    )
+  )
 }

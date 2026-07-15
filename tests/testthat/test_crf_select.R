@@ -164,38 +164,7 @@ test_that("available_crf_references includes registry reference IDs", {
   expect_true(all(unique(registry$reference_id) %in% references$reference_id))
 })
 
-test_that("crf_override_options shows selected CRF and same-slot alternatives", {
-  options <- crf_override_options(
-    presets = "experimental_default",
-    pollutant = "PM25",
-    cause = "IHD",
-    outcome = "Deaths"
-  )
 
-  expect_s3_class(options, "data.frame")
-  expect_gt(nrow(options), 1)
-
-  expect_true(all(c(
-    "pollutant",
-    "cause",
-    "outcome",
-    "selected",
-    "selected_by_preset",
-    "crf_id",
-    "reference_id",
-    "form",
-    "notes"
-  ) %in% names(options)))
-
-  selected <- options %>%
-    dplyr::filter(selected)
-
-  expect_equal(nrow(selected), 1)
-  expect_equal(selected$crf_id, "gemm_pm25_ihd_25plus_deaths_v1")
-  expect_equal(selected$selected_by_preset, "experimental_default")
-
-  expect_true("test_tabular_pm25_ihd_deaths_v1" %in% options$crf_id)
-})
 
 test_that("crf_override_options errors on unknown preset", {
   expect_error(
@@ -206,18 +175,6 @@ test_that("crf_override_options errors on unknown preset", {
       outcome = "Deaths"
     ),
     "Unknown CRF preset"
-  )
-})
-
-test_that("crf_override_options errors when selected presets do not contain slot", {
-  expect_error(
-    crf_override_options(
-      presets = "experimental_default",
-      pollutant = "NO2",
-      cause = "Asthma.1to18",
-      outcome = "AsthmaIncidence"
-    ),
-    "Selected presets do not contain this pollutant/cause/outcome slot"
   )
 })
 
@@ -242,6 +199,59 @@ test_that("crf_override_options errors when presets are missing or empty", {
     "`presets` must contain at least one CRF preset name",
     fixed = TRUE
   )
+})
+
+test_that("crf_override_options supports partial pollutant filter", {
+  options <- crf_override_options(
+    presets = "experimental_default",
+    pollutant = "PM25"
+  )
+
+  expect_gt(nrow(options), 0)
+  expect_true(all(options$pollutant == "PM25"))
+  expect_true("gemm_pm25_ihd_25plus_deaths_v1" %in% options$crf_id)
+})
+
+test_that("crf_override_options supports partial cause filter", {
+  options <- crf_override_options(
+    presets = "experimental_default",
+    cause = "IHD"
+  )
+
+  expect_gt(nrow(options), 0)
+  expect_true(all(options$cause == "IHD"))
+  expect_true("gemm_pm25_ihd_25plus_deaths_v1" %in% options$crf_id)
+})
+
+test_that("crf_override_options supports case-insensitive partial outcome filter", {
+  options <- crf_override_options(
+    presets = "experimental_default",
+    outcome = "death"
+  )
+
+  expect_gt(nrow(options), 0)
+  expect_true(all(options$outcome == "Deaths"))
+})
+
+test_that("crf_override_options returns empty result when no selected slots match filters", {
+  options <- crf_override_options(
+    presets = "experimental_default",
+    pollutant = "missing_pollutant"
+  )
+
+  expect_s3_class(options, "data.frame")
+  expect_equal(nrow(options), 0)
+  expect_true(all(c(
+    "pollutant",
+    "cause",
+    "outcome",
+    "selected",
+    "selected_by_preset",
+    "crf_id",
+    "reference_id",
+    "form",
+    "notes"
+  ) %in% names(options)))
 })
 
 test_that("crfs_override replaces selected pollutant/cause row", {
