@@ -297,3 +297,89 @@ available_crf_references <- function(references = load_crf_references()) {
     ) %>%
     dplyr::arrange(reference_id)
 }
+
+crf_override_options <- function(
+  presets,
+  pollutant,
+  cause,
+  outcome,
+  registry = load_crf_registry()
+){
+
+  available_presets <- available_crf_presets()
+  unknown_presets <- setdiff(presets, available_presets)
+
+  if (length(unknown_presets) > 0) {
+    stop(
+      "Unknown CRF preset: ",
+      paste(unknown_presets, collapse = ", "),
+      ". Available presets: ",
+      paste(available_presets, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  selected <- dplyr::bind_rows(
+    lapply(
+      presets,
+      describe_crf_preset,
+      registry = registry
+    )
+  )
+
+  current <- selected %>%
+    dplyr::filter(
+      .data$pollutant == !!pollutant,
+      .data$cause == !!cause,
+      .data$outcome == !!outcome
+    )
+    
+  if (nrow(current) == 0) {
+    stop(
+      "Selected presets do not contain this pollutant/cause/outcome slot: ",
+      paste(pollutant, cause, outcome, sep = "/"),
+      call. = FALSE
+    )
+  }
+
+  current_sources <- current %>%
+    dplyr::distinct(pollutant, cause, outcome, crf_id)
+
+  if (nrow(current_sources) > 1) {
+    stop(
+      "Selected presets contain multiple CRFs for this pollutant/cause/outcome slot: ",
+      paste(pollutant, cause, outcome, sep = "/"),
+      ". Resolve this conflict before choosing override options.",
+      call. = FALSE
+    )
+  }
+
+  current_by_crf <- current %>%
+    dplyr::group_by(crf_id) %>%
+    dplyr::summarise(
+      selected_by_preset = paste(unique(.data$preset), collapse = ", "),
+      .groups = "drop"
+    )
+
+  search_crf_registry(
+    pollutant = pollutant,
+    cause = cause,
+    outcome = outcome,
+    registry = registry
+  ) %>%
+    dplyr::left_join(current_by_crf, by = "crf_id") %>%
+    dplyr::mutate(selected = !is.na(.data$selected_by_preset)) %>%
+    dplyr::arrange(dplyr::desc(.data$selected), .data$reference_id, .data$crf_id) %>%
+    dplyr::select(
+      pollutant,
+      cause,
+      outcome,
+      selected,
+      selected_by_preset,
+      crf_id,
+      reference_id,
+      form,
+      notes
+    )
+
+}
