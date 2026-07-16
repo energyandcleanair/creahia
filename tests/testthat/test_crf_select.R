@@ -646,3 +646,36 @@ test_that("preview_crf_set errors on unknown addition crf_id", {
     "Unknown addition crf_id"
   )
 })
+
+test_that("crfs_set returns final selected registry rows", {
+  crfs <- crfs_set(presets = "experimental_default")
+
+  expect_s3_class(crfs, "data.frame")
+  expect_equal(nrow(crfs), 2)
+  expect_true("gemm_pm25_ihd_25plus_deaths_v1" %in% crfs$crf_id)
+  expect_true("legacy_no2_ncdlri_deaths_v1" %in% crfs$crf_id)
+})
+
+test_that("crfs_set applies remove, add, and replace", {
+  crfs <- crfs_set(
+    presets = "experimental_default",
+    remove = list(
+      list(
+        pollutant = "NO2",
+        cause = "NCD.LRI",
+        outcome = "Deaths"
+      )
+    ),
+    add = list(
+      list(crf_id = "legacy_no2_asthma_1to18_incidence_v1")
+    ),
+    replace = list(
+      list(crf_id = "test_tabular_pm25_ihd_deaths_v1")
+    )
+  )
+
+  expect_true("test_tabular_pm25_ihd_deaths_v1" %in% crfs$crf_id)
+  expect_true("legacy_no2_asthma_1to18_incidence_v1" %in% crfs$crf_id)
+  expect_false("gemm_pm25_ihd_25plus_deaths_v1" %in% crfs$crf_id)
+  expect_false("legacy_no2_ncdlri_deaths_v1" %in% crfs$crf_id)
+})

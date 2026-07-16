@@ -844,3 +844,25 @@ resolve_crf_replacement <- function(replacement, registry) {
 
   replacement_row
 }
+
+crfs_set <- function(
+  presets,
+  add = NULL,
+  remove = NULL,
+  replace = NULL,
+  registry = load_crf_registry()
+) {
+  preview <- preview_crf_set(
+    presets = presets,
+    add = add,
+    remove = remove,
+    replace = replace,
+    registry = registry
+  )
+
+  selection <- preview %>%
+    dplyr::filter(.data$action != "removed") %>%
+    dplyr::select(dplyr::all_of(CRF_SELECTION_REQUIRED_COLUMNS))
+
+  resolve_crf_selection(selection, registry = registry)
+}
