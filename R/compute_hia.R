@@ -44,6 +44,10 @@ compute_hia <- function(conc_map,
   
   crf_compute <- match.arg(crf_compute)
 
+  if (is_crfs_set(crfs)) {
+    crf_compute <- "registry"
+  }
+
   # Fix inputs: if scale_base_year or scale_target_year is not null,
   # warn user
   if(!is.null(scale_base_year) || !is.null(scale_target_year)){
