@@ -257,6 +257,37 @@ test_that("compute_hia_paf handles empty rr_sources", {
   )
 })
 
+test_that("compute_hia_paf skips RR path for empty parsed rr_sources table", {
+  test_data <- setup_test_data()
+
+  empty_rr_sources <- tibble::tibble(
+    cause = character(),
+    source = character()
+  )
+
+  with_mocked_bindings(
+    get_crfs = function(...) test_data$crfs,
+    compute_hia_paf_rr_curves = function(...) {
+      stop("RR path should not be called for empty parsed rr_sources")
+    },
+    {
+      result <- compute_hia_paf(
+        conc_map = test_data$conc_map,
+        species = test_data$species,
+        regions = test_data$regions,
+        scenarios = names(test_data$conc_map),
+        rr_sources = empty_rr_sources,
+        crfs = test_data$crfs
+      )
+    }
+  )
+
+  expect_true(is.data.frame(result))
+  expect_true("scenario" %in% names(result))
+  expect_true(any(result$pollutant == "NO2"))
+})
+
+
 test_that("PAF calculations handle edge cases", {
   test_data <- setup_test_data()
 

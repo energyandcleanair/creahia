@@ -224,7 +224,7 @@ compute_hia_paf <- function(conc_map,
                            ) {
   
   crf_compute <- match.arg(crf_compute)
-  
+
   if (is_crfs_set(crfs)) {
     crf_compute <- "registry"
   }
@@ -266,7 +266,7 @@ compute_hia_paf <- function(conc_map,
     bind_rows(paf_crf, .id = "scenario")
   )
 
-  if (length(rr_sources) > 0) {
+  if (has_rr_sources(rr_sources)) {
     print("Computing RR-based PAF")
 
     paf_rr <- compute_hia_paf_rr_curves(
@@ -501,4 +501,16 @@ diagnose_paf <- function(paf, diagnostic_folder) {
     ggsave(filename = file.path(diagnostic_folder, "paf_by_outcome.png"), plot = plot, width = 10, height = 6)
 
   }
+}
+
+has_rr_sources <- function(rr_sources) {
+  if (is.null(rr_sources)) {
+    return(FALSE)
+  }
+
+  if (is.data.frame(rr_sources)) {
+    return(nrow(rr_sources) > 0)
+  }
+
+  length(rr_sources) > 0
 }
