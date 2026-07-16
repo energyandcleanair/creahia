@@ -686,3 +686,10 @@ test_that("crfs_set returns a typed CRF set", {
   expect_s3_class(crfs, "creahia_crf_set")
   expect_true(is_crfs_set(crfs))
 })
+
+test_that("crfs_set output preserves double_counted metadata", {
+  selected <- crfs_set(presets = "experimental_default")
+
+  expect_true("double_counted" %in% names(selected))
+  expect_false(any(is.na(selected$double_counted)))
+})

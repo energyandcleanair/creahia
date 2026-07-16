@@ -3,6 +3,7 @@ CRF_REGISTRY_REQUIRED_COLUMNS <- c(
   "pollutant",
   "cause",
   "outcome",
+  "double_counted",
   "age_low",
   "age_high",
   "region_applicability",
@@ -100,6 +101,14 @@ validate_crf_registry <- function(registry, references = load_crf_references()) 
     stop(
       "CRF registry file contains reference_ids that are not present in the references file: ",
       paste(missing_reference_ids, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  if (any(is.na(registry$double_counted))) {
+    stop(
+      "CRF registry file contains missing double_counted values. Problem crf_id values: ",
+      paste(registry$crf_id[is.na(registry$double_counted)], collapse = ", "),
       call. = FALSE
     )
   }

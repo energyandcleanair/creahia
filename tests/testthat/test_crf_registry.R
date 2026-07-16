@@ -60,3 +60,11 @@ test_that("unknown reference_id fails validation", {
     "CRF registry file contains reference_ids that are not present in the references file: missing_reference"
   )
 })
+
+test_that("CRF registry exposes double_counted metadata", {
+  registry <- load_crf_registry(validate = FALSE)
+
+  expect_true("double_counted" %in% names(registry))
+  expect_type(registry$double_counted, "logical")
+  expect_false(any(is.na(registry$double_counted)))
+})
