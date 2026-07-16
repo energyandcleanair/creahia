@@ -525,13 +525,17 @@ Use this after inspecting a preset and previewing any changes with
 `preview_crf_set()`. The result is resolved back to registry rows and can be
 passed to `compute_hia()` or `compute_hia_paf()`.
 
-#### Example
+#### Basic Example
 
 ```r
 crfs <- crfs_set(
   presets = "experimental_default"
 )
+```
 
+You can then pass the result to the HIA compute path:
+
+```r
 compute_hia(
   conc_map = conc_map,
   species = "no2",
@@ -545,11 +549,111 @@ compute_hia(
 )
 ```
 
-#### Replace Example
+#### Add Example
+
+Use `add` when the current preset does not already select the slot you want.
+The source-based form uses `pollutant + cause + outcome + reference_id`:
 
 ```r
 crfs <- crfs_set(
   presets = "experimental_default",
+  add = list(
+    list(
+      pollutant = "NO2",
+      cause = "Asthma.1to18",
+      outcome = "AsthmaIncidence",
+      reference_id = "legacy_default_crfs"
+    )
+  )
+)
+```
+
+You can also add by direct `crf_id`:
+
+```r
+crfs <- crfs_set(
+  presets = "experimental_default",
+  add = list(
+    list(crf_id = "legacy_no2_asthma_1to18_incidence_v1")
+  )
+)
+```
+
+#### Remove Example
+
+Use `remove` when a preset selects a slot that should not be included in the
+final compute-ready CRF set:
+
+```r
+crfs <- crfs_set(
+  presets = "experimental_default",
+  remove = list(
+    list(
+      pollutant = "NO2",
+      cause = "NCD.LRI",
+      outcome = "Deaths"
+    )
+  )
+)
+```
+
+`remove` uses the HIA slot only. It does not need `reference_id`, because it
+removes the currently selected CRF for that slot.
+
+#### Replace Example
+
+Use `replace` when the current preset already selects a slot, but you want to
+switch that slot to another registry CRF.
+
+```r
+crfs <- crfs_set(
+  presets = "experimental_default",
+  replace = list(
+    list(
+      pollutant = "PM25",
+      cause = "IHD",
+      outcome = "Deaths",
+      reference_id = "registry_fixture"
+    )
+  )
+)
+```
+
+You can also replace by direct `crf_id`:
+
+```r
+crfs <- crfs_set(
+  presets = "experimental_default",
+  replace = list(
+    list(crf_id = "test_tabular_pm25_ihd_deaths_v1")
+  )
+)
+```
+
+#### Combined Example
+
+`add`, `remove`, and `replace` can be used together. The operations are previewed
+and validated by the same rules as `preview_crf_set()` before the final
+`creahia_crf_set` is created.
+
+```r
+crfs <- crfs_set(
+  presets = "experimental_default",
+  add = list(
+    list(
+      pollutant = "NO2",
+      cause = "Asthma.1to18",
+      outcome = "AsthmaIncidence",
+      reference_id = "legacy_default_crfs"
+    )
+  ),
+  remove = list(
+    list(
+      pollutant = "NO2",
+      cause = "NCD.LRI",
+      outcome = "Deaths"
+    )
+  ),
   replace = list(
     list(
       pollutant = "PM25",
@@ -578,6 +682,13 @@ calculation is routed through the registry path.
 - run HIA by itself
 - guarantee that all legacy CRFs have already been migrated into the registry
 - replace the default legacy path for ordinary CRF inputs
+
+`add`, `remove`, and `replace` are exact modification operations:
+
+- `add` is for slots absent from the current selection
+- `remove` requires `pollutant`, `cause`, and `outcome`
+- `replace` is for slots already present in the current selection
+- `add` and `replace` accept either the source-based form or direct `crf_id`
 
 ---
 
@@ -761,25 +872,71 @@ This keeps the exploratory lookup separate from the exact modification.
 
 ### Workflow 5: Create A Compute-Ready CRF Set
 
-Once the desired slot and reference are clear, keep the `crfs_set()` replace
-entry precise:
+Once the desired slots and references are clear, first preview the exact
+composition:
 
 ```r
-crfs <- crfs_set(
+preview_crf_set(
   presets = "experimental_default",
+  add = list(
+    list(
+      pollutant = "NO2",
+      cause = "Asthma.1to18",
+      outcome = "AsthmaIncidence",
+      reference_id = "legacy_default_crfs"
+    )
+  ),
+  remove = list(
+    list(
+      pollutant = "NO2",
+      cause = "NCD.LRI",
+      outcome = "Deaths"
+    )
+  ),
   replace = list(
     list(
       pollutant = "PM25",
       cause = "IHD",
       outcome = "Deaths",
-      reference_id = "burnett_2018_gemm"
+      reference_id = "registry_fixture"
     )
   )
 )
 ```
 
-This preserves the distinction between exploratory lookup and actual
-modification.
+If the preview is correct, use the same arguments in `crfs_set()`:
+
+```r
+crfs <- crfs_set(
+  presets = "experimental_default",
+  add = list(
+    list(
+      pollutant = "NO2",
+      cause = "Asthma.1to18",
+      outcome = "AsthmaIncidence",
+      reference_id = "legacy_default_crfs"
+    )
+  ),
+  remove = list(
+    list(
+      pollutant = "NO2",
+      cause = "NCD.LRI",
+      outcome = "Deaths"
+    )
+  ),
+  replace = list(
+    list(
+      pollutant = "PM25",
+      cause = "IHD",
+      outcome = "Deaths",
+      reference_id = "registry_fixture"
+    )
+  )
+)
+```
+
+This preserves the distinction between exploratory lookup, preview, and actual
+compute-ready selection.
 
 You can pass the result to the HIA compute path:
 
