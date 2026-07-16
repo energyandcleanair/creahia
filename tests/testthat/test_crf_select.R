@@ -679,3 +679,10 @@ test_that("crfs_set applies remove, add, and replace", {
   expect_false("gemm_pm25_ihd_25plus_deaths_v1" %in% crfs$crf_id)
   expect_false("legacy_no2_ncdlri_deaths_v1" %in% crfs$crf_id)
 })
+
+test_that("crfs_set returns a typed CRF set", {
+  crfs <- crfs_set(presets = "experimental_default")
+
+  expect_s3_class(crfs, "creahia_crf_set")
+  expect_true(is_crfs_set(crfs))
+})

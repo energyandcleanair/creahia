@@ -864,5 +864,14 @@ crfs_set <- function(
     dplyr::filter(.data$action != "removed") %>%
     dplyr::select(dplyr::all_of(CRF_SELECTION_REQUIRED_COLUMNS))
 
-  resolve_crf_selection(selection, registry = registry)
+  new_crfs_set(resolve_crf_selection(selection, registry = registry))
+}
+
+new_crfs_set <- function(crfs) {
+  class(crfs) <- unique(c("creahia_crf_set", class(crfs)))
+  crfs
+}
+
+is_crfs_set <- function(crfs) {
+  inherits(crfs, "creahia_crf_set")
 }

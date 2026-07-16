@@ -225,6 +225,10 @@ compute_hia_paf <- function(conc_map,
   
   crf_compute <- match.arg(crf_compute)
   
+  if (is_crfs_set(crfs)) {
+    crf_compute <- "registry"
+  }
+  
   paf <- tibble::tibble(
     scenario = character(),
     pollutant = character(),

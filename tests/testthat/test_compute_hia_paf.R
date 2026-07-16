@@ -790,3 +790,37 @@ test_that("compute_hia_paf registry path accepts crfs_set output", {
   expect_true(all(!is.na(paf_values)))
   expect_true(any(paf_values != 0))
 })
+
+test_that("compute_hia_paf uses registry path automatically for crfs_set output", {
+  test_data <- setup_test_data()
+
+  test_data$conc_map$scenario1$BGD$conc_baseline_no2 <- c(30, 35, 40)
+  test_data$conc_map$scenario1$BGD$conc_scenario_no2 <- c(20, 25, 30)
+
+  registry_crfs <- crfs_set(presets = "experimental_default")
+
+  with_mocked_bindings(
+    diagnose_paf = function(...) NULL,
+    {
+      result <- compute_hia_paf(
+        conc_map = test_data$conc_map,
+        species = "no2",
+        regions = test_data$regions,
+        rr_sources = c(),
+        crfs = registry_crfs
+      )
+    }
+  )
+
+  expect_s3_class(result, "data.frame")
+  expect_equal(unique(result$pollutant), "NO2")
+  expect_equal(unique(result$cause), "NCD.LRI")
+  expect_equal(unique(result$outcome), "Deaths")
+
+  paf_values <- result %>%
+    dplyr::select(low, central, high) %>%
+    unlist(use.names = FALSE)
+
+  expect_true(all(!is.na(paf_values)))
+  expect_true(any(paf_values != 0))
+})
