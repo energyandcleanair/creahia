@@ -20,6 +20,16 @@ These helpers are for inspection and selection planning. Except for
 `crfs_set()`, they do not create a compute-ready selection. None of them run HIA,
 compute PAFs, or modify package data.
 
+## Development Status
+
+The registry and preset migration is still incomplete. Some examples below use
+the internal `registry_fixture` only to show the shape of a replacement or
+composition request. It is test data, not scientific evidence, and the current
+selection functions deliberately reject it for user-facing CRF selection. These
+examples document the API shape temporarily; they should not be copied into a
+production HIA workflow. They will be replaced with reviewed CRF alternatives
+once the registry and presets have been fully built.
+
 ## Core Concepts
 
 ### Registry
@@ -352,8 +362,10 @@ PM25 / IHD / Deaths / selected = TRUE / burnett_2018_gemm
 PM25 / IHD / Deaths / selected = FALSE / registry_fixture
 ```
 
-then the preset currently selects the Burnett GEMM CRF for PM2.5 IHD deaths,
-and the registry contains another CRF for the same slot.
+then the preset currently selects the Burnett GEMM CRF for PM2.5 IHD deaths.
+The second row is an example of the kind of alternative that the API can
+display during development; `registry_fixture` is currently excluded from
+actual user-facing output and is not a valid replacement option.
 
 #### Important Boundary
 
@@ -443,7 +455,7 @@ what changed.
 
 #### Replace Example
 
-Replace one selected slot using `pollutant + cause + outcome + reference_id`:
+The intended replacement request is:
 
 ```r
 preview_crf_set(
@@ -459,7 +471,11 @@ preview_crf_set(
 )
 ```
 
-You can also replace by explicit `crf_id`:
+This particular example is for API illustration only. `registry_fixture` is an
+internal test row and the current function deliberately rejects it. A reviewed,
+user-facing registry row must be used for a real replacement.
+
+You can also express the same operation with an explicit `crf_id`:
 
 ```r
 preview_crf_set(
@@ -602,8 +618,7 @@ removes the currently selected CRF for that slot.
 
 #### Replace Example
 
-Use `replace` when the current preset already selects a slot, but you want to
-switch that slot to another registry CRF.
+The intended replacement form is:
 
 ```r
 crfs <- crfs_set(
@@ -619,7 +634,10 @@ crfs <- crfs_set(
 )
 ```
 
-You can also replace by direct `crf_id`:
+This is currently an API-shape example only. The fixture is rejected by the
+current implementation; a real workflow must use a reviewed registry CRF.
+
+The same operation can be expressed by direct `crf_id`:
 
 ```r
 crfs <- crfs_set(
@@ -770,6 +788,10 @@ crfs_override(
 )
 ```
 
+This example illustrates the intended API shape only. The named row is an
+internal validation fixture retained for automated tests and is rejected by the
+current helper. A real workflow must use a reviewed, user-facing registry row.
+
 #### Interpretation
 
 This changes one exact slot to a replacement `crf_id`. Unlike
@@ -852,7 +874,10 @@ crf_override_options(
 )
 ```
 
-Then preview the exact replacement:
+Then preview the exact replacement using one of the reviewed alternatives
+returned by the helper. Internal validation fixtures are excluded and cannot be
+used as replacements. The original API-shape example is shown below for
+documentation purposes only and will currently be rejected:
 
 ```r
 preview_crf_set(
