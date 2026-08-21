@@ -65,3 +65,6 @@ AGE_ADULTS_SPLIT = c(
 CRF_FORM_LOG_LINEAR = "log_linear"
 CRF_FORM_TABULAR = "tabular"
 CRF_FORM_VALUES = c(CRF_FORM_LOG_LINEAR, CRF_FORM_TABULAR)
+
+# Registry rows reserved for deterministic internal validation tests.
+CRF_INTERNAL_REFERENCE_IDS = "registry_fixture"

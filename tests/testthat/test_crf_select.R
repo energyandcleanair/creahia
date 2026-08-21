@@ -261,20 +261,19 @@ test_that("crf_override_options returns empty result when no selected slots matc
   ) %in% names(options)))
 })
 
-test_that("crfs_override replaces selected pollutant/cause row", {
+test_that("crfs_override rejects internal fixture rows", {
   crfs <- crfs_preset("experimental_default")
 
-  updated <- crfs_override(
-    crfs,
-    pollutant = "PM25",
-    cause = "IHD",
-    outcome = "Deaths",
-    crf_id = "test_tabular_pm25_ihd_deaths_v1"
+  expect_error(
+    crfs_override(
+      crfs,
+      pollutant = "PM25",
+      cause = "IHD",
+      outcome = "Deaths",
+      crf_id = "test_tabular_pm25_ihd_deaths_v1"
+    ),
+    "Internal registry fixtures cannot be used"
   )
-
-  expect_true("test_tabular_pm25_ihd_deaths_v1" %in% updated$crf_id)
-  expect_false("gemm_pm25_ihd_25plus_deaths_v1" %in% updated$crf_id)
-  expect_true("legacy_no2_ncdlri_deaths_v1" %in% updated$crf_id)
 })
 
 test_that("crfs_override errors on unknown replacement crf_id", {
@@ -405,52 +404,33 @@ test_that("preview_crf_set errors on unknown preset", {
   )
 })
 
-test_that("preview_crf_set previews source-based replacement", {
-  preview <- preview_crf_set(
-    presets = "experimental_default",
-    replace = list(
-      list(
-        pollutant = "PM25",
-        cause = "IHD",
-        outcome = "Deaths",
-        reference_id = "registry_fixture"
+test_that("preview_crf_set rejects source-based fixture replacement", {
+  expect_error(
+    preview_crf_set(
+      presets = "experimental_default",
+      replace = list(
+        list(
+          pollutant = "PM25",
+          cause = "IHD",
+          outcome = "Deaths",
+          reference_id = "registry_fixture"
+        )
       )
-    )
+    ),
+    "Internal registry fixtures cannot be used"
   )
-
-  replaced <- preview %>%
-    dplyr::filter(
-      pollutant == "PM25",
-      cause == "IHD",
-      outcome == "Deaths"
-    )
-
-  expect_equal(nrow(replaced), 1)
-  expect_equal(replaced$action, "replaced")
-  expect_equal(replaced$crf_id, "test_tabular_pm25_ihd_deaths_v1")
-  expect_equal(replaced$reference_id, "registry_fixture")
-
-  expect_false("gemm_pm25_ihd_25plus_deaths_v1" %in% preview$crf_id)
 })
 
-test_that("preview_crf_set previews crf_id replacement", {
-  preview <- preview_crf_set(
-    presets = "experimental_default",
-    replace = list(
-      list(crf_id = "test_tabular_pm25_ihd_deaths_v1")
-    )
+test_that("preview_crf_set rejects fixture replacement by crf_id", {
+  expect_error(
+    preview_crf_set(
+      presets = "experimental_default",
+      replace = list(
+        list(crf_id = "test_tabular_pm25_ihd_deaths_v1")
+      )
+    ),
+    "Internal registry fixtures cannot be used"
   )
-
-  replaced <- preview %>%
-    dplyr::filter(
-      pollutant == "PM25",
-      cause == "IHD",
-      outcome == "Deaths"
-    )
-
-  expect_equal(nrow(replaced), 1)
-  expect_equal(replaced$action, "replaced")
-  expect_equal(replaced$crf_id, "test_tabular_pm25_ihd_deaths_v1")
 })
 
 test_that("preview_crf_set errors on replacement for unselected slot", {
@@ -554,7 +534,7 @@ test_that("preview_crf_set errors when replacing a removed slot", {
         )
       ),
       replace = list(
-        list(crf_id = "test_tabular_pm25_ihd_deaths_v1")
+        list(crf_id = "legacy_no2_asthma_1to18_incidence_v1")
       )
     ),
     "Cannot replace a slot that is not selected by the current presets"
@@ -656,7 +636,7 @@ test_that("crfs_set returns final selected registry rows", {
   expect_true("legacy_no2_ncdlri_deaths_v1" %in% crfs$crf_id)
 })
 
-test_that("crfs_set applies remove, add, and replace", {
+test_that("crfs_set applies remove and add", {
   crfs <- crfs_set(
     presets = "experimental_default",
     remove = list(
@@ -668,16 +648,23 @@ test_that("crfs_set applies remove, add, and replace", {
     ),
     add = list(
       list(crf_id = "legacy_no2_asthma_1to18_incidence_v1")
-    ),
-    replace = list(
-      list(crf_id = "test_tabular_pm25_ihd_deaths_v1")
     )
   )
 
-  expect_true("test_tabular_pm25_ihd_deaths_v1" %in% crfs$crf_id)
   expect_true("legacy_no2_asthma_1to18_incidence_v1" %in% crfs$crf_id)
-  expect_false("gemm_pm25_ihd_25plus_deaths_v1" %in% crfs$crf_id)
   expect_false("legacy_no2_ncdlri_deaths_v1" %in% crfs$crf_id)
+})
+
+test_that("crfs_set rejects fixture replacement", {
+  expect_error(
+    crfs_set(
+      presets = "experimental_default",
+      replace = list(
+        list(crf_id = "test_tabular_pm25_ihd_deaths_v1")
+      )
+    ),
+    "Internal registry fixtures cannot be used"
+  )
 })
 
 test_that("crfs_set returns a typed CRF set", {

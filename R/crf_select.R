@@ -8,6 +8,26 @@ available_crf_presets <- function() {
   sort(sub("\\.csv$", "", preset_files))
 }
 
+filter_user_facing_crf_registry <- function(registry) {
+  registry %>%
+    dplyr::filter(!.data$reference_id %in% CRF_INTERNAL_REFERENCE_IDS)
+}
+
+assert_no_internal_crfs <- function(crfs, context = "user-facing CRF selection") {
+  internal_rows <- crfs %>%
+    dplyr::filter(.data$reference_id %in% CRF_INTERNAL_REFERENCE_IDS)
+
+  if (nrow(internal_rows) > 0) {
+    stop(
+      "Internal registry fixtures cannot be used in ", context, ": ",
+      paste(unique(internal_rows$crf_id), collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  invisible(TRUE)
+}
+
 load_crf_preset <- function(name = "experimental_default") {
   path <- get_hia_path(
     file.path("crf/presets", paste0(name, ".csv")),
@@ -43,7 +63,10 @@ crfs_preset <- function(name = "experimental_default", registry = load_crf_regis
     dplyr::select(dplyr::all_of(CRF_SELECTION_REQUIRED_COLUMNS))
 
 
-  resolve_crf_selection(selection, registry = registry)
+  selected <- resolve_crf_selection(selection, registry = registry)
+  assert_no_internal_crfs(selected, context = "a packaged preset")
+
+  selected
   
 }
 
@@ -104,6 +127,7 @@ resolve_crf_selection <- function(selection, registry = load_crf_registry()) {
     )
   }
 
+  assert_no_internal_crfs(selected, context = "CRF selection")
   validate_crf_selection(selected)
 
   selected
@@ -119,6 +143,7 @@ crfs_override <- function(crfs, pollutant, cause, outcome, crf_id, registry = lo
     ),
     registry = registry
   )
+  assert_no_internal_crfs(replacement, context = "CRF overrides")
 
   updated <- crfs %>%
     dplyr::filter(!(pollutant == !!pollutant & cause == !!cause & outcome == !!outcome)) %>%
@@ -191,6 +216,8 @@ describe_crf_preset <- function(name, registry = load_crf_registry()) {
       by = c("pollutant", "cause", "outcome", "crf_id")
     )
 
+  assert_no_internal_crfs(described, context = "a packaged preset")
+
   missing_matches <- dplyr::anti_join(
     preset,
     registry,
@@ -237,8 +264,7 @@ search_crf_registry <- function(
   query = NULL,
   registry = load_crf_registry()
 ) {
-  
-  result <- registry
+  result <- filter_user_facing_crf_registry(registry)
   
   filters <- list(
     pollutant = pollutant,
@@ -288,6 +314,7 @@ search_crf_registry <- function(
 
 available_crf_references <- function(references = load_crf_references()) {
   references %>%
+    dplyr::filter(!.data$reference_id %in% CRF_INTERNAL_REFERENCE_IDS) %>%
     dplyr::select(
       reference_id,
       author,
@@ -673,6 +700,8 @@ resolve_crf_addition <- function(addition, registry) {
       stop("Addition crf_id must identify exactly one registry row.", call. = FALSE)
     }
 
+    assert_no_internal_crfs(addition_row, context = "preview additions")
+
     return(addition_row)
   }
 
@@ -719,6 +748,8 @@ resolve_crf_addition <- function(addition, registry) {
       call. = FALSE
     )
   }
+
+  assert_no_internal_crfs(addition_row, context = "preview additions")
 
   addition_row
 }
@@ -795,6 +826,8 @@ resolve_crf_replacement <- function(replacement, registry) {
       stop("Replacement crf_id must identify exactly one registry row.", call. = FALSE)
     }
 
+    assert_no_internal_crfs(replacement_row, context = "preview replacements")
+
     return(replacement_row)
   }
 
@@ -841,6 +874,8 @@ resolve_crf_replacement <- function(replacement, registry) {
       call. = FALSE
     )
   }
+
+  assert_no_internal_crfs(replacement_row, context = "preview replacements")
 
   replacement_row
 }
