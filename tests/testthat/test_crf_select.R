@@ -165,7 +165,8 @@ test_that("available_crf_references returns human-readable reference fields", {
 })
 
 test_that("available_crf_references includes registry reference IDs", {
-  registry <- load_crf_registry()
+  registry <- load_crf_registry() %>%
+    filter_user_facing_crf_registry()
   references <- available_crf_references()
 
   expect_true(all(unique(registry$reference_id) %in% references$reference_id))
@@ -442,7 +443,7 @@ test_that("preview_crf_set errors on replacement for unselected slot", {
           pollutant = "NO2",
           cause = "Asthma.1to18",
           outcome = "AsthmaIncidence",
-          reference_id = "legacy_default_crfs"
+          reference_id = "khreis_2017_childhood_asthma"
         )
       )
     ),
@@ -549,7 +550,7 @@ test_that("preview_crf_set previews source-based addition", {
         pollutant = "NO2",
         cause = "Asthma.1to18",
         outcome = "AsthmaIncidence",
-        reference_id = "legacy_default_crfs"
+        reference_id = "khreis_2017_childhood_asthma"
       )
     )
   )
@@ -564,7 +565,7 @@ test_that("preview_crf_set previews source-based addition", {
   expect_equal(nrow(added), 1)
   expect_equal(added$action, "added")
   expect_equal(added$crf_id, "legacy_no2_asthma_1to18_incidence_v1")
-  expect_equal(added$reference_id, "legacy_default_crfs")
+  expect_equal(added$reference_id, "khreis_2017_childhood_asthma")
   expect_true(is.na(added$selected_by_preset))
 })
 

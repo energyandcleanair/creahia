@@ -425,6 +425,11 @@ The historical `default` name is deprecated for this purpose. Use a name such
 as `historical_default` for the historical profile, while keeping the current
 two-row `experimental_default` clearly labelled as development/test-only.
 
+The first concrete readiness audit is
+`10-default-profile-migration-readiness-audit.md`. It records the remaining
+evidence required for the 15-row default profile without treating that profile
+as a completed public migration.
+
 Before adding migrated rows, recover missing bibliographic provenance, resolve
 reference-specific aggregate-cause/double-counting behaviour, and add a test
 that accounts for every manifest row. Do not change the public package default;
