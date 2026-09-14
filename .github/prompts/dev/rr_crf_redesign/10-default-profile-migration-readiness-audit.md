@@ -16,9 +16,11 @@ are all supported by evidence.
 | --- | --- |
 | `needs_reference_recovery` | The legacy file has no usable reference and `references.csv` has no stable source record. |
 | `reference_recovered_with_derivation_pending` | The original study is recorded, but a legacy unit conversion or model setting is not stated directly by that study and must remain documented as such. |
+| `source_identified_pending_parameter_verification` | The originating study is recorded, but an age-specific value, counterfactual, or age-routing convention remains to be verified before Registry migration. |
 | `age_corroborated` | The identical C40 and South-Africa row provides matching numeric age bounds. |
 | `age_boundary_check` | A counterpart provides bounds, but its named age group and the legacy cause label differ at a boundary. |
 | `needs_age_evidence` | The default-only row has no counterpart with age bounds. |
+| `needs_scientific_review: Q01` | Code and source evidence are recorded, but the Registry age-field contract still needs scientific/semantic review. |
 | `legacy_false_pending_reference` | Legacy metadata says `double_counted = FALSE`; retain it as source evidence but do not treat it as a scientific conclusion until the reference is recovered. |
 | `needs_aggregate_decision` | The row uses `NCD.LRI`; aggregate/component overlap must be verified from the source before final Registry metadata. |
 | `partially_migrated` | A Registry row exists but still has unresolved provenance or metadata. |
@@ -39,10 +41,10 @@ are all supported by evidence.
 | --- | --- | --- | --- | --- | --- | --- |
 | L01 | `NO2 / Asthma.1to18 / AsthmaIncidence` | `reference_recovered_with_derivation_pending`: Khreis et al. (2017), `khreis_2017_childhood_asthma`; the paper reports OR 1.05 (1.02–1.07) per 4 ug/m3, while the legacy 10 ppb RR is a documented rescaling | `age_corroborated`: 1–18 in C40 and South Africa; the paper itself does not establish the Registry boundary | `legacy_false_pending_coverage` | `migrated_with_follow_up`: `legacy_no2_asthma_1to18_incidence_v1` now has a stable reference ID | Retain the conversion, 2 ppb counterfactual, and age range as legacy/model settings; add this row to a historical selection only after the 15-row coverage test. |
 | L02 | `NO2 / Asthma.1to18 / AsthmaPrevalence` | `needs_scientific_source_decision`: the recovered Khreis CRF is for asthma development/incidence, not prevalence; it must not be reused automatically | `age_corroborated`: 1–18 | `legacy_false_pending_reference` | `not_migrated` | Identify the original prevalence source or explicitly decide whether this legacy outcome should be retired. |
-| L03 | `PM2.5 / Asthma.0to17 / AsthmaERV` | `needs_reference_recovery`; legacy field blank | `age_boundary_check`: cause says `0to17`; counterparts store age 0–18 | `legacy_false_pending_reference` | `not_migrated` | Recover reference and determine whether age high `18` is an inclusive bound or a label convention. |
-| L04 | `PM2.5 / Asthma.18to99 / AsthmaERV` | `needs_reference_recovery`; legacy field blank | `age_corroborated`: 18–99 | `legacy_false_pending_reference` | `not_migrated` | Recover reference, then add Registry row with 18–99 bounds. |
-| L05 | `O3_8h / Asthma.0to17 / AsthmaERV` | `needs_reference_recovery`; legacy field blank | `age_boundary_check`: cause says `0to17`; counterparts store age 0–18 | `legacy_false_pending_reference` | `not_migrated` | Recover reference and resolve the same 0–17/0–18 boundary convention as L03. |
-| L06 | `O3_8h / Asthma.18to99 / AsthmaERV` | `needs_reference_recovery`; legacy field blank | `age_corroborated`: 18–99 | `legacy_false_pending_reference` | `not_migrated` | Recover reference, then add Registry row with 18–99 bounds. |
+| L03 | `PM2.5 / Asthma.0to17 / AsthmaERV` | `source_identified_pending_parameter_verification`: Zheng et al. (2015), `zheng_2015_asthma_erv`; child PM2.5 RR 1.025 (1.013–1.037) per 10 ug/m3 is corroborated, while the 6 ug counterfactual is a legacy/model setting | `needs_scientific_review: Q01`: legacy cause `0to17`, counterpart metadata 0–18, and legacy output label 0–18 have distinct roles | `legacy_false_pending_reference` | `not_migrated` | Verify the O3-independent EPI routing evidence, then resolve Q01 before assigning final Registry bounds. |
+| L04 | `PM2.5 / Asthma.18to99 / AsthmaERV` | `source_identified_pending_parameter_verification`: Zheng et al. (2015), `zheng_2015_asthma_erv`; PM2.5 overall RR 1.023 (1.015–1.031) per 10 ug/m3 is corroborated, while the 6 ug counterfactual is a legacy/model setting | `needs_scientific_review: Q01`: counterpart metadata is 18–99 but the legacy impact output label is 25+ | `legacy_false_pending_reference` | `not_migrated` | Verify the EPI routing evidence, then resolve Q01 before assigning final Registry bounds. |
+| L05 | `O3_8h / Asthma.0to17 / AsthmaERV` | `source_identified_pending_parameter_verification`: Zheng et al. (2015), `zheng_2015_asthma_erv`; verify the original age-specific O3 RR 1.018 (1.010–1.024) before migration | `needs_scientific_review: Q01`: use the same unresolved child age semantics as L03 | `legacy_false_pending_reference` | `not_migrated` | Verify the O3 subgroup table and EPI routing evidence, then resolve Q01 before assigning final Registry bounds. |
+| L06 | `O3_8h / Asthma.18to99 / AsthmaERV` | `source_identified_pending_parameter_verification`: Zheng et al. (2015), `zheng_2015_asthma_erv`; verify the original age-specific O3 RR 1.018 (1.012–1.022) before migration | `needs_scientific_review: Q01`: use the same unresolved adult age semantics as L04 | `legacy_false_pending_reference` | `not_migrated` | Verify the O3 subgroup table and EPI routing evidence, then resolve Q01 before assigning final Registry bounds. |
 | L07 | `PM2.5 / PTB / PTB` | `needs_reference_recovery`; legacy field blank | `age_corroborated`: 0–0 (`Newborn`) | `legacy_false_pending_reference` | `not_migrated` | Recover reference and confirm that the Registry age encoding represents the newborn rule correctly. |
 | L08 | `PM2.5 / LBW / LBW` | `needs_reference_recovery`; legacy field blank | `age_corroborated`: 0–0 (`Newborn`) | `legacy_false_pending_reference` | `not_migrated` | Recover reference and confirm that the Registry age encoding represents the newborn rule correctly. |
 | L09 | `PM2.5 / Absences / Absences` | `needs_reference_recovery`; legacy field blank | `age_corroborated`: 20–65 | `legacy_false_pending_reference` | `not_migrated` | Recover reference, then add Registry row with 20–65 bounds. |
@@ -85,6 +87,26 @@ This evidence cannot be transferred to L02: L02 is labelled
 distinction is retained explicitly so a later migration cannot silently treat
 incidence and prevalence as interchangeable.
 
+## Zheng asthma ERV source-identification slice
+
+L03–L06 now point to Zheng et al. (2015) through
+`zheng_2015_asthma_erv`; this identifies the epidemiological source without
+claiming that all Registry metadata is final. The legacy PM2.5 child and
+overall RR values are corroborated. Before adding any of the four Registry
+rows, recover the O3 age-specific values from the original source table and
+resolve the discrepancy between legacy cause labels (`0to17`, `18to99`),
+counterpart metadata (`0–18`, `18–99`), and current legacy impact labels
+(`0–18`, `25+`).
+
+## Scientific-review link
+
+`11-scientific-review-open-questions.md` records Q01, the shared question of
+what Registry `age_low` / `age_high` should mean for the asthma ERV rows. The
+question is intentionally centralised there: this audit tracks row readiness,
+while Q01 separates confirmed evidence, remaining engineering tracing, and the
+later scientific/semantic decision. It does not block reference recovery for
+the other legacy rows.
+
 ## Exit criteria for `legacy_profile_default`
 
 The default profile can populate a historical `target_selection_id` only when:
@@ -108,3 +130,4 @@ The default profile can populate a historical `target_selection_id` only when:
 - `inst/extdata/crf/references.csv`
 - `08-legacy-crf-migration-manifest.md`
 - Khreis H, Kelly C, Tate J, et al. (2017), doi:10.1016/j.envint.2016.11.012
+- Zheng X-Y, Ding H, Jiang L-N, et al. (2015), doi:10.1371/journal.pone.0138146

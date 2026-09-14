@@ -49,10 +49,10 @@ layer and is deliberately not encoded as EPI versioning.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | L01 | `NO2 / Asthma.1to18 / AsthmaIncidence` | `1.10/1.26/1.37; 10/2; ppb x 0.532` | historical_default, c40, krewski_south_africa (3) | blank / recover source | asthma | legacy `FALSE`; no aggregate relation recorded | `asthma_original` | all three profiles |
 | L02 | `NO2 / Asthma.1to18 / AsthmaPrevalence` | `1.10/1.26/1.37; 10/2; ppb x 0.532` | historical_default, c40, krewski_south_africa (3) | blank / recover source | asthma | legacy `FALSE`; no aggregate relation recorded | `asthma_original` | all three profiles |
-| L03 | `PM2.5 / Asthma.0to17 / AsthmaERV` | `1.013/1.025/1.037; 10/6; ug x 1` | historical_default, c40, krewski_south_africa (3) | blank / recover source | asthma | legacy `FALSE`; no aggregate relation recorded | `asthma_original` | all three profiles |
-| L04 | `PM2.5 / Asthma.18to99 / AsthmaERV` | `1.015/1.023/1.031; 10/6; ug x 1` | historical_default, c40, krewski_south_africa (3) | blank / recover source | asthma | legacy `FALSE`; no aggregate relation recorded | `asthma_original` | all three profiles |
-| L05 | `O3_8h / Asthma.0to17 / AsthmaERV` | `1.010/1.018/1.024; 10/2; ppb x 0.51` | historical_default, c40, krewski_south_africa (3) | blank / recover source | asthma | legacy `FALSE`; no aggregate relation recorded | `asthma_original` | all three profiles |
-| L06 | `O3_8h / Asthma.18to99 / AsthmaERV` | `1.012/1.018/1.022; 10/2; ppb x 0.51` | historical_default, c40, krewski_south_africa (3) | blank / recover source | asthma | legacy `FALSE`; no aggregate relation recorded | `asthma_original` | all three profiles |
+| L03 | `PM2.5 / Asthma.0to17 / AsthmaERV` | `1.013/1.025/1.037; 10/6; ug x 1` | historical_default, c40, krewski_south_africa (3) | Zheng et al. 2015 / PM2.5 child subgroup identified; retain 6 ug counterfactual and final age semantics as legacy/model decisions | asthma | legacy `FALSE`; no aggregate relation recorded | `asthma_original` | all three profiles |
+| L04 | `PM2.5 / Asthma.18to99 / AsthmaERV` | `1.015/1.023/1.031; 10/6; ug x 1` | historical_default, c40, krewski_south_africa (3) | Zheng et al. 2015 / PM2.5 overall value identified; retain 6 ug counterfactual and final age semantics as legacy/model decisions | asthma | legacy `FALSE`; no aggregate relation recorded | `asthma_original` | all three profiles |
+| L05 | `O3_8h / Asthma.0to17 / AsthmaERV` | `1.010/1.018/1.024; 10/2; ppb x 0.51` | historical_default, c40, krewski_south_africa (3) | Zheng et al. 2015 / source identified; verify the original age-specific O3 table before migration | asthma | legacy `FALSE`; no aggregate relation recorded | `asthma_original` | all three profiles |
+| L06 | `O3_8h / Asthma.18to99 / AsthmaERV` | `1.012/1.018/1.022; 10/2; ppb x 0.51` | historical_default, c40, krewski_south_africa (3) | Zheng et al. 2015 / source identified; verify the original age-specific O3 table before migration | asthma | legacy `FALSE`; no aggregate relation recorded | `asthma_original` | all three profiles |
 | L07 | `PM2.5 / PTB / PTB` | `1.07/1.15/1.16; 10/8.8; ug x 1` | historical_default, c40, krewski_south_africa (3) | blank / recover source | birth | legacy `FALSE`; no aggregate relation recorded | `birth_original` | all three profiles |
 | L08 | `PM2.5 / LBW / LBW` | `1.03/1.10/1.18; 10/4; ug x 1` | historical_default, c40, krewski_south_africa (3) | blank / recover source | birth | legacy `FALSE`; no aggregate relation recorded | `birth_original` | all three profiles |
 | L09 | `PM2.5 / Absences / Absences` | `1.039/1.046/1.053; 10/0; ug x 1` | historical_default, c40, krewski_south_africa (3) | blank / recover source | work absence | legacy `FALSE`; no aggregate relation recorded | `work_absence_original` | all three profiles |
@@ -108,3 +108,7 @@ including it in a Set or registry.
 reference, age, double-counting, and Registry status for the 15-row default
 profile. It is the implementation gate for the first historical fingerprint
 target; it does not declare the profile migrated or select a public preset.
+
+`11-scientific-review-open-questions.md` is the separate evidence-backed review
+queue for questions that cannot be answered by source recovery or code tracing
+alone. Q01 centralises the asthma ERV age-field decision affecting L03–L06.

@@ -430,6 +430,11 @@ The first concrete readiness audit is
 evidence required for the 15-row default profile without treating that profile
 as a completed public migration.
 
+`11-scientific-review-open-questions.md` keeps unresolved scientific and
+semantic decisions separate from row-level readiness. Continue reference
+recovery and code tracing first; collect only the remaining evidence-backed
+questions for consolidated mentor/HIA-domain review.
+
 Before adding migrated rows, recover missing bibliographic provenance, resolve
 reference-specific aggregate-cause/double-counting behaviour, and add a test
 that accounts for every manifest row. Do not change the public package default;
