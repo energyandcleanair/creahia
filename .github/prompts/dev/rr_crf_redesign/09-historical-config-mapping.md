@@ -2,8 +2,6 @@
 
 ## Status
 
-Working draft created from the 2026-08-24 mentor discussion.
-
 This document is a mapping specification, not a decision on public preset or
 Set names. The identifiers beginning with `legacy_` and `provisional_` are
 temporary planning IDs only.
@@ -73,6 +71,19 @@ fingerprints implicitly use `legacy_profile_default`.
 The current fingerprint test therefore covers RR/EPI/population variations
 under the default CRF profile. It does not yet cover the C40 or
 Krewski-South-Africa CRF profiles.
+
+### Deterministic legacy CRF PAF baseline
+
+`tests/testthat/test_legacy_default_crf_paf_fingerprint.R` now fixes a small
+synthetic concentration/population input and asserts the 15 PAF rows produced
+by `get_crfs("default")` against
+`tests/testthat/fixtures/legacy_default_crf_paf_fingerprint.csv`.
+
+This is a **legacy numerical baseline**, not approval of every legacy row's
+scientific definition. It is intentionally independent of EPI and impact
+calculation so a future Registry migration can first show that its CRF/PAF
+math matches the old default rows. Full HIA fingerprints remain necessary to
+validate the later EPI and impact-routing layers.
 
 ## Provisional mapping: current fingerprint configurations
 

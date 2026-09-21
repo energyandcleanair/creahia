@@ -3,7 +3,7 @@
 ## Purpose and status
 
 This is the implementation contract for the complete legacy log-linear CRF
-migration directed by mentor feedback on 2026-08-17. It is a planning manifest,
+migration on 2026-08-17. It is a planning manifest,
 not yet a registry import and not a claim that all references have been
 recovered.
 
@@ -104,18 +104,15 @@ including it in a Set or registry.
 
 ## Related readiness audit
 
-`10-default-profile-migration-readiness-audit.md` records the row-by-row
-reference, age, double-counting, and Registry status for the 15-row default
-profile. It is the implementation gate for the first historical fingerprint
-target; it does not declare the profile migrated or select a public preset.
-
-`11-scientific-review-open-questions.md` is the separate evidence-backed review
-queue for questions that cannot be answered by source recovery or code tracing
-alone. Q01 centralises the asthma ERV age-field decision affecting L03–L06;
-Q02 records the unsupported L02 prevalence outcome and its retire-or-replace
-decision. Q03 records the birth-outcome reported-OR and term-LBW semantics for
-L07–L08. Q04 records the work-absence 20–65 population and exposure-duration
-semantics for L09. Q05 records the O3 respiratory-mortality source semantics
-for L10–L11. Q06 records the source-versus-legacy outcome, age, and
-PM2.5-overlap semantics for L12–L13. Q07 records the source-versus-legacy
-outcome, age, YLL, and concentration-conversion semantics for L14–L15.
+`doc/registry-legacy-default-scientific-review.md` is the consolidated public reviewer
+gate and reviewer queue for the 15-row default profile. It records the
+row-by-row reference, age, double-counting, and Registry status without
+declaring the profile migrated or selecting a public preset. It also records
+the evidence-backed questions that cannot be resolved by source recovery or
+code tracing alone: Q01 for asthma ERV age/effect-estimate semantics (L03–L06),
+Q02 for the unsupported L02 prevalence outcome, Q03 for birth-outcome OR and
+term-LBW semantics (L07–L08), Q04 for the work-absence 20–65 population and
+exposure duration (L09), Q05 for O3 respiratory-mortality semantics (L10–L11),
+Q06 for NO2 outcome/age/PM2.5-overlap semantics (L12–L13), Q07 for SO2
+outcome/age/YLL/conversion semantics (L14–L15), and Q08 for multi-source
+Registry provenance.

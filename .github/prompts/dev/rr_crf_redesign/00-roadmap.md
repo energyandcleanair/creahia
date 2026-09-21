@@ -425,15 +425,12 @@ The historical `default` name is deprecated for this purpose. Use a name such
 as `historical_default` for the historical profile, while keeping the current
 two-row `experimental_default` clearly labelled as development/test-only.
 
-The first concrete readiness audit is
-`10-default-profile-migration-readiness-audit.md`. It records the remaining
-evidence required for the 15-row default profile without treating that profile
-as a completed public migration.
-
-`11-scientific-review-open-questions.md` keeps unresolved scientific and
-semantic decisions separate from row-level readiness. Continue reference
-recovery and code tracing first; collect only the remaining evidence-backed
-questions for consolidated mentor/HIA-domain review.
+`doc/registry-legacy-default-scientific-review.md` is the consolidated English reviewer document
+for the 15-row default profile. It records row-level migration readiness and
+the remaining evidence-backed scientific/semantic decisions without treating
+the profile as a completed public migration. Continue reference recovery and
+code tracing first; retain only the remaining questions for consolidated
+mentor/HIA-domain review.
 
 Before adding migrated rows, recover missing bibliographic provenance, resolve
 reference-specific aggregate-cause/double-counting behaviour, and add a test
@@ -497,6 +494,11 @@ Current foundation:
   Registry target.
 - All nine mappings remain `legacy_defined`, not Registry-ready, until their
   complete historical CRF rows and scientific metadata are available.
+- A deterministic 15-row legacy-default CRF PAF fingerprint now protects the
+  current log-linear CRF calculation independently of EPI and impact routing.
+  Its fixture is a numerical baseline only: it must remain available for
+  historical comparison even when reviewers decide that an individual legacy
+  definition should not become a supported Registry row.
 
 ## Current Confirmation Points
 
