@@ -6,6 +6,9 @@ man/
 .Renviron
 inst/doc
 
+# Local development plans and mentor-review notes
+.github/prompts/dev/
+
 tmp/
 cache/
 keys/

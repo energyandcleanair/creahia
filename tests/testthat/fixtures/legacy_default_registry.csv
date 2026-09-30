@@ -1,0 +1,16 @@
+crf_id,pollutant,cause,outcome,double_counted,age_low,age_high,region_applicability,form,rr_central,rr_low,rr_high,conc_change,counterfact,unit,units_multiplier,data_path,reference_id,notes
+test_legacy_default_l01_v1,NO2,Asthma.1to18,AsthmaIncidence,FALSE,NA,NA,global,log_linear,1.26,1.1,1.37,10,2,ppb,0.532,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L01
+test_legacy_default_l02_v1,NO2,Asthma.1to18,AsthmaPrevalence,FALSE,NA,NA,global,log_linear,1.26,1.1,1.37,10,2,ppb,0.532,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L02
+test_legacy_default_l03_v1,PM25,Asthma.0to17,AsthmaERV,FALSE,NA,NA,global,log_linear,1.025,1.013,1.037,10,6,ug,1,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L03
+test_legacy_default_l04_v1,PM25,Asthma.18to99,AsthmaERV,FALSE,NA,NA,global,log_linear,1.023,1.015,1.031,10,6,ug,1,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L04
+test_legacy_default_l05_v1,O3_8h,Asthma.0to17,AsthmaERV,FALSE,NA,NA,global,log_linear,1.018,1.01,1.024,10,2,ppb,0.51,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L05
+test_legacy_default_l06_v1,O3_8h,Asthma.18to99,AsthmaERV,FALSE,NA,NA,global,log_linear,1.018,1.012,1.022,10,2,ppb,0.51,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L06
+test_legacy_default_l07_v1,PM25,PTB,PTB,FALSE,NA,NA,global,log_linear,1.15,1.07,1.16,10,8.8,ug,1,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L07
+test_legacy_default_l08_v1,PM25,LBW,LBW,FALSE,NA,NA,global,log_linear,1.1,1.03,1.18,10,4,ug,1,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L08
+test_legacy_default_l09_v1,PM25,Absences,Absences,FALSE,NA,NA,global,log_linear,1.046,1.039,1.053,10,0,ug,1,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L09
+test_legacy_default_l10_v1,O3_8h,COPD,Deaths,FALSE,NA,NA,global,log_linear,1.12,1.08,1.16,10,35,ppb,0.51,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L10
+test_legacy_default_l11_v1,O3_8h,COPD,YLLs,FALSE,NA,NA,global,log_linear,1.12,1.08,1.16,10,35,ppb,0.51,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L11
+test_legacy_default_l12_v1,NO2,NCD.LRI,Deaths,FALSE,NA,NA,global,log_linear,1.037,1.021,1.08,10,20,ug,1,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L12
+test_legacy_default_l13_v1,NO2,NCD.LRI,YLLs,FALSE,NA,NA,global,log_linear,1.037,1.021,1.08,10,20,ug,1,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L13
+test_legacy_default_l14_v1,SO2,NCD.LRI,Deaths,FALSE,NA,NA,global,log_linear,1.02,1.014,1.026,5,0.02,ppb,0.381679389,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L14
+test_legacy_default_l15_v1,SO2,NCD.LRI,YLLs,FALSE,NA,NA,global,log_linear,1.02,1.014,1.026,5,0.02,ppb,0.381679389,NA,legacy_default_crfs,Test-only Registry representation of legacy default row L15
