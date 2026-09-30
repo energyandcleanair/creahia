@@ -1,29 +1,3 @@
-legacy_default_fingerprint_conc_map <- function() {
-  list(
-    legacy_default_baseline = list(
-      fingerprint_region = data.frame(
-        conc_baseline_pm25 = c(35, 55),
-        conc_scenario_pm25 = c(10, 25),
-        conc_baseline_no2 = c(30, 50),
-        conc_scenario_no2 = c(10, 20),
-        conc_baseline_o3_8h = c(70, 90),
-        conc_scenario_o3_8h = c(30, 50),
-        conc_baseline_so2 = c(20, 30),
-        conc_scenario_so2 = c(5, 10),
-        pop = c(1000, 3000)
-      )
-    )
-  )
-}
-
-read_legacy_default_paf_fingerprint <- function() {
-  readr::read_csv(
-    testthat::test_path("fixtures", "legacy_default_crf_paf_fingerprint.csv"),
-    show_col_types = FALSE
-  ) %>%
-    dplyr::arrange(.data$pollutant, .data$cause, .data$outcome)
-}
-
 test_that("legacy default CRF PAF fingerprint remains stable", {
   # This is a small deterministic baseline for the 15 active rows in CRFs.csv.
   # It protects the legacy numerical contract; it does not endorse every row's
@@ -49,11 +23,7 @@ test_that("legacy default CRF PAF fingerprint remains stable", {
 })
 
 test_that("Registry path reproduces all 15 legacy default CRF PAF rows", {
-  fixture_path <- testthat::test_path(
-    "fixtures",
-    "legacy_default_registry.csv"
-  )
-  registry_crfs <- load_crf_registry(path = fixture_path)
+  registry_crfs <- read_legacy_default_registry_fixture()
   production_crf_ids <- load_crf_registry()$crf_id
 
   # These rows reproduce historical calculations for testing only. Keeping
