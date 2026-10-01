@@ -6,7 +6,7 @@ man/
 .Renviron
 inst/doc
 
-# Local development plans and mentor-review notes
+# Local development plans
 .github/prompts/dev/
 
 tmp/

@@ -68,3 +68,38 @@ test_that("CRF registry exposes double_counted metadata", {
   expect_type(registry$double_counted, "logical")
   expect_false(any(is.na(registry$double_counted)))
 })
+
+test_that("Registry rows can be upserted as one batch", {
+  registry_path <- withr::local_tempfile(fileext = ".csv")
+  readr::write_csv(
+    tibble::tibble(crf_id = c("keep", "replace"), value = c(1, 2)),
+    registry_path
+  )
+  updates <- tibble::tibble(
+    crf_id = c("replace", "add"),
+    value = c(20, 30)
+  )
+
+  with_mocked_bindings(
+    get_hia_path = function(...) registry_path,
+    validate_crf_registry = function(...) invisible(TRUE),
+    {
+      expect_true(upsert_crf_registry_rows(updates))
+    }
+  )
+
+  result <- readr::read_csv(registry_path, show_col_types = FALSE)
+  expect_equal(result$crf_id, c("keep", "replace", "add"))
+  expect_equal(result$value, c(1, 20, 30))
+})
+
+test_that("Registry batch upsert rejects duplicate incoming IDs", {
+  duplicate_rows <- tibble::tibble(
+    crf_id = c("duplicate", "duplicate")
+  )
+
+  expect_error(
+    upsert_crf_registry_rows(duplicate_rows),
+    "duplicate crf_ids: duplicate"
+  )
+})
