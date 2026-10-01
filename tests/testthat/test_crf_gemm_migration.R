@@ -272,3 +272,17 @@ test_that("full adult GEMM candidate creates valid Registry rows", {
   expect_true(all(!rows$double_counted))
   expect_true(validate_crf_registry(rows, references = gemm_reference_row()))
 })
+
+
+test_that("full adult GEMM death rows are registered exactly once", {
+  specs <- gemm_adult_deaths_specs()
+  registered <- load_crf_registry() %>%
+    dplyr::filter(crf_id %in% specs$crf_id) %>%
+    dplyr::arrange(match(crf_id, specs$crf_id))
+
+  expect_equal(nrow(registered), nrow(specs))
+  expect_equal(registered$crf_id, specs$crf_id)
+  expect_equal(registered$cause, specs$cause)
+  expect_true(all(registered$outcome == MEASURE_DEATHS))
+  expect_true(all(registered$reference_id == "burnett_2018_gemm"))
+})

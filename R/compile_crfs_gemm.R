@@ -386,7 +386,7 @@ gemm_cause_slug <- function(cause) {
 
 gemm_adult_deaths_notes <- function(cause) {
   paste(
-    "Candidate migration from inst/extdata/rr/processed/rr_gemm.csv;",
+    "Opt-in Registry migration from inst/extdata/rr/processed/rr_gemm.csv;",
     "includes the", cause,
     "25+ aggregate and all adult split-age GEMM curves"
   )

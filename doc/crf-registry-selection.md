@@ -104,12 +104,25 @@ Example output:
 
 ```r
 [1] "experimental_default"
+[2] "gemm_adult_deaths_aggregate"
+[3] "gemm_adult_deaths_components"
 ```
 
 #### Interpretation
 
 Each returned value can be passed to helpers such as `describe_crf_preset()`,
 `crfs_preset()`, or `crf_override_options()`.
+
+The two GEMM adult death presets are opt-in alternatives:
+
+- `gemm_adult_deaths_aggregate` selects the single `NCD.LRI` aggregate
+  mortality curve.
+- `gemm_adult_deaths_components` selects the five component mortality curves:
+  `LRI`, `COPD`, `IHD`, `LC`, and `Stroke`.
+
+Do not combine these two presets in one HIA calculation. `NCD.LRI` contains the
+component causes, so selecting both representations would double-count the same
+health burden. Neither preset changes the package's current default behavior.
 
 ---
 
@@ -455,36 +468,20 @@ what changed.
 
 #### Replace Example
 
-The intended replacement request is:
+For example, replace the experimental IHD `25+` curve with the full adult-age
+IHD curve:
 
 ```r
 preview_crf_set(
   presets = "experimental_default",
   replace = list(
-    list(
-      pollutant = "PM25",
-      cause = "IHD",
-      outcome = "Deaths",
-      reference_id = "registry_fixture"
-    )
+    list(crf_id = "gemm_pm25_ihd_adult_deaths_v1")
   )
 )
 ```
 
-This particular example is for API illustration only. `registry_fixture` is an
-internal test row and the current function deliberately rejects it. A reviewed,
-user-facing registry row must be used for a real replacement.
-
-You can also express the same operation with an explicit `crf_id`:
-
-```r
-preview_crf_set(
-  presets = "experimental_default",
-  replace = list(
-    list(crf_id = "test_tabular_pm25_ihd_deaths_v1")
-  )
-)
-```
+Both IHD rows cite the same GEMM reference, so `crf_id` is required to identify
+which age structure should be selected.
 
 #### Output Columns
 
@@ -522,6 +519,9 @@ HIA slots, not broad categories.
 - `add` and `replace` support both source-based entries using
   `pollutant + cause + outcome + reference_id` and fallback entries using
   `crf_id`.
+- Source-based entries must match exactly one Registry row. When multiple rows
+  share one reference, as with the two GEMM IHD age structures, use `crf_id` to
+  disambiguate.
 
 `preview_crf_set()` does not run HIA and does not create a `crfs_set()` object.
 It only shows what the composed selection would look like.
