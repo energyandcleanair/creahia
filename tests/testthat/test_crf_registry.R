@@ -69,6 +69,27 @@ test_that("CRF registry exposes double_counted metadata", {
   expect_false(any(is.na(registry$double_counted)))
 })
 
+test_that("reviewed CRF references preserve formal citation metadata", {
+  references <- load_crf_references()
+
+  asthma <- references %>%
+    dplyr::filter(
+      reference_id == "achakulwisut_2019_paediatric_asthma_incidence"
+    )
+  gemm <- references %>%
+    dplyr::filter(reference_id == "burnett_2018_gemm")
+
+  expect_equal(
+    asthma$title,
+    paste(
+      "Global, national, and urban burdens of paediatric asthma incidence",
+      "attributable to ambient NO2 pollution: estimates from global datasets"
+    )
+  )
+  expect_equal(asthma$journal, "The Lancet Planetary Health")
+  expect_equal(gemm$url, "https://doi.org/10.1073/pnas.1803222115")
+})
+
 test_that("Registry rows can be upserted as one batch", {
   registry_path <- withr::local_tempfile(fileext = ".csv")
   readr::write_csv(

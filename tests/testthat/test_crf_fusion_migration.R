@@ -150,3 +150,73 @@ test_that("Fusion candidate paths match legacy age-weighted PAFs", {
     }
   )
 })
+
+
+test_that("Fusion adult death candidates create valid Registry rows", {
+  specs <- fusion_adult_deaths_specs()
+  rows <- dplyr::bind_rows(lapply(
+    seq_len(nrow(specs)),
+    function(i) {
+      fusion_deaths_registry_row(
+        cause = specs$cause[[i]],
+        crf_id = specs$crf_id[[i]],
+        data_path = specs$data_path[[i]],
+        notes = fusion_adult_deaths_notes(specs$cause[[i]])
+      )
+    }
+  ))
+  reference <- fusion_reference_row()
+
+  expect_named(rows, CRF_REGISTRY_REQUIRED_COLUMNS)
+  expect_equal(rows$cause, specs$cause)
+  expect_true(all(rows$outcome == MEASURE_DEATHS))
+  expect_true(all(!rows$double_counted))
+  expect_true(all(rows$reference_id == "burnett_2022_fusion"))
+  expect_equal(reference$doi, "10.1016/j.envres.2021.112245")
+  expect_match(reference$notes, "Fusion Parameters Jul 7, 2021.csv", fixed = TRUE)
+  expect_match(
+    reference$notes,
+    "LL Fusion Parameters theta eq 97.5.csv",
+    fixed = TRUE
+  )
+  expect_match(reference$notes, "validation reference only", fixed = TRUE)
+  expect_match(
+    reference$notes,
+    "does not establish regeneration",
+    fixed = TRUE
+  )
+  expect_true(validate_crf_references(reference))
+  expect_true(validate_crf_registry(rows, references = reference))
+})
+
+
+test_that("Fusion adult death rows are registered exactly once", {
+  specs <- fusion_adult_deaths_specs()
+  expected <- dplyr::bind_rows(lapply(
+    seq_len(nrow(specs)),
+    function(i) {
+      fusion_deaths_registry_row(
+        cause = specs$cause[[i]],
+        crf_id = specs$crf_id[[i]],
+        data_path = specs$data_path[[i]],
+        notes = fusion_adult_deaths_notes(specs$cause[[i]])
+      )
+    }
+  ))
+  registered <- load_crf_registry() %>%
+    dplyr::filter(crf_id %in% specs$crf_id) %>%
+    dplyr::arrange(match(crf_id, specs$crf_id)) %>%
+    tibble::as_tibble()
+
+  expect_equal(nrow(registered), nrow(specs))
+  expect_equal(registered, expected)
+
+  registered_reference <- load_crf_references() %>%
+    dplyr::filter(reference_id == "burnett_2022_fusion")
+  expect_equal(nrow(registered_reference), 1)
+  expect_equal(
+    registered_reference$doi,
+    "10.1016/j.envres.2021.112245"
+  )
+  expect_equal(registered_reference$notes, fusion_reference_row()$notes)
+})

@@ -56,7 +56,11 @@ fusion_adult_deaths_specs <- function() {
 }
 
 
-compile_fusion_adult_deaths <- function(overwrite = FALSE) {
+compile_fusion_adult_deaths <- function(
+  overwrite = FALSE,
+  update_registry = FALSE,
+  update_references = FALSE
+) {
   source_path <- get_hia_path(
     "rr/processed/rr_fusion.csv",
     error_if_not_exists = TRUE
@@ -95,7 +99,27 @@ compile_fusion_adult_deaths <- function(overwrite = FALSE) {
     readr::write_csv(compiled[[specs$cause[[i]]]], output_paths[[i]])
   }
 
-  specs
+  registry_rows <- dplyr::bind_rows(lapply(
+    seq_len(nrow(specs)),
+    function(i) {
+      fusion_deaths_registry_row(
+        cause = specs$cause[[i]],
+        crf_id = specs$crf_id[[i]],
+        data_path = specs$data_path[[i]],
+        notes = fusion_adult_deaths_notes(specs$cause[[i]])
+      )
+    }
+  ))
+
+  if (update_references) {
+    upsert_crf_reference_row(fusion_reference_row())
+  }
+
+  if (update_registry) {
+    upsert_crf_registry_rows(registry_rows)
+  }
+
+  registry_rows
 }
 
 
@@ -136,4 +160,73 @@ compile_fusion_deaths_data <- function(rr, cause) {
 fusion_cause_slug <- function(cause) {
   slug <- gsub("[^a-z0-9]+", "_", tolower(cause))
   gsub("^_|_$", "", slug)
+}
+
+
+fusion_adult_deaths_notes <- function(cause) {
+  age_description <- if (cause %in% fusion_split_age_causes()) {
+    "25+ aggregate and all adult split-age curves"
+  } else {
+    "25+ curve"
+  }
+
+  paste(
+    "Opt-in Registry migration from inst/extdata/rr/processed/rr_fusion.csv;",
+    "includes the", cause, age_description
+  )
+}
+
+
+fusion_deaths_registry_row <- function(cause, crf_id, data_path, notes) {
+  tibble::tibble(
+    crf_id = crf_id,
+    pollutant = "PM25",
+    cause = cause,
+    outcome = MEASURE_DEATHS,
+    double_counted = FALSE,
+    age_low = 25,
+    age_high = Inf,
+    region_applicability = "global",
+    form = CRF_FORM_TABULAR,
+    rr_central = NA_real_,
+    rr_low = NA_real_,
+    rr_high = NA_real_,
+    conc_change = NA_real_,
+    counterfact = NA_real_,
+    unit = "ug",
+    units_multiplier = 1,
+    data_path = data_path,
+    reference_id = "burnett_2022_fusion",
+    notes = notes
+  )
+}
+
+
+fusion_reference_row <- function() {
+  tibble::tibble(
+    reference_id = "burnett_2022_fusion",
+    author = "Burnett RT, Spadaro JV, Garcia GR, Pope CA III",
+    year = 2022,
+    title = paste(
+      "Designing health impact functions to assess marginal changes",
+      "in outdoor fine particulate matter"
+    ),
+    journal = "Environmental Research",
+    volume = "204",
+    pages = "112245",
+    doi = "10.1016/j.envres.2021.112245",
+    url = "https://doi.org/10.1016/j.envres.2021.112245",
+    notes = paste(
+      "Primary methods paper for the Fusion PM2.5 mortality model.",
+      "The current generation code returns curves from",
+      "generate_rr_fusion_from_code(), which uses the Burnett-supplied",
+      "\"Fusion Parameters Jul 7, 2021.csv\" and",
+      "\"LL Fusion Parameters theta eq 97.5.csv\".",
+      "The packaged rr/processed/rr_fusion.csv is the migration source, but",
+      "its Git history does not establish regeneration by the current code.",
+      "The lookup workbook is a validation reference only; workbook metadata",
+      "identifies Joseph V. Spadaro as its creator, and the code notes that",
+      "generated values do not yet exactly match it."
+    )
+  )
 }

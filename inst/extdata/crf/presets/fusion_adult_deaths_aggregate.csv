@@ -1,0 +1,2 @@
+pollutant,cause,outcome,crf_id,notes
+PM25,NCD.LRI,Deaths,fusion_pm25_ncd_lri_25plus_deaths_v1,Opt-in Fusion adult aggregate mortality curve; do not combine with the component preset

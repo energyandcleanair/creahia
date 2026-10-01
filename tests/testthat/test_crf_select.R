@@ -340,6 +340,53 @@ test_that("GEMM adult death presets produce typed opt-in CRF sets", {
   expect_true(all(components$reference_id == "burnett_2018_gemm"))
 })
 
+test_that("Fusion adult death presets keep aggregate and components separate", {
+  expect_true(all(c(
+    "fusion_adult_deaths_aggregate",
+    "fusion_adult_deaths_components"
+  ) %in% available_crf_presets()))
+
+  aggregate <- crfs_preset("fusion_adult_deaths_aggregate")
+  components <- crfs_preset("fusion_adult_deaths_components")
+
+  expect_equal(aggregate$cause, CAUSE_NCDLRI)
+  expect_setequal(
+    components$cause,
+    c(
+      CAUSE_LRI, CAUSE_COPD, CAUSE_DIABETES,
+      CAUSE_IHD, CAUSE_LUNGCANCER, CAUSE_STROKE
+    )
+  )
+  expect_true(all(aggregate$outcome == MEASURE_DEATHS))
+  expect_true(all(components$outcome == MEASURE_DEATHS))
+  expect_no_error(
+    validate_crf_selection(aggregate, check_double_counting = TRUE)
+  )
+  expect_no_error(
+    validate_crf_selection(components, check_double_counting = TRUE)
+  )
+
+  expect_error(
+    validate_crf_selection(
+      dplyr::bind_rows(aggregate, components),
+      check_double_counting = TRUE
+    ),
+    "ncdlri_mortality"
+  )
+})
+
+test_that("Fusion adult death presets produce typed opt-in CRF sets", {
+  aggregate <- crfs_set(presets = "fusion_adult_deaths_aggregate")
+  components <- crfs_set(presets = "fusion_adult_deaths_components")
+
+  expect_true(is_crfs_set(aggregate))
+  expect_true(is_crfs_set(components))
+  expect_equal(nrow(aggregate), 1)
+  expect_equal(nrow(components), 6)
+  expect_true(all(aggregate$reference_id == "burnett_2022_fusion"))
+  expect_true(all(components$reference_id == "burnett_2022_fusion"))
+})
+
 test_that("load_crf_preset loads required columns", {
   preset <- load_crf_preset("experimental_default")
 
