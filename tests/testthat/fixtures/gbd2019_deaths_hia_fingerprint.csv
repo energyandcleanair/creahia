@@ -1,0 +1,8 @@
+scenario,region_id,pollutant,cause,outcome,estimate,age_group,double_counted,number
+scenario1,BGD,PM25,COPD,Deaths,central,25+,FALSE,-0.024070354625589863
+scenario1,BGD,PM25,Diabetes,Deaths,central,25+,FALSE,-0.01219852142568742
+scenario1,BGD,PM25,IHD,Deaths,central,25+,FALSE,-0.025429401139592803
+scenario1,BGD,PM25,LC,Deaths,central,25+,FALSE,-0.01950211068978866
+scenario1,BGD,PM25,LRI,Deaths,central,25+,FALSE,-0.019124627903989135
+scenario1,BGD,PM25,LRI.child,Deaths.child,central,0-4,FALSE,-0.019292387797883778
+scenario1,BGD,PM25,Stroke,Deaths,central,25+,FALSE,-0.03376224791773943
