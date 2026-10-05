@@ -1,0 +1,7 @@
+preset,scenario,region_id,pollutant,cause,outcome,estimate,age_group,double_counted,number
+gemm_adult_deaths_aggregate,scenario1,BGD,PM25,NCD.LRI,Deaths,central,25+,FALSE,-0.017130485558582122
+gemm_adult_deaths_components,scenario1,BGD,PM25,COPD,Deaths,central,25+,FALSE,-0.025434509282333078
+gemm_adult_deaths_components,scenario1,BGD,PM25,IHD,Deaths,central,25+,FALSE,-0.03902709080003496
+gemm_adult_deaths_components,scenario1,BGD,PM25,LC,Deaths,central,25+,FALSE,-0.030705965910377733
+gemm_adult_deaths_components,scenario1,BGD,PM25,LRI,Deaths,central,25+,FALSE,-0.05724180745112028
+gemm_adult_deaths_components,scenario1,BGD,PM25,Stroke,Deaths,central,25+,FALSE,-0.03296047415080933
