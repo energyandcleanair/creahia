@@ -27,33 +27,18 @@ make_historical_membership <- function(registry) {
 }
 
 
-test_that("packaged historical stores contain the blocked default profile", {
-  registry <- .load_historical_crf_registry()
-  memberships <- .load_historical_crf_memberships()
-
-  expect_equal(nrow(registry), 15)
-  expect_equal(nrow(memberships), 15)
-  expect_true(all(c(
-    CRF_REGISTRY_REQUIRED_COLUMNS,
-    .historical_registry_metadata_columns()
-  ) %in% names(registry)))
-  expect_named(memberships, .historical_membership_columns())
-  expect_true(all(registry$lifecycle == "historical_reproduction"))
-  expect_true(all(registry$visibility == "internal_compatibility"))
-  expect_true(all(registry$readiness_status == "not_ready"))
-  expect_true(all(!is.na(registry$blocking_reason)))
-  expect_true(all(!is.na(registry$question_ids)))
-  expect_setequal(
-    registry$crf_id,
-    sprintf("historical_default_l%02d_v1", seq_len(15))
+historical_profile_cases <- function() {
+  tibble::tribble(
+    ~version, ~selection_id, ~expected_rows,
+    "default", "legacy_profile_default", 15L,
+    "C40", "legacy_profile_c40", 19L,
+    "Krewski-South Africa", "legacy_profile_krewski_south_africa", 21L
   )
-})
+}
 
 
-test_that("packaged default definitions preserve the legacy numeric contract", {
-  registry <- .load_historical_crf_registry()
-  legacy <- get_crfs("default")
-  contract_columns <- c(
+historical_numeric_contract_columns <- function() {
+  c(
     "pollutant",
     "cause",
     "outcome",
@@ -66,33 +51,98 @@ test_that("packaged default definitions preserve the legacy numeric contract", {
     "unit",
     "units_multiplier"
   )
+}
 
-  stored_contract <- registry %>%
-    dplyr::select(dplyr::all_of(contract_columns)) %>%
-    dplyr::arrange(pollutant, cause, outcome)
-  legacy_contract <- legacy %>%
-    dplyr::select(dplyr::all_of(contract_columns)) %>%
-    dplyr::arrange(pollutant, cause, outcome)
 
-  expect_equal(stored_contract, legacy_contract)
-  expect_true(all(is.na(registry$age_low)))
-  expect_true(all(is.na(registry$age_high)))
+test_that("packaged historical stores account for all active CRF profiles", {
+  registry <- .load_historical_crf_registry()
+  memberships <- .load_historical_crf_memberships()
+
+  expect_equal(nrow(registry), 25)
+  expect_equal(nrow(memberships), 55)
+  expect_true(all(c(
+    CRF_REGISTRY_REQUIRED_COLUMNS,
+    .historical_registry_metadata_columns()
+  ) %in% names(registry)))
+  expect_named(memberships, .historical_membership_columns())
+  expect_true(all(registry$lifecycle == "historical_reproduction"))
+  expect_true(all(registry$visibility == "internal_compatibility"))
+  expect_true(all(registry$readiness_status == "not_ready"))
+  expect_true(all(!is.na(registry$blocking_reason)))
+  expect_true(all(!is.na(registry$question_ids)))
+  expect_setequal(
+    registry$crf_id,
+    c(
+      sprintf("historical_default_l%02d_v1", seq_len(15)),
+      sprintf("historical_l%02d_v1", 16:25)
+    )
+  )
+})
+
+
+test_that("packaged definitions preserve every profile's numeric contract", {
+  registry <- .load_historical_crf_registry()
+  memberships <- .load_historical_crf_memberships()
+  contract_columns <- historical_numeric_contract_columns()
+
+  purrr::pwalk(historical_profile_cases(), function(
+    version,
+    selection_id,
+    expected_rows
+  ) {
+    stored_contract <- memberships %>%
+      dplyr::filter(.data$selection_id == !!selection_id) %>%
+      dplyr::inner_join(registry, by = "crf_id") %>%
+      dplyr::select(dplyr::all_of(contract_columns)) %>%
+      dplyr::arrange(pollutant, cause, outcome) %>%
+      tibble::as_tibble()
+    legacy_contract <- get_crfs(version) %>%
+      dplyr::select(dplyr::all_of(contract_columns)) %>%
+      dplyr::arrange(pollutant, cause, outcome) %>%
+      tibble::as_tibble()
+
+    expect_equal(nrow(stored_contract), expected_rows, info = selection_id)
+    expect_equal(stored_contract, legacy_contract, info = selection_id)
+  })
+
+  default_definitions <- registry %>%
+    dplyr::filter(grepl("^historical_default_", .data$crf_id))
+  added_definitions <- registry %>%
+    dplyr::filter(grepl("^historical_l", .data$crf_id))
+
+  expect_true(all(is.na(default_definitions$age_low)))
+  expect_true(all(is.na(default_definitions$age_high)))
+  expect_true(all(added_definitions$age_low == 25))
+  expect_true(all(added_definitions$age_high == 99))
   expect_true(all(registry$form == CRF_FORM_LOG_LINEAR))
   expect_true(all(registry$reference_id %in% load_crf_references()$reference_id))
 })
 
 
-test_that("packaged default memberships cover every stable component identity", {
+test_that("packaged memberships cover every stable profile identity", {
   registry <- .load_historical_crf_registry()
   memberships <- .load_historical_crf_memberships()
-  expected_components <- .normalise_crf_components(
-    get_crfs("default"),
-    input_mode = "legacy_profile",
-    selection_id = "legacy_profile_default"
-  )
 
-  expect_setequal(memberships$component_id, expected_components$component_id)
-  expect_true(all(memberships$selection_id == "legacy_profile_default"))
+  purrr::pwalk(historical_profile_cases(), function(
+    version,
+    selection_id,
+    expected_rows
+  ) {
+    expected_components <- .normalise_crf_components(
+      get_crfs(version),
+      input_mode = "legacy_profile",
+      selection_id = selection_id
+    )
+    stored_components <- memberships %>%
+      dplyr::filter(.data$selection_id == !!selection_id)
+
+    expect_equal(nrow(stored_components), expected_rows, info = selection_id)
+    expect_setequal(
+      stored_components$component_id,
+      expected_components$component_id
+    )
+  })
+
   expect_setequal(memberships$crf_id, registry$crf_id)
   expect_error(
     .resolve_historical_crf_components(
@@ -102,6 +152,16 @@ test_that("packaged default memberships cover every stable component identity", 
     ),
     "not Registry-ready"
   )
+})
+
+
+test_that("the C40 NO2 mortality reference is fully registered", {
+  reference <- load_crf_references() %>%
+    dplyr::filter(.data$reference_id == "faustini_2014_no2_mortality")
+
+  expect_equal(nrow(reference), 1)
+  expect_equal(reference$year, 2014)
+  expect_equal(reference$doi, "10.1183/09031936.00114713")
 })
 
 
