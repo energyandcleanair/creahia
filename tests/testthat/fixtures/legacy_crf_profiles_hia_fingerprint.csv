@@ -1,0 +1,56 @@
+configuration_id,scenario,region_id,pollutant,cause,outcome,estimate,age_group,double_counted,number
+default,legacy_default_baseline,fingerprint_region,NO2,Asthma.1to18,AsthmaIncidence,central,0-18,FALSE,-22.52901218659369
+default,legacy_default_baseline,fingerprint_region,NO2,Asthma.1to18,AsthmaPrevalence,central,0-18,FALSE,-24.138227342778958
+default,legacy_default_baseline,fingerprint_region,NO2,NCD.LRI,Deaths,central,25+,FALSE,-7.2262800056591026
+default,legacy_default_baseline,fingerprint_region,NO2,NCD.LRI,YLLs,central,25+,FALSE,-7.606610532272739
+default,legacy_default_baseline,fingerprint_region,O3_8h,Asthma.0to17,AsthmaERV,central,0-18,FALSE,-1.779061504029741
+default,legacy_default_baseline,fingerprint_region,O3_8h,Asthma.18to99,AsthmaERV,central,25+,FALSE,-1.9273166293655526
+default,legacy_default_baseline,fingerprint_region,O3_8h,COPD,Deaths,central,25+,FALSE,-6.3520930864908545
+default,legacy_default_baseline,fingerprint_region,O3_8h,COPD,YLLs,central,25+,FALSE,-6.749098904396532
+default,legacy_default_baseline,fingerprint_region,PM25,Absences,Absences,central,25+,FALSE,-6.073306421495534
+default,legacy_default_baseline,fingerprint_region,PM25,Asthma.0to17,AsthmaERV,central,0-18,FALSE,-3.531448516552995
+default,legacy_default_baseline,fingerprint_region,PM25,Asthma.18to99,AsthmaERV,central,25+,FALSE,-3.5131396742500907
+default,legacy_default_baseline,fingerprint_region,PM25,LBW,LBW,central,Newborn,FALSE,-22.69705352744884
+default,legacy_default_baseline,fingerprint_region,PM25,PTB,PTB,central,Newborn,FALSE,-41.5409980824337
+default,legacy_default_baseline,fingerprint_region,SO2,NCD.LRI,Deaths,central,25+,FALSE,-2.1849204129574815
+default,legacy_default_baseline,fingerprint_region,SO2,NCD.LRI,YLLs,central,25+,FALSE,-2.29991622416577
+C40,legacy_default_baseline,fingerprint_region,NO2,AllCause,Deaths,central,25+,FALSE,-5.466643425519603
+C40,legacy_default_baseline,fingerprint_region,NO2,AllCause,YLLs,central,25+,FALSE,-5.922197044312903
+C40,legacy_default_baseline,fingerprint_region,NO2,Asthma.1to18,AsthmaIncidence,central,0-18,FALSE,-25.74744249896422
+C40,legacy_default_baseline,fingerprint_region,NO2,Asthma.1to18,AsthmaPrevalence,central,0-18,FALSE,-27.356657655149483
+C40,legacy_default_baseline,fingerprint_region,NO2,TotCV,Deaths,central,25+,TRUE,-35.15396301886134
+C40,legacy_default_baseline,fingerprint_region,NO2,TotCV,YLLs,central,25+,TRUE,-36.751870428809575
+C40,legacy_default_baseline,fingerprint_region,NO2,TotResp,Deaths,central,25+,TRUE,-8.12945634808991
+C40,legacy_default_baseline,fingerprint_region,NO2,TotResp,YLLs,central,25+,TRUE,-8.46818369592699
+C40,legacy_default_baseline,fingerprint_region,O3_8h,Asthma.0to17,AsthmaERV,central,0-18,FALSE,-2.0755717547013646
+C40,legacy_default_baseline,fingerprint_region,O3_8h,Asthma.18to99,AsthmaERV,central,25+,FALSE,-2.2238268800371763
+C40,legacy_default_baseline,fingerprint_region,O3_8h,COPD,Deaths,central,25+,FALSE,-7.14610472230221
+C40,legacy_default_baseline,fingerprint_region,O3_8h,COPD,YLLs,central,25+,FALSE,-7.5431105402078895
+C40,legacy_default_baseline,fingerprint_region,PM25,Absences,Absences,central,25+,FALSE,-6.073306421495534
+C40,legacy_default_baseline,fingerprint_region,PM25,Asthma.0to17,AsthmaERV,central,0-18,FALSE,-4.120023269311828
+C40,legacy_default_baseline,fingerprint_region,PM25,Asthma.18to99,AsthmaERV,central,25+,FALSE,-4.053622701057797
+C40,legacy_default_baseline,fingerprint_region,PM25,LBW,LBW,central,Newborn,FALSE,-25.21894836383204
+C40,legacy_default_baseline,fingerprint_region,PM25,PTB,PTB,central,Newborn,FALSE,-41.5409980824337
+C40,legacy_default_baseline,fingerprint_region,SO2,AllCause,Deaths,central,25+,FALSE,-1.379949734499462
+C40,legacy_default_baseline,fingerprint_region,SO2,AllCause,YLLs,central,25+,FALSE,-1.4949455457077505
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,NO2,AllCause,Deaths,central,25+,FALSE,-5.466643425519603
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,NO2,AllCause,YLLs,central,25+,FALSE,-5.922197044312903
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,NO2,Asthma.1to18,AsthmaIncidence,central,0-18,FALSE,-25.74744249896422
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,NO2,Asthma.1to18,AsthmaPrevalence,central,0-18,FALSE,-27.356657655149483
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,NO2,TotCV,Deaths,central,25+,TRUE,-35.15396301886134
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,NO2,TotCV,YLLs,central,25+,TRUE,-36.751870428809575
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,NO2,TotResp,Deaths,central,25+,TRUE,-8.12945634808991
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,NO2,TotResp,YLLs,central,25+,TRUE,-8.46818369592699
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,O3_8h,Asthma.0to17,AsthmaERV,central,0-18,FALSE,-2.0755717547013646
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,O3_8h,Asthma.18to99,AsthmaERV,central,25+,FALSE,-2.2238268800371763
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,O3_8h,COPD,Deaths,central,25+,FALSE,-7.14610472230221
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,O3_8h,COPD,YLLs,central,25+,FALSE,-7.5431105402078895
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,PM25,Absences,Absences,central,25+,FALSE,-6.073306421495534
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,PM25,AllCause,Deaths,central,25+,FALSE,-6.17621052892705
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,PM25,AllCause,YLLs,central,25+,FALSE,-6.690894739670973
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,PM25,Asthma.0to17,AsthmaERV,central,0-18,FALSE,-4.120023269311828
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,PM25,Asthma.18to99,AsthmaERV,central,25+,FALSE,-4.053622701057797
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,PM25,LBW,LBW,central,Newborn,FALSE,-25.21894836383204
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,PM25,PTB,PTB,central,Newborn,FALSE,-41.5409980824337
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,SO2,AllCause,Deaths,central,25+,FALSE,-1.379949734499462
+Krewski-South Africa,legacy_default_baseline,fingerprint_region,SO2,AllCause,YLLs,central,25+,FALSE,-1.4949455457077505
