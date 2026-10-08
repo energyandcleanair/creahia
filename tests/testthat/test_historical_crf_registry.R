@@ -27,17 +27,81 @@ make_historical_membership <- function(registry) {
 }
 
 
-test_that("packaged historical stores start empty with stable schemas", {
+test_that("packaged historical stores contain the blocked default profile", {
   registry <- .load_historical_crf_registry()
   memberships <- .load_historical_crf_memberships()
 
-  expect_equal(nrow(registry), 0)
-  expect_equal(nrow(memberships), 0)
+  expect_equal(nrow(registry), 15)
+  expect_equal(nrow(memberships), 15)
   expect_true(all(c(
     CRF_REGISTRY_REQUIRED_COLUMNS,
     .historical_registry_metadata_columns()
   ) %in% names(registry)))
   expect_named(memberships, .historical_membership_columns())
+  expect_true(all(registry$lifecycle == "historical_reproduction"))
+  expect_true(all(registry$visibility == "internal_compatibility"))
+  expect_true(all(registry$readiness_status == "not_ready"))
+  expect_true(all(!is.na(registry$blocking_reason)))
+  expect_true(all(!is.na(registry$question_ids)))
+  expect_setequal(
+    registry$crf_id,
+    sprintf("historical_default_l%02d_v1", seq_len(15))
+  )
+})
+
+
+test_that("packaged default definitions preserve the legacy numeric contract", {
+  registry <- .load_historical_crf_registry()
+  legacy <- get_crfs("default")
+  contract_columns <- c(
+    "pollutant",
+    "cause",
+    "outcome",
+    "double_counted",
+    "rr_central",
+    "rr_low",
+    "rr_high",
+    "conc_change",
+    "counterfact",
+    "unit",
+    "units_multiplier"
+  )
+
+  stored_contract <- registry %>%
+    dplyr::select(dplyr::all_of(contract_columns)) %>%
+    dplyr::arrange(pollutant, cause, outcome)
+  legacy_contract <- legacy %>%
+    dplyr::select(dplyr::all_of(contract_columns)) %>%
+    dplyr::arrange(pollutant, cause, outcome)
+
+  expect_equal(stored_contract, legacy_contract)
+  expect_true(all(is.na(registry$age_low)))
+  expect_true(all(is.na(registry$age_high)))
+  expect_true(all(registry$form == CRF_FORM_LOG_LINEAR))
+  expect_true(all(registry$reference_id %in% load_crf_references()$reference_id))
+})
+
+
+test_that("packaged default memberships cover every stable component identity", {
+  registry <- .load_historical_crf_registry()
+  memberships <- .load_historical_crf_memberships()
+  expected_components <- .normalise_crf_components(
+    get_crfs("default"),
+    input_mode = "legacy_profile",
+    selection_id = "legacy_profile_default"
+  )
+
+  expect_setequal(memberships$component_id, expected_components$component_id)
+  expect_true(all(memberships$selection_id == "legacy_profile_default"))
+  expect_setequal(memberships$crf_id, registry$crf_id)
+  expect_error(
+    .resolve_historical_crf_components(
+      component_ids = memberships$component_id,
+      registry = registry,
+      memberships = memberships
+    ),
+    "not Registry-ready"
+  )
 })
 
 
@@ -86,6 +150,12 @@ test_that("historical readiness and provenance fail closed", {
       dplyr::mutate(ready, reference_id = "registry_fixture")
     ),
     "Validation fixtures cannot be stored"
+  )
+  expect_error(
+    .validate_historical_crf_registry(
+      dplyr::mutate(ready, reference_id = "missing_reference")
+    ),
+    "unknown reference_id"
   )
 })
 
@@ -153,8 +223,10 @@ test_that("internal resolver returns only complete historical components", {
 test_that("historical storage is invisible to public Registry selection", {
   historical_registry <- make_historical_registry_row()
   historical_id <- historical_registry$crf_id
+  packaged_historical_ids <- .load_historical_crf_registry()$crf_id
 
   expect_false(historical_id %in% load_crf_registry()$crf_id)
+  expect_false(any(packaged_historical_ids %in% load_crf_registry()$crf_id))
   expect_false(historical_id %in% available_crf_presets())
   expect_equal(nrow(search_crf_registry(query = historical_id)), 0)
 

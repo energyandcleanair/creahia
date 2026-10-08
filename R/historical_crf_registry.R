@@ -139,6 +139,18 @@
     )
   }
 
+  missing_reference_ids <- setdiff(
+    unique(registry$reference_id),
+    load_crf_references()$reference_id
+  )
+  if (length(missing_reference_ids) > 0) {
+    stop(
+      "Historical CRFs reference unknown reference_id values: ",
+      paste(missing_reference_ids, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
   invalid_forms <- setdiff(unique(registry$form), CRF_FORM_VALUES)
   if (length(invalid_forms) > 0) {
     stop(

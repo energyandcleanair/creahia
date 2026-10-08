@@ -1,1 +1,16 @@
 component_id,selection_id,crf_id,notes
+crf_profile|legacy_profile_default|NO2|Asthma.1to18|AsthmaIncidence,legacy_profile_default,historical_default_l01_v1,Historical default profile membership L01.
+crf_profile|legacy_profile_default|NO2|Asthma.1to18|AsthmaPrevalence,legacy_profile_default,historical_default_l02_v1,Historical default profile membership L02.
+crf_profile|legacy_profile_default|PM25|Asthma.0to17|AsthmaERV,legacy_profile_default,historical_default_l03_v1,Historical default profile membership L03.
+crf_profile|legacy_profile_default|PM25|Asthma.18to99|AsthmaERV,legacy_profile_default,historical_default_l04_v1,Historical default profile membership L04.
+crf_profile|legacy_profile_default|O3_8h|Asthma.0to17|AsthmaERV,legacy_profile_default,historical_default_l05_v1,Historical default profile membership L05.
+crf_profile|legacy_profile_default|O3_8h|Asthma.18to99|AsthmaERV,legacy_profile_default,historical_default_l06_v1,Historical default profile membership L06.
+crf_profile|legacy_profile_default|PM25|PTB|PTB,legacy_profile_default,historical_default_l07_v1,Historical default profile membership L07.
+crf_profile|legacy_profile_default|PM25|LBW|LBW,legacy_profile_default,historical_default_l08_v1,Historical default profile membership L08.
+crf_profile|legacy_profile_default|PM25|Absences|Absences,legacy_profile_default,historical_default_l09_v1,Historical default profile membership L09.
+crf_profile|legacy_profile_default|O3_8h|COPD|Deaths,legacy_profile_default,historical_default_l10_v1,Historical default profile membership L10.
+crf_profile|legacy_profile_default|O3_8h|COPD|YLLs,legacy_profile_default,historical_default_l11_v1,Historical default profile membership L11.
+crf_profile|legacy_profile_default|NO2|NCD.LRI|Deaths,legacy_profile_default,historical_default_l12_v1,Historical default profile membership L12.
+crf_profile|legacy_profile_default|NO2|NCD.LRI|YLLs,legacy_profile_default,historical_default_l13_v1,Historical default profile membership L13.
+crf_profile|legacy_profile_default|SO2|NCD.LRI|Deaths,legacy_profile_default,historical_default_l14_v1,Historical default profile membership L14.
+crf_profile|legacy_profile_default|SO2|NCD.LRI|YLLs,legacy_profile_default,historical_default_l15_v1,Historical default profile membership L15.
