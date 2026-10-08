@@ -17,3 +17,4 @@ validation/*.RDS
 examples/example_ph/
 examples/example_ph_who/
 examples/example_meteosim/
+.DS_Store
