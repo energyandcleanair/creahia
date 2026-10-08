@@ -1,0 +1,1 @@
+crf_id,pollutant,cause,outcome,double_counted,age_low,age_high,region_applicability,form,rr_central,rr_low,rr_high,conc_change,counterfact,unit,units_multiplier,data_path,reference_id,notes,lifecycle,visibility,readiness_status,blocking_reason,question_ids,provenance_notes
