@@ -333,6 +333,76 @@ test_that("shadow mode resolves the current package default contract", {
 })
 
 
+test_that("GBD 2019 historical contract exposes its complete readiness gap", {
+  rr_selection <- .resolve_hia_rr_selection_boundary(
+    rr_sources = c(RR_GEMM, RR_ORIGINAL),
+    calc_causes = "GEMM and GBD",
+    gbd_causes = NULL
+  )
+  observation <- .observe_hia_compatibility_boundary(
+    crfs = get_crfs("default"),
+    rr_sources = parse_rr_sources(rr_selection$rr_sources),
+    epi = get_epi("gbd2019"),
+    context = make_shadow_test_boundary_context(
+      epi_version = "gbd2019",
+      rr_selection_mode = rr_selection$mode,
+      calc_causes = rr_selection$calc_causes,
+      gbd_causes = rr_selection$gbd_causes
+    ),
+    population_year_intent = .capture_population_year_intent(
+      pop_year = 2020,
+      scale_base_year = NULL,
+      scale_target_year = NULL,
+      resolved_pop_year = 2020
+    )
+  )
+  components <- observation$result$components
+  blocking_components <- observation$result$blocking_components
+  blocking_summary <- blocking_components %>%
+    dplyr::count(component_type, source, name = "n") %>%
+    dplyr::arrange(component_type, source)
+
+  expect_equal(observation$status, "resolved")
+  expect_equal(
+    observation$input_contract,
+    "legacy_default_gemm_gbd2019_2020"
+  )
+  expect_false(observation$result$ready)
+  expect_equal(
+    components %>% dplyr::count(component_type, name = "n"),
+    tibble::tribble(
+      ~component_type, ~n,
+      "crf", 15L,
+      "epi", 1L,
+      "rr", 18L
+    )
+  )
+  expect_true(components$ready[components$component_type == "epi"])
+  expect_true(all(
+    components$reproduction_status[components$component_type != "epi"] ==
+      "not_verified"
+  ))
+  expect_equal(nrow(blocking_components), 33)
+  expect_equal(
+    blocking_summary,
+    tibble::tribble(
+      ~component_type, ~source, ~n,
+      "crf", "NO2", 4L,
+      "crf", "O3_8h", 4L,
+      "crf", "PM25", 5L,
+      "crf", "SO2", 2L,
+      "rr", "gemm", 14L,
+      "rr", "original", 4L
+    )
+  )
+  expect_setequal(
+    observation$specification$readiness$blocking_component_ids,
+    blocking_components$component_id
+  )
+  expect_equal(nrow(observation$result$ignored_rr_pairs), 0)
+})
+
+
 test_that("custom HIA inputs stay outside the first shadow slice", {
   observed <- FALSE
   expected <- make_shadow_test_impacts()
