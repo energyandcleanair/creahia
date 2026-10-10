@@ -103,6 +103,96 @@ test_that("historical RR requirements remain fail-closed", {
 })
 
 
+test_that("selected GEMM Deaths record complete evidence without readiness promotion", {
+  rr_selection <- .resolve_hia_rr_selection_boundary(
+    rr_sources = c(RR_GEMM, RR_ORIGINAL),
+    calc_causes = "GEMM and GBD",
+    gbd_causes = NULL
+  )
+  selected_components <- .normalise_rr_components(
+    parse_rr_sources(rr_selection$rr_sources)
+  )
+  manifest <- .load_historical_rr_manifest()
+  selected_manifest <- manifest %>%
+    dplyr::semi_join(selected_components, by = "component_id")
+  gemm_deaths <- selected_manifest %>%
+    dplyr::filter(source == RR_GEMM, outcome == MEASURE_DEATHS)
+  evidence_complete_blocker <- paste(
+    "Source, outcome, age, PAF, and impact parity are verified;",
+    "historical RR remains not ready pending methodology and readiness review."
+  )
+
+  expect_equal(nrow(selected_manifest), 18L)
+  expect_equal(nrow(gemm_deaths), 6L)
+  expect_setequal(
+    gemm_deaths$cause,
+    c("NCD.LRI", "COPD", "IHD", "LC", "LRI", "Stroke")
+  )
+  expect_true(all(gemm_deaths$coverage_status == "public_registry_candidate"))
+  expect_true(all(gemm_deaths$reproduction_status == "not_verified"))
+  expect_true(all(
+    gemm_deaths$reproduction_blocking_reason == evidence_complete_blocker
+  ))
+  expect_true(all(gemm_deaths$scientific_review_status == "not_reviewed"))
+
+  registry <- load_crf_registry()
+  legacy_gemm <- get_rr(RR_GEMM)
+  for (i in seq_len(nrow(gemm_deaths))) {
+    component <- gemm_deaths[i, , drop = FALSE]
+    candidate_ids <- strsplit(
+      component$public_registry_crf_ids,
+      ";",
+      fixed = TRUE
+    )[[1]]
+    candidates <- registry %>%
+      dplyr::filter(crf_id %in% candidate_ids)
+    age_matches <- vapply(seq_len(nrow(candidates)), function(j) {
+      candidate_data <- load_crf_tabular(candidates[j, , drop = FALSE])
+      identical(
+        .canonical_rr_age_contract(candidate_data$age),
+        component$age_contract
+      )
+    }, logical(1))
+    matching_candidate <- candidates[age_matches, , drop = FALSE]
+
+    expect_equal(nrow(matching_candidate), 1L, info = component$component_id)
+    expect_equal(
+      matching_candidate$cause,
+      component$cause,
+      info = component$component_id
+    )
+    expect_equal(
+      matching_candidate$outcome,
+      component$outcome,
+      info = component$component_id
+    )
+
+    candidate_data <- load_crf_tabular(matching_candidate) %>%
+      dplyr::arrange(exposure, age) %>%
+      tibble::as_tibble()
+    legacy_data <- legacy_gemm %>%
+      dplyr::filter(cause == component$cause) %>%
+      dplyr::select(exposure, age, low, central, high) %>%
+      dplyr::arrange(exposure, age) %>%
+      tibble::as_tibble()
+    expect_equal(
+      candidate_data,
+      legacy_data,
+      tolerance = 1e-12,
+      info = component$component_id
+    )
+  }
+
+  remaining <- selected_manifest %>%
+    dplyr::anti_join(gemm_deaths, by = "component_id")
+  expect_equal(nrow(remaining), 12L)
+  expect_true(all(remaining$reproduction_status == "not_verified"))
+  expect_false(any(
+    remaining$reproduction_blocking_reason == evidence_complete_blocker
+  ))
+})
+
+
 test_that("historical RR manifest enforces canonical internal identities", {
   manifest <- .load_historical_rr_manifest()
 
