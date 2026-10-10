@@ -156,6 +156,61 @@ test_that("shadow specification records resolved population-year intent", {
 })
 
 
+test_that("GBD 2019 historical call emits its canonical specification", {
+  seen <- new.env(parent = emptyenv())
+  expected <- make_shadow_test_impacts()
+  old_options <- options(
+    creahia.hia_readiness_shadow_observer = function(observation) {
+      seen$observation <- observation
+    }
+  )
+  on.exit(options(old_options), add = TRUE)
+
+  with_mocked_bindings(
+    get_crfs = function(version = "default") make_shadow_test_crfs(),
+    get_epi = function(version = "default") make_shadow_test_epi(),
+    parse_rr_sources = function(rr_sources) {
+      seen$translated_rr_sources <- rr_sources
+      tibble::tibble(cause = "NCD.LRI", source = RR_GEMM)
+    },
+    validate_crfs_against_epi = function(...) invisible(TRUE),
+    .resolve_hia_component_readiness = function(..., epi_version) {
+      seen$readiness_epi_version <- epi_version
+      readiness <- make_specification_readiness()
+      readiness$components <- readiness$components[0, ]
+      readiness$blocking_components <- readiness$blocking_components[0, ]
+      readiness
+    },
+    compute_hia_paf = function(...) tibble::tibble(),
+    compute_hia_impacts = function(...) expected,
+    get_pop_year = function(year_desired) year_desired,
+    {
+      result <- run_shadow_test_hia(
+        calc_causes = "GEMM and GBD",
+        epi_version = "gbd2019",
+        pop_year = 2020
+      )
+    }
+  )
+
+  specification <- seen$observation$specification
+  expect_identical(result, expected)
+  expect_equal(seen$observation$status, "resolved")
+  expect_equal(
+    specification$input_contract,
+    "legacy_default_gemm_gbd2019_2020"
+  )
+  expect_equal(specification$epi_version, "gbd2019")
+  expect_equal(specification$population_year$supplied$pop_year, 2020)
+  expect_equal(specification$population_year$resolved_pop_year, 2020)
+  expect_equal(seen$readiness_epi_version, "gbd2019")
+  expect_identical(
+    seen$translated_rr_sources,
+    convert_old_parameters_to_rr_sources("GEMM and GBD", NULL)
+  )
+})
+
+
 test_that("shadow readiness failures do not interrupt the legacy calculation", {
   seen <- new.env(parent = emptyenv())
   expected <- make_shadow_test_impacts()

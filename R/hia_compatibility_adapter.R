@@ -42,6 +42,24 @@
 }
 
 
+.matches_direct_population_year <- function(population_year_intent, expected_year) {
+  supplied <- population_year_intent$supplied
+  is_single_year <- function(value) {
+    is.numeric(value) &&
+      length(value) == 1 &&
+      !is.na(value) &&
+      value == expected_year
+  }
+
+  is.list(supplied) &&
+    is_single_year(supplied$pop_year) &&
+    is.null(supplied$scale_base_year) &&
+    is.null(supplied$scale_target_year) &&
+    is_single_year(population_year_intent$resolved_pop_year) &&
+    isTRUE(population_year_intent$scaling_requested)
+}
+
+
 .not_applicable_hia_boundary <- function(reason, message) {
   list(
     status = "not_applicable",
@@ -119,13 +137,37 @@
     ))
   }
 
+  is_gemm_gbd_selector <-
+    identical(context$rr_selection_mode, "legacy_cause_selectors") &&
+    identical(context$calc_causes, "GEMM and GBD") &&
+    identical(context$gbd_causes, "default")
+  is_gbd2019_historical_mapping <-
+    is_gemm_gbd_selector &&
+    identical(context$epi_version, "gbd2019")
+
   if (
-    !identical(context$epi_version, "default") ||
-    !identical(context$crfs_version, "default")
+    !identical(context$crfs_version, "default") ||
+    (
+      !identical(context$epi_version, "default") &&
+      !is_gbd2019_historical_mapping
+    )
   ) {
     return(.not_applicable_hia_boundary(
       reason = "non_default_version",
       message = "Non-default CRF or EPI versions are outside the first adapter slice."
+    ))
+  }
+
+  if (
+    is_gbd2019_historical_mapping &&
+    !.matches_direct_population_year(population_year_intent, 2020)
+  ) {
+    return(.not_applicable_hia_boundary(
+      reason = "population_year_contract",
+      message = paste(
+        "The GBD 2019 historical mapping requires directly supplied",
+        "pop_year = 2020."
+      )
     ))
   }
 
@@ -151,9 +193,9 @@
     crf_selection_id = "legacy_profile_default",
     epi_version = context$epi_version
   )
-  input_contract <- if (
-    identical(context$rr_selection_mode, "legacy_cause_selectors")
-  ) {
+  input_contract <- if (is_gbd2019_historical_mapping) {
+    "legacy_default_gemm_gbd2019_2020"
+  } else if (is_gemm_gbd_selector) {
     "legacy_gemm_gbd_default"
   } else {
     "legacy_default"
