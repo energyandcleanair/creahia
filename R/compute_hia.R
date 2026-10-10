@@ -72,13 +72,14 @@ compute_hia <- function(conc_map,
   }
 
 
-  if(!is.null(calc_causes) || !is.null(gbd_causes)) {
-    log_info("Using old parameters for calc_causes and gbd_causes. Ignoring rr_sources.")
-    rr_sources <- convert_old_parameters_to_rr_sources(calc_causes = calc_causes, gbd_causes = gbd_causes)
-  }
+  rr_selection <- .resolve_hia_rr_selection_boundary(
+    rr_sources = rr_sources,
+    calc_causes = calc_causes,
+    gbd_causes = gbd_causes
+  )
 
   # Parse sources of relative risk
-  rr_sources <- parse_rr_sources(rr_sources)
+  rr_sources <- parse_rr_sources(rr_selection$rr_sources)
 
   validate_crfs_against_epi(crfs = crfs, epi = epi, species = species)
 
@@ -94,8 +95,9 @@ compute_hia <- function(conc_map,
       epi_version = epi_version,
       crfs_version = crfs_version,
       crf_compute = crf_compute,
-      calc_causes = calc_causes,
-      gbd_causes = gbd_causes
+      rr_selection_mode = rr_selection$mode,
+      calc_causes = rr_selection$calc_causes,
+      gbd_causes = rr_selection$gbd_causes
     )
   )
   .observe_hia_compatibility_boundary(

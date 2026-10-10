@@ -5,9 +5,11 @@ test_that("canonical default specification stores stable component contracts", {
     scale_target_year = NULL,
     resolved_pop_year = 2030
   )
-  specification <- .new_default_hia_specification(
+  specification <- .new_hia_specification(
     readiness = make_specification_readiness(),
-    population_year_intent = population_year
+    population_year_intent = population_year,
+    input_contract = "legacy_default",
+    epi_version = "default"
   )
 
   expect_s3_class(specification, "creahia_hia_specification")
@@ -58,9 +60,11 @@ test_that("canonical specification rejects incomplete readiness results", {
   readiness$ignored_rr_pairs <- NULL
 
   expect_error(
-    .new_default_hia_specification(
+    .new_hia_specification(
       readiness = readiness,
-      population_year_intent = list()
+      population_year_intent = list(),
+      input_contract = "legacy_default",
+      epi_version = "default"
     ),
     "missing required fields: ignored_rr_pairs"
   )

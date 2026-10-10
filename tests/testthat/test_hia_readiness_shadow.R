@@ -47,6 +47,7 @@ make_shadow_test_boundary_context <- function(...) {
     epi_version = "default",
     crfs_version = "default",
     crf_compute = "legacy",
+    rr_selection_mode = "rr_sources",
     calc_causes = NULL,
     gbd_causes = NULL
   )

@@ -6,6 +6,7 @@ make_adapter_test_context <- function(...) {
     epi_version = "default",
     crfs_version = "default",
     crf_compute = "legacy",
+    rr_selection_mode = "rr_sources",
     calc_causes = NULL,
     gbd_causes = NULL
   )
@@ -21,6 +22,58 @@ make_adapter_test_population_year <- function() {
     resolved_pop_year = NULL
   )
 }
+
+
+test_that("RR selection boundary preserves legacy translation and precedence", {
+  seen <- new.env(parent = emptyenv())
+  explicit_rr_sources <- list(custom = "IgnoredCause")
+  expected <- convert_old_parameters_to_rr_sources(
+    calc_causes = "GEMM and GBD",
+    gbd_causes = "default"
+  )
+
+  with_mocked_bindings(
+    log_info = function(message) seen$message <- message,
+    {
+      translated <- .resolve_hia_rr_selection_boundary(
+        rr_sources = explicit_rr_sources,
+        calc_causes = "GEMM and GBD",
+        gbd_causes = NULL
+      )
+    }
+  )
+
+  expect_equal(translated$mode, "legacy_cause_selectors")
+  expect_equal(translated$calc_causes, "GEMM and GBD")
+  expect_equal(translated$gbd_causes, "default")
+  expect_identical(translated$rr_sources, expected)
+  expect_equal(
+    seen$message,
+    "Using old parameters for calc_causes and gbd_causes. Ignoring rr_sources."
+  )
+  expect_false(identical(translated$rr_sources, explicit_rr_sources))
+})
+
+
+test_that("RR selection boundary preserves direct and invalid inputs", {
+  direct <- list(gemm = "NCD.LRI")
+  unchanged <- .resolve_hia_rr_selection_boundary(
+    rr_sources = direct,
+    calc_causes = NULL,
+    gbd_causes = NULL
+  )
+
+  expect_equal(unchanged$mode, "rr_sources")
+  expect_identical(unchanged$rr_sources, direct)
+  expect_error(
+    .resolve_hia_rr_selection_boundary(
+      rr_sources = direct,
+      calc_causes = "GBD only",
+      gbd_causes = "all"
+    ),
+    "Invalid combination of gbd_causes and calc_causes"
+  )
+})
 
 
 test_that("compatibility boundary emits the canonical default specification", {
@@ -53,11 +106,44 @@ test_that("compatibility boundary emits the canonical default specification", {
 })
 
 
+test_that("compatibility boundary emits the first legacy selector specification", {
+  readiness <- make_specification_readiness()
+  context <- make_adapter_test_context(
+    rr_sources_supplied = TRUE,
+    rr_selection_mode = "legacy_cause_selectors",
+    calc_causes = "GEMM and GBD",
+    gbd_causes = "default"
+  )
+
+  with_mocked_bindings(
+    .resolve_hia_component_readiness = function(...) readiness,
+    {
+      resolved <- .resolve_hia_compatibility_boundary(
+        crfs = tibble::tibble(),
+        rr_sources = tibble::tibble(),
+        epi = tibble::tibble(),
+        context = context,
+        population_year_intent = make_adapter_test_population_year()
+      )
+    }
+  )
+
+  expect_equal(resolved$status, "resolved")
+  expect_equal(resolved$input_contract, "legacy_gemm_gbd_default")
+  expect_equal(
+    resolved$specification$input_contract,
+    "legacy_gemm_gbd_default"
+  )
+})
+
+
 test_that("compatibility boundary explicitly excludes unsupported slices", {
   contexts <- list(
     registry_route = make_adapter_test_context(crf_compute = "registry"),
     legacy_cause_selectors = make_adapter_test_context(
-      calc_causes = "GEMM and GBD"
+      rr_selection_mode = "legacy_cause_selectors",
+      calc_causes = "GBD only",
+      gbd_causes = "default"
     ),
     non_default_version = make_adapter_test_context(crfs_version = "C40"),
     explicit_scientific_input = make_adapter_test_context(

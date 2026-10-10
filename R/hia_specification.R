@@ -34,7 +34,12 @@
 }
 
 
-.new_default_hia_specification <- function(readiness, population_year_intent) {
+.new_hia_specification <- function(
+  readiness,
+  population_year_intent,
+  input_contract,
+  epi_version
+) {
   required_readiness_fields <- c(
     "ready",
     "components",
@@ -71,13 +76,13 @@
 
   specification <- list(
     schema_version = 1L,
-    input_contract = "legacy_default",
+    input_contract = input_contract,
     components = list(
       crf = components %>% dplyr::filter(component_type == "crf"),
       rr = components %>% dplyr::filter(component_type == "rr"),
       epi = components %>% dplyr::filter(component_type == "epi")
     ),
-    epi_version = "default",
+    epi_version = epi_version,
     population_year = population_year_intent,
     readiness = list(
       ready = readiness$ready,

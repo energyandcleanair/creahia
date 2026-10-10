@@ -6,8 +6,38 @@
     "epi_version",
     "crfs_version",
     "crf_compute",
+    "rr_selection_mode",
     "calc_causes",
     "gbd_causes"
+  )
+}
+
+
+.resolve_hia_rr_selection_boundary <- function(
+  rr_sources,
+  calc_causes,
+  gbd_causes
+) {
+  if (!is.null(calc_causes) || !is.null(gbd_causes)) {
+    log_info("Using old parameters for calc_causes and gbd_causes. Ignoring rr_sources.")
+    translated_rr_sources <- convert_old_parameters_to_rr_sources(
+      calc_causes = calc_causes,
+      gbd_causes = gbd_causes
+    )
+
+    return(list(
+      rr_sources = translated_rr_sources,
+      mode = "legacy_cause_selectors",
+      calc_causes = calc_causes,
+      gbd_causes = gbd_causes %||% "default"
+    ))
+  }
+
+  list(
+    rr_sources = rr_sources,
+    mode = "rr_sources",
+    calc_causes = NULL,
+    gbd_causes = NULL
   )
 }
 
@@ -67,10 +97,25 @@
     ))
   }
 
-  if (!is.null(context$calc_causes) || !is.null(context$gbd_causes)) {
+  supported_selection_modes <- c("rr_sources", "legacy_cause_selectors")
+  if (!(context$rr_selection_mode %in% supported_selection_modes)) {
+    stop(
+      "HIA compatibility context has an invalid rr_selection_mode: ",
+      context$rr_selection_mode,
+      call. = FALSE
+    )
+  }
+
+  if (
+    identical(context$rr_selection_mode, "legacy_cause_selectors") &&
+    !(
+      identical(context$calc_causes, "GEMM and GBD") &&
+      identical(context$gbd_causes, "default")
+    )
+  ) {
     return(.not_applicable_hia_boundary(
       reason = "legacy_cause_selectors",
-      message = "Translated calc_causes/gbd_causes inputs are not yet supported by the adapter."
+      message = "This translated calc_causes/gbd_causes combination is not yet supported by the adapter."
     ))
   }
 
@@ -84,7 +129,14 @@
     ))
   }
 
-  if (any(unlist(context[provenance_fields], use.names = FALSE))) {
+  scientific_input_fields <- c("epi_supplied", "crfs_supplied")
+  if (
+    any(unlist(context[scientific_input_fields], use.names = FALSE)) ||
+    (
+      identical(context$rr_selection_mode, "rr_sources") &&
+      context$rr_sources_supplied
+    )
+  ) {
     return(.not_applicable_hia_boundary(
       reason = "explicit_scientific_input",
       message = "Explicit CRF, RR, or EPI inputs are outside the first adapter slice."
@@ -99,14 +151,23 @@
     crf_selection_id = "legacy_profile_default",
     epi_version = context$epi_version
   )
-  specification <- .new_default_hia_specification(
+  input_contract <- if (
+    identical(context$rr_selection_mode, "legacy_cause_selectors")
+  ) {
+    "legacy_gemm_gbd_default"
+  } else {
+    "legacy_default"
+  }
+  specification <- .new_hia_specification(
     readiness = readiness,
-    population_year_intent = population_year_intent
+    population_year_intent = population_year_intent,
+    input_contract = input_contract,
+    epi_version = context$epi_version
   )
 
   list(
     status = "resolved",
-    input_contract = "legacy_default",
+    input_contract = input_contract,
     result = readiness,
     specification = specification
   )
