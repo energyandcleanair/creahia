@@ -65,7 +65,7 @@ make_component_manifest <- function(components, not_ready = character()) {
 }
 
 
-test_that("RR source forms normalise to source/cause/outcome/age components", {
+test_that("RR source forms normalise to grouped components with age contracts", {
   rr_loader <- make_readiness_rr_loader()
   measure_map <- make_readiness_measure_map()
 
@@ -111,7 +111,15 @@ test_that("RR source forms normalise to source/cause/outcome/age components", {
   expect_true(any(
     preference$cause == "CauseA" &
       preference$outcome == "YLLs" &
-      preference$age_contract == "30-34"
+      preference$age_contract == "25-29;30-34"
+  ))
+  expect_true(all(
+    preference$component_id == .component_id(
+      "rr",
+      preference$source,
+      preference$cause,
+      preference$outcome
+    )
   ))
   expect_false(any(
     preference$cause == "CauseShared" &
@@ -158,10 +166,13 @@ test_that("actual default RR preference resolves child LRI to GEMM", {
   components <- .normalise_rr_components(c(RR_GEMM, RR_ORIGINAL))
   child_lri <- components %>%
     dplyr::filter(cause == CAUSE_LRICHILD)
+  split_adults <- components %>%
+    dplyr::filter(grepl("25-29", age_contract, fixed = TRUE))
 
   expect_gt(nrow(child_lri), 0)
   expect_true(all(child_lri$source == RR_GEMM))
   expect_true(all(child_lri$age_contract == "Under 5"))
+  expect_false(any(grepl("25+", split_adults$age_contract, fixed = TRUE)))
 })
 
 
@@ -272,7 +283,7 @@ test_that("explicit Registry Sets are runtime-ready components", {
 
 test_that("component manifest separates reproduction from scientific review", {
   components <- tibble::tibble(
-    component_id = "rr|source_a|CauseA|Deaths|25-29",
+    component_id = "rr|source_a|CauseA|Deaths",
     component_type = "rr",
     selection_id = "rr_sources:named_list",
     source = "source_a",
@@ -358,6 +369,33 @@ test_that("whole-call readiness requires every resolved component", {
   expect_true(ready$ready)
   expect_equal(nrow(ready$blocking_components), 0)
   expect_true(any(ready$components$component_type == "epi"))
+
+  rr_id <- rr_components$component_id[[1]]
+  mismatched_age_manifest <- complete_manifest %>%
+    dplyr::mutate(
+      age_contract = dplyr::if_else(
+        component_id == rr_id,
+        "25+",
+        age_contract
+      )
+    )
+  mismatched_age <- .resolve_hia_component_readiness(
+    crfs = legacy_crfs,
+    rr_sources = rr_sources,
+    epi = epi,
+    manifest = mismatched_age_manifest,
+    crf_input_mode = "legacy_profile",
+    crf_selection_id = "legacy_profile_default",
+    epi_version = "custom",
+    rr_loader = rr_loader,
+    measure_map = measure_map
+  )
+  expect_false(mismatched_age$ready)
+  expect_equal(mismatched_age$blocking_components$component_id, rr_id)
+  expect_match(
+    mismatched_age$blocking_components$blocking_reason,
+    "age contract does not match"
+  )
 
   missing_manifest <- complete_manifest[-1, , drop = FALSE]
   missing <- .resolve_hia_component_readiness(

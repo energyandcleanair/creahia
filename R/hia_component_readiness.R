@@ -42,6 +42,24 @@
 }
 
 
+.canonical_rr_age_contract <- function(ages) {
+  ages <- unique(as.character(ages))
+  ages <- ages[!is.na(ages) & ages != ""]
+  if (length(ages) == 0) {
+    stop("RR age contracts must contain at least one age.", call. = FALSE)
+  }
+
+  ages <- deduplicate_adult_ages(ages)
+  known_order <- unique(c(AGE_CHILDREN, AGE_ADULTS, AGE_ADULTS_SPLIT))
+  ordered_ages <- c(
+    intersect(known_order, ages),
+    sort(setdiff(ages, known_order))
+  )
+
+  paste(ordered_ages, collapse = ";")
+}
+
+
 .validate_component_manifest <- function(manifest) {
   required_columns <- c(
     "component_id",
@@ -331,9 +349,14 @@
       dplyr::transmute(
         cause = as.character(cause),
         source = source_name,
-        age_contract = as.character(age)
+        age = as.character(age)
       ) %>%
-      dplyr::distinct()
+      dplyr::distinct() %>%
+      dplyr::group_by(cause, source) %>%
+      dplyr::summarise(
+        age_contract = .canonical_rr_age_contract(age),
+        .groups = "drop"
+      )
   }) %>%
     dplyr::bind_rows()
 
@@ -363,9 +386,7 @@
       relationship = "many-to-many"
     ) %>%
     dplyr::transmute(
-      component_id = .component_id(
-        "rr", source, cause, measure, age_contract
-      ),
+      component_id = .component_id("rr", source, cause, measure),
       component_type = "rr",
       selection_id = paste0("rr_sources:", input_mode),
       source,
@@ -567,6 +588,7 @@
     dplyr::select(
       component_id,
       lifecycle,
+      manifest_age_contract = age_contract,
       reproduction_status,
       manifest_blocking_reason = reproduction_blocking_reason,
       scientific_review_status,
@@ -576,9 +598,14 @@
   assessed <- components %>%
     dplyr::left_join(manifest_status, by = "component_id") %>%
     dplyr::mutate(
+      age_contract_matches =
+        (is.na(age_contract) & is.na(manifest_age_contract)) |
+        (!is.na(age_contract) & !is.na(manifest_age_contract) &
+          age_contract == manifest_age_contract),
       ready = dplyr::case_when(
         readiness_source == "runtime_validation" ~ runtime_ready,
         readiness_source == "manifest" &
+          age_contract_matches &
           reproduction_status == "parity_verified" ~ TRUE,
         TRUE ~ FALSE
       ),
@@ -587,6 +614,8 @@
         readiness_source == "runtime_validation" ~ blocking_reason,
         is.na(reproduction_status) ~
           "Component is absent from the readiness manifest.",
+        !age_contract_matches ~
+          "Resolved age contract does not match the readiness manifest.",
         TRUE ~ manifest_blocking_reason
       )
     )
@@ -603,7 +632,7 @@
   crfs,
   rr_sources,
   epi,
-  manifest,
+  manifest = .load_hia_component_manifest(),
   crf_input_mode = c("auto", "legacy_profile", "custom"),
   crf_selection_id = NULL,
   epi_version = "custom",

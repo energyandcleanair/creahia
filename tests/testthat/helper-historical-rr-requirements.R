@@ -1,29 +1,3 @@
-historical_rr_requirements_path <- function() {
-  testthat::test_path("fixtures", "historical_rr_requirements.csv")
-}
-
-
-load_historical_rr_requirements <- function() {
-  readr::read_csv(
-    historical_rr_requirements_path(),
-    col_types = readr::cols(
-      requirement_id = readr::col_character(),
-      source = readr::col_character(),
-      cause = readr::col_character(),
-      outcome = readr::col_character(),
-      age_contracts = readr::col_character(),
-      required_by = readr::col_character(),
-      public_registry_crf_ids = readr::col_character(),
-      coverage_status = readr::col_character(),
-      reproduction_status = readr::col_character(),
-      reproduction_blocking_reason = readr::col_character(),
-      scientific_review_status = readr::col_character(),
-      scientific_review_reason = readr::col_character()
-    )
-  )
-}
-
-
 historical_configuration_rr_sources <- function(configuration) {
   calc_causes <- configuration$legacy_calc_causes[[1]]
 
@@ -38,10 +12,11 @@ historical_configuration_rr_sources <- function(configuration) {
 }
 
 
-derive_historical_rr_age_components <- function(
-  configurations = load_historical_fingerprint_configurations()
+derive_historical_rr_components <- function(
+  configurations = load_historical_fingerprint_configurations(),
+  include_actual_default = TRUE
 ) {
-  purrr::map_dfr(seq_len(nrow(configurations)), function(i) {
+  configured <- purrr::map_dfr(seq_len(nrow(configurations)), function(i) {
     configuration <- configurations[i, , drop = FALSE]
 
     .normalise_rr_components(
@@ -49,29 +24,31 @@ derive_historical_rr_age_components <- function(
     ) %>%
       dplyr::mutate(mapping_id = configuration$mapping_id[[1]])
   })
+
+  if (!include_actual_default) {
+    return(configured)
+  }
+
+  dplyr::bind_rows(
+    configured,
+    .normalise_rr_components(c(RR_GEMM, RR_ORIGINAL)) %>%
+      dplyr::mutate(mapping_id = "actual_no_argument_default")
+  )
 }
 
 
 derive_historical_rr_requirements <- function(
   configurations = load_historical_fingerprint_configurations()
 ) {
-  derive_historical_rr_age_components(configurations) %>%
+  derive_historical_rr_components(configurations) %>%
     dplyr::group_by(source, cause, outcome) %>%
     dplyr::summarise(
-      age_contracts = paste(sort(unique(age_contract)), collapse = ";"),
+      component_id = dplyr::first(component_id),
+      age_contract = dplyr::first(age_contract),
       required_by = paste(sort(unique(mapping_id)), collapse = ";"),
       .groups = "drop"
     ) %>%
-    dplyr::mutate(
-      requirement_id = paste(
-        "rr_requirement",
-        source,
-        cause,
-        outcome,
-        sep = "|"
-      ),
-      .before = 1
-    ) %>%
+    dplyr::relocate(component_id) %>%
     dplyr::arrange(source, cause, outcome)
 }
 

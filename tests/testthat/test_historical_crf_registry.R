@@ -295,7 +295,7 @@ test_that("internal resolver uses parity without requiring scientific approval",
   )
   expect_error(
     .resolve_historical_crf_components(
-      component_ids = "rr|missing|Cause|Deaths|25-29",
+      component_ids = "rr|missing|Cause|Deaths",
       registry = ready_registry,
       memberships = memberships
     ),
