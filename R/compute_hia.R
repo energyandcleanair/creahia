@@ -1,3 +1,34 @@
+.observe_default_hia_readiness <- function(crfs, rr_sources, epi, epi_version) {
+  observation <- tryCatch(
+    {
+      result <- .resolve_hia_component_readiness(
+        crfs = crfs,
+        rr_sources = rr_sources,
+        epi = epi,
+        crf_input_mode = "legacy_profile",
+        crf_selection_id = "legacy_profile_default",
+        epi_version = epi_version
+      )
+
+      list(status = "resolved", result = result)
+    },
+    error = function(error) {
+      list(status = "error", error = conditionMessage(error))
+    }
+  )
+
+  observer <- getOption("creahia.hia_readiness_shadow_observer")
+  if (is.function(observer)) {
+    tryCatch(
+      observer(observation),
+      error = function(error) invisible(NULL)
+    )
+  }
+
+  invisible(observation)
+}
+
+
 #' Compute HIA
 #'
 #' @param conc_map
@@ -41,7 +72,16 @@ compute_hia <- function(conc_map,
                         calc_causes = NULL,
                         gbd_causes = NULL,
                         ...){
-  
+
+  observe_default_readiness <-
+    missing(rr_sources) &&
+    missing(epi) &&
+    missing(crfs) &&
+    identical(epi_version, "default") &&
+    identical(crfs_version, "default") &&
+    is.null(calc_causes) &&
+    is.null(gbd_causes)
+
   crf_compute <- match.arg(crf_compute)
 
   if (is_crfs_set(crfs)) {
@@ -70,6 +110,15 @@ compute_hia <- function(conc_map,
   rr_sources <- parse_rr_sources(rr_sources)
 
   validate_crfs_against_epi(crfs = crfs, epi = epi, species = species)
+
+  if (observe_default_readiness && identical(crf_compute, "legacy")) {
+    .observe_default_hia_readiness(
+      crfs = crfs,
+      rr_sources = rr_sources,
+      epi = epi,
+      epi_version = epi_version
+    )
+  }
 
   message("Computing PAF")
   paf <- compute_hia_paf(
