@@ -30,6 +30,15 @@
 }
 
 
+.empty_ignored_rr_pairs <- function() {
+  tibble::tibble(
+    cause = character(),
+    source = character(),
+    reason = character()
+  )
+}
+
+
 .component_id <- function(component_type, ...) {
   values <- list(...)
   encoded <- lapply(values, function(value) {
@@ -309,7 +318,9 @@
   attr(pairs, "input_mode") <- NULL
 
   if (nrow(pairs) == 0) {
-    return(.empty_hia_components())
+    components <- .empty_hia_components()
+    attr(components, "ignored_rr_pairs") <- .empty_ignored_rr_pairs()
+    return(components)
   }
 
   missing_measure_columns <- setdiff(c("cause", "measure"), names(measure_map))
@@ -317,19 +328,6 @@
     stop(
       "RR measure map is missing required columns: ",
       paste(missing_measure_columns, collapse = ", "),
-      call. = FALSE
-    )
-  }
-
-  missing_measures <- dplyr::anti_join(
-    pairs %>% dplyr::distinct(cause),
-    measure_map %>% dplyr::distinct(cause),
-    by = "cause"
-  )
-  if (nrow(missing_measures) > 0) {
-    stop(
-      "No outcome/measure mapping exists for RR causes: ",
-      paste(missing_measures$cause, collapse = ", "),
       call. = FALSE
     )
   }
@@ -365,20 +363,40 @@
     available_ages %>% dplyr::distinct(cause, source),
     by = c("cause", "source")
   )
-  if (nrow(missing_curves) > 0) {
-    missing_labels <- paste(
-      missing_curves$source,
-      missing_curves$cause,
-      sep = "/"
+
+  ignored_rr_pairs <- missing_curves %>%
+    dplyr::transmute(
+      cause,
+      source,
+      reason = "No curve data exists for this RR source/cause pair."
     )
+
+  selected_pairs <- dplyr::semi_join(
+    pairs,
+    available_ages %>% dplyr::distinct(cause, source),
+    by = c("cause", "source")
+  )
+
+  if (nrow(selected_pairs) == 0) {
+    components <- .empty_hia_components()
+    attr(components, "ignored_rr_pairs") <- ignored_rr_pairs
+    return(components)
+  }
+
+  missing_measures <- dplyr::anti_join(
+    selected_pairs %>% dplyr::distinct(cause),
+    measure_map %>% dplyr::distinct(cause),
+    by = "cause"
+  )
+  if (nrow(missing_measures) > 0) {
     stop(
-      "Selected RR source/cause pairs have no curve data: ",
-      paste(missing_labels, collapse = ", "),
+      "No outcome/measure mapping exists for RR causes: ",
+      paste(missing_measures$cause, collapse = ", "),
       call. = FALSE
     )
   }
 
-  pairs %>%
+  components <- selected_pairs %>%
     dplyr::inner_join(measure_map, by = "cause") %>%
     dplyr::inner_join(
       available_ages,
@@ -399,6 +417,9 @@
     ) %>%
     dplyr::distinct() %>%
     dplyr::arrange(source, cause, outcome, age_contract)
+
+  attr(components, "ignored_rr_pairs") <- ignored_rr_pairs
+  components
 }
 
 
@@ -651,6 +672,7 @@
     rr_loader = rr_loader,
     measure_map = measure_map
   )
+  ignored_rr_pairs <- attr(rr_components, "ignored_rr_pairs")
 
   required_metric_keys <- dplyr::bind_rows(
     crf_components,
@@ -673,5 +695,7 @@
     epi_component
   )
 
-  .assess_hia_component_readiness(components, manifest = manifest)
+  result <- .assess_hia_component_readiness(components, manifest = manifest)
+  result$ignored_rr_pairs <- ignored_rr_pairs %||% .empty_ignored_rr_pairs()
+  result
 }

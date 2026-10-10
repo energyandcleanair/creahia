@@ -128,7 +128,7 @@ test_that("RR source forms normalise to grouped components with age contracts", 
 })
 
 
-test_that("RR component normalisation fails closed for incomplete inputs", {
+test_that("RR component normalisation preserves legacy unavailable-pair filtering", {
   rr_loader <- make_readiness_rr_loader()
   measure_map <- make_readiness_measure_map()
 
@@ -140,17 +140,22 @@ test_that("RR component normalisation fails closed for incomplete inputs", {
     ),
     "must be named"
   )
-  expect_error(
-    .normalise_rr_components(
-      list(source_a = "MissingCause"),
-      rr_loader = rr_loader,
-      measure_map = dplyr::bind_rows(
-        measure_map,
-        tibble::tibble(cause = "MissingCause", measure = "Deaths")
-      )
-    ),
-    "no curve data"
+  components <- .normalise_rr_components(
+    list(source_a = c("CauseA", "MissingCause")),
+    rr_loader = rr_loader,
+    measure_map = measure_map
   )
+
+  expect_true(all(components$cause == "CauseA"))
+  expect_equal(
+    attr(components, "ignored_rr_pairs"),
+    tibble::tibble(
+      cause = "MissingCause",
+      source = "source_a",
+      reason = "No curve data exists for this RR source/cause pair."
+    )
+  )
+
   expect_error(
     .normalise_rr_components(
       list(source_a = "CauseA"),
@@ -158,6 +163,18 @@ test_that("RR component normalisation fails closed for incomplete inputs", {
       measure_map = dplyr::filter(measure_map, cause != "CauseA")
     ),
     "No outcome/measure mapping"
+  )
+
+  malformed_loader <- function(source) {
+    tibble::tibble(cause = "CauseA", source = source)
+  }
+  expect_error(
+    .normalise_rr_components(
+      list(source_a = "CauseA"),
+      rr_loader = malformed_loader,
+      measure_map = measure_map
+    ),
+    "missing required columns: age"
   )
 })
 
@@ -173,6 +190,24 @@ test_that("actual default RR preference resolves child LRI to GEMM", {
   expect_true(all(child_lri$source == RR_GEMM))
   expect_true(all(child_lri$age_contract == "Under 5"))
   expect_false(any(grepl("25+", split_adults$age_contract, fixed = TRUE)))
+})
+
+
+test_that("actual named RR selection matches legacy unavailable-pair filtering", {
+  requested <- list(gemm = c(CAUSE_NCDLRI, CAUSE_DIABETES))
+  legacy_pairs <- get_cause_source(requested) %>%
+    dplyr::select(cause, source)
+  components <- .normalise_rr_components(requested)
+
+  expect_equal(
+    sort(unique(paste(components$cause, components$source, sep = "|"))),
+    sort(unique(paste(legacy_pairs$cause, legacy_pairs$source, sep = "|")))
+  )
+  expect_equal(
+    attr(components, "ignored_rr_pairs") %>%
+      dplyr::select(cause, source),
+    tibble::tibble(cause = CAUSE_DIABETES, source = RR_GEMM)
+  )
 })
 
 
@@ -368,6 +403,7 @@ test_that("whole-call readiness requires every resolved component", {
   )
   expect_true(ready$ready)
   expect_equal(nrow(ready$blocking_components), 0)
+  expect_equal(nrow(ready$ignored_rr_pairs), 0)
   expect_true(any(ready$components$component_type == "epi"))
 
   rr_id <- rr_components$component_id[[1]]
@@ -434,6 +470,56 @@ test_that("whole-call readiness requires every resolved component", {
   )
   expect_false(blocked$ready)
   expect_equal(blocked$blocking_components$component_id, blocked_id)
+})
+
+
+test_that("readiness resolver reports RR pairs ignored by the legacy selector", {
+  rr_loader <- make_readiness_rr_loader()
+  measure_map <- make_readiness_measure_map()
+  legacy_crfs <- tibble::tibble(
+    pollutant = "NO2",
+    cause = "CauseA",
+    outcome = "Deaths"
+  )
+  rr_sources <- list(source_a = c("CauseA", "MissingCause"))
+  epi <- make_readiness_epi(c("CauseA_Deaths", "CauseA_YLLs"))
+
+  crf_components <- .normalise_crf_components(
+    legacy_crfs,
+    input_mode = "legacy_profile",
+    selection_id = "legacy_profile_default"
+  )
+  rr_components <- .normalise_rr_components(
+    list(source_a = "CauseA"),
+    rr_loader = rr_loader,
+    measure_map = measure_map
+  )
+  manifest <- make_component_manifest(
+    dplyr::bind_rows(crf_components, rr_components)
+  )
+
+  resolved <- .resolve_hia_component_readiness(
+    crfs = legacy_crfs,
+    rr_sources = rr_sources,
+    epi = epi,
+    manifest = manifest,
+    crf_input_mode = "legacy_profile",
+    crf_selection_id = "legacy_profile_default",
+    epi_version = "custom",
+    rr_loader = rr_loader,
+    measure_map = measure_map
+  )
+
+  expect_true(resolved$ready)
+  expect_equal(nrow(resolved$blocking_components), 0)
+  expect_equal(
+    resolved$ignored_rr_pairs %>% dplyr::select(cause, source),
+    tibble::tibble(cause = "MissingCause", source = "source_a")
+  )
+  expect_match(
+    resolved$ignored_rr_pairs$reason,
+    "No curve data exists"
+  )
 })
 
 
