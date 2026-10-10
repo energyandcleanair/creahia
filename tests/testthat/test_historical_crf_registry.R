@@ -1,6 +1,8 @@
 make_historical_registry_row <- function(
-  readiness_status = "registry_ready",
-  blocking_reason = NA_character_
+  reproduction_status = "parity_verified",
+  reproduction_blocking_reason = NA_character_,
+  scientific_review_status = "not_reviewed",
+  scientific_review_reason = "Method review is pending."
 ) {
   load_crf_registry() %>%
     dplyr::filter(form == CRF_FORM_LOG_LINEAR) %>%
@@ -9,8 +11,10 @@ make_historical_registry_row <- function(
       crf_id = "historical_test_crf_v1",
       lifecycle = "historical_reproduction",
       visibility = "internal_compatibility",
-      readiness_status = readiness_status,
-      blocking_reason = blocking_reason,
+      reproduction_status = reproduction_status,
+      reproduction_blocking_reason = reproduction_blocking_reason,
+      scientific_review_status = scientific_review_status,
+      scientific_review_reason = scientific_review_reason,
       question_ids = "Q-test",
       provenance_notes = "Synthetic historical row used only for boundary tests."
     )
@@ -67,8 +71,10 @@ test_that("packaged historical stores account for all active CRF profiles", {
   expect_named(memberships, .historical_membership_columns())
   expect_true(all(registry$lifecycle == "historical_reproduction"))
   expect_true(all(registry$visibility == "internal_compatibility"))
-  expect_true(all(registry$readiness_status == "not_ready"))
-  expect_true(all(!is.na(registry$blocking_reason)))
+  expect_true(all(registry$reproduction_status == "not_verified"))
+  expect_true(all(!is.na(registry$reproduction_blocking_reason)))
+  expect_true(all(registry$scientific_review_status == "not_reviewed"))
+  expect_true(all(!is.na(registry$scientific_review_reason)))
   expect_true(all(!is.na(registry$question_ids)))
   expect_setequal(
     registry$crf_id,
@@ -150,7 +156,7 @@ test_that("packaged memberships cover every stable profile identity", {
       registry = registry,
       memberships = memberships
     ),
-    "not Registry-ready"
+    "not parity-verified"
   )
 })
 
@@ -184,36 +190,54 @@ test_that("historical registry requires internal lifecycle and visibility", {
 })
 
 
-test_that("historical readiness and provenance fail closed", {
-  ready <- make_historical_registry_row()
-  not_ready <- make_historical_registry_row(
-    readiness_status = "not_ready",
-    blocking_reason = "Reference mapping is unresolved."
+test_that("historical reproduction and scientific review validate separately", {
+  verified <- make_historical_registry_row()
+  not_verified <- make_historical_registry_row(
+    reproduction_status = "not_verified",
+    reproduction_blocking_reason = "Registry parity is incomplete."
   )
 
-  expect_invisible(.validate_historical_crf_registry(ready))
-  expect_invisible(.validate_historical_crf_registry(not_ready))
+  expect_invisible(.validate_historical_crf_registry(verified))
+  expect_invisible(.validate_historical_crf_registry(not_verified))
   expect_error(
     .validate_historical_crf_registry(
-      dplyr::mutate(not_ready, blocking_reason = NA_character_)
+      dplyr::mutate(
+        not_verified,
+        reproduction_blocking_reason = NA_character_
+      )
     ),
-    "must have a blocking_reason"
+    "must have a reproduction_blocking_reason"
   )
   expect_error(
     .validate_historical_crf_registry(
-      dplyr::mutate(ready, provenance_notes = NA_character_)
+      dplyr::mutate(verified, scientific_review_reason = NA_character_)
+    ),
+    "must have a scientific_review_reason"
+  )
+  expect_invisible(
+    .validate_historical_crf_registry(
+      dplyr::mutate(
+        verified,
+        scientific_review_status = "reviewed",
+        scientific_review_reason = NA_character_
+      )
+    )
+  )
+  expect_error(
+    .validate_historical_crf_registry(
+      dplyr::mutate(verified, provenance_notes = NA_character_)
     ),
     "must include provenance_notes"
   )
   expect_error(
     .validate_historical_crf_registry(
-      dplyr::mutate(ready, reference_id = "registry_fixture")
+      dplyr::mutate(verified, reference_id = "registry_fixture")
     ),
     "Validation fixtures cannot be stored"
   )
   expect_error(
     .validate_historical_crf_registry(
-      dplyr::mutate(ready, reference_id = "missing_reference")
+      dplyr::mutate(verified, reference_id = "missing_reference")
     ),
     "unknown reference_id"
   )
@@ -244,7 +268,7 @@ test_that("historical memberships map stable components to stored CRFs", {
 })
 
 
-test_that("internal resolver returns only complete historical components", {
+test_that("internal resolver uses parity without requiring scientific approval", {
   ready_registry <- make_historical_registry_row()
   memberships <- make_historical_membership(ready_registry)
 
@@ -258,8 +282,8 @@ test_that("internal resolver returns only complete historical components", {
   expect_equal(resolved$crf_id, ready_registry$crf_id)
 
   blocked_registry <- make_historical_registry_row(
-    readiness_status = "not_ready",
-    blocking_reason = "Method review is pending."
+    reproduction_status = "not_verified",
+    reproduction_blocking_reason = "Registry parity is incomplete."
   )
   expect_error(
     .resolve_historical_crf_components(
@@ -267,7 +291,7 @@ test_that("internal resolver returns only complete historical components", {
       registry = blocked_registry,
       memberships = memberships
     ),
-    "not Registry-ready.*Method review is pending"
+    "not parity-verified.*Registry parity is incomplete"
   )
   expect_error(
     .resolve_historical_crf_components(

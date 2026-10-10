@@ -49,16 +49,18 @@ make_component_manifest <- function(components, not_ready = character()) {
       outcome,
       age_contract,
       lifecycle = "historical_reproduction",
-      readiness_status = ifelse(
+      reproduction_status = ifelse(
         component_id %in% not_ready,
-        "not_ready",
-        "registry_ready"
+        "not_verified",
+        "parity_verified"
       ),
-      blocking_reason = ifelse(
+      reproduction_blocking_reason = ifelse(
         component_id %in% not_ready,
         "Historical Registry data is incomplete.",
         NA_character_
-      )
+      ),
+      scientific_review_status = "not_reviewed",
+      scientific_review_reason = "Method review is pending."
     )
 }
 
@@ -268,7 +270,7 @@ test_that("explicit Registry Sets are runtime-ready components", {
 })
 
 
-test_that("component manifest separates lifecycle from readiness", {
+test_that("component manifest separates reproduction from scientific review", {
   components <- tibble::tibble(
     component_id = "rr|source_a|CauseA|Deaths|25-29",
     component_type = "rr",
@@ -278,8 +280,10 @@ test_that("component manifest separates lifecycle from readiness", {
     outcome = "Deaths",
     age_contract = "25-29",
     lifecycle = "historical_reproduction",
-    readiness_status = "registry_ready",
-    blocking_reason = NA_character_
+    reproduction_status = "parity_verified",
+    reproduction_blocking_reason = NA_character_,
+    scientific_review_status = "not_reviewed",
+    scientific_review_reason = "Method review is pending."
   )
 
   expect_invisible(.validate_component_manifest(components))
@@ -287,7 +291,9 @@ test_that("component manifest separates lifecycle from readiness", {
     .validate_component_manifest(
       dplyr::mutate(
         components,
-        lifecycle = "validation_fixture"
+        lifecycle = "validation_fixture",
+        scientific_review_status = "not_applicable",
+        scientific_review_reason = NA_character_
       )
     ),
     "fixtures cannot satisfy"
@@ -296,10 +302,19 @@ test_that("component manifest separates lifecycle from readiness", {
     .validate_component_manifest(
       dplyr::mutate(
         components,
-        readiness_status = "not_ready"
+        reproduction_status = "not_verified"
       )
     ),
-    "must have a blocking_reason"
+    "must have a reproduction_blocking_reason"
+  )
+  expect_error(
+    .validate_component_manifest(
+      dplyr::mutate(
+        components,
+        scientific_review_reason = NA_character_
+      )
+    ),
+    "must have a scientific_review_reason"
   )
 })
 

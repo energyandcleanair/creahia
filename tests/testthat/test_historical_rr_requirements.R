@@ -84,9 +84,12 @@ test_that("historical RR requirements remain fail-closed", {
     dplyr::pull(required_by) %>%
     unique()
 
-  expect_true(all(inventory$readiness_status == "not_ready"))
-  expect_true(all(!is.na(inventory$blocking_reason)))
-  expect_true(all(inventory$blocking_reason != ""))
+  expect_true(all(inventory$reproduction_status == "not_verified"))
+  expect_true(all(!is.na(inventory$reproduction_blocking_reason)))
+  expect_true(all(inventory$reproduction_blocking_reason != ""))
+  expect_true(all(inventory$scientific_review_status == "not_reviewed"))
+  expect_true(all(!is.na(inventory$scientific_review_reason)))
+  expect_true(all(inventory$scientific_review_reason != ""))
   expect_setequal(represented_configurations, configurations$mapping_id)
   expect_true(all(is.na(
     inventory$public_registry_crf_ids[

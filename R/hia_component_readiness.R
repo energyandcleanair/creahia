@@ -52,8 +52,10 @@
     "outcome",
     "age_contract",
     "lifecycle",
-    "readiness_status",
-    "blocking_reason"
+    "reproduction_status",
+    "reproduction_blocking_reason",
+    "scientific_review_status",
+    "scientific_review_reason"
   )
 
   missing_columns <- setdiff(required_columns, names(manifest))
@@ -101,41 +103,96 @@
     )
   }
 
-  allowed_statuses <- c("registry_ready", "not_ready")
-  invalid_statuses <- setdiff(
-    unique(manifest$readiness_status),
-    allowed_statuses
+  allowed_reproduction_statuses <- c("parity_verified", "not_verified")
+  invalid_reproduction_statuses <- setdiff(
+    unique(manifest$reproduction_status),
+    allowed_reproduction_statuses
   )
-  if (length(invalid_statuses) > 0) {
+  if (length(invalid_reproduction_statuses) > 0) {
     stop(
-      "Component readiness manifest contains invalid readiness_status values: ",
-      paste(invalid_statuses, collapse = ", "),
+      "Component readiness manifest contains invalid reproduction_status values: ",
+      paste(invalid_reproduction_statuses, collapse = ", "),
       call. = FALSE
     )
   }
 
-  ready_with_blocker <- manifest$readiness_status == "registry_ready" &
-    !is.na(manifest$blocking_reason)
-  not_ready_without_blocker <- manifest$readiness_status == "not_ready" &
-    is.na(manifest$blocking_reason)
+  allowed_scientific_statuses <- c(
+    "reviewed",
+    "not_reviewed",
+    "not_applicable"
+  )
+  invalid_scientific_statuses <- setdiff(
+    unique(manifest$scientific_review_status),
+    allowed_scientific_statuses
+  )
+  if (length(invalid_scientific_statuses) > 0) {
+    stop(
+      "Component readiness manifest contains invalid scientific_review_status values: ",
+      paste(invalid_scientific_statuses, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  verified_with_blocker <-
+    manifest$reproduction_status == "parity_verified" &
+    !is.na(manifest$reproduction_blocking_reason)
+  unverified_without_blocker <-
+    manifest$reproduction_status == "not_verified" &
+    (is.na(manifest$reproduction_blocking_reason) |
+      manifest$reproduction_blocking_reason == "")
+  unreviewed_without_reason <-
+    manifest$scientific_review_status == "not_reviewed" &
+    (is.na(manifest$scientific_review_reason) |
+      manifest$scientific_review_reason == "")
+  reviewed_with_reason <-
+    manifest$scientific_review_status == "reviewed" &
+    !is.na(manifest$scientific_review_reason)
   fixture_marked_ready <- manifest$lifecycle == "validation_fixture" &
-    manifest$readiness_status == "registry_ready"
+    manifest$reproduction_status == "parity_verified"
+  fixture_scientific_status <- manifest$lifecycle == "validation_fixture" &
+    manifest$scientific_review_status != "not_applicable"
+  reviewed_public_without_review <- manifest$lifecycle == "reviewed_public" &
+    manifest$scientific_review_status != "reviewed"
 
-  if (any(ready_with_blocker)) {
+  if (any(verified_with_blocker)) {
     stop(
-      "Registry-ready components must not retain a blocking_reason.",
+      "Parity-verified components must not retain a reproduction_blocking_reason.",
       call. = FALSE
     )
   }
-  if (any(not_ready_without_blocker)) {
+  if (any(unverified_without_blocker)) {
     stop(
-      "Not-ready components must have a blocking_reason.",
+      "Not-verified components must have a reproduction_blocking_reason.",
+      call. = FALSE
+    )
+  }
+  if (any(unreviewed_without_reason)) {
+    stop(
+      "Not-reviewed components must have a scientific_review_reason.",
+      call. = FALSE
+    )
+  }
+  if (any(reviewed_with_reason)) {
+    stop(
+      "Reviewed components must not retain a scientific_review_reason.",
       call. = FALSE
     )
   }
   if (any(fixture_marked_ready)) {
     stop(
       "Validation fixtures cannot satisfy production Registry readiness.",
+      call. = FALSE
+    )
+  }
+  if (any(fixture_scientific_status)) {
+    stop(
+      "Validation fixtures must use scientific_review_status 'not_applicable'.",
+      call. = FALSE
+    )
+  }
+  if (any(reviewed_public_without_review)) {
+    stop(
+      "Reviewed-public components must have scientific_review_status 'reviewed'.",
       call. = FALSE
     )
   }
@@ -510,8 +567,10 @@
     dplyr::select(
       component_id,
       lifecycle,
-      readiness_status,
-      manifest_blocking_reason = blocking_reason
+      reproduction_status,
+      manifest_blocking_reason = reproduction_blocking_reason,
+      scientific_review_status,
+      scientific_review_reason
     )
 
   assessed <- components %>%
@@ -520,13 +579,13 @@
       ready = dplyr::case_when(
         readiness_source == "runtime_validation" ~ runtime_ready,
         readiness_source == "manifest" &
-          readiness_status == "registry_ready" ~ TRUE,
+          reproduction_status == "parity_verified" ~ TRUE,
         TRUE ~ FALSE
       ),
       blocking_reason = dplyr::case_when(
         ready ~ NA_character_,
         readiness_source == "runtime_validation" ~ blocking_reason,
-        is.na(readiness_status) ~
+        is.na(reproduction_status) ~
           "Component is absent from the readiness manifest.",
         TRUE ~ manifest_blocking_reason
       )

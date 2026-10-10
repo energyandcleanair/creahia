@@ -2,8 +2,10 @@
   c(
     "lifecycle",
     "visibility",
-    "readiness_status",
-    "blocking_reason",
+    "reproduction_status",
+    "reproduction_blocking_reason",
+    "scientific_review_status",
+    "scientific_review_reason",
     "question_ids",
     "provenance_notes"
   )
@@ -96,27 +98,71 @@
     )
   }
 
-  allowed_statuses <- c("not_ready", "registry_ready")
-  if (!all(registry$readiness_status %in% allowed_statuses)) {
+  allowed_reproduction_statuses <- c("not_verified", "parity_verified")
+  if (!all(registry$reproduction_status %in% allowed_reproduction_statuses)) {
     stop(
-      "Historical CRF readiness_status must be 'not_ready' or 'registry_ready'.",
+      paste(
+        "Historical CRF reproduction_status must be 'not_verified'",
+        "or 'parity_verified'."
+      ),
       call. = FALSE
     )
   }
 
-  ready_with_blocker <- registry$readiness_status == "registry_ready" &
-    !is.na(registry$blocking_reason)
-  not_ready_without_blocker <- registry$readiness_status == "not_ready" &
-    (is.na(registry$blocking_reason) | registry$blocking_reason == "")
-  if (any(ready_with_blocker)) {
+  verified_with_blocker <-
+    registry$reproduction_status == "parity_verified" &
+    !is.na(registry$reproduction_blocking_reason)
+  not_verified_without_blocker <-
+    registry$reproduction_status == "not_verified" &
+    (is.na(registry$reproduction_blocking_reason) |
+      registry$reproduction_blocking_reason == "")
+  if (any(verified_with_blocker)) {
     stop(
-      "Registry-ready historical CRFs must not retain a blocking_reason.",
+      paste(
+        "Parity-verified historical CRFs must not retain a",
+        "reproduction_blocking_reason."
+      ),
       call. = FALSE
     )
   }
-  if (any(not_ready_without_blocker)) {
+  if (any(not_verified_without_blocker)) {
     stop(
-      "Not-ready historical CRFs must have a blocking_reason.",
+      paste(
+        "Not-verified historical CRFs must have a",
+        "reproduction_blocking_reason."
+      ),
+      call. = FALSE
+    )
+  }
+
+  allowed_scientific_statuses <- c("reviewed", "not_reviewed")
+  if (!all(registry$scientific_review_status %in%
+      allowed_scientific_statuses)) {
+    stop(
+      paste(
+        "Historical CRF scientific_review_status must be 'reviewed'",
+        "or 'not_reviewed'."
+      ),
+      call. = FALSE
+    )
+  }
+
+  reviewed_with_reason <-
+    registry$scientific_review_status == "reviewed" &
+    !is.na(registry$scientific_review_reason)
+  not_reviewed_without_reason <-
+    registry$scientific_review_status == "not_reviewed" &
+    (is.na(registry$scientific_review_reason) |
+      registry$scientific_review_reason == "")
+  if (any(reviewed_with_reason)) {
+    stop(
+      "Reviewed historical CRFs must not retain a scientific_review_reason.",
+      call. = FALSE
+    )
+  }
+  if (any(not_reviewed_without_reason)) {
+    stop(
+      "Not-reviewed historical CRFs must have a scientific_review_reason.",
       call. = FALSE
     )
   }
@@ -268,15 +314,15 @@
     dplyr::inner_join(registry, by = "crf_id")
 
   blocked <- selected %>%
-    dplyr::filter(readiness_status != "registry_ready")
+    dplyr::filter(reproduction_status != "parity_verified")
   if (nrow(blocked) > 0) {
     details <- paste0(
       blocked$component_id,
       ": ",
-      blocked$blocking_reason
+      blocked$reproduction_blocking_reason
     )
     stop(
-      "Historical components are not Registry-ready: ",
+      "Historical components are not parity-verified: ",
       paste(details, collapse = "; "),
       call. = FALSE
     )

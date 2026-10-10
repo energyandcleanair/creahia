@@ -15,8 +15,10 @@ load_historical_rr_requirements <- function() {
       required_by = readr::col_character(),
       public_registry_crf_ids = readr::col_character(),
       coverage_status = readr::col_character(),
-      readiness_status = readr::col_character(),
-      blocking_reason = readr::col_character()
+      reproduction_status = readr::col_character(),
+      reproduction_blocking_reason = readr::col_character(),
+      scientific_review_status = readr::col_character(),
+      scientific_review_reason = readr::col_character()
     )
   )
 }
