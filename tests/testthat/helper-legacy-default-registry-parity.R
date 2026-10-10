@@ -24,10 +24,11 @@ read_legacy_default_paf_fingerprint <- function() {
     dplyr::arrange(.data$pollutant, .data$cause, .data$outcome)
 }
 
-read_legacy_default_registry_fixture <- function() {
-  load_crf_registry(
-    path = testthat::test_path("fixtures", "legacy_default_registry.csv")
-  )
+resolve_historical_default_crfs <- function() {
+  memberships <- .load_historical_crf_memberships() %>%
+    dplyr::filter(selection_id == "legacy_profile_default")
+
+  .resolve_historical_crf_components(memberships$component_id)
 }
 
 legacy_default_hia_epi_fixture <- function() {

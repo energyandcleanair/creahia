@@ -317,7 +317,7 @@ test_that("shadow mode resolves the current package default contract", {
     component_counts$n[component_counts$component_type == "epi"],
     1
   )
-  expect_equal(nrow(observation$result$blocking_components), 33)
+  expect_equal(nrow(observation$result$blocking_components), 18)
   expect_equal(nrow(observation$result$ignored_rr_pairs), 0)
   expect_equal(
     nrow(observation$specification$components$crf),
@@ -379,18 +379,19 @@ test_that("GBD 2019 historical contract exposes its complete readiness gap", {
   )
   expect_true(components$ready[components$component_type == "epi"])
   expect_true(all(
-    components$reproduction_status[components$component_type != "epi"] ==
+    components$reproduction_status[components$component_type == "crf"] ==
+      "parity_verified"
+  ))
+  expect_true(all(components$ready[components$component_type == "crf"]))
+  expect_true(all(
+    components$reproduction_status[components$component_type == "rr"] ==
       "not_verified"
   ))
-  expect_equal(nrow(blocking_components), 33)
+  expect_equal(nrow(blocking_components), 18)
   expect_equal(
     blocking_summary,
     tibble::tribble(
       ~component_type, ~source, ~n,
-      "crf", "NO2", 4L,
-      "crf", "O3_8h", 4L,
-      "crf", "PM25", 5L,
-      "crf", "SO2", 2L,
       "rr", "gemm", 14L,
       "rr", "original", 4L
     )

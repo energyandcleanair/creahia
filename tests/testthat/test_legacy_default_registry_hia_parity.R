@@ -1,6 +1,6 @@
 test_that("Registry path reproduces legacy default impacts end to end", {
   legacy_crfs <- get_crfs("default")
-  registry_crfs <- new_crfs_set(read_legacy_default_registry_fixture())
+  registry_crfs <- resolve_historical_default_crfs()
   conc_map <- legacy_default_fingerprint_conc_map()
   epi <- legacy_default_hia_epi_fixture()
   regions <- tibble::tibble(

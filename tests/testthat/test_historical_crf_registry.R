@@ -71,8 +71,16 @@ test_that("packaged historical stores account for all active CRF profiles", {
   expect_named(memberships, .historical_membership_columns())
   expect_true(all(registry$lifecycle == "historical_reproduction"))
   expect_true(all(registry$visibility == "internal_compatibility"))
-  expect_true(all(registry$reproduction_status == "not_verified"))
-  expect_true(all(!is.na(registry$reproduction_blocking_reason)))
+  default_rows <- registry %>%
+    dplyr::filter(grepl("^historical_default_", crf_id))
+  other_rows <- registry %>%
+    dplyr::filter(!grepl("^historical_default_", crf_id))
+  expect_equal(nrow(default_rows), 15L)
+  expect_true(all(default_rows$reproduction_status == "parity_verified"))
+  expect_true(all(is.na(default_rows$reproduction_blocking_reason)))
+  expect_equal(nrow(other_rows), 10L)
+  expect_true(all(other_rows$reproduction_status == "not_verified"))
+  expect_true(all(!is.na(other_rows$reproduction_blocking_reason)))
   expect_true(all(registry$scientific_review_status == "not_reviewed"))
   expect_true(all(!is.na(registry$scientific_review_reason)))
   expect_true(all(!is.na(registry$question_ids)))
@@ -150,6 +158,15 @@ test_that("packaged memberships cover every stable profile identity", {
   })
 
   expect_setequal(memberships$crf_id, registry$crf_id)
+  default_memberships <- memberships %>%
+    dplyr::filter(selection_id == "legacy_profile_default")
+  resolved_default <- .resolve_historical_crf_components(
+    component_ids = default_memberships$component_id,
+    registry = registry,
+    memberships = memberships
+  )
+  expect_s3_class(resolved_default, "creahia_historical_crf_set")
+  expect_equal(nrow(resolved_default), 15L)
   expect_error(
     .resolve_historical_crf_components(
       component_ids = memberships$component_id,

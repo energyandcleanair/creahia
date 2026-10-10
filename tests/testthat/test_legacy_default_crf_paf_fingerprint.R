@@ -23,14 +23,13 @@ test_that("legacy default CRF PAF fingerprint remains stable", {
 })
 
 test_that("Registry path reproduces all 15 legacy default CRF PAF rows", {
-  registry_crfs <- read_legacy_default_registry_fixture()
+  registry_crfs <- resolve_historical_default_crfs()
   production_crf_ids <- load_crf_registry()$crf_id
 
-  # These rows reproduce historical calculations for testing only. Keeping
-  # their IDs out of the packaged Registry prevents numerical parity from being
-  # mistaken for scientific approval.
+  # Historical reproduction rows remain internal even after numerical parity.
   testthat::expect_equal(nrow(registry_crfs), 15L)
   testthat::expect_named(registry_crfs, CRF_REGISTRY_REQUIRED_COLUMNS)
+  testthat::expect_s3_class(registry_crfs, "creahia_historical_crf_set")
   testthat::expect_false(any(registry_crfs$crf_id %in% production_crf_ids))
 
   actual <- compute_hia_paf_crfs_registry(
