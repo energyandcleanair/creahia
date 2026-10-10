@@ -1,48 +1,3 @@
-.observe_default_hia_readiness <- function(
-  crfs,
-  rr_sources,
-  epi,
-  epi_version,
-  population_year_intent
-) {
-  observation <- tryCatch(
-    {
-      result <- .resolve_hia_component_readiness(
-        crfs = crfs,
-        rr_sources = rr_sources,
-        epi = epi,
-        crf_input_mode = "legacy_profile",
-        crf_selection_id = "legacy_profile_default",
-        epi_version = epi_version
-      )
-      specification <- .new_default_hia_specification(
-        readiness = result,
-        population_year_intent = population_year_intent
-      )
-
-      list(
-        status = "resolved",
-        result = result,
-        specification = specification
-      )
-    },
-    error = function(error) {
-      list(status = "error", error = conditionMessage(error))
-    }
-  )
-
-  observer <- getOption("creahia.hia_readiness_shadow_observer")
-  if (is.function(observer)) {
-    tryCatch(
-      observer(observation),
-      error = function(error) invisible(NULL)
-    )
-  }
-
-  invisible(observation)
-}
-
-
 #' Compute HIA
 #'
 #' @param conc_map
@@ -87,20 +42,16 @@ compute_hia <- function(conc_map,
                         gbd_causes = NULL,
                         ...){
 
+  argument_provenance <- list(
+    rr_sources_supplied = !missing(rr_sources),
+    epi_supplied = !missing(epi),
+    crfs_supplied = !missing(crfs)
+  )
   supplied_population_years <- list(
     pop_year = pop_year,
     scale_base_year = scale_base_year,
     scale_target_year = scale_target_year
   )
-
-  observe_default_readiness <-
-    missing(rr_sources) &&
-    missing(epi) &&
-    missing(crfs) &&
-    identical(epi_version, "default") &&
-    identical(crfs_version, "default") &&
-    is.null(calc_causes) &&
-    is.null(gbd_causes)
 
   crf_compute <- match.arg(crf_compute)
 
@@ -131,21 +82,29 @@ compute_hia <- function(conc_map,
 
   validate_crfs_against_epi(crfs = crfs, epi = epi, species = species)
 
-  if (observe_default_readiness && identical(crf_compute, "legacy")) {
-    population_year_intent <- .capture_population_year_intent(
-      pop_year = supplied_population_years$pop_year,
-      scale_base_year = supplied_population_years$scale_base_year,
-      scale_target_year = supplied_population_years$scale_target_year,
-      resolved_pop_year = pop_year
-    )
-    .observe_default_hia_readiness(
-      crfs = crfs,
-      rr_sources = rr_sources,
-      epi = epi,
+  population_year_intent <- .capture_population_year_intent(
+    pop_year = supplied_population_years$pop_year,
+    scale_base_year = supplied_population_years$scale_base_year,
+    scale_target_year = supplied_population_years$scale_target_year,
+    resolved_pop_year = pop_year
+  )
+  compatibility_context <- c(
+    argument_provenance,
+    list(
       epi_version = epi_version,
-      population_year_intent = population_year_intent
+      crfs_version = crfs_version,
+      crf_compute = crf_compute,
+      calc_causes = calc_causes,
+      gbd_causes = gbd_causes
     )
-  }
+  )
+  .observe_hia_compatibility_boundary(
+    crfs = crfs,
+    rr_sources = rr_sources,
+    epi = epi,
+    context = compatibility_context,
+    population_year_intent = population_year_intent
+  )
 
   message("Computing PAF")
   paf <- compute_hia_paf(

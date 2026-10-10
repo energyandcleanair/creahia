@@ -39,6 +39,21 @@ run_shadow_test_hia <- function(...) {
 }
 
 
+make_shadow_test_boundary_context <- function(...) {
+  defaults <- list(
+    rr_sources_supplied = FALSE,
+    epi_supplied = FALSE,
+    crfs_supplied = FALSE,
+    epi_version = "default",
+    crfs_version = "default",
+    crf_compute = "legacy",
+    calc_causes = NULL,
+    gbd_causes = NULL
+  )
+  utils::modifyList(defaults, list(...))
+}
+
+
 test_that("actual default HIA call observes readiness without changing output", {
   seen <- new.env(parent = emptyenv())
   expected <- make_shadow_test_impacts()
@@ -189,14 +204,14 @@ test_that("shadow observer failures stay internal", {
       readiness
     },
     {
-      observation <- .observe_default_hia_readiness(
+      observation <- .observe_hia_compatibility_boundary(
         crfs = make_shadow_test_crfs(),
         rr_sources = tibble::tibble(
           cause = "NCD.LRI",
           source = RR_GEMM
         ),
         epi = make_shadow_test_epi(),
-        epi_version = "default",
+        context = make_shadow_test_boundary_context(),
         population_year_intent = .capture_population_year_intent(
           pop_year = NULL,
           scale_base_year = NULL,
@@ -217,11 +232,11 @@ test_that("shadow observer failures stay internal", {
 
 
 test_that("shadow mode resolves the current package default contract", {
-  observation <- .observe_default_hia_readiness(
+  observation <- .observe_hia_compatibility_boundary(
     crfs = get_crfs("default"),
     rr_sources = parse_rr_sources(c(RR_GEMM, RR_ORIGINAL)),
     epi = get_epi("default"),
-    epi_version = "default",
+    context = make_shadow_test_boundary_context(),
     population_year_intent = .capture_population_year_intent(
       pop_year = NULL,
       scale_base_year = NULL,
