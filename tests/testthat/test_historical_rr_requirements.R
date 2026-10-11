@@ -241,9 +241,9 @@ test_that("Fusion child LRI keeps one exact internal copy of duplicate rows", {
   expect_equal(dplyr::n_distinct(historical_registry$data_path), 1L)
   expect_false(any(historical_registry$double_counted))
   expect_true(all(
-    historical_registry$reproduction_status == "not_verified"
+    historical_registry$reproduction_status == "parity_verified"
   ))
-  expect_true(all(!is.na(
+  expect_true(all(is.na(
     historical_registry$reproduction_blocking_reason
   )))
   expect_true(all(
@@ -251,6 +251,12 @@ test_that("Fusion child LRI keeps one exact internal copy of duplicate rows", {
   ))
   expect_true(all(manifest$coverage_status == "historical_internal_candidate"))
   expect_true(all(manifest$routing_status == "not_ready"))
+  expect_true(all(
+    manifest$routing_blocking_reason == paste(
+      "Historical RR routing remains disabled pending methodology and",
+      "readiness review."
+    )
+  ))
   expect_true(all(is.na(manifest$public_registry_crf_ids)))
   expect_false(any(
     historical_registry$crf_id %in% load_crf_registry()$crf_id
@@ -354,8 +360,8 @@ test_that("historical RR requirements remain fail-closed", {
       tibble::as_tibble(),
     tibble::tribble(
       ~reproduction_status, ~n,
-      "not_verified", 35L,
-      "parity_verified", 34L
+      "not_verified", 33L,
+      "parity_verified", 36L
     )
   )
   expect_true(all(
