@@ -76,11 +76,11 @@ test_that("historical RR inventory records current Registry data coverage", {
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_candidate"),
-    21
+    23
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_required"),
-    35
+    33
   )
 })
 
@@ -159,7 +159,7 @@ test_that("Fusion death requirements record parity without routing promotion", {
 
 test_that("Fusion YLL and YLD outcome reuse is represented only internally", {
   historical_registry <- .load_historical_rr_registry() %>%
-    dplyr::filter(source == RR_FUSION)
+    dplyr::filter(source == RR_FUSION, cause != CAUSE_LRICHILD)
   manifest <- .load_historical_rr_manifest() %>%
     dplyr::filter(component_id %in% historical_registry$component_id)
 
@@ -218,6 +218,124 @@ test_that("Fusion YLL and YLD outcome reuse is represented only internally", {
       info = candidate$component_id
     )
   }
+})
+
+
+test_that("Fusion child LRI keeps one exact internal copy of duplicate rows", {
+  historical_registry <- .load_historical_rr_registry() %>%
+    dplyr::filter(source == RR_FUSION, cause == CAUSE_LRICHILD)
+  manifest <- .load_historical_rr_manifest() %>%
+    dplyr::filter(component_id %in% historical_registry$component_id)
+  legacy_child <- get_rr(RR_FUSION) %>%
+    dplyr::filter(cause == CAUSE_LRICHILD, age == AGE_CHILDREN)
+  duplicate_contract <- legacy_child %>%
+    dplyr::group_by(age, exposure) %>%
+    dplyr::summarise(
+      row_count = dplyr::n(),
+      distinct_values = dplyr::n_distinct(paste(low, central, high)),
+      .groups = "drop"
+    )
+
+  expect_equal(nrow(historical_registry), 2L)
+  expect_setequal(historical_registry$outcome, c("Deaths", "YLLs"))
+  expect_equal(dplyr::n_distinct(historical_registry$data_path), 1L)
+  expect_false(any(historical_registry$double_counted))
+  expect_true(all(
+    historical_registry$reproduction_status == "not_verified"
+  ))
+  expect_true(all(!is.na(
+    historical_registry$reproduction_blocking_reason
+  )))
+  expect_true(all(
+    historical_registry$scientific_review_status == "not_reviewed"
+  ))
+  expect_true(all(manifest$coverage_status == "historical_internal_candidate"))
+  expect_true(all(manifest$routing_status == "not_ready"))
+  expect_true(all(is.na(manifest$public_registry_crf_ids)))
+  expect_false(any(
+    historical_registry$crf_id %in% load_crf_registry()$crf_id
+  ))
+
+  expect_equal(nrow(legacy_child), 6002L)
+  expect_equal(nrow(duplicate_contract), 3001L)
+  expect_true(all(duplicate_contract$row_count == 2L))
+  expect_true(all(duplicate_contract$distinct_values == 1L))
+
+  expected_curve <- legacy_child %>%
+    dplyr::select(exposure, age, low, central, high) %>%
+    dplyr::distinct(exposure, age, .keep_all = TRUE) %>%
+    dplyr::arrange(age, exposure) %>%
+    tibble::as_tibble()
+  for (i in seq_len(nrow(historical_registry))) {
+    candidate <- historical_registry[i, , drop = FALSE]
+    candidate_data <- load_crf_tabular(candidate) %>%
+      dplyr::arrange(age, exposure) %>%
+      tibble::as_tibble()
+
+    expect_identical(
+      .canonical_rr_age_contract(candidate_data$age),
+      AGE_CHILDREN,
+      info = candidate$component_id
+    )
+    expect_equal(
+      candidate_data,
+      expected_curve,
+      tolerance = 0,
+      info = candidate$component_id
+    )
+  }
+})
+
+
+test_that("Fusion child LRI internal curve is reproducible and fail-closed", {
+  output_dir <- withr::local_tempdir()
+  output_paths <- .compile_historical_fusion_rr_curves(
+    output_dir = output_dir
+  )
+  committed_dir <- get_hia_path(
+    "rr/compatibility/tabular",
+    error_if_not_exists = TRUE
+  )
+
+  expect_setequal(
+    basename(output_paths),
+    .historical_fusion_rr_curve_specs()$filename
+  )
+  for (output_path in output_paths) {
+    generated <- readr::read_csv(output_path, show_col_types = FALSE)
+    committed <- readr::read_csv(
+      file.path(committed_dir, basename(output_path)),
+      show_col_types = FALSE
+    )
+    expect_equal(
+      generated,
+      committed,
+      tolerance = 0,
+      info = basename(output_path)
+    )
+  }
+
+  conflicting_source <- readr::read_csv(
+    get_hia_path("rr/processed/rr_fusion.csv", error_if_not_exists = TRUE),
+    show_col_types = FALSE
+  )
+  child_rows <- which(
+    conflicting_source$source == RR_FUSION &
+      conflicting_source$cause == CAUSE_LRICHILD &
+      conflicting_source$age == AGE_CHILDREN
+  )
+  conflicting_source$central[[child_rows[[1]]]] <-
+    conflicting_source$central[[child_rows[[1]]]] + 0.01
+  conflicting_path <- file.path(withr::local_tempdir(), "rr_fusion.csv")
+  readr::write_csv(conflicting_source, conflicting_path)
+
+  expect_error(
+    .compile_historical_fusion_rr_curves(
+      source_path = conflicting_path,
+      output_dir = withr::local_tempdir()
+    ),
+    "duplicate exposure rows contain different RR values"
+  )
 })
 
 
@@ -376,7 +494,7 @@ test_that("GEMM YLL and YLD outcome reuse is represented only internally", {
     dplyr::filter(component_id %in% historical_registry$component_id)
 
   expect_equal(nrow(expected_components), 8L)
-  expect_equal(nrow(complete_historical_registry), 21L)
+  expect_equal(nrow(complete_historical_registry), 23L)
   expect_equal(nrow(historical_registry), 8L)
   expect_setequal(
     historical_registry$component_id,

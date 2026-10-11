@@ -5,7 +5,7 @@ test_that("internal Fusion YLL and YLD rows reproduce historical results", {
     "readiness review."
   )
   internal_registry <- .load_historical_rr_registry() %>%
-    dplyr::filter(source == RR_FUSION)
+    dplyr::filter(source == RR_FUSION, cause != CAUSE_LRICHILD)
   manifest <- .load_historical_rr_manifest() %>%
     dplyr::filter(component_id %in% internal_registry$component_id)
 
