@@ -69,6 +69,70 @@
 }
 
 
+.derive_historical_component_routing_checklist <- function(
+  components,
+  registry_data_available
+) {
+  required_columns <- c(
+    "lifecycle",
+    "visibility",
+    "reproduction_status"
+  )
+  missing_columns <- setdiff(required_columns, names(components))
+  if (length(missing_columns) > 0) {
+    stop(
+      "Historical routing checklist is missing required columns: ",
+      paste(missing_columns, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  if (
+    !is.logical(registry_data_available) ||
+    length(registry_data_available) != nrow(components) ||
+    anyNA(registry_data_available)
+  ) {
+    stop(
+      paste(
+        "registry_data_available must contain one non-missing logical value",
+        "per historical component."
+      ),
+      call. = FALSE
+    )
+  }
+
+  checklist <- tibble::tibble(
+    routing_check_data_available = registry_data_available,
+    routing_check_reproduction_verified =
+      components$reproduction_status == "parity_verified",
+    routing_check_visibility_guarded =
+      components$lifecycle == "historical_reproduction" &
+      components$visibility == "internal_compatibility"
+  ) %>%
+    dplyr::mutate(
+      routing_checklist_complete =
+        routing_check_data_available &
+        routing_check_reproduction_verified &
+        routing_check_visibility_guarded,
+      routing_checklist_status = dplyr::if_else(
+        routing_checklist_complete,
+        "ready",
+        "not_ready"
+      ),
+      routing_checklist_blocking_reason = dplyr::case_when(
+        routing_checklist_complete ~ NA_character_,
+        !routing_check_data_available ~
+          "Registry-shaped historical component data is incomplete.",
+        !routing_check_reproduction_verified ~
+          "Numerical reproduction evidence is incomplete.",
+        !routing_check_visibility_guarded ~
+          "Historical component visibility guard is incomplete."
+      )
+    )
+
+  checklist
+}
+
+
 .validate_component_manifest <- function(manifest) {
   required_columns <- c(
     "component_id",

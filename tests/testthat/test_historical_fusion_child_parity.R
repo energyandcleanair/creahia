@@ -1,9 +1,5 @@
 test_that("internal Fusion child LRI rows reproduce PAF and impacts", {
   results <- run_historical_fusion_child_parity_fixture()
-  policy_hold <- paste(
-    "Historical RR routing remains disabled pending methodology and",
-    "readiness review."
-  )
   internal_registry <- .load_historical_rr_registry() %>%
     dplyr::filter(source == RR_FUSION, cause == CAUSE_LRICHILD)
   manifest <- .load_historical_rr_manifest() %>%
@@ -13,8 +9,9 @@ test_that("internal Fusion child LRI rows reproduce PAF and impacts", {
   expect_true(all(manifest$reproduction_status == "parity_verified"))
   expect_true(all(is.na(internal_registry$reproduction_blocking_reason)))
   expect_true(all(is.na(manifest$reproduction_blocking_reason)))
-  expect_true(all(manifest$routing_status == "not_ready"))
-  expect_true(all(manifest$routing_blocking_reason == policy_hold))
+  expect_true(all(manifest$routing_checklist_complete))
+  expect_true(all(manifest$routing_status == "ready"))
+  expect_true(all(is.na(manifest$routing_blocking_reason)))
 
   warning_sets <- list(
     legacy_paf = results$legacy_paf$warnings,

@@ -7,9 +7,9 @@ test_that("the first historical contract reproduces as one Registry Set", {
 
   expect_s3_class(registry_crfs, "creahia_hia_diagnostic_set")
   expect_s3_class(registry_crfs, "creahia_crf_set")
-  expect_false(results$specification$readiness$ready)
+  expect_true(results$specification$readiness$ready)
   expect_true(all(
-    results$specification$components$rr$routing_status == "not_ready"
+    results$specification$components$rr$routing_status == "ready"
   ))
   expect_equal(nrow(registry_crfs), 33L)
   expect_equal(sum(registry_crfs$crf_id %in% historical_crf_ids), 15L)
@@ -118,7 +118,29 @@ test_that("diagnostic RR resolution requires parity evidence", {
         component_id == blocked_id,
         "Parity evidence is incomplete.",
         reproduction_blocking_reason
-      )
+      ),
+      routing_check_reproduction_verified = dplyr::if_else(
+        component_id == blocked_id,
+        FALSE,
+        routing_check_reproduction_verified
+      ),
+      routing_checklist_complete = dplyr::if_else(
+        component_id == blocked_id,
+        FALSE,
+        routing_checklist_complete
+      ),
+      routing_checklist_status = dplyr::if_else(
+        component_id == blocked_id,
+        "not_ready",
+        routing_checklist_status
+      ),
+      routing_checklist_blocking_reason = dplyr::if_else(
+        component_id == blocked_id,
+        "Numerical reproduction evidence is incomplete.",
+        routing_checklist_blocking_reason
+      ),
+      routing_status = routing_checklist_status,
+      routing_blocking_reason = routing_checklist_blocking_reason
     )
 
   expect_error(

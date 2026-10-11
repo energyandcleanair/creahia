@@ -467,7 +467,14 @@ test_that("shadow mode resolves the current package default contract", {
     component_counts$n[component_counts$component_type == "epi"],
     1
   )
-  expect_equal(nrow(observation$result$blocking_components), 18)
+  expect_equal(nrow(observation$result$blocking_components), 2)
+  expect_setequal(
+    observation$result$blocking_components$component_id,
+    c(
+      "rr|gemm|LRI.child|Deaths",
+      "rr|gemm|LRI.child|YLLs"
+    )
+  )
   expect_equal(nrow(observation$result$ignored_rr_pairs), 0)
   expect_equal(
     nrow(observation$specification$components$crf),
@@ -485,7 +492,7 @@ test_that("shadow mode resolves the current package default contract", {
 })
 
 
-test_that("GBD 2019 historical contract exposes its complete readiness gap", {
+test_that("GBD 2019 historical contract satisfies component routing", {
   rr_selection <- .resolve_hia_rr_selection_boundary(
     rr_sources = c(RR_GEMM, RR_ORIGINAL),
     calc_causes = "GEMM and GBD",
@@ -510,16 +517,12 @@ test_that("GBD 2019 historical contract exposes its complete readiness gap", {
   )
   components <- observation$result$components
   blocking_components <- observation$result$blocking_components
-  blocking_summary <- blocking_components %>%
-    dplyr::count(component_type, source, name = "n") %>%
-    dplyr::arrange(component_type, source)
-
   expect_equal(observation$status, "resolved")
   expect_equal(
     observation$input_contract,
     "legacy_default_gemm_gbd2019_2020"
   )
-  expect_false(observation$result$ready)
+  expect_true(observation$result$ready)
   expect_equal(
     components %>% dplyr::count(component_type, name = "n"),
     tibble::tribble(
@@ -541,29 +544,23 @@ test_that("GBD 2019 historical contract exposes its complete readiness gap", {
   ))
   expect_true(all(
     components$routing_status[components$component_type == "rr"] ==
-      "not_ready"
+      "ready"
   ))
-  expect_equal(nrow(blocking_components), 18)
-  expect_equal(
-    blocking_summary,
-    tibble::tribble(
-      ~component_type, ~source, ~n,
-      "rr", "gemm", 14L,
-      "rr", "original", 4L
-    )
-  )
-  expect_setequal(
+  expect_equal(nrow(blocking_components), 0)
+  expect_length(
     observation$specification$readiness$blocking_component_ids,
-    blocking_components$component_id
+    0
   )
   expect_equal(nrow(observation$result$ignored_rr_pairs), 0)
 
   route_plan <- observation$route_plan
-  expect_equal(route_plan$route, "legacy")
-  expect_equal(route_plan$reason, "components_not_ready")
-  expect_setequal(
-    route_plan$blocking_component_ids,
-    blocking_components$component_id
+  expect_equal(route_plan$route, "registry")
+  expect_equal(route_plan$reason, "all_components_ready")
+  expect_s3_class(route_plan$registry_set, "creahia_crf_set")
+  expect_equal(observation$route_application$status, "applied")
+  expect_identical(
+    observation$route_application$compute_inputs$crf_compute,
+    "registry"
   )
 })
 

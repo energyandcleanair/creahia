@@ -18,7 +18,13 @@
     "required_by",
     "public_registry_crf_ids",
     "coverage_status",
-    "provenance_notes"
+    "provenance_notes",
+    "routing_check_data_available",
+    "routing_check_reproduction_verified",
+    "routing_check_visibility_guarded",
+    "routing_checklist_complete",
+    "routing_checklist_status",
+    "routing_checklist_blocking_reason"
   )
 }
 
@@ -104,6 +110,12 @@
   }
 
   manifest <- readr::read_csv(path, col_types = readr::cols())
+  routing_checklist <- .derive_historical_component_routing_checklist(
+    components = manifest,
+    registry_data_available =
+      manifest$coverage_status != "historical_internal_required"
+  )
+  manifest <- dplyr::bind_cols(manifest, routing_checklist)
   if (validate) {
     .validate_historical_rr_manifest(manifest)
   }
@@ -147,6 +159,43 @@
   if (any(manifest$visibility != "internal_compatibility")) {
     stop(
       "Historical RR components must use visibility 'internal_compatibility'.",
+      call. = FALSE
+    )
+  }
+
+  missing_checklist_columns <- setdiff(
+    c(
+      "routing_check_data_available",
+      "routing_check_reproduction_verified",
+      "routing_check_visibility_guarded",
+      "routing_checklist_complete",
+      "routing_checklist_status",
+      "routing_checklist_blocking_reason"
+    ),
+    names(manifest)
+  )
+  if (length(missing_checklist_columns) > 0) {
+    stop(
+      "Historical RR manifest is missing routing checklist columns: ",
+      paste(missing_checklist_columns, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  if (!identical(manifest$routing_status, manifest$routing_checklist_status)) {
+    stop(
+      "Historical RR routing_status must match the engineering checklist.",
+      call. = FALSE
+    )
+  }
+  if (!identical(
+    manifest$routing_blocking_reason,
+    manifest$routing_checklist_blocking_reason
+  )) {
+    stop(
+      paste(
+        "Historical RR routing_blocking_reason must match the engineering",
+        "checklist."
+      ),
       call. = FALSE
     )
   }
@@ -253,6 +302,12 @@
 
   crf_components <- historical_crf_memberships %>%
     dplyr::inner_join(historical_crf_registry, by = "crf_id") %>%
+    dplyr::bind_cols(
+      .derive_historical_component_routing_checklist(
+        components = .,
+        registry_data_available = rep(TRUE, nrow(.))
+      )
+    ) %>%
     dplyr::transmute(
       component_id,
       component_type = "crf",
@@ -264,16 +319,12 @@
       lifecycle,
       reproduction_status,
       reproduction_blocking_reason,
-      routing_status = dplyr::if_else(
-        reproduction_status == "parity_verified",
-        "ready",
-        "not_ready"
-      ),
-      routing_blocking_reason = dplyr::if_else(
-        reproduction_status == "parity_verified",
-        NA_character_,
-        reproduction_blocking_reason
-      ),
+      routing_check_data_available,
+      routing_check_reproduction_verified,
+      routing_check_visibility_guarded,
+      routing_checklist_complete,
+      routing_status = routing_checklist_status,
+      routing_blocking_reason = routing_checklist_blocking_reason,
       scientific_review_status,
       scientific_review_reason
     )
@@ -290,6 +341,10 @@
       lifecycle,
       reproduction_status,
       reproduction_blocking_reason,
+      routing_check_data_available,
+      routing_check_reproduction_verified,
+      routing_check_visibility_guarded,
+      routing_checklist_complete,
       routing_status,
       routing_blocking_reason,
       scientific_review_status,

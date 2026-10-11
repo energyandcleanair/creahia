@@ -75,6 +75,55 @@ make_component_manifest <- function(components, not_ready = character()) {
 }
 
 
+test_that("historical routing checklist uses engineering evidence only", {
+  components <- tibble::tibble(
+    lifecycle = "historical_reproduction",
+    visibility = "internal_compatibility",
+    reproduction_status = "parity_verified",
+    scientific_review_status = c("not_reviewed", "reviewed")
+  )
+
+  ready <- .derive_historical_component_routing_checklist(
+    components,
+    registry_data_available = c(TRUE, TRUE)
+  )
+
+  expect_true(all(ready$routing_checklist_complete))
+  expect_true(all(ready$routing_checklist_status == "ready"))
+  expect_true(all(is.na(ready$routing_checklist_blocking_reason)))
+
+  data_blocked <- .derive_historical_component_routing_checklist(
+    components[1, ],
+    registry_data_available = FALSE
+  )
+  expect_false(data_blocked$routing_checklist_complete)
+  expect_equal(
+    data_blocked$routing_checklist_blocking_reason,
+    "Registry-shaped historical component data is incomplete."
+  )
+
+  reproduction_blocked <- .derive_historical_component_routing_checklist(
+    dplyr::mutate(components[1, ], reproduction_status = "not_verified"),
+    registry_data_available = TRUE
+  )
+  expect_false(reproduction_blocked$routing_checklist_complete)
+  expect_equal(
+    reproduction_blocked$routing_checklist_blocking_reason,
+    "Numerical reproduction evidence is incomplete."
+  )
+
+  visibility_blocked <- .derive_historical_component_routing_checklist(
+    dplyr::mutate(components[1, ], visibility = "public"),
+    registry_data_available = TRUE
+  )
+  expect_false(visibility_blocked$routing_checklist_complete)
+  expect_equal(
+    visibility_blocked$routing_checklist_blocking_reason,
+    "Historical component visibility guard is incomplete."
+  )
+})
+
+
 test_that("RR source forms normalise to grouped components with age contracts", {
   rr_loader <- make_readiness_rr_loader()
   measure_map <- make_readiness_measure_map()
