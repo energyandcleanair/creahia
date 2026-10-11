@@ -104,6 +104,23 @@ test_that("actual default HIA call observes readiness without changing output", 
     "components_not_ready"
   )
   expect_s3_class(
+    seen$observation$route_application,
+    "creahia_hia_route_application_observation"
+  )
+  expect_equal(seen$observation$route_application$status, "applied")
+  expect_identical(
+    seen$observation$route_application$compute_inputs$crfs,
+    make_shadow_test_crfs()
+  )
+  expect_identical(
+    seen$observation$route_application$compute_inputs$rr_sources,
+    seen$rr_sources
+  )
+  expect_identical(
+    seen$observation$route_application$compute_inputs$crf_compute,
+    "legacy"
+  )
+  expect_s3_class(
     seen$observation$specification,
     "creahia_hia_specification"
   )
@@ -316,6 +333,107 @@ test_that("shadow route-planning failures stay internal", {
   expect_equal(observation$route_plan$status, "error")
   expect_equal(observation$route_plan$reason, "route_planning_error")
   expect_match(observation$route_plan$error, "route planning failed")
+  expect_equal(observation$route_application$status, "error")
+  expect_null(observation$route_application$compute_inputs)
+  expect_match(
+    observation$route_application$error,
+    "Cannot apply an errored HIA compatibility route plan"
+  )
+})
+
+
+test_that("shadow route application prepares complete Registry compute inputs", {
+  registry_set <- crfs_set("gbd2019_deaths")
+
+  with_mocked_bindings(
+    .resolve_hia_component_readiness = function(...) {
+      make_specification_readiness()
+    },
+    .plan_hia_compatibility_route = function(...) {
+      .new_hia_compatibility_route_plan(
+        status = "planned",
+        route = "registry",
+        reason = "all_components_ready",
+        registry_set = registry_set
+      )
+    },
+    {
+      observation <- .observe_hia_compatibility_boundary(
+        crfs = make_shadow_test_crfs(),
+        rr_sources = tibble::tibble(
+          cause = "NCD.LRI",
+          source = RR_GEMM
+        ),
+        epi = make_shadow_test_epi(),
+        context = make_shadow_test_boundary_context(),
+        population_year_intent = .capture_population_year_intent(
+          pop_year = NULL,
+          scale_base_year = NULL,
+          scale_target_year = NULL,
+          resolved_pop_year = NULL
+        )
+      )
+    }
+  )
+
+  application <- observation$route_application
+  expect_equal(application$status, "applied")
+  expect_identical(application$compute_inputs$crfs, registry_set)
+  expect_false(has_rr_sources(application$compute_inputs$rr_sources))
+  expect_identical(application$compute_inputs$crf_compute, "registry")
+})
+
+
+test_that("shadow Registry candidates do not change the actual compute route", {
+  seen <- new.env(parent = emptyenv())
+  expected <- make_shadow_test_impacts()
+  legacy_crfs <- make_shadow_test_crfs()
+  registry_set <- crfs_set("gbd2019_deaths")
+  old_options <- options(
+    creahia.hia_readiness_shadow_observer = function(observation) {
+      seen$observation <- observation
+    }
+  )
+  on.exit(options(old_options), add = TRUE)
+
+  with_mocked_bindings(
+    get_crfs = function(version = "default") legacy_crfs,
+    get_epi = function(version = "default") make_shadow_test_epi(),
+    parse_rr_sources = function(rr_sources) {
+      tibble::tibble(cause = "NCD.LRI", source = RR_GEMM)
+    },
+    validate_crfs_against_epi = function(...) invisible(TRUE),
+    .resolve_hia_component_readiness = function(...) {
+      make_specification_readiness()
+    },
+    .plan_hia_compatibility_route = function(...) {
+      .new_hia_compatibility_route_plan(
+        status = "planned",
+        route = "registry",
+        reason = "all_components_ready",
+        registry_set = registry_set
+      )
+    },
+    compute_hia_paf = function(..., crfs, rr_sources, crf_compute) {
+      seen$paf_crfs <- crfs
+      seen$paf_rr_sources <- rr_sources
+      seen$paf_crf_compute <- crf_compute
+      tibble::tibble()
+    },
+    compute_hia_impacts = function(...) expected,
+    {
+      result <- run_shadow_test_hia()
+    }
+  )
+
+  candidate_inputs <- seen$observation$route_application$compute_inputs
+  expect_identical(result, expected)
+  expect_identical(candidate_inputs$crfs, registry_set)
+  expect_false(has_rr_sources(candidate_inputs$rr_sources))
+  expect_identical(candidate_inputs$crf_compute, "registry")
+  expect_identical(seen$paf_crfs, legacy_crfs)
+  expect_true(has_rr_sources(seen$paf_rr_sources))
+  expect_identical(seen$paf_crf_compute, "legacy")
 })
 
 
@@ -478,6 +596,15 @@ test_that("adapter-inapplicable observations preserve their existing route", {
   expect_equal(observation$status, "not_applicable")
   expect_equal(observation$route_plan$route, "unchanged")
   expect_equal(observation$route_plan$reason, "registry_route")
+  expect_equal(observation$route_application$status, "applied")
+  expect_identical(
+    observation$route_application$compute_inputs$crfs,
+    make_shadow_test_crfs()
+  )
+  expect_identical(
+    observation$route_application$compute_inputs$crf_compute,
+    "registry"
+  )
   expect_false(observed)
 })
 

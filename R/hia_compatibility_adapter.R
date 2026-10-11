@@ -286,6 +286,40 @@
 }
 
 
+.observe_hia_compatibility_route_application <- function(
+  route_plan,
+  crfs,
+  rr_sources,
+  crf_compute
+) {
+  tryCatch(
+    structure(
+      list(
+        status = "applied",
+        compute_inputs = .apply_hia_compatibility_route_plan(
+          route_plan = route_plan,
+          crfs = crfs,
+          rr_sources = rr_sources,
+          crf_compute = crf_compute
+        ),
+        error = NULL
+      ),
+      class = c("creahia_hia_route_application_observation", "list")
+    ),
+    error = function(error) {
+      structure(
+        list(
+          status = "error",
+          compute_inputs = NULL,
+          error = conditionMessage(error)
+        ),
+        class = c("creahia_hia_route_application_observation", "list")
+      )
+    }
+  )
+}
+
+
 .resolve_hia_compatibility_boundary <- function(
   crfs,
   rr_sources,
@@ -466,6 +500,13 @@
     }
   )
   observation$route_plan <- route_plan
+  observation$route_application <-
+    .observe_hia_compatibility_route_application(
+      route_plan = route_plan,
+      crfs = crfs,
+      rr_sources = rr_sources,
+      crf_compute = context$crf_compute
+    )
 
   if (identical(observation$status, "not_applicable")) {
     return(invisible(observation))
