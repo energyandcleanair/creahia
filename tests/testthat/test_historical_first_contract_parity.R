@@ -75,31 +75,37 @@ test_that("the first historical contract reproduces as one Registry Set", {
 })
 
 
-test_that("diagnostic Registry resolution rejects incomplete specifications", {
+test_that("diagnostic Registry resolution accepts the selected component set", {
   specification <- historical_first_contract_specification()
   specification$components$rr <- specification$components$rr[-1, , drop = FALSE]
 
-  expect_error(
-    .resolve_hia_diagnostic_registry_set(specification),
-    "does not contain the complete RR selection"
-  )
+  resolved <- .resolve_hia_diagnostic_registry_set(specification)
+  expect_s3_class(resolved, "creahia_crf_set")
+  expect_equal(nrow(resolved), 32L)
 
   specification <- historical_first_contract_specification()
   specification$components$epi <- specification$components$epi[0, , drop = FALSE]
   expect_error(
     .resolve_hia_diagnostic_registry_set(specification),
-    "does not contain the required EPI component"
+    "requires one ready EPI component"
   )
 })
 
 
-test_that("diagnostic Registry resolution rejects unsupported contracts", {
+test_that("diagnostic Registry resolution treats contract names as labels", {
   specification <- historical_first_contract_specification()
-  specification$input_contract <- "legacy_default"
+  specification$input_contract <- "another-evidence-label"
+
+  expect_s3_class(
+    .resolve_hia_diagnostic_registry_set(specification),
+    "creahia_crf_set"
+  )
+
+  specification$input_contract <- ""
 
   expect_error(
     .resolve_hia_diagnostic_registry_set(specification),
-    "outside the supported diagnostic contract"
+    "requires one non-empty evidence label"
   )
 })
 

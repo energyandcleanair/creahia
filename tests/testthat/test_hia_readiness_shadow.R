@@ -211,7 +211,13 @@ test_that("GBD 2019 historical call emits its canonical specification", {
   expect_equal(seen$observation$status, "resolved")
   expect_equal(
     specification$input_contract,
-    "legacy_default_gemm_gbd2019_2020"
+    paste(
+      "component_resolved",
+      "legacy_profile_default",
+      "legacy_cause_selectors",
+      "gbd2019",
+      sep = "|"
+    )
   )
   expect_equal(specification$epi_version, "gbd2019")
   expect_equal(specification$population_year$supplied$pop_year, 2020)
@@ -520,7 +526,13 @@ test_that("GBD 2019 historical contract satisfies component routing", {
   expect_equal(observation$status, "resolved")
   expect_equal(
     observation$input_contract,
-    "legacy_default_gemm_gbd2019_2020"
+    paste(
+      "component_resolved",
+      "legacy_profile_default",
+      "legacy_cause_selectors",
+      "gbd2019",
+      sep = "|"
+    )
   )
   expect_true(observation$result$ready)
   expect_equal(
@@ -562,6 +574,61 @@ test_that("GBD 2019 historical contract satisfies component routing", {
     observation$route_application$compute_inputs$crf_compute,
     "registry"
   )
+
+  another_population_year <- .observe_hia_compatibility_boundary(
+    crfs = get_crfs("default"),
+    rr_sources = parse_rr_sources(rr_selection$rr_sources),
+    epi = get_epi("gbd2019"),
+    context = make_shadow_test_boundary_context(
+      epi_version = "gbd2019",
+      rr_selection_mode = rr_selection$mode,
+      calc_causes = rr_selection$calc_causes,
+      gbd_causes = rr_selection$gbd_causes
+    ),
+    population_year_intent = .capture_population_year_intent(
+      pop_year = 2021,
+      scale_base_year = NULL,
+      scale_target_year = NULL,
+      resolved_pop_year = 2021
+    )
+  )
+  expect_equal(another_population_year$status, "resolved")
+  expect_equal(another_population_year$route_plan$route, "registry")
+  expect_equal(
+    another_population_year$input_contract,
+    observation$input_contract
+  )
+  expect_setequal(
+    another_population_year$result$components$component_id,
+    observation$result$components$component_id
+  )
+})
+
+
+test_that("C40 is assessed as a component profile instead of excluded", {
+  observation <- .observe_hia_compatibility_boundary(
+    crfs = get_crfs("C40"),
+    rr_sources = parse_rr_sources(c(RR_GEMM, RR_ORIGINAL)),
+    epi = get_epi("default"),
+    context = make_shadow_test_boundary_context(crfs_version = "C40"),
+    population_year_intent = .capture_population_year_intent(
+      pop_year = NULL,
+      scale_base_year = NULL,
+      scale_target_year = NULL,
+      resolved_pop_year = NULL
+    )
+  )
+  crf_components <- observation$result$components %>%
+    dplyr::filter(component_type == "crf")
+
+  expect_equal(observation$status, "resolved")
+  expect_equal(nrow(crf_components), 19L)
+  expect_true(all(
+    crf_components$selection_id == "legacy_profile_c40"
+  ))
+  expect_false(observation$result$ready)
+  expect_equal(observation$route_plan$route, "legacy")
+  expect_gt(nrow(observation$result$blocking_components), 0L)
 })
 
 
@@ -640,12 +707,12 @@ test_that("custom HIA inputs stay outside the first shadow slice", {
 })
 
 
-test_that("non-default profile versions stay outside the first shadow slice", {
-  observed <- FALSE
+test_that("non-default profile versions use their component membership", {
+  seen <- new.env(parent = emptyenv())
   expected <- make_shadow_test_impacts()
   old_options <- options(
     creahia.hia_readiness_shadow_observer = function(observation) {
-      observed <<- TRUE
+      seen$observation <- observation
     }
   )
   on.exit(options(old_options), add = TRUE)
@@ -657,8 +724,9 @@ test_that("non-default profile versions stay outside the first shadow slice", {
       tibble::tibble(cause = "NCD.LRI", source = RR_GEMM)
     },
     validate_crfs_against_epi = function(...) invisible(TRUE),
-    .resolve_hia_component_readiness = function(...) {
-      stop("non-default profiles must not reach shadow readiness")
+    .resolve_hia_component_readiness = function(..., crf_selection_id) {
+      seen$crf_selection_id <- crf_selection_id
+      make_specification_readiness()
     },
     compute_hia_paf = function(...) tibble::tibble(),
     compute_hia_impacts = function(...) expected,
@@ -668,5 +736,6 @@ test_that("non-default profile versions stay outside the first shadow slice", {
   )
 
   expect_identical(result, expected)
-  expect_false(observed)
+  expect_equal(seen$observation$status, "resolved")
+  expect_equal(seen$crf_selection_id, "legacy_profile_c40")
 })

@@ -1,8 +1,3 @@
-.supported_hia_diagnostic_contract <- function() {
-  "legacy_default_gemm_gbd2019_2020"
-}
-
-
 .validate_hia_diagnostic_specification <- function(specification) {
   if (!inherits(specification, "creahia_hia_specification")) {
     stop(
@@ -13,70 +8,64 @@
   if (!identical(specification$schema_version, 1L)) {
     stop("Unsupported HIA specification schema version.", call. = FALSE)
   }
-  if (!identical(
-    specification$input_contract,
-    .supported_hia_diagnostic_contract()
-  )) {
+  if (
+    !is.character(specification$input_contract) ||
+    length(specification$input_contract) != 1 ||
+    is.na(specification$input_contract) ||
+    specification$input_contract == ""
+  ) {
     stop(
-      "The HIA specification is outside the supported diagnostic contract.",
+      "The HIA specification requires one non-empty evidence label.",
       call. = FALSE
     )
   }
-  if (!identical(specification$epi_version, "gbd2019")) {
+  if (!isTRUE(specification$readiness$ready)) {
     stop(
-      "The first diagnostic contract requires epi_version = 'gbd2019'.",
+      "Diagnostic Registry resolution requires every component to be ready.",
       call. = FALSE
     )
   }
-  if (!.matches_direct_population_year(specification$population_year, 2020)) {
-    stop(
-      "The first diagnostic contract requires directly supplied pop_year = 2020.",
-      call. = FALSE
-    )
-  }
-
-  expected_manifest <- .load_hia_component_manifest()
-  expected_crf_ids <- expected_manifest %>%
-    dplyr::filter(
-      component_type == "crf",
-      selection_id == "legacy_profile_default"
-    ) %>%
-    dplyr::pull(component_id)
-  expected_rr_ids <- .load_historical_rr_manifest() %>%
-    tidyr::separate_rows(required_by, sep = ";") %>%
-    dplyr::filter(
-      required_by == .supported_hia_diagnostic_contract()
-    ) %>%
-    dplyr::pull(component_id)
 
   supplied_crf_ids <- specification$components$crf$component_id
   supplied_rr_ids <- specification$components$rr$component_id
-  is_complete_component_set <- function(supplied, expected) {
-    length(supplied) == length(expected) &&
-      !anyNA(supplied) &&
-      !anyDuplicated(supplied) &&
-      setequal(supplied, expected)
-  }
-  if (!is_complete_component_set(supplied_crf_ids, expected_crf_ids)) {
+  if (
+    length(supplied_crf_ids) == 0 ||
+    anyNA(supplied_crf_ids) ||
+    anyDuplicated(supplied_crf_ids)
+  ) {
     stop(
-      "The diagnostic HIA specification does not contain the complete CRF profile.",
+      "The diagnostic HIA specification has invalid CRF component IDs.",
       call. = FALSE
     )
   }
-  if (!is_complete_component_set(supplied_rr_ids, expected_rr_ids)) {
+  if (anyNA(supplied_rr_ids) || anyDuplicated(supplied_rr_ids)) {
     stop(
-      "The diagnostic HIA specification does not contain the complete RR selection.",
+      "The diagnostic HIA specification has invalid RR component IDs.",
+      call. = FALSE
+    )
+  }
+  route_components <- dplyr::bind_rows(
+    specification$components$crf,
+    specification$components$rr
+  )
+  if (
+    anyNA(route_components$ready) ||
+    any(!route_components$ready) ||
+    anyNA(route_components$routing_status) ||
+    any(route_components$routing_status != "ready")
+  ) {
+    stop(
+      "Diagnostic Registry components must be routing-ready.",
       call. = FALSE
     )
   }
   epi_components <- specification$components$epi
   if (
     nrow(epi_components) != 1 ||
-    !identical(epi_components$source, "gbd2019") ||
     !isTRUE(epi_components$ready)
   ) {
     stop(
-      "The diagnostic HIA specification does not contain the required EPI component.",
+      "The diagnostic HIA specification requires one ready EPI component.",
       call. = FALSE
     )
   }
@@ -227,9 +216,13 @@
   ) %>%
     tibble::as_tibble() %>%
     dplyr::select(dplyr::all_of(CRF_REGISTRY_REQUIRED_COLUMNS))
-  historical_rr <- .resolve_historical_rr_diagnostic_components(
-    specification$components$rr$component_id
-  )
+  historical_rr <- if (nrow(specification$components$rr) == 0) {
+    tibble::tibble()
+  } else {
+    .resolve_historical_rr_diagnostic_components(
+      specification$components$rr$component_id
+    )
+  }
   resolved <- dplyr::bind_rows(historical_crfs, historical_rr) %>%
     .apply_hia_set_double_counting()
 

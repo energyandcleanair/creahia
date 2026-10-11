@@ -42,29 +42,51 @@
 }
 
 
-.matches_direct_population_year <- function(population_year_intent, expected_year) {
-  supplied <- population_year_intent$supplied
-  is_single_year <- function(value) {
-    is.numeric(value) &&
-      length(value) == 1 &&
-      !is.na(value) &&
-      value == expected_year
-  }
-
-  is.list(supplied) &&
-    is_single_year(supplied$pop_year) &&
-    is.null(supplied$scale_base_year) &&
-    is.null(supplied$scale_target_year) &&
-    is_single_year(population_year_intent$resolved_pop_year) &&
-    isTRUE(population_year_intent$scaling_requested)
-}
-
-
 .not_applicable_hia_boundary <- function(reason, message) {
   list(
     status = "not_applicable",
     reason = reason,
     message = message
+  )
+}
+
+
+.historical_crf_profile_selection_id <- function(
+  crfs_version,
+  memberships = .load_historical_crf_memberships()
+) {
+  if (
+    !is.character(crfs_version) ||
+    length(crfs_version) != 1 ||
+    is.na(crfs_version) ||
+    crfs_version == ""
+  ) {
+    stop("crfs_version must contain one non-empty value.", call. = FALSE)
+  }
+
+  profile_slug <- gsub("[^a-z0-9]+", "_", tolower(crfs_version))
+  profile_slug <- gsub("^_|_$", "", profile_slug)
+  selection_id <- paste0("legacy_profile_", profile_slug)
+
+  if (!(selection_id %in% memberships$selection_id)) {
+    return(NULL)
+  }
+
+  selection_id
+}
+
+
+.hia_component_evidence_label <- function(
+  crf_selection_id,
+  rr_selection_mode,
+  epi_version
+) {
+  paste(
+    "component_resolved",
+    crf_selection_id,
+    rr_selection_mode,
+    epi_version,
+    sep = "|"
   )
 }
 
@@ -375,64 +397,23 @@
     )
   }
 
-  if (
-    identical(context$rr_selection_mode, "legacy_cause_selectors") &&
-    !(
-      identical(context$calc_causes, "GEMM and GBD") &&
-      identical(context$gbd_causes, "default")
-    )
-  ) {
+  if (context$crfs_supplied) {
     return(.not_applicable_hia_boundary(
-      reason = "legacy_cause_selectors",
-      message = "This translated calc_causes/gbd_causes combination is not yet supported by the adapter."
-    ))
-  }
-
-  is_gemm_gbd_selector <-
-    identical(context$rr_selection_mode, "legacy_cause_selectors") &&
-    identical(context$calc_causes, "GEMM and GBD") &&
-    identical(context$gbd_causes, "default")
-  is_gbd2019_historical_mapping <-
-    is_gemm_gbd_selector &&
-    identical(context$epi_version, "gbd2019")
-
-  if (
-    !identical(context$crfs_version, "default") ||
-    (
-      !identical(context$epi_version, "default") &&
-      !is_gbd2019_historical_mapping
-    )
-  ) {
-    return(.not_applicable_hia_boundary(
-      reason = "non_default_version",
-      message = "Non-default CRF or EPI versions are outside the first adapter slice."
-    ))
-  }
-
-  if (
-    is_gbd2019_historical_mapping &&
-    !.matches_direct_population_year(population_year_intent, 2020)
-  ) {
-    return(.not_applicable_hia_boundary(
-      reason = "population_year_contract",
+      reason = "explicit_crfs",
       message = paste(
-        "The GBD 2019 historical mapping requires directly supplied",
-        "pop_year = 2020."
+        "Explicit CRF data require a separate canonical-data rule before",
+        "shared-engine routing."
       )
     ))
   }
 
-  scientific_input_fields <- c("epi_supplied", "crfs_supplied")
-  if (
-    any(unlist(context[scientific_input_fields], use.names = FALSE)) ||
-    (
-      identical(context$rr_selection_mode, "rr_sources") &&
-      context$rr_sources_supplied
-    )
-  ) {
+  crf_selection_id <- .historical_crf_profile_selection_id(
+    context$crfs_version
+  )
+  if (is.null(crf_selection_id)) {
     return(.not_applicable_hia_boundary(
-      reason = "explicit_scientific_input",
-      message = "Explicit CRF, RR, or EPI inputs are outside the first adapter slice."
+      reason = "unrepresented_crf_profile",
+      message = "The selected CRF profile is absent from compatibility storage."
     ))
   }
 
@@ -441,16 +422,14 @@
     rr_sources = rr_sources,
     epi = epi,
     crf_input_mode = "legacy_profile",
-    crf_selection_id = "legacy_profile_default",
+    crf_selection_id = crf_selection_id,
     epi_version = context$epi_version
   )
-  input_contract <- if (is_gbd2019_historical_mapping) {
-    "legacy_default_gemm_gbd2019_2020"
-  } else if (is_gemm_gbd_selector) {
-    "legacy_gemm_gbd_default"
-  } else {
-    "legacy_default"
-  }
+  input_contract <- .hia_component_evidence_label(
+    crf_selection_id = crf_selection_id,
+    rr_selection_mode = context$rr_selection_mode,
+    epi_version = context$epi_version
+  )
   specification <- .new_hia_specification(
     readiness = readiness,
     population_year_intent = population_year_intent,

@@ -53,7 +53,13 @@ make_adapter_route_observation <- function(ready = FALSE) {
   specification <- .new_hia_specification(
     readiness = readiness,
     population_year_intent = make_adapter_test_population_year(2020),
-    input_contract = "legacy_default_gemm_gbd2019_2020",
+    input_contract = paste(
+      "component_resolved",
+      "legacy_profile_default",
+      "legacy_cause_selectors",
+      "gbd2019",
+      sep = "|"
+    ),
     epi_version = "gbd2019"
   )
 
@@ -135,7 +141,10 @@ test_that("compatibility boundary emits the canonical default specification", {
   )
 
   expect_equal(resolved$status, "resolved")
-  expect_equal(resolved$input_contract, "legacy_default")
+  expect_equal(
+    resolved$input_contract,
+    "component_resolved|legacy_profile_default|rr_sources|default"
+  )
   expect_identical(resolved$result, readiness)
   expect_s3_class(
     resolved$specification,
@@ -143,7 +152,7 @@ test_that("compatibility boundary emits the canonical default specification", {
   )
   expect_equal(
     resolved$specification$input_contract,
-    "legacy_default"
+    "component_resolved|legacy_profile_default|rr_sources|default"
   )
 })
 
@@ -171,10 +180,19 @@ test_that("compatibility boundary emits the first legacy selector specification"
   )
 
   expect_equal(resolved$status, "resolved")
-  expect_equal(resolved$input_contract, "legacy_gemm_gbd_default")
+  expect_equal(
+    resolved$input_contract,
+    paste(
+      "component_resolved",
+      "legacy_profile_default",
+      "legacy_cause_selectors",
+      "default",
+      sep = "|"
+    )
+  )
   expect_equal(
     resolved$specification$input_contract,
-    "legacy_gemm_gbd_default"
+    resolved$input_contract
   )
 })
 
@@ -204,7 +222,13 @@ test_that("compatibility boundary identifies the GBD 2019 historical mapping", {
   expect_equal(resolved$status, "resolved")
   expect_equal(
     resolved$input_contract,
-    "legacy_default_gemm_gbd2019_2020"
+    paste(
+      "component_resolved",
+      "legacy_profile_default",
+      "legacy_cause_selectors",
+      "gbd2019",
+      sep = "|"
+    )
   )
   expect_equal(resolved$specification$epi_version, "gbd2019")
   expect_equal(
@@ -218,7 +242,8 @@ test_that("compatibility boundary identifies the GBD 2019 historical mapping", {
 })
 
 
-test_that("GBD 2019 historical mapping requires direct 2020 population intent", {
+test_that("population year does not determine component routing applicability", {
+  readiness <- make_specification_readiness()
   context <- make_adapter_test_context(
     epi_version = "gbd2019",
     rr_selection_mode = "legacy_cause_selectors",
@@ -236,9 +261,7 @@ test_that("GBD 2019 historical mapping requires direct 2020 population intent", 
   )
 
   with_mocked_bindings(
-    .resolve_hia_component_readiness = function(...) {
-      stop("unsupported mappings must not reach readiness resolution")
-    },
+    .resolve_hia_component_readiness = function(...) readiness,
     {
       results <- lapply(population_intents, function(population_year_intent) {
         .resolve_hia_compatibility_boundary(
@@ -249,43 +272,100 @@ test_that("GBD 2019 historical mapping requires direct 2020 population intent", 
           population_year_intent = population_year_intent
         )
       })
+      another_epi <- .resolve_hia_compatibility_boundary(
+        crfs = tibble::tibble(),
+        rr_sources = tibble::tibble(),
+        epi = tibble::tibble(),
+        context = utils::modifyList(context, list(epi_version = "gbd2021")),
+        population_year_intent = make_adapter_test_population_year(2020)
+      )
     }
   )
 
   expect_true(all(vapply(
     results,
-    function(result) identical(result$status, "not_applicable"),
+    function(result) identical(result$status, "resolved"),
     logical(1)
   )))
-  expect_true(all(vapply(
+  expect_length(unique(vapply(
     results,
-    function(result) identical(result$reason, "population_year_contract"),
-    logical(1)
-  )))
-
-  unsupported_epi <- .resolve_hia_compatibility_boundary(
-    crfs = tibble::tibble(),
-    rr_sources = tibble::tibble(),
-    epi = tibble::tibble(),
-    context = utils::modifyList(context, list(epi_version = "gbd2021")),
-    population_year_intent = make_adapter_test_population_year(2020)
-  )
-  expect_equal(unsupported_epi$status, "not_applicable")
-  expect_equal(unsupported_epi$reason, "non_default_version")
+    `[[`,
+    character(1),
+    "input_contract"
+  )), 1)
+  expect_equal(another_epi$status, "resolved")
+  expect_equal(another_epi$specification$epi_version, "gbd2021")
 })
 
 
-test_that("compatibility boundary explicitly excludes unsupported slices", {
+test_that("compatibility boundary resolves composable legacy selections", {
+  readiness <- make_specification_readiness()
+  seen <- list()
   contexts <- list(
-    registry_route = make_adapter_test_context(crf_compute = "registry"),
     legacy_cause_selectors = make_adapter_test_context(
       rr_selection_mode = "legacy_cause_selectors",
       calc_causes = "GBD only",
       gbd_causes = "default"
     ),
-    non_default_version = make_adapter_test_context(crfs_version = "C40"),
-    explicit_scientific_input = make_adapter_test_context(
-      rr_sources_supplied = TRUE
+    c40 = make_adapter_test_context(crfs_version = "C40"),
+    explicit_rr_epi = make_adapter_test_context(
+      rr_sources_supplied = TRUE,
+      epi_supplied = TRUE,
+      epi_version = "custom"
+    )
+  )
+
+  with_mocked_bindings(
+    .resolve_hia_component_readiness = function(
+      ...,
+      crf_selection_id,
+      epi_version
+    ) {
+      seen[[length(seen) + 1]] <<- list(
+        crf_selection_id = crf_selection_id,
+        epi_version = epi_version
+      )
+      readiness
+    },
+    {
+      results <- lapply(contexts, function(context) {
+        .resolve_hia_compatibility_boundary(
+          crfs = tibble::tibble(),
+          rr_sources = tibble::tibble(),
+          epi = tibble::tibble(),
+          context = context,
+          population_year_intent = make_adapter_test_population_year()
+        )
+      })
+    }
+  )
+
+  expect_true(all(vapply(
+    results,
+    function(result) identical(result$status, "resolved"),
+    logical(1)
+  )))
+  expect_equal(
+    vapply(seen, `[[`, character(1), "crf_selection_id"),
+    c(
+      "legacy_profile_default",
+      "legacy_profile_c40",
+      "legacy_profile_default"
+    )
+  )
+  expect_equal(
+    vapply(seen, `[[`, character(1), "epi_version"),
+    c("default", "default", "custom")
+  )
+})
+
+
+test_that("compatibility boundary explicitly excludes unsupported CRF inputs", {
+  contexts <- list(
+    registry_route = make_adapter_test_context(crf_compute = "registry"),
+    explicit_crfs = make_adapter_test_context(crfs_supplied = TRUE),
+    unrepresented_crf_profile = make_adapter_test_context(
+      crfs_version = "unknown profile"
     )
   )
 
