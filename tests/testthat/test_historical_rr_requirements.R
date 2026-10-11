@@ -76,11 +76,11 @@ test_that("historical RR inventory records current Registry data coverage", {
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_candidate"),
-    12
+    21
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_required"),
-    44
+    35
   )
 })
 
@@ -152,6 +152,70 @@ test_that("Fusion death requirements record parity without routing promotion", {
       legacy_data,
       tolerance = 1e-12,
       info = component$component_id
+    )
+  }
+})
+
+
+test_that("Fusion YLL and YLD outcome reuse is represented only internally", {
+  historical_registry <- .load_historical_rr_registry() %>%
+    dplyr::filter(source == RR_FUSION)
+  manifest <- .load_historical_rr_manifest() %>%
+    dplyr::filter(component_id %in% historical_registry$component_id)
+
+  expect_equal(nrow(historical_registry), 9L)
+  expect_setequal(unique(historical_registry$outcome), c("YLLs", "YLDs"))
+  expect_false(any(historical_registry$cause == CAUSE_LRICHILD))
+  expect_true(all(historical_registry$lifecycle == "historical_reproduction"))
+  expect_true(all(
+    historical_registry$visibility == "internal_compatibility"
+  ))
+  expect_true(all(
+    historical_registry$reproduction_status == "not_verified"
+  ))
+  expect_true(all(!is.na(
+    historical_registry$reproduction_blocking_reason
+  )))
+  expect_true(all(
+    historical_registry$scientific_review_status == "not_reviewed"
+  ))
+  expect_true(all(manifest$coverage_status == "historical_internal_candidate"))
+  expect_true(all(manifest$routing_status == "not_ready"))
+  expect_true(all(is.na(manifest$public_registry_crf_ids)))
+  expect_false(any(
+    historical_registry$crf_id %in% load_crf_registry()$crf_id
+  ))
+  expect_identical(
+    historical_registry$double_counted,
+    historical_registry$outcome == MEASURE_YLLS &
+      historical_registry$cause != "NCD.LRI"
+  )
+
+  legacy_fusion <- get_rr(RR_FUSION)
+  for (i in seq_len(nrow(historical_registry))) {
+    candidate <- historical_registry[i, , drop = FALSE]
+    component <- manifest %>%
+      dplyr::filter(component_id == candidate$component_id)
+    candidate_data <- load_crf_tabular(candidate) %>%
+      dplyr::arrange(age, exposure) %>%
+      tibble::as_tibble()
+    legacy_data <- legacy_fusion %>%
+      dplyr::filter(cause == candidate$cause, source == RR_FUSION) %>%
+      dplyr::select(exposure, age, low, central, high) %>%
+      dplyr::arrange(age, exposure) %>%
+      tibble::as_tibble()
+
+    expect_equal(nrow(component), 1L, info = candidate$component_id)
+    expect_identical(
+      .canonical_rr_age_contract(candidate_data$age),
+      component$age_contract,
+      info = candidate$component_id
+    )
+    expect_equal(
+      candidate_data,
+      legacy_data,
+      tolerance = 1e-12,
+      info = candidate$component_id
     )
   }
 })
@@ -312,7 +376,7 @@ test_that("GEMM YLL and YLD outcome reuse is represented only internally", {
     dplyr::filter(component_id %in% historical_registry$component_id)
 
   expect_equal(nrow(expected_components), 8L)
-  expect_equal(nrow(complete_historical_registry), 12L)
+  expect_equal(nrow(complete_historical_registry), 21L)
   expect_equal(nrow(historical_registry), 8L)
   expect_setequal(
     historical_registry$component_id,
