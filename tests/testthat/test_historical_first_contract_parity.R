@@ -5,7 +5,12 @@ test_that("the first historical contract reproduces as one Registry Set", {
   internal_rr_ids <- .load_historical_rr_registry()$crf_id
   public_crf_ids <- load_crf_registry()$crf_id
 
+  expect_s3_class(registry_crfs, "creahia_hia_diagnostic_set")
   expect_s3_class(registry_crfs, "creahia_crf_set")
+  expect_false(results$specification$readiness$ready)
+  expect_true(all(
+    results$specification$components$rr$routing_status == "not_ready"
+  ))
   expect_equal(nrow(registry_crfs), 33L)
   expect_equal(sum(registry_crfs$crf_id %in% historical_crf_ids), 15L)
   expect_equal(sum(registry_crfs$crf_id %in% internal_rr_ids), 12L)
@@ -67,4 +72,60 @@ test_that("the first historical contract reproduces as one Registry Set", {
   expect_equal(nrow(actual_fingerprint), 33L)
   expect_equal(nrow(expected_fingerprint), 33L)
   expect_equal(actual_fingerprint, expected_fingerprint, tolerance = 1e-12)
+})
+
+
+test_that("diagnostic Registry resolution rejects incomplete specifications", {
+  specification <- historical_first_contract_specification()
+  specification$components$rr <- specification$components$rr[-1, , drop = FALSE]
+
+  expect_error(
+    .resolve_hia_diagnostic_registry_set(specification),
+    "does not contain the complete RR selection"
+  )
+
+  specification <- historical_first_contract_specification()
+  specification$components$epi <- specification$components$epi[0, , drop = FALSE]
+  expect_error(
+    .resolve_hia_diagnostic_registry_set(specification),
+    "does not contain the required EPI component"
+  )
+})
+
+
+test_that("diagnostic Registry resolution rejects unsupported contracts", {
+  specification <- historical_first_contract_specification()
+  specification$input_contract <- "legacy_default"
+
+  expect_error(
+    .resolve_hia_diagnostic_registry_set(specification),
+    "outside the supported diagnostic contract"
+  )
+})
+
+
+test_that("diagnostic RR resolution requires parity evidence", {
+  specification <- historical_first_contract_specification()
+  blocked_id <- specification$components$rr$component_id[[1]]
+  manifest <- .load_historical_rr_manifest() %>%
+    dplyr::mutate(
+      reproduction_status = dplyr::if_else(
+        component_id == blocked_id,
+        "not_verified",
+        reproduction_status
+      ),
+      reproduction_blocking_reason = dplyr::if_else(
+        component_id == blocked_id,
+        "Parity evidence is incomplete.",
+        reproduction_blocking_reason
+      )
+    )
+
+  expect_error(
+    .resolve_historical_rr_diagnostic_components(
+      specification$components$rr$component_id,
+      manifest = manifest
+    ),
+    "not parity-verified"
+  )
 })

@@ -3,110 +3,48 @@ historical_first_contract_id <- function() {
 }
 
 
-historical_first_contract_rr_manifest <- function() {
+historical_first_contract_specification <- function() {
   configuration <- load_historical_fingerprint_configurations() %>%
     dplyr::filter(mapping_id == historical_first_contract_id())
-  selected_components <- legacy_hia_configuration_rr_sources(configuration) %>%
-    parse_rr_sources() %>%
-    .normalise_rr_components()
-
-  .load_historical_rr_manifest() %>%
-    dplyr::semi_join(selected_components, by = "component_id")
-}
-
-
-resolve_historical_first_contract_public_rr <- function(manifest) {
-  public_registry <- load_crf_registry()
-  public_manifest <- manifest %>%
-    dplyr::filter(coverage_status == "public_registry_candidate")
-
-  purrr::map_dfr(seq_len(nrow(public_manifest)), function(i) {
-    component <- public_manifest[i, , drop = FALSE]
-    candidate_ids <- strsplit(
-      component$public_registry_crf_ids,
-      ";",
-      fixed = TRUE
-    )[[1]]
-    candidates <- public_registry %>%
-      dplyr::filter(crf_id %in% candidate_ids)
-    age_matches <- vapply(seq_len(nrow(candidates)), function(j) {
-      candidate_data <- load_crf_tabular(candidates[j, , drop = FALSE])
-      identical(
-        .canonical_rr_age_contract(candidate_data$age),
-        component$age_contract
-      )
-    }, logical(1))
-    matching_candidate <- candidates[age_matches, , drop = FALSE]
-
-    if (nrow(matching_candidate) != 1) {
-      stop(
-        "Expected one public RR candidate for ",
-        component$component_id,
-        ", found ",
-        nrow(matching_candidate),
-        ".",
-        call. = FALSE
-      )
-    }
-
-    matching_candidate %>%
-      dplyr::select(dplyr::all_of(CRF_REGISTRY_REQUIRED_COLUMNS))
-  })
-}
-
-
-resolve_historical_first_contract_rr <- function() {
-  manifest <- historical_first_contract_rr_manifest()
-  internal_rr <- .load_historical_rr_registry() %>%
-    dplyr::semi_join(manifest, by = "component_id") %>%
-    dplyr::select(dplyr::all_of(CRF_REGISTRY_REQUIRED_COLUMNS))
-  public_rr <- resolve_historical_first_contract_public_rr(manifest)
-  resolved <- dplyr::bind_rows(public_rr, internal_rr)
-
-  if (nrow(resolved) != nrow(manifest)) {
-    stop(
-      "The first historical contract did not resolve every RR component.",
-      call. = FALSE
-    )
-  }
-  validate_crf_selection(resolved)
-  resolved
-}
-
-
-resolve_historical_first_contract_registry <- function() {
-  resolved <- dplyr::bind_rows(
-    resolve_historical_default_crfs(),
-    resolve_historical_first_contract_rr()
-  ) %>%
-    dplyr::select(dplyr::all_of(CRF_REGISTRY_REQUIRED_COLUMNS))
-
-  dc_groups <- load_dc_groups()
-  aggregate_causes <- dc_groups %>%
-    dplyr::filter(role == CRF_DC_ROLE_AGGREGATE) %>%
-    dplyr::pull(cause)
-  component_causes <- dc_groups %>%
-    dplyr::filter(role == CRF_DC_ROLE_COMPONENT) %>%
-    dplyr::pull(cause)
-  has_pm25_deaths_aggregate <- any(
-    resolved$pollutant == "PM25" &
-      resolved$outcome == MEASURE_DEATHS &
-      resolved$cause %in% aggregate_causes
+  legacy_crfs <- get_crfs(
+    legacy_hia_configuration_value(configuration, "legacy_crfs_version")
   )
-  if (has_pm25_deaths_aggregate) {
-    resolved <- resolved %>%
-      dplyr::mutate(
-        double_counted = double_counted |
-          (
-            pollutant == "PM25" &
-              outcome == MEASURE_DEATHS &
-              cause %in% component_causes
-          )
-      )
-  }
+  legacy_rr_sources <- legacy_hia_configuration_rr_sources(configuration)
+  epi_version <- legacy_hia_configuration_value(configuration, "epi_version")
+  epi <- legacy_hia_epi_fixture(
+    crfs = legacy_crfs,
+    rr_sources = legacy_rr_sources,
+    epi_version = epi_version
+  )
+  rr_selection <- .resolve_hia_rr_selection_boundary(
+    rr_sources = legacy_rr_sources,
+    calc_causes = "GEMM and GBD",
+    gbd_causes = NULL
+  )
+  boundary <- .resolve_hia_compatibility_boundary(
+    crfs = legacy_crfs,
+    rr_sources = parse_rr_sources(rr_selection$rr_sources),
+    epi = epi,
+    context = list(
+      rr_sources_supplied = FALSE,
+      epi_supplied = FALSE,
+      crfs_supplied = FALSE,
+      epi_version = epi_version,
+      crfs_version = "default",
+      crf_compute = "legacy",
+      rr_selection_mode = rr_selection$mode,
+      calc_causes = rr_selection$calc_causes,
+      gbd_causes = rr_selection$gbd_causes
+    ),
+    population_year_intent = .capture_population_year_intent(
+      pop_year = 2020,
+      scale_base_year = NULL,
+      scale_target_year = NULL,
+      resolved_pop_year = 2020
+    )
+  )
 
-  validate_crf_selection(resolved)
-  new_crfs_set(resolved)
+  boundary$specification
 }
 
 
@@ -154,7 +92,8 @@ run_historical_first_contract_parity_fixture <- function() {
     legacy_hia_configuration_value(configuration, "legacy_crfs_version")
   )
   legacy_rr_sources <- legacy_hia_configuration_rr_sources(configuration)
-  registry_crfs <- resolve_historical_first_contract_registry()
+  specification <- historical_first_contract_specification()
+  registry_crfs <- .resolve_hia_diagnostic_registry_set(specification)
   empty_rr_sources <- legacy_hia_empty_rr_sources()
   epi_version <- legacy_hia_configuration_value(configuration, "epi_version")
   epi <- legacy_hia_epi_fixture(
@@ -228,6 +167,7 @@ run_historical_first_contract_parity_fixture <- function() {
 
   list(
     configuration_id = configuration_id,
+    specification = specification,
     registry_crfs = registry_crfs,
     legacy_paf = legacy_paf,
     registry_paf = registry_paf,
