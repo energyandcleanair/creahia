@@ -171,9 +171,9 @@ test_that("Fusion YLL and YLD outcome reuse is represented only internally", {
     historical_registry$visibility == "internal_compatibility"
   ))
   expect_true(all(
-    historical_registry$reproduction_status == "not_verified"
+    historical_registry$reproduction_status == "parity_verified"
   ))
-  expect_true(all(!is.na(
+  expect_true(all(is.na(
     historical_registry$reproduction_blocking_reason
   )))
   expect_true(all(
@@ -236,8 +236,8 @@ test_that("historical RR requirements remain fail-closed", {
       tibble::as_tibble(),
     tibble::tribble(
       ~reproduction_status, ~n,
-      "not_verified", 44L,
-      "parity_verified", 25L
+      "not_verified", 35L,
+      "parity_verified", 34L
     )
   )
   expect_true(all(
