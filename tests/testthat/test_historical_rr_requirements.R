@@ -85,6 +85,78 @@ test_that("historical RR inventory records current Registry data coverage", {
 })
 
 
+test_that("Fusion death requirements record parity without routing promotion", {
+  manifest <- .load_historical_rr_manifest()
+  fusion_deaths <- manifest %>%
+    dplyr::filter(
+      source == RR_FUSION,
+      outcome == MEASURE_DEATHS,
+      coverage_status == "public_registry_candidate"
+    )
+  routing_blocker <- paste(
+    "Historical RR routing remains disabled pending methodology and",
+    "readiness review."
+  )
+
+  expect_equal(nrow(fusion_deaths), 7L)
+  expect_setequal(
+    fusion_deaths$cause,
+    c("NCD.LRI", "LRI", "COPD", "Diabetes", "IHD", "LC", "Stroke")
+  )
+  expect_true(all(
+    fusion_deaths$coverage_status == "public_registry_candidate"
+  ))
+  expect_true(all(
+    fusion_deaths$reproduction_status == "parity_verified"
+  ))
+  expect_true(all(is.na(fusion_deaths$reproduction_blocking_reason)))
+  expect_true(all(fusion_deaths$routing_status == "not_ready"))
+  expect_true(all(fusion_deaths$routing_blocking_reason == routing_blocker))
+  expect_true(all(fusion_deaths$scientific_review_status == "not_reviewed"))
+  expect_true(all(grepl(
+    "test_crf_fusion_migration[.]R",
+    fusion_deaths$provenance_notes
+  )))
+  expect_true(all(grepl(
+    "test_fusion_registry_hia_parity[.]R",
+    fusion_deaths$provenance_notes
+  )))
+
+  registry <- load_crf_registry()
+  legacy_fusion <- get_rr(RR_FUSION)
+  for (i in seq_len(nrow(fusion_deaths))) {
+    component <- fusion_deaths[i, , drop = FALSE]
+    candidate <- registry %>%
+      dplyr::filter(crf_id == component$public_registry_crf_ids)
+
+    expect_equal(nrow(candidate), 1L, info = component$component_id)
+    expect_equal(candidate$cause, component$cause)
+    expect_equal(candidate$outcome, component$outcome)
+
+    candidate_data <- load_crf_tabular(candidate) %>%
+      dplyr::arrange(age, exposure) %>%
+      tibble::as_tibble()
+    legacy_data <- legacy_fusion %>%
+      dplyr::filter(cause == component$cause, source == RR_FUSION) %>%
+      dplyr::select(exposure, age, low, central, high) %>%
+      dplyr::arrange(age, exposure) %>%
+      tibble::as_tibble()
+
+    expect_identical(
+      .canonical_rr_age_contract(candidate_data$age),
+      component$age_contract,
+      info = component$component_id
+    )
+    expect_equal(
+      candidate_data,
+      legacy_data,
+      tolerance = 1e-12,
+      info = component$component_id
+    )
+  }
+})
+
+
 test_that("historical RR requirements remain fail-closed", {
   inventory <- .load_historical_rr_manifest()
   configurations <- load_historical_fingerprint_configurations()
@@ -100,8 +172,8 @@ test_that("historical RR requirements remain fail-closed", {
       tibble::as_tibble(),
     tibble::tribble(
       ~reproduction_status, ~n,
-      "not_verified", 51L,
-      "parity_verified", 18L
+      "not_verified", 44L,
+      "parity_verified", 25L
     )
   )
   expect_true(all(
