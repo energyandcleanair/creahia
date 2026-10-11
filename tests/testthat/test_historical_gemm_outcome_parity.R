@@ -4,7 +4,8 @@ test_that("internal GEMM YLL and YLD rows reproduce historical PAF and impacts",
     "Source, outcome, age, PAF, and impact parity are verified;",
     "historical RR remains not ready pending methodology and readiness review."
   )
-  internal_registry <- .load_historical_rr_registry()
+  internal_registry <- .load_historical_rr_registry() %>%
+    dplyr::filter(source == RR_GEMM)
   manifest <- .load_historical_rr_manifest() %>%
     dplyr::filter(component_id %in% internal_registry$component_id)
 
