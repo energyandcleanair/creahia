@@ -21,6 +21,78 @@
 }
 
 
+.historical_rr_registry_columns <- function() {
+  c(
+    "component_id",
+    "source",
+    CRF_REGISTRY_REQUIRED_COLUMNS,
+    .historical_registry_metadata_columns()
+  )
+}
+
+
+.load_historical_rr_registry <- function(path = NULL, validate = TRUE) {
+  if (is.null(path)) {
+    path <- get_hia_path(
+      "rr/compatibility/historical_registry.csv",
+      error_if_not_exists = TRUE
+    )
+  }
+
+  registry <- readr::read_csv(path, col_types = readr::cols())
+  if (validate) {
+    .validate_historical_rr_registry(registry)
+  }
+  registry
+}
+
+
+.validate_historical_rr_registry <- function(registry) {
+  missing_columns <- setdiff(.historical_rr_registry_columns(), names(registry))
+  if (length(missing_columns) > 0) {
+    stop(
+      "Historical RR registry is missing required columns: ",
+      paste(missing_columns, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  .validate_historical_crf_registry(
+    registry %>%
+      dplyr::select(-component_id, -source)
+  )
+
+  duplicated_components <- unique(
+    registry$component_id[duplicated(registry$component_id)]
+  )
+  if (length(duplicated_components) > 0) {
+    stop(
+      "Historical RR registry contains duplicate component_id values: ",
+      paste(duplicated_components, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  expected_ids <- .component_id(
+    "rr",
+    registry$source,
+    registry$cause,
+    registry$outcome
+  )
+  if (!identical(registry$component_id, expected_ids)) {
+    stop(
+      "Historical RR Registry component_id values must match source/cause/outcome.",
+      call. = FALSE
+    )
+  }
+  if (any(registry$form != CRF_FORM_TABULAR)) {
+    stop("Historical RR Registry rows must use tabular CRFs.", call. = FALSE)
+  }
+
+  invisible(TRUE)
+}
+
+
 .load_historical_rr_manifest <- function(path = NULL, validate = TRUE) {
   if (is.null(path)) {
     path <- get_hia_path(
@@ -37,7 +109,10 @@
 }
 
 
-.validate_historical_rr_manifest <- function(manifest) {
+.validate_historical_rr_manifest <- function(
+  manifest,
+  historical_registry = .load_historical_rr_registry()
+) {
   missing_columns <- setdiff(
     .historical_rr_manifest_columns(),
     names(manifest)
@@ -113,6 +188,7 @@
 
   allowed_coverage <- c(
     "public_registry_candidate",
+    "historical_internal_candidate",
     "historical_internal_required"
   )
   invalid_coverage <- setdiff(unique(manifest$coverage_status), allowed_coverage)
@@ -125,7 +201,7 @@
   }
 
   internal_with_public_ids <-
-    manifest$coverage_status == "historical_internal_required" &
+    manifest$coverage_status != "public_registry_candidate" &
     !is.na(manifest$public_registry_crf_ids)
   candidate_without_public_ids <-
     manifest$coverage_status == "public_registry_candidate" &
@@ -140,6 +216,19 @@
   if (any(candidate_without_public_ids)) {
     stop(
       "Public-candidate historical RR components must name a Registry CRF.",
+      call. = FALSE
+    )
+  }
+  .validate_historical_rr_registry(historical_registry)
+  internal_candidate_ids <- manifest %>%
+    dplyr::filter(coverage_status == "historical_internal_candidate") %>%
+    dplyr::pull(component_id)
+  if (!setequal(internal_candidate_ids, historical_registry$component_id)) {
+    stop(
+      paste(
+        "Historical RR manifest component links must match the internal",
+        "RR Registry."
+      ),
       call. = FALSE
     )
   }

@@ -35,16 +35,20 @@ test_that("historical RR manifest covers named configurations and actual default
 })
 
 
-test_that("historical RR inventory records current public Registry candidates", {
+test_that("historical RR inventory records current Registry data coverage", {
   inventory <- .load_historical_rr_manifest()
   candidates <- derive_public_rr_registry_candidates()
+  internal_candidates <- .load_historical_rr_registry() %>%
+    dplyr::select(component_id) %>%
+    dplyr::mutate(has_internal_candidate = TRUE)
   expected <- derive_historical_rr_requirements() %>%
     dplyr::left_join(candidates, by = c("source", "cause", "outcome")) %>%
+    dplyr::left_join(internal_candidates, by = "component_id") %>%
     dplyr::mutate(
-      coverage_status = dplyr::if_else(
-        is.na(public_registry_crf_ids),
-        "historical_internal_required",
-        "public_registry_candidate"
+      coverage_status = dplyr::case_when(
+        !is.na(public_registry_crf_ids) ~ "public_registry_candidate",
+        !is.na(has_internal_candidate) ~ "historical_internal_candidate",
+        TRUE ~ "historical_internal_required"
       )
     )
 
@@ -71,8 +75,12 @@ test_that("historical RR inventory records current public Registry candidates", 
     13
   )
   expect_equal(
+    sum(inventory$coverage_status == "historical_internal_candidate"),
+    8
+  )
+  expect_equal(
     sum(inventory$coverage_status == "historical_internal_required"),
-    56
+    48
   )
 })
 
@@ -193,11 +201,78 @@ test_that("selected GEMM Deaths record complete evidence without readiness promo
 })
 
 
+test_that("GEMM YLL and YLD outcome reuse is represented only internally", {
+  rr_selection <- .resolve_hia_rr_selection_boundary(
+    rr_sources = c(RR_GEMM, RR_ORIGINAL),
+    calc_causes = "GEMM and GBD",
+    gbd_causes = NULL
+  )
+  selected_components <- .normalise_rr_components(
+    parse_rr_sources(rr_selection$rr_sources)
+  )
+  expected_components <- selected_components %>%
+    dplyr::filter(source == RR_GEMM, outcome != MEASURE_DEATHS)
+  historical_registry <- .load_historical_rr_registry()
+  manifest <- .load_historical_rr_manifest() %>%
+    dplyr::filter(component_id %in% historical_registry$component_id)
+
+  expect_equal(nrow(expected_components), 8L)
+  expect_equal(nrow(historical_registry), 8L)
+  expect_setequal(
+    historical_registry$component_id,
+    expected_components$component_id
+  )
+  expect_setequal(unique(historical_registry$outcome), c("YLLs", "YLDs"))
+  expect_true(all(historical_registry$lifecycle == "historical_reproduction"))
+  expect_true(all(historical_registry$visibility == "internal_compatibility"))
+  expect_true(all(historical_registry$reproduction_status == "not_verified"))
+  expect_true(all(
+    historical_registry$scientific_review_status == "not_reviewed"
+  ))
+  expect_true(all(manifest$coverage_status == "historical_internal_candidate"))
+  expect_true(all(is.na(manifest$public_registry_crf_ids)))
+  expect_false(any(
+    historical_registry$crf_id %in% load_crf_registry()$crf_id
+  ))
+
+  legacy_gemm <- get_rr(RR_GEMM)
+  for (i in seq_len(nrow(historical_registry))) {
+    candidate <- historical_registry[i, , drop = FALSE]
+    component <- manifest %>%
+      dplyr::filter(component_id == candidate$component_id)
+    candidate_data <- load_crf_tabular(candidate) %>%
+      dplyr::arrange(exposure, age) %>%
+      tibble::as_tibble()
+    legacy_data <- legacy_gemm %>%
+      dplyr::filter(cause == candidate$cause) %>%
+      dplyr::select(exposure, age, low, central, high) %>%
+      dplyr::arrange(exposure, age) %>%
+      tibble::as_tibble()
+
+    expect_equal(nrow(component), 1L, info = candidate$component_id)
+    expect_identical(
+      .canonical_rr_age_contract(candidate_data$age),
+      component$age_contract,
+      info = candidate$component_id
+    )
+    expect_equal(
+      candidate_data,
+      legacy_data,
+      tolerance = 1e-12,
+      info = candidate$component_id
+    )
+  }
+})
+
+
 test_that("historical RR manifest enforces canonical internal identities", {
   manifest <- .load_historical_rr_manifest()
+  historical_registry <- .load_historical_rr_registry()
 
   expect_named(manifest, .historical_rr_manifest_columns())
   expect_invisible(.validate_historical_rr_manifest(manifest))
+  expect_named(historical_registry, .historical_rr_registry_columns())
+  expect_invisible(.validate_historical_rr_registry(historical_registry))
   expect_true(all(manifest$component_type == "rr"))
   expect_true(all(manifest$selection_id == "historical_rr"))
   expect_true(all(manifest$lifecycle == "historical_reproduction"))
@@ -219,6 +294,15 @@ test_that("historical RR manifest enforces canonical internal identities", {
   expect_error(
     .validate_historical_rr_manifest(noncanonical),
     "canonical calculation ages"
+  )
+  expect_error(
+    .validate_historical_rr_registry(
+      dplyr::mutate(
+        historical_registry,
+        component_id = paste0(component_id, "|invalid")
+      )
+    ),
+    "must match source/cause/outcome"
   )
 })
 
