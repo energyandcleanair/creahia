@@ -212,6 +212,80 @@
 }
 
 
+.empty_hia_rr_sources <- function() {
+  tibble::tibble(
+    cause = character(),
+    source = character()
+  )
+}
+
+
+.apply_hia_compatibility_route_plan <- function(
+  route_plan,
+  crfs,
+  rr_sources,
+  crf_compute
+) {
+  if (!inherits(route_plan, "creahia_hia_compatibility_route_plan")) {
+    stop("route_plan must be a compatibility route plan.", call. = FALSE)
+  }
+  if (identical(route_plan$status, "error")) {
+    stop(
+      "Cannot apply an errored HIA compatibility route plan: ",
+      route_plan$error %||% route_plan$reason,
+      call. = FALSE
+    )
+  }
+  if (!identical(route_plan$status, "planned")) {
+    stop(
+      "Cannot apply an HIA compatibility route plan with status: ",
+      route_plan$status,
+      call. = FALSE
+    )
+  }
+
+  if (identical(route_plan$route, "unchanged")) {
+    return(list(
+      crfs = crfs,
+      rr_sources = rr_sources,
+      crf_compute = crf_compute
+    ))
+  }
+  if (identical(route_plan$route, "legacy")) {
+    if (!identical(crf_compute, "legacy") || is_crfs_set(crfs)) {
+      stop(
+        "A legacy compatibility plan requires existing legacy CRF inputs.",
+        call. = FALSE
+      )
+    }
+    return(list(
+      crfs = crfs,
+      rr_sources = rr_sources,
+      crf_compute = crf_compute
+    ))
+  }
+  if (!identical(route_plan$route, "registry")) {
+    stop(
+      "HIA compatibility route plan has an unsupported route: ",
+      route_plan$route,
+      call. = FALSE
+    )
+  }
+  if (!is_crfs_set(route_plan$registry_set)) {
+    stop(
+      "A Registry compatibility plan requires a resolved crfs_set().",
+      call. = FALSE
+    )
+  }
+
+  list(
+    crfs = route_plan$registry_set,
+    rr_sources = .empty_hia_rr_sources(),
+    crf_compute = "registry"
+  )
+}
+
+
 .resolve_hia_compatibility_boundary <- function(
   crfs,
   rr_sources,

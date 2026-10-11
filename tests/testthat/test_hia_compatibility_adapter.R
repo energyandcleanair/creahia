@@ -438,3 +438,129 @@ test_that("route planning rejects inconsistent readiness claims", {
     "readiness result and canonical specification disagree"
   )
 })
+
+
+test_that("legacy route application preserves existing compute inputs", {
+  plan <- .plan_hia_compatibility_route(
+    make_adapter_route_observation(ready = FALSE)
+  )
+  crfs <- tibble::tibble(
+    cause = "COPD",
+    outcome = "Deaths"
+  )
+  rr_sources <- tibble::tibble(
+    cause = "COPD",
+    source = "gemm"
+  )
+
+  applied <- .apply_hia_compatibility_route_plan(
+    route_plan = plan,
+    crfs = crfs,
+    rr_sources = rr_sources,
+    crf_compute = "legacy"
+  )
+
+  expect_identical(applied$crfs, crfs)
+  expect_identical(applied$rr_sources, rr_sources)
+  expect_identical(applied$crf_compute, "legacy")
+})
+
+
+test_that("unchanged route application preserves an explicit Registry route", {
+  plan <- .plan_hia_compatibility_route(list(
+    status = "not_applicable",
+    reason = "registry_route"
+  ))
+  crfs <- crfs_set("gbd2019_deaths")
+  rr_sources <- .empty_hia_rr_sources()
+
+  applied <- .apply_hia_compatibility_route_plan(
+    route_plan = plan,
+    crfs = crfs,
+    rr_sources = rr_sources,
+    crf_compute = "registry"
+  )
+
+  expect_identical(applied$crfs, crfs)
+  expect_identical(applied$rr_sources, rr_sources)
+  expect_identical(applied$crf_compute, "registry")
+})
+
+
+test_that("Registry route application replaces all compute inputs atomically", {
+  registry_set <- crfs_set("gbd2019_deaths")
+  plan <- .plan_hia_compatibility_route(
+    make_adapter_route_observation(ready = TRUE),
+    registry_set_resolver = function(...) registry_set
+  )
+  legacy_crfs <- tibble::tibble(
+    cause = "COPD",
+    outcome = "Deaths"
+  )
+  legacy_rr_sources <- tibble::tibble(
+    cause = "COPD",
+    source = "gemm"
+  )
+
+  applied <- .apply_hia_compatibility_route_plan(
+    route_plan = plan,
+    crfs = legacy_crfs,
+    rr_sources = legacy_rr_sources,
+    crf_compute = "legacy"
+  )
+
+  expect_identical(applied$crfs, registry_set)
+  expect_false(has_rr_sources(applied$rr_sources))
+  expect_named(applied$rr_sources, c("cause", "source"))
+  expect_identical(applied$crf_compute, "registry")
+})
+
+
+test_that("route application fails closed for unsafe plans", {
+  errored_plan <- .plan_hia_compatibility_route(
+    make_adapter_route_observation(ready = TRUE),
+    registry_set_resolver = function(...) {
+      stop("Registry data are unavailable.")
+    }
+  )
+  legacy_crfs <- tibble::tibble(cause = "COPD")
+  rr_sources <- tibble::tibble(cause = "COPD", source = "gemm")
+
+  expect_error(
+    .apply_hia_compatibility_route_plan(
+      route_plan = errored_plan,
+      crfs = legacy_crfs,
+      rr_sources = rr_sources,
+      crf_compute = "legacy"
+    ),
+    "Cannot apply an errored HIA compatibility route plan"
+  )
+
+  invalid_registry_plan <- .new_hia_compatibility_route_plan(
+    status = "planned",
+    route = "registry",
+    reason = "all_components_ready"
+  )
+  expect_error(
+    .apply_hia_compatibility_route_plan(
+      route_plan = invalid_registry_plan,
+      crfs = legacy_crfs,
+      rr_sources = rr_sources,
+      crf_compute = "legacy"
+    ),
+    "requires a resolved crfs_set"
+  )
+
+  legacy_plan <- .plan_hia_compatibility_route(
+    make_adapter_route_observation(ready = FALSE)
+  )
+  expect_error(
+    .apply_hia_compatibility_route_plan(
+      route_plan = legacy_plan,
+      crfs = crfs_set("gbd2019_deaths"),
+      rr_sources = .empty_hia_rr_sources(),
+      crf_compute = "registry"
+    ),
+    "requires existing legacy CRF inputs"
+  )
+})
