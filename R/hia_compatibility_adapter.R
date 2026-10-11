@@ -501,3 +501,8 @@
 
   invisible(observation)
 }
+
+
+.hia_readiness_shadow_enabled <- function() {
+  is.function(getOption("creahia.hia_readiness_shadow_observer"))
+}

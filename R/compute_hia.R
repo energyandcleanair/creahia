@@ -83,30 +83,32 @@ compute_hia <- function(conc_map,
 
   validate_crfs_against_epi(crfs = crfs, epi = epi, species = species)
 
-  population_year_intent <- .capture_population_year_intent(
-    pop_year = supplied_population_years$pop_year,
-    scale_base_year = supplied_population_years$scale_base_year,
-    scale_target_year = supplied_population_years$scale_target_year,
-    resolved_pop_year = pop_year
-  )
-  compatibility_context <- c(
-    argument_provenance,
-    list(
-      epi_version = epi_version,
-      crfs_version = crfs_version,
-      crf_compute = crf_compute,
-      rr_selection_mode = rr_selection$mode,
-      calc_causes = rr_selection$calc_causes,
-      gbd_causes = rr_selection$gbd_causes
+  if (.hia_readiness_shadow_enabled()) {
+    population_year_intent <- .capture_population_year_intent(
+      pop_year = supplied_population_years$pop_year,
+      scale_base_year = supplied_population_years$scale_base_year,
+      scale_target_year = supplied_population_years$scale_target_year,
+      resolved_pop_year = pop_year
     )
-  )
-  .observe_hia_compatibility_boundary(
-    crfs = crfs,
-    rr_sources = rr_sources,
-    epi = epi,
-    context = compatibility_context,
-    population_year_intent = population_year_intent
-  )
+    compatibility_context <- c(
+      argument_provenance,
+      list(
+        epi_version = epi_version,
+        crfs_version = crfs_version,
+        crf_compute = crf_compute,
+        rr_selection_mode = rr_selection$mode,
+        calc_causes = rr_selection$calc_causes,
+        gbd_causes = rr_selection$gbd_causes
+      )
+    )
+    .observe_hia_compatibility_boundary(
+      crfs = crfs,
+      rr_sources = rr_sources,
+      epi = epi,
+      context = compatibility_context,
+      population_year_intent = population_year_intent
+    )
+  }
 
   message("Computing PAF")
   paf <- compute_hia_paf(

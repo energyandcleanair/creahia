@@ -55,6 +55,48 @@ make_shadow_test_boundary_context <- function(...) {
 }
 
 
+test_that("ordinary HIA calls skip shadow resolution unless opted in", {
+  expected <- make_shadow_test_impacts()
+  old_options <- options(creahia.hia_readiness_shadow_observer = NULL)
+  on.exit(options(old_options), add = TRUE)
+
+  expect_false(.hia_readiness_shadow_enabled())
+
+  with_mocked_bindings(
+    get_crfs = function(version = "default") make_shadow_test_crfs(),
+    get_epi = function(version = "default") make_shadow_test_epi(),
+    parse_rr_sources = function(rr_sources) {
+      tibble::tibble(cause = "NCD.LRI", source = RR_GEMM)
+    },
+    validate_crfs_against_epi = function(...) invisible(TRUE),
+    .capture_population_year_intent = function(...) {
+      stop("disabled shadow mode must not build a diagnostic specification")
+    },
+    .observe_hia_compatibility_boundary = function(...) {
+      stop("disabled shadow mode must not resolve compatibility")
+    },
+    compute_hia_paf = function(...) tibble::tibble(),
+    compute_hia_impacts = function(...) expected,
+    {
+      result <- run_shadow_test_hia()
+    }
+  )
+
+  expect_identical(result, expected)
+})
+
+
+test_that("shadow mode requires an observer function", {
+  old_options <- options(creahia.hia_readiness_shadow_observer = TRUE)
+  on.exit(options(old_options), add = TRUE)
+
+  expect_false(.hia_readiness_shadow_enabled())
+
+  options(creahia.hia_readiness_shadow_observer = function(...) NULL)
+  expect_true(.hia_readiness_shadow_enabled())
+})
+
+
 test_that("actual default HIA call observes readiness without changing output", {
   seen <- new.env(parent = emptyenv())
   expected <- make_shadow_test_impacts()
@@ -264,6 +306,11 @@ test_that("shadow readiness failures do not interrupt the legacy calculation", {
   expect_equal(
     seen$observation$route_plan$reason,
     "compatibility_boundary_error"
+  )
+  expect_equal(seen$observation$route_application$status, "error")
+  expect_match(
+    seen$observation$route_application$error,
+    "Cannot apply an errored HIA compatibility route plan"
   )
 })
 
