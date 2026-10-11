@@ -86,10 +86,7 @@ test_that("actual default HIA call observes readiness without changing output", 
       seen$crf_input_mode <- crf_input_mode
       seen$crf_selection_id <- crf_selection_id
       seen$epi_version <- epi_version
-      readiness <- make_specification_readiness()
-      readiness$components <- readiness$components[0, ]
-      readiness$blocking_components <- readiness$blocking_components[0, ]
-      readiness
+      make_specification_readiness()
     },
     compute_hia_paf = function(...) tibble::tibble(),
     compute_hia_impacts = function(...) expected,
@@ -101,6 +98,11 @@ test_that("actual default HIA call observes readiness without changing output", 
   expect_identical(result, expected)
   expect_equal(seen$observation$status, "resolved")
   expect_false(seen$observation$result$ready)
+  expect_equal(seen$observation$route_plan$route, "legacy")
+  expect_equal(
+    seen$observation$route_plan$reason,
+    "components_not_ready"
+  )
   expect_s3_class(
     seen$observation$specification,
     "creahia_hia_specification"
@@ -135,10 +137,7 @@ test_that("shadow specification records resolved population-year intent", {
     },
     validate_crfs_against_epi = function(...) invisible(TRUE),
     .resolve_hia_component_readiness = function(...) {
-      readiness <- make_specification_readiness()
-      readiness$components <- readiness$components[0, ]
-      readiness$blocking_components <- readiness$blocking_components[0, ]
-      readiness
+      make_specification_readiness()
     },
     compute_hia_paf = function(...) tibble::tibble(),
     compute_hia_impacts = function(...) expected,
@@ -176,10 +175,7 @@ test_that("GBD 2019 historical call emits its canonical specification", {
     validate_crfs_against_epi = function(...) invisible(TRUE),
     .resolve_hia_component_readiness = function(..., epi_version) {
       seen$readiness_epi_version <- epi_version
-      readiness <- make_specification_readiness()
-      readiness$components <- readiness$components[0, ]
-      readiness$blocking_components <- readiness$blocking_components[0, ]
-      readiness
+      make_specification_readiness()
     },
     compute_hia_paf = function(...) tibble::tibble(),
     compute_hia_impacts = function(...) expected,
@@ -241,6 +237,11 @@ test_that("shadow readiness failures do not interrupt the legacy calculation", {
   expect_identical(result, expected)
   expect_equal(seen$observation$status, "error")
   expect_match(seen$observation$error, "shadow resolver failed")
+  expect_equal(seen$observation$route_plan$status, "error")
+  expect_equal(
+    seen$observation$route_plan$reason,
+    "compatibility_boundary_error"
+  )
 })
 
 
@@ -254,10 +255,7 @@ test_that("shadow observer failures stay internal", {
 
   with_mocked_bindings(
     .resolve_hia_component_readiness = function(...) {
-      readiness <- make_specification_readiness()
-      readiness$components <- readiness$components[0, ]
-      readiness$blocking_components <- readiness$blocking_components[0, ]
-      readiness
+      make_specification_readiness()
     },
     {
       observation <- .observe_hia_compatibility_boundary(
@@ -284,6 +282,40 @@ test_that("shadow observer failures stay internal", {
     observation$specification,
     "creahia_hia_specification"
   )
+})
+
+
+test_that("shadow route-planning failures stay internal", {
+  with_mocked_bindings(
+    .resolve_hia_component_readiness = function(...) {
+      make_specification_readiness()
+    },
+    .plan_hia_compatibility_route = function(...) {
+      stop("route planning failed")
+    },
+    {
+      observation <- .observe_hia_compatibility_boundary(
+        crfs = make_shadow_test_crfs(),
+        rr_sources = tibble::tibble(
+          cause = "NCD.LRI",
+          source = RR_GEMM
+        ),
+        epi = make_shadow_test_epi(),
+        context = make_shadow_test_boundary_context(),
+        population_year_intent = .capture_population_year_intent(
+          pop_year = NULL,
+          scale_base_year = NULL,
+          scale_target_year = NULL,
+          resolved_pop_year = NULL
+        )
+      )
+    }
+  )
+
+  expect_equal(observation$status, "resolved")
+  expect_equal(observation$route_plan$status, "error")
+  expect_equal(observation$route_plan$reason, "route_planning_error")
+  expect_match(observation$route_plan$error, "route planning failed")
 })
 
 
@@ -330,6 +362,8 @@ test_that("shadow mode resolves the current package default contract", {
   expect_false(
     observation$specification$population_year$scaling_requested
   )
+  expect_equal(observation$route_plan$route, "legacy")
+  expect_equal(observation$route_plan$reason, "components_not_ready")
 })
 
 
@@ -406,18 +440,45 @@ test_that("GBD 2019 historical contract exposes its complete readiness gap", {
   )
   expect_equal(nrow(observation$result$ignored_rr_pairs), 0)
 
-  route_plan <- .plan_hia_compatibility_route(
-    observation,
-    registry_set_resolver = function(...) {
-      stop("Unready historical RR must not resolve a Registry Set.")
-    }
-  )
+  route_plan <- observation$route_plan
   expect_equal(route_plan$route, "legacy")
   expect_equal(route_plan$reason, "components_not_ready")
   expect_setequal(
     route_plan$blocking_component_ids,
     blocking_components$component_id
   )
+})
+
+
+test_that("adapter-inapplicable observations preserve their existing route", {
+  observed <- FALSE
+  old_options <- options(
+    creahia.hia_readiness_shadow_observer = function(observation) {
+      observed <<- TRUE
+    }
+  )
+  on.exit(options(old_options), add = TRUE)
+
+  observation <- .observe_hia_compatibility_boundary(
+    crfs = make_shadow_test_crfs(),
+    rr_sources = tibble::tibble(
+      cause = "NCD.LRI",
+      source = RR_GEMM
+    ),
+    epi = make_shadow_test_epi(),
+    context = make_shadow_test_boundary_context(crf_compute = "registry"),
+    population_year_intent = .capture_population_year_intent(
+      pop_year = NULL,
+      scale_base_year = NULL,
+      scale_target_year = NULL,
+      resolved_pop_year = NULL
+    )
+  )
+
+  expect_equal(observation$status, "not_applicable")
+  expect_equal(observation$route_plan$route, "unchanged")
+  expect_equal(observation$route_plan$reason, "registry_route")
+  expect_false(observed)
 })
 
 

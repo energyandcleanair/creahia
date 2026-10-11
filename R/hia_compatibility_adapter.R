@@ -379,6 +379,20 @@
     }
   )
 
+  route_plan <- tryCatch(
+    .plan_hia_compatibility_route(observation),
+    error = function(error) {
+      .new_hia_compatibility_route_plan(
+        status = "error",
+        route = NULL,
+        reason = "route_planning_error",
+        input_contract = observation$input_contract %||% NULL,
+        error = conditionMessage(error)
+      )
+    }
+  )
+  observation$route_plan <- route_plan
+
   if (identical(observation$status, "not_applicable")) {
     return(invisible(observation))
   }
