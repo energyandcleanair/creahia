@@ -405,6 +405,19 @@ test_that("GBD 2019 historical contract exposes its complete readiness gap", {
     blocking_components$component_id
   )
   expect_equal(nrow(observation$result$ignored_rr_pairs), 0)
+
+  route_plan <- .plan_hia_compatibility_route(
+    observation,
+    registry_set_resolver = function(...) {
+      stop("Unready historical RR must not resolve a Registry Set.")
+    }
+  )
+  expect_equal(route_plan$route, "legacy")
+  expect_equal(route_plan$reason, "components_not_ready")
+  expect_setequal(
+    route_plan$blocking_component_ids,
+    blocking_components$component_id
+  )
 })
 
 

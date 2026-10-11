@@ -29,6 +29,43 @@ make_adapter_test_population_year <- function(
 }
 
 
+make_adapter_route_observation <- function(ready = FALSE) {
+  readiness <- make_specification_readiness()
+  if (ready) {
+    readiness$components <- readiness$components %>%
+      dplyr::mutate(
+        ready = TRUE,
+        blocking_reason = NA_character_,
+        reproduction_status = dplyr::if_else(
+          component_type == "epi",
+          NA_character_,
+          "parity_verified"
+        ),
+        routing_status = dplyr::if_else(
+          component_type == "epi",
+          NA_character_,
+          "ready"
+        )
+      )
+    readiness$ready <- TRUE
+    readiness$blocking_components <- readiness$components[0, , drop = FALSE]
+  }
+  specification <- .new_hia_specification(
+    readiness = readiness,
+    population_year_intent = make_adapter_test_population_year(2020),
+    input_contract = "legacy_default_gemm_gbd2019_2020",
+    epi_version = "gbd2019"
+  )
+
+  list(
+    status = "resolved",
+    input_contract = specification$input_contract,
+    result = readiness,
+    specification = specification
+  )
+}
+
+
 test_that("RR selection boundary preserves legacy translation and precedence", {
   seen <- new.env(parent = emptyenv())
   explicit_rr_sources <- list(custom = "IgnoredCause")
@@ -304,5 +341,100 @@ test_that("compatibility boundary validates argument provenance", {
       population_year_intent = make_adapter_test_population_year()
     ),
     "must be single TRUE/FALSE values: crfs_supplied"
+  )
+})
+
+
+test_that("route planning keeps incomplete contracts on the legacy route", {
+  observation <- make_adapter_route_observation(ready = FALSE)
+  resolver_called <- FALSE
+  plan <- .plan_hia_compatibility_route(
+    observation,
+    registry_set_resolver = function(...) {
+      resolver_called <<- TRUE
+      stop("unready contracts must not resolve a Registry Set")
+    }
+  )
+
+  expect_s3_class(plan, "creahia_hia_compatibility_route_plan")
+  expect_equal(plan$status, "planned")
+  expect_equal(plan$route, "legacy")
+  expect_equal(plan$reason, "components_not_ready")
+  expect_setequal(
+    plan$blocking_component_ids,
+    observation$specification$readiness$blocking_component_ids
+  )
+  expect_false(resolver_called)
+  expect_null(plan$registry_set)
+})
+
+
+test_that("route planning selects Registry only when the whole call is ready", {
+  observation <- make_adapter_route_observation(ready = TRUE)
+  expected_set <- crfs_set("gbd2019_deaths")
+  seen_specification <- NULL
+  plan <- .plan_hia_compatibility_route(
+    observation,
+    registry_set_resolver = function(specification) {
+      seen_specification <<- specification
+      expected_set
+    }
+  )
+
+  expect_identical(seen_specification, observation$specification)
+  expect_equal(plan$status, "planned")
+  expect_equal(plan$route, "registry")
+  expect_equal(plan$reason, "all_components_ready")
+  expect_identical(plan$registry_set, expected_set)
+  expect_length(plan$blocking_component_ids, 0)
+})
+
+
+test_that("route planning never hides Registry Set resolution failures", {
+  observation <- make_adapter_route_observation(ready = TRUE)
+  plan <- .plan_hia_compatibility_route(
+    observation,
+    registry_set_resolver = function(...) stop("Registry data are unavailable.")
+  )
+
+  expect_equal(plan$status, "error")
+  expect_null(plan$route)
+  expect_equal(plan$reason, "registry_set_resolution_error")
+  expect_match(plan$error, "Registry data are unavailable")
+  expect_error(
+    .plan_hia_compatibility_route(
+      observation,
+      registry_set_resolver = function(...) tibble::tibble()
+    ),
+    "must return a crfs_set"
+  )
+})
+
+
+test_that("route planning preserves excluded and failed boundary states", {
+  excluded <- .plan_hia_compatibility_route(list(
+    status = "not_applicable",
+    reason = "registry_route"
+  ))
+  failed <- .plan_hia_compatibility_route(list(
+    status = "error",
+    error = "Readiness resolution failed."
+  ))
+
+  expect_equal(excluded$route, "unchanged")
+  expect_equal(excluded$reason, "registry_route")
+  expect_equal(failed$status, "error")
+  expect_null(failed$route)
+  expect_match(failed$error, "Readiness resolution failed")
+})
+
+
+test_that("route planning rejects inconsistent readiness claims", {
+  observation <- make_adapter_route_observation(ready = FALSE)
+  observation$result$ready <- TRUE
+
+  expect_error(
+    .plan_hia_compatibility_route(observation),
+    "readiness result and canonical specification disagree"
   )
 })

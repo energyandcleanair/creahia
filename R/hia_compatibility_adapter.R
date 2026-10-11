@@ -69,6 +69,149 @@
 }
 
 
+.new_hia_compatibility_route_plan <- function(
+  status,
+  route,
+  reason,
+  input_contract = NULL,
+  blocking_component_ids = character(),
+  registry_set = NULL,
+  error = NULL
+) {
+  structure(
+    list(
+      status = status,
+      route = route,
+      reason = reason,
+      input_contract = input_contract,
+      blocking_component_ids = blocking_component_ids,
+      registry_set = registry_set,
+      error = error
+    ),
+    class = c("creahia_hia_compatibility_route_plan", "list")
+  )
+}
+
+
+.plan_hia_compatibility_route <- function(
+  observation,
+  registry_set_resolver = .resolve_hia_diagnostic_registry_set
+) {
+  if (!is.list(observation) || is.null(observation$status)) {
+    stop("HIA compatibility observation is missing a status.", call. = FALSE)
+  }
+
+  if (identical(observation$status, "not_applicable")) {
+    return(.new_hia_compatibility_route_plan(
+      status = "planned",
+      route = "unchanged",
+      reason = observation$reason %||% "adapter_not_applicable"
+    ))
+  }
+  if (identical(observation$status, "error")) {
+    return(.new_hia_compatibility_route_plan(
+      status = "error",
+      route = NULL,
+      reason = "compatibility_boundary_error",
+      error = observation$error %||% "Unknown compatibility boundary error."
+    ))
+  }
+  if (!identical(observation$status, "resolved")) {
+    stop(
+      "HIA compatibility observation has an unsupported status: ",
+      observation$status,
+      call. = FALSE
+    )
+  }
+
+  required_fields <- c("input_contract", "result", "specification")
+  missing_fields <- setdiff(required_fields, names(observation))
+  if (length(missing_fields) > 0) {
+    stop(
+      "Resolved HIA compatibility observation is missing fields: ",
+      paste(missing_fields, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  result_ready <- observation$result$ready
+  specification_ready <- observation$specification$readiness$ready
+  if (
+    !is.logical(result_ready) || length(result_ready) != 1 ||
+    !is.logical(specification_ready) || length(specification_ready) != 1 ||
+    is.na(result_ready) || is.na(specification_ready) ||
+    !identical(result_ready, specification_ready)
+  ) {
+    stop(
+      "HIA readiness result and canonical specification disagree.",
+      call. = FALSE
+    )
+  }
+  if (!identical(
+    observation$input_contract,
+    observation$specification$input_contract
+  )) {
+    stop(
+      "HIA observation and canonical specification use different contracts.",
+      call. = FALSE
+    )
+  }
+  result_blockers <- observation$result$blocking_components$component_id
+  specification_blockers <-
+    observation$specification$readiness$blocking_component_ids
+  if (!setequal(result_blockers, specification_blockers)) {
+    stop(
+      "HIA readiness result and canonical specification list different blockers.",
+      call. = FALSE
+    )
+  }
+  if ((result_ready && length(result_blockers) > 0) ||
+      (!result_ready && length(result_blockers) == 0)) {
+    stop(
+      "HIA readiness status is inconsistent with its blocking components.",
+      call. = FALSE
+    )
+  }
+
+  if (!result_ready) {
+    return(.new_hia_compatibility_route_plan(
+      status = "planned",
+      route = "legacy",
+      reason = "components_not_ready",
+      input_contract = observation$input_contract,
+      blocking_component_ids = specification_blockers
+    ))
+  }
+
+  registry_set <- tryCatch(
+    registry_set_resolver(observation$specification),
+    error = function(error) error
+  )
+  if (inherits(registry_set, "error")) {
+    return(.new_hia_compatibility_route_plan(
+      status = "error",
+      route = NULL,
+      reason = "registry_set_resolution_error",
+      input_contract = observation$input_contract,
+      error = conditionMessage(registry_set)
+    ))
+  }
+  if (!is_crfs_set(registry_set)) {
+    stop(
+      "HIA Registry Set resolver must return a crfs_set() result.",
+      call. = FALSE
+    )
+  }
+
+  .new_hia_compatibility_route_plan(
+    status = "planned",
+    route = "registry",
+    reason = "all_components_ready",
+    input_contract = observation$input_contract,
+    registry_set = registry_set
+  )
+}
+
+
 .resolve_hia_compatibility_boundary <- function(
   crfs,
   rr_sources,
