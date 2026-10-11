@@ -111,7 +111,7 @@ test_that("historical RR requirements remain fail-closed", {
 })
 
 
-test_that("selected GEMM Deaths record complete evidence without readiness promotion", {
+test_that("selected RR rows record complete evidence without readiness promotion", {
   rr_selection <- .resolve_hia_rr_selection_boundary(
     rr_sources = c(RR_GEMM, RR_ORIGINAL),
     calc_causes = "GEMM and GBD",
@@ -196,11 +196,7 @@ test_that("selected GEMM Deaths record complete evidence without readiness promo
   expect_equal(nrow(remaining), 12L)
   expect_true(all(remaining$reproduction_status == "not_verified"))
   expect_true(all(
-    remaining$reproduction_blocking_reason[remaining$source == RR_GEMM] ==
-      evidence_complete_blocker
-  ))
-  expect_false(any(
-    remaining$reproduction_blocking_reason[remaining$source == RR_ORIGINAL] ==
+    remaining$reproduction_blocking_reason ==
       evidence_complete_blocker
   ))
 })
@@ -273,7 +269,7 @@ test_that("GEMM YLL and YLD outcome reuse is represented only internally", {
 })
 
 
-test_that("original RR blockers have exact internal curve representations", {
+test_that("original RR rows retain exact internal curve representations", {
   rr_selection <- .resolve_hia_rr_selection_boundary(
     rr_sources = c(RR_GEMM, RR_ORIGINAL),
     calc_causes = "GEMM and GBD",
@@ -287,9 +283,9 @@ test_that("original RR blockers have exact internal curve representations", {
     dplyr::filter(source == RR_ORIGINAL)
   manifest <- .load_historical_rr_manifest() %>%
     dplyr::filter(component_id %in% historical_registry$component_id)
-  representation_blocker <- paste(
-    "Source curve, outcome, and age representation are complete;",
-    "PAF and impact parity are not complete."
+  policy_hold <- paste(
+    "Source, outcome, age, PAF, and impact parity are verified;",
+    "historical RR remains not ready pending methodology and readiness review."
   )
 
   expect_equal(nrow(expected_components), 4L)
@@ -303,7 +299,7 @@ test_that("original RR blockers have exact internal curve representations", {
   expect_true(all(historical_registry$visibility == "internal_compatibility"))
   expect_true(all(historical_registry$reproduction_status == "not_verified"))
   expect_true(all(
-    historical_registry$reproduction_blocking_reason == representation_blocker
+    historical_registry$reproduction_blocking_reason == policy_hold
   ))
   expect_true(all(
     historical_registry$scientific_review_status == "not_reviewed"
