@@ -195,8 +195,13 @@ test_that("selected GEMM Deaths record complete evidence without readiness promo
     dplyr::anti_join(gemm_deaths, by = "component_id")
   expect_equal(nrow(remaining), 12L)
   expect_true(all(remaining$reproduction_status == "not_verified"))
+  expect_true(all(
+    remaining$reproduction_blocking_reason[remaining$source == RR_GEMM] ==
+      evidence_complete_blocker
+  ))
   expect_false(any(
-    remaining$reproduction_blocking_reason == evidence_complete_blocker
+    remaining$reproduction_blocking_reason[remaining$source == RR_ORIGINAL] ==
+      evidence_complete_blocker
   ))
 })
 
