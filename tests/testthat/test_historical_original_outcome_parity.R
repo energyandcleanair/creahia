@@ -1,20 +1,20 @@
 test_that("internal original RR rows reproduce warnings, PAF, and impacts", {
   results <- run_historical_original_outcome_parity_fixture()
   policy_hold <- paste(
-    "Source, outcome, age, PAF, and impact parity are verified;",
-    "historical RR remains not ready pending methodology and readiness review."
+    "Historical RR routing remains disabled pending methodology and",
+    "readiness review."
   )
   internal_registry <- .load_historical_rr_registry() %>%
     dplyr::filter(source == RR_ORIGINAL)
   manifest <- .load_historical_rr_manifest() %>%
     dplyr::filter(component_id %in% internal_registry$component_id)
 
-  expect_true(all(internal_registry$reproduction_status == "not_verified"))
-  expect_true(all(manifest$reproduction_status == "not_verified"))
-  expect_true(all(
-    internal_registry$reproduction_blocking_reason == policy_hold
-  ))
-  expect_true(all(manifest$reproduction_blocking_reason == policy_hold))
+  expect_true(all(internal_registry$reproduction_status == "parity_verified"))
+  expect_true(all(manifest$reproduction_status == "parity_verified"))
+  expect_true(all(is.na(internal_registry$reproduction_blocking_reason)))
+  expect_true(all(is.na(manifest$reproduction_blocking_reason)))
+  expect_true(all(manifest$routing_status == "not_ready"))
+  expect_true(all(manifest$routing_blocking_reason == policy_hold))
 
   expected_warnings <- c(
     "PAF estimates are not properly ordered or of the same sign for Diabetes Deaths",

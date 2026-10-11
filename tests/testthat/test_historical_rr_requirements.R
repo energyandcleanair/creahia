@@ -93,9 +93,30 @@ test_that("historical RR requirements remain fail-closed", {
     dplyr::pull(required_by) %>%
     unique()
 
-  expect_true(all(inventory$reproduction_status == "not_verified"))
-  expect_true(all(!is.na(inventory$reproduction_blocking_reason)))
-  expect_true(all(inventory$reproduction_blocking_reason != ""))
+  expect_equal(
+    inventory %>%
+      dplyr::ungroup() %>%
+      dplyr::count(reproduction_status, name = "n") %>%
+      tibble::as_tibble(),
+    tibble::tribble(
+      ~reproduction_status, ~n,
+      "not_verified", 51L,
+      "parity_verified", 18L
+    )
+  )
+  expect_true(all(
+    !is.na(inventory$reproduction_blocking_reason[
+      inventory$reproduction_status == "not_verified"
+    ])
+  ))
+  expect_true(all(is.na(
+    inventory$reproduction_blocking_reason[
+      inventory$reproduction_status == "parity_verified"
+    ]
+  )))
+  expect_true(all(inventory$routing_status == "not_ready"))
+  expect_true(all(!is.na(inventory$routing_blocking_reason)))
+  expect_true(all(inventory$routing_blocking_reason != ""))
   expect_true(all(inventory$scientific_review_status == "not_reviewed"))
   expect_true(all(!is.na(inventory$scientific_review_reason)))
   expect_true(all(inventory$scientific_review_reason != ""))
@@ -125,9 +146,9 @@ test_that("selected RR rows record complete evidence without readiness promotion
     dplyr::semi_join(selected_components, by = "component_id")
   gemm_deaths <- selected_manifest %>%
     dplyr::filter(source == RR_GEMM, outcome == MEASURE_DEATHS)
-  evidence_complete_blocker <- paste(
-    "Source, outcome, age, PAF, and impact parity are verified;",
-    "historical RR remains not ready pending methodology and readiness review."
+  routing_blocker <- paste(
+    "Historical RR routing remains disabled pending methodology and",
+    "readiness review."
   )
 
   expect_equal(nrow(selected_manifest), 18L)
@@ -137,10 +158,10 @@ test_that("selected RR rows record complete evidence without readiness promotion
     c("NCD.LRI", "COPD", "IHD", "LC", "LRI", "Stroke")
   )
   expect_true(all(gemm_deaths$coverage_status == "public_registry_candidate"))
-  expect_true(all(gemm_deaths$reproduction_status == "not_verified"))
-  expect_true(all(
-    gemm_deaths$reproduction_blocking_reason == evidence_complete_blocker
-  ))
+  expect_true(all(gemm_deaths$reproduction_status == "parity_verified"))
+  expect_true(all(is.na(gemm_deaths$reproduction_blocking_reason)))
+  expect_true(all(gemm_deaths$routing_status == "not_ready"))
+  expect_true(all(gemm_deaths$routing_blocking_reason == routing_blocker))
   expect_true(all(gemm_deaths$scientific_review_status == "not_reviewed"))
 
   registry <- load_crf_registry()
@@ -194,11 +215,10 @@ test_that("selected RR rows record complete evidence without readiness promotion
   remaining <- selected_manifest %>%
     dplyr::anti_join(gemm_deaths, by = "component_id")
   expect_equal(nrow(remaining), 12L)
-  expect_true(all(remaining$reproduction_status == "not_verified"))
-  expect_true(all(
-    remaining$reproduction_blocking_reason ==
-      evidence_complete_blocker
-  ))
+  expect_true(all(remaining$reproduction_status == "parity_verified"))
+  expect_true(all(is.na(remaining$reproduction_blocking_reason)))
+  expect_true(all(remaining$routing_status == "not_ready"))
+  expect_true(all(remaining$routing_blocking_reason == routing_blocker))
 })
 
 
@@ -229,7 +249,11 @@ test_that("GEMM YLL and YLD outcome reuse is represented only internally", {
   expect_setequal(unique(historical_registry$outcome), c("YLLs", "YLDs"))
   expect_true(all(historical_registry$lifecycle == "historical_reproduction"))
   expect_true(all(historical_registry$visibility == "internal_compatibility"))
-  expect_true(all(historical_registry$reproduction_status == "not_verified"))
+  expect_true(all(
+    historical_registry$reproduction_status == "parity_verified"
+  ))
+  expect_true(all(is.na(historical_registry$reproduction_blocking_reason)))
+  expect_true(all(manifest$routing_status == "not_ready"))
   expect_true(all(
     historical_registry$scientific_review_status == "not_reviewed"
   ))
@@ -284,8 +308,8 @@ test_that("original RR rows retain exact internal curve representations", {
   manifest <- .load_historical_rr_manifest() %>%
     dplyr::filter(component_id %in% historical_registry$component_id)
   policy_hold <- paste(
-    "Source, outcome, age, PAF, and impact parity are verified;",
-    "historical RR remains not ready pending methodology and readiness review."
+    "Historical RR routing remains disabled pending methodology and",
+    "readiness review."
   )
 
   expect_equal(nrow(expected_components), 4L)
@@ -297,10 +321,12 @@ test_that("original RR rows retain exact internal curve representations", {
   expect_equal(dplyr::n_distinct(historical_registry$data_path), 2L)
   expect_true(all(historical_registry$lifecycle == "historical_reproduction"))
   expect_true(all(historical_registry$visibility == "internal_compatibility"))
-  expect_true(all(historical_registry$reproduction_status == "not_verified"))
   expect_true(all(
-    historical_registry$reproduction_blocking_reason == policy_hold
+    historical_registry$reproduction_status == "parity_verified"
   ))
+  expect_true(all(is.na(historical_registry$reproduction_blocking_reason)))
+  expect_true(all(manifest$routing_status == "not_ready"))
+  expect_true(all(manifest$routing_blocking_reason == policy_hold))
   expect_true(all(
     historical_registry$scientific_review_status == "not_reviewed"
   ))

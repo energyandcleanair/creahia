@@ -10,6 +10,7 @@
     "ready",
     "blocking_reason",
     "reproduction_status",
+    "routing_status",
     "scientific_review_status"
   )
 }

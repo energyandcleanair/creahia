@@ -11,6 +11,8 @@
     "visibility",
     "reproduction_status",
     "reproduction_blocking_reason",
+    "routing_status",
+    "routing_blocking_reason",
     "scientific_review_status",
     "scientific_review_reason",
     "required_by",
@@ -262,6 +264,16 @@
       lifecycle,
       reproduction_status,
       reproduction_blocking_reason,
+      routing_status = dplyr::if_else(
+        reproduction_status == "parity_verified",
+        "ready",
+        "not_ready"
+      ),
+      routing_blocking_reason = dplyr::if_else(
+        reproduction_status == "parity_verified",
+        NA_character_,
+        reproduction_blocking_reason
+      ),
       scientific_review_status,
       scientific_review_reason
     )
@@ -278,6 +290,8 @@
       lifecycle,
       reproduction_status,
       reproduction_blocking_reason,
+      routing_status,
+      routing_blocking_reason,
       scientific_review_status,
       scientific_review_reason
     )

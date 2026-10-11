@@ -385,7 +385,11 @@ test_that("GBD 2019 historical contract exposes its complete readiness gap", {
   expect_true(all(components$ready[components$component_type == "crf"]))
   expect_true(all(
     components$reproduction_status[components$component_type == "rr"] ==
-      "not_verified"
+      "parity_verified"
+  ))
+  expect_true(all(
+    components$routing_status[components$component_type == "rr"] ==
+      "not_ready"
   ))
   expect_equal(nrow(blocking_components), 18)
   expect_equal(

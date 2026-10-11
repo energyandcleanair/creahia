@@ -59,6 +59,16 @@ make_component_manifest <- function(components, not_ready = character()) {
         "Historical Registry data is incomplete.",
         NA_character_
       ),
+      routing_status = ifelse(
+        component_id %in% not_ready,
+        "not_ready",
+        "ready"
+      ),
+      routing_blocking_reason = ifelse(
+        component_id %in% not_ready,
+        "Component is not approved for Registry routing.",
+        NA_character_
+      ),
       scientific_review_status = "not_reviewed",
       scientific_review_reason = "Method review is pending."
     )
@@ -328,6 +338,8 @@ test_that("component manifest separates reproduction from scientific review", {
     lifecycle = "historical_reproduction",
     reproduction_status = "parity_verified",
     reproduction_blocking_reason = NA_character_,
+    routing_status = "ready",
+    routing_blocking_reason = NA_character_,
     scientific_review_status = "not_reviewed",
     scientific_review_reason = "Method review is pending."
   )
@@ -348,10 +360,40 @@ test_that("component manifest separates reproduction from scientific review", {
     .validate_component_manifest(
       dplyr::mutate(
         components,
-        reproduction_status = "not_verified"
+        reproduction_status = "not_verified",
+        routing_status = "not_ready",
+        routing_blocking_reason = "Reproduction parity is incomplete."
       )
     ),
     "must have a reproduction_blocking_reason"
+  )
+  expect_invisible(
+    .validate_component_manifest(
+      dplyr::mutate(
+        components,
+        routing_status = "not_ready",
+        routing_blocking_reason = "Routing approval is pending."
+      )
+    )
+  )
+  expect_error(
+    .validate_component_manifest(
+      dplyr::mutate(
+        components,
+        reproduction_status = "not_verified",
+        reproduction_blocking_reason = "Parity is incomplete."
+      )
+    ),
+    "must be parity-verified"
+  )
+  expect_error(
+    .validate_component_manifest(
+      dplyr::mutate(
+        components,
+        routing_status = "not_ready"
+      )
+    ),
+    "must have a routing_blocking_reason"
   )
   expect_error(
     .validate_component_manifest(
@@ -470,6 +512,40 @@ test_that("whole-call readiness requires every resolved component", {
   )
   expect_false(blocked$ready)
   expect_equal(blocked$blocking_components$component_id, blocked_id)
+
+  routing_blocked_manifest <- complete_manifest %>%
+    dplyr::mutate(
+      routing_status = dplyr::if_else(
+        component_id == blocked_id,
+        "not_ready",
+        routing_status
+      ),
+      routing_blocking_reason = dplyr::if_else(
+        component_id == blocked_id,
+        "Routing approval is pending.",
+        routing_blocking_reason
+      )
+    )
+  routing_blocked <- .resolve_hia_component_readiness(
+    crfs = legacy_crfs,
+    rr_sources = rr_sources,
+    epi = epi,
+    manifest = routing_blocked_manifest,
+    crf_input_mode = "legacy_profile",
+    crf_selection_id = "legacy_profile_default",
+    epi_version = "custom",
+    rr_loader = rr_loader,
+    measure_map = measure_map
+  )
+  expect_false(routing_blocked$ready)
+  expect_equal(
+    routing_blocked$blocking_components$component_id,
+    blocked_id
+  )
+  expect_equal(
+    routing_blocked$blocking_components$blocking_reason,
+    "Routing approval is pending."
+  )
 })
 
 

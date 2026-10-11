@@ -81,6 +81,8 @@
     "lifecycle",
     "reproduction_status",
     "reproduction_blocking_reason",
+    "routing_status",
+    "routing_blocking_reason",
     "scientific_review_status",
     "scientific_review_reason"
   )
@@ -143,6 +145,19 @@
     )
   }
 
+  allowed_routing_statuses <- c("ready", "not_ready")
+  invalid_routing_statuses <- setdiff(
+    unique(manifest$routing_status),
+    allowed_routing_statuses
+  )
+  if (length(invalid_routing_statuses) > 0) {
+    stop(
+      "Component readiness manifest contains invalid routing_status values: ",
+      paste(invalid_routing_statuses, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
   allowed_scientific_statuses <- c(
     "reviewed",
     "not_reviewed",
@@ -167,6 +182,16 @@
     manifest$reproduction_status == "not_verified" &
     (is.na(manifest$reproduction_blocking_reason) |
       manifest$reproduction_blocking_reason == "")
+  ready_with_blocker <-
+    manifest$routing_status == "ready" &
+    !is.na(manifest$routing_blocking_reason)
+  not_ready_without_blocker <-
+    manifest$routing_status == "not_ready" &
+    (is.na(manifest$routing_blocking_reason) |
+      manifest$routing_blocking_reason == "")
+  route_ready_without_parity <-
+    manifest$routing_status == "ready" &
+    manifest$reproduction_status != "parity_verified"
   unreviewed_without_reason <-
     manifest$scientific_review_status == "not_reviewed" &
     (is.na(manifest$scientific_review_reason) |
@@ -190,6 +215,24 @@
   if (any(unverified_without_blocker)) {
     stop(
       "Not-verified components must have a reproduction_blocking_reason.",
+      call. = FALSE
+    )
+  }
+  if (any(ready_with_blocker)) {
+    stop(
+      "Routing-ready components must not retain a routing_blocking_reason.",
+      call. = FALSE
+    )
+  }
+  if (any(not_ready_without_blocker)) {
+    stop(
+      "Not-ready components must have a routing_blocking_reason.",
+      call. = FALSE
+    )
+  }
+  if (any(route_ready_without_parity)) {
+    stop(
+      "Routing-ready components must be parity-verified.",
       call. = FALSE
     )
   }
@@ -611,7 +654,9 @@
       lifecycle,
       manifest_age_contract = age_contract,
       reproduction_status,
-      manifest_blocking_reason = reproduction_blocking_reason,
+      reproduction_blocking_reason,
+      routing_status,
+      routing_blocking_reason,
       scientific_review_status,
       scientific_review_reason
     )
@@ -627,7 +672,8 @@
         readiness_source == "runtime_validation" ~ runtime_ready,
         readiness_source == "manifest" &
           age_contract_matches &
-          reproduction_status == "parity_verified" ~ TRUE,
+          reproduction_status == "parity_verified" &
+          routing_status == "ready" ~ TRUE,
         TRUE ~ FALSE
       ),
       blocking_reason = dplyr::case_when(
@@ -637,7 +683,10 @@
           "Component is absent from the readiness manifest.",
         !age_contract_matches ~
           "Resolved age contract does not match the readiness manifest.",
-        TRUE ~ manifest_blocking_reason
+        reproduction_status != "parity_verified" ~
+          reproduction_blocking_reason,
+        routing_status != "ready" ~ routing_blocking_reason,
+        TRUE ~ "Component is not ready for Registry routing."
       )
     )
 
