@@ -73,14 +73,19 @@ test_that("packaged historical stores account for all active CRF profiles", {
   expect_true(all(registry$visibility == "internal_compatibility"))
   default_rows <- registry %>%
     dplyr::filter(grepl("^historical_default_", crf_id))
-  other_rows <- registry %>%
-    dplyr::filter(!grepl("^historical_default_", crf_id))
+  c40_added_rows <- registry %>%
+    dplyr::filter(crf_id %in% sprintf("historical_l%02d_v1", 16:23))
+  remaining_rows <- registry %>%
+    dplyr::filter(crf_id %in% sprintf("historical_l%02d_v1", 24:25))
   expect_equal(nrow(default_rows), 15L)
   expect_true(all(default_rows$reproduction_status == "parity_verified"))
   expect_true(all(is.na(default_rows$reproduction_blocking_reason)))
-  expect_equal(nrow(other_rows), 10L)
-  expect_true(all(other_rows$reproduction_status == "not_verified"))
-  expect_true(all(!is.na(other_rows$reproduction_blocking_reason)))
+  expect_equal(nrow(c40_added_rows), 8L)
+  expect_true(all(c40_added_rows$reproduction_status == "parity_verified"))
+  expect_true(all(is.na(c40_added_rows$reproduction_blocking_reason)))
+  expect_equal(nrow(remaining_rows), 2L)
+  expect_true(all(remaining_rows$reproduction_status == "not_verified"))
+  expect_true(all(!is.na(remaining_rows$reproduction_blocking_reason)))
   expect_true(all(registry$scientific_review_status == "not_reviewed"))
   expect_true(all(!is.na(registry$scientific_review_reason)))
   expect_true(all(!is.na(registry$question_ids)))
