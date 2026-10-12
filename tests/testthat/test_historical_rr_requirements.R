@@ -76,11 +76,11 @@ test_that("historical RR inventory records current Registry data coverage", {
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_candidate"),
-    37
+    39
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_required"),
-    19
+    17
   )
 })
 
@@ -474,8 +474,8 @@ test_that("historical RR routing checklist remains fail-closed", {
       tibble::as_tibble(),
     tibble::tribble(
       ~reproduction_status, ~n,
-      "not_verified", 19L,
-      "parity_verified", 50L
+      "not_verified", 17L,
+      "parity_verified", 52L
     )
   )
   expect_true(all(
@@ -495,8 +495,8 @@ test_that("historical RR routing checklist remains fail-closed", {
       tibble::as_tibble(),
     tibble::tribble(
       ~routing_status, ~n,
-      "not_ready", 19L,
-      "ready", 50L
+      "not_ready", 17L,
+      "ready", 52L
     )
   )
   expect_true(all(inventory$routing_checklist_complete ==
@@ -643,7 +643,7 @@ test_that("GEMM YLL and YLD outcome reuse is represented only internally", {
     dplyr::filter(component_id %in% historical_registry$component_id)
 
   expect_equal(nrow(expected_components), 8L)
-  expect_equal(nrow(complete_historical_registry), 37L)
+  expect_equal(nrow(complete_historical_registry), 39L)
   expect_equal(nrow(historical_registry), 8L)
   expect_setequal(
     historical_registry$component_id,
@@ -842,6 +842,47 @@ test_that("original RR internal curves can be regenerated from the legacy source
     ),
     "invalid age coverage \\(missing: 25-29\\)"
   )
+})
+
+
+test_that("GBD 2023 LC internal curve can be regenerated from its processed source", {
+  output_dir <- withr::local_tempdir()
+  output_paths <- .compile_historical_gbd2023_rr_curves(
+    output_dir = output_dir
+  )
+  committed_dir <- get_hia_path(
+    "rr/compatibility/tabular",
+    error_if_not_exists = TRUE
+  )
+
+  expect_setequal(
+    basename(output_paths),
+    .historical_gbd2023_rr_curve_specs()$filename
+  )
+  for (output_path in output_paths) {
+    generated <- readr::read_csv(output_path, show_col_types = FALSE)
+    committed <- readr::read_csv(
+      file.path(committed_dir, basename(output_path)),
+      show_col_types = FALSE
+    )
+    expect_equal(
+      generated,
+      committed,
+      tolerance = 0,
+      info = basename(output_path)
+    )
+  }
+
+  generated <- readr::read_csv(output_paths[[1]], show_col_types = FALSE) %>%
+    dplyr::arrange(age, exposure) %>%
+    tibble::as_tibble()
+  legacy_source <- get_rr(RR_GBD2023) %>%
+    dplyr::filter(cause == CAUSE_LUNGCANCER) %>%
+    dplyr::select(exposure, age, low, central, high) %>%
+    dplyr::arrange(age, exposure) %>%
+    tibble::as_tibble()
+
+  expect_equal(generated, legacy_source, tolerance = 0)
 })
 
 
