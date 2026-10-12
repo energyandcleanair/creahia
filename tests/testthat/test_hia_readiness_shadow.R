@@ -507,7 +507,7 @@ test_that("shadow mode resolves the current package default contract", {
     dplyr::count(component_type)
 
   expect_equal(observation$status, "resolved")
-  expect_false(observation$result$ready)
+  expect_true(observation$result$ready)
   expect_equal(
     component_counts$n[component_counts$component_type == "crf"],
     15
@@ -520,14 +520,7 @@ test_that("shadow mode resolves the current package default contract", {
     component_counts$n[component_counts$component_type == "epi"],
     1
   )
-  expect_equal(nrow(observation$result$blocking_components), 2)
-  expect_setequal(
-    observation$result$blocking_components$component_id,
-    c(
-      "rr|gemm|LRI.child|Deaths",
-      "rr|gemm|LRI.child|YLLs"
-    )
-  )
+  expect_equal(nrow(observation$result$blocking_components), 0)
   expect_equal(nrow(observation$result$ignored_rr_pairs), 0)
   expect_equal(
     nrow(observation$specification$components$crf),
@@ -540,8 +533,8 @@ test_that("shadow mode resolves the current package default contract", {
   expect_false(
     observation$specification$population_year$scaling_requested
   )
-  expect_equal(observation$route_plan$route, "legacy")
-  expect_equal(observation$route_plan$reason, "components_not_ready")
+  expect_equal(observation$route_plan$route, "registry")
+  expect_equal(observation$route_plan$reason, "all_components_ready")
 })
 
 
@@ -673,9 +666,9 @@ test_that("C40 is assessed as a component profile instead of excluded", {
   expect_true(all(
     crf_components$selection_id == "legacy_profile_c40"
   ))
-  expect_false(observation$result$ready)
-  expect_equal(observation$route_plan$route, "legacy")
-  expect_gt(nrow(observation$result$blocking_components), 0L)
+  expect_true(observation$result$ready)
+  expect_equal(observation$route_plan$route, "registry")
+  expect_equal(nrow(observation$result$blocking_components), 0L)
 })
 
 
