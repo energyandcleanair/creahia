@@ -4,7 +4,9 @@
     "Diabetes", AGE_ADULTS,
     "historical_original_pm25_diabetes_25plus_v1.csv",
     "LRI.child", AGE_CHILDREN,
-    "historical_original_pm25_lri_child_under5_v1.csv"
+    "historical_original_pm25_lri_child_under5_v1.csv",
+    "LRI", AGE_ADULTS,
+    "historical_original_pm25_lri_25plus_v1.csv"
   )
 }
 
@@ -56,6 +58,16 @@
     if (nrow(curve) == 0) {
       stop(
         "Original RR source has no curve for ",
+        specs$cause[[i]],
+        " / ",
+        specs$age[[i]],
+        ".",
+        call. = FALSE
+      )
+    }
+    if (anyDuplicated(curve[c("exposure", "age")])) {
+      stop(
+        "Original RR source has duplicate age/exposure rows for ",
         specs$cause[[i]],
         " / ",
         specs$age[[i]],

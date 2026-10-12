@@ -1,6 +1,9 @@
 historical_original_outcome_registry <- function() {
   .load_historical_rr_registry() %>%
-    dplyr::filter(source == RR_ORIGINAL) %>%
+    dplyr::filter(
+      source == RR_ORIGINAL,
+      cause %in% c("Diabetes", CAUSE_LRICHILD)
+    ) %>%
     dplyr::select(dplyr::all_of(CRF_REGISTRY_REQUIRED_COLUMNS)) %>%
     new_crfs_set()
 }

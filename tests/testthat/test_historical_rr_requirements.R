@@ -76,11 +76,11 @@ test_that("historical RR inventory records current Registry data coverage", {
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_candidate"),
-    25
+    27
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_required"),
-    31
+    29
   )
 })
 
@@ -474,8 +474,8 @@ test_that("historical RR routing checklist remains fail-closed", {
       tibble::as_tibble(),
     tibble::tribble(
       ~reproduction_status, ~n,
-      "not_verified", 31L,
-      "parity_verified", 38L
+      "not_verified", 29L,
+      "parity_verified", 40L
     )
   )
   expect_true(all(
@@ -495,8 +495,8 @@ test_that("historical RR routing checklist remains fail-closed", {
       tibble::as_tibble(),
     tibble::tribble(
       ~routing_status, ~n,
-      "not_ready", 31L,
-      "ready", 38L
+      "not_ready", 29L,
+      "ready", 40L
     )
   )
   expect_true(all(inventory$routing_checklist_complete ==
@@ -643,7 +643,7 @@ test_that("GEMM YLL and YLD outcome reuse is represented only internally", {
     dplyr::filter(component_id %in% historical_registry$component_id)
 
   expect_equal(nrow(expected_components), 8L)
-  expect_equal(nrow(complete_historical_registry), 25L)
+  expect_equal(nrow(complete_historical_registry), 27L)
   expect_equal(nrow(historical_registry), 8L)
   expect_setequal(
     historical_registry$component_id,
@@ -709,7 +709,7 @@ test_that("original RR rows retain exact internal curve representations", {
   ) %>%
     dplyr::filter(source == RR_ORIGINAL)
   historical_registry <- .load_historical_rr_registry() %>%
-    dplyr::filter(source == RR_ORIGINAL)
+    dplyr::filter(component_id %in% expected_components$component_id)
   manifest <- .load_historical_rr_manifest() %>%
     dplyr::filter(component_id %in% historical_registry$component_id)
   expect_equal(nrow(expected_components), 4L)
@@ -809,6 +809,26 @@ test_that("original RR internal curves can be regenerated from the legacy source
       info = basename(output_path)
     )
   }
+
+  duplicate_source <- readr::read_csv(
+    get_hia_path("rr/processed/rr_original.csv", error_if_not_exists = TRUE),
+    show_col_types = FALSE
+  )
+  duplicate_source <- dplyr::bind_rows(
+    duplicate_source,
+    duplicate_source %>%
+      dplyr::filter(cause == "LRI", age == AGE_ADULTS) %>%
+      dplyr::slice(1)
+  )
+  duplicate_path <- file.path(withr::local_tempdir(), "rr_original.csv")
+  readr::write_csv(duplicate_source, duplicate_path)
+  expect_error(
+    .compile_historical_original_rr_curves(
+      source_path = duplicate_path,
+      output_dir = withr::local_tempdir()
+    ),
+    "duplicate age/exposure rows for LRI / 25\\+"
+  )
 })
 
 
