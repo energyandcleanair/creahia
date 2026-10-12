@@ -9,16 +9,29 @@ historical_rr_parity_registry <- function(source, cause) {
 }
 
 
-historical_rr_parity_keys <- function(source, cause) {
-  historical_rr_parity_registry(source, cause) %>%
+historical_rr_parity_keys <- function(source, cause, impacts = FALSE) {
+  keys <- historical_rr_parity_registry(source, cause) %>%
     dplyr::select(pollutant, cause, outcome)
+
+  if (impacts) {
+    keys <- keys %>%
+      dplyr::mutate(
+        outcome = dplyr::if_else(
+          cause == CAUSE_LRICHILD & outcome == MEASURE_DEATHS,
+          "Deaths.child",
+          outcome
+        )
+      )
+  }
+
+  keys
 }
 
 
-filter_historical_rr_parity <- function(data, source, cause) {
+filter_historical_rr_parity <- function(data, source, cause, impacts = FALSE) {
   data %>%
     dplyr::semi_join(
-      historical_rr_parity_keys(source, cause),
+      historical_rr_parity_keys(source, cause, impacts = impacts),
       by = c("pollutant", "cause", "outcome")
     )
 }
@@ -179,10 +192,10 @@ expect_historical_rr_parity <- function(source, cause, configuration_id) {
   testthat::expect_true(any(registry_paf$central != 0))
 
   legacy_impacts <- results$legacy_impacts %>%
-    filter_historical_rr_parity(source, cause) %>%
+    filter_historical_rr_parity(source, cause, impacts = TRUE) %>%
     arrange_historical_rr_parity_impacts()
   registry_impacts <- results$registry_impacts %>%
-    filter_historical_rr_parity(source, cause) %>%
+    filter_historical_rr_parity(source, cause, impacts = TRUE) %>%
     arrange_historical_rr_parity_impacts()
 
   testthat::expect_equal(nrow(legacy_impacts), nrow(internal_registry) * 3L)
@@ -199,7 +212,14 @@ expect_historical_rr_parity <- function(source, cause, configuration_id) {
     dplyr::filter(estimate == "central") %>%
     dplyr::arrange(outcome)
   expected_metadata <- internal_registry %>%
-    dplyr::select(outcome, double_counted) %>%
+    dplyr::transmute(
+      outcome = dplyr::if_else(
+        cause == CAUSE_LRICHILD & outcome == MEASURE_DEATHS,
+        "Deaths.child",
+        outcome
+      ),
+      double_counted
+    ) %>%
     dplyr::arrange(outcome)
   expected_age_group <- if (
     all(internal_registry$age_low == 0) &&
@@ -209,7 +229,7 @@ expect_historical_rr_parity <- function(source, cause, configuration_id) {
   } else {
     "25+"
   }
-  testthat::expect_setequal(central_impacts$outcome, internal_registry$outcome)
+  testthat::expect_setequal(central_impacts$outcome, expected_metadata$outcome)
   testthat::expect_true(all(central_impacts$age_group == expected_age_group))
   testthat::expect_equal(
     central_impacts %>% dplyr::select(outcome, double_counted),
@@ -223,7 +243,7 @@ expect_historical_rr_parity <- function(source, cause, configuration_id) {
   expected_fingerprint <-
     read_legacy_historical_configurations_hia_fingerprint() %>%
     dplyr::filter(configuration_id == results$configuration_id) %>%
-    filter_historical_rr_parity(source, cause)
+    filter_historical_rr_parity(source, cause, impacts = TRUE)
 
   testthat::expect_equal(
     nrow(actual_fingerprint),
