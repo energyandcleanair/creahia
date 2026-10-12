@@ -76,11 +76,11 @@ test_that("historical RR inventory records current Registry data coverage", {
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_candidate"),
-    27
+    29
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_required"),
-    29
+    27
   )
 })
 
@@ -474,8 +474,8 @@ test_that("historical RR routing checklist remains fail-closed", {
       tibble::as_tibble(),
     tibble::tribble(
       ~reproduction_status, ~n,
-      "not_verified", 29L,
-      "parity_verified", 40L
+      "not_verified", 27L,
+      "parity_verified", 42L
     )
   )
   expect_true(all(
@@ -495,8 +495,8 @@ test_that("historical RR routing checklist remains fail-closed", {
       tibble::as_tibble(),
     tibble::tribble(
       ~routing_status, ~n,
-      "not_ready", 29L,
-      "ready", 40L
+      "not_ready", 27L,
+      "ready", 42L
     )
   )
   expect_true(all(inventory$routing_checklist_complete ==
@@ -643,7 +643,7 @@ test_that("GEMM YLL and YLD outcome reuse is represented only internally", {
     dplyr::filter(component_id %in% historical_registry$component_id)
 
   expect_equal(nrow(expected_components), 8L)
-  expect_equal(nrow(complete_historical_registry), 27L)
+  expect_equal(nrow(complete_historical_registry), 29L)
   expect_equal(nrow(historical_registry), 8L)
   expect_setequal(
     historical_registry$component_id,

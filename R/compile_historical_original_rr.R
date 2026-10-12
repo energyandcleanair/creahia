@@ -6,7 +6,9 @@
     "LRI.child", AGE_CHILDREN,
     "historical_original_pm25_lri_child_under5_v1.csv",
     "LRI", AGE_ADULTS,
-    "historical_original_pm25_lri_25plus_v1.csv"
+    "historical_original_pm25_lri_25plus_v1.csv",
+    "LC", AGE_ADULTS,
+    "historical_original_pm25_lc_25plus_v1.csv"
   )
 }
 
