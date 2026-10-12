@@ -1,16 +1,22 @@
 .historical_original_rr_curve_specs <- function() {
-  tibble::tribble(
-    ~cause, ~age, ~filename,
-    "Diabetes", AGE_ADULTS,
-    "historical_original_pm25_diabetes_25plus_v1.csv",
-    "LRI.child", AGE_CHILDREN,
-    "historical_original_pm25_lri_child_under5_v1.csv",
-    "LRI", AGE_ADULTS,
-    "historical_original_pm25_lri_25plus_v1.csv",
-    "LC", AGE_ADULTS,
-    "historical_original_pm25_lc_25plus_v1.csv",
-    "COPD", AGE_ADULTS,
-    "historical_original_pm25_copd_25plus_v1.csv"
+  tibble::tibble(
+    cause = c("Diabetes", "LRI.child", "LRI", "LC", "COPD", "IHD"),
+    ages = list(
+      AGE_ADULTS,
+      AGE_CHILDREN,
+      AGE_ADULTS,
+      AGE_ADULTS,
+      AGE_ADULTS,
+      AGE_ADULTS_SPLIT
+    ),
+    filename = c(
+      "historical_original_pm25_diabetes_25plus_v1.csv",
+      "historical_original_pm25_lri_child_under5_v1.csv",
+      "historical_original_pm25_lri_25plus_v1.csv",
+      "historical_original_pm25_lc_25plus_v1.csv",
+      "historical_original_pm25_copd_25plus_v1.csv",
+      "historical_original_pm25_ihd_adult_v1.csv"
+    )
   )
 }
 
@@ -51,20 +57,23 @@
   output_paths <- file.path(output_dir, specs$filename)
 
   for (i in seq_len(nrow(specs))) {
+    expected_ages <- specs$ages[[i]]
     curve <- source %>%
       dplyr::filter(
         cause == specs$cause[[i]],
-        age == specs$age[[i]]
+        age %in% expected_ages
       ) %>%
+      dplyr::mutate(.age_order = match(age, expected_ages)) %>%
+      dplyr::arrange(.age_order, exposure) %>%
       dplyr::select(exposure, age, low, central, high) %>%
-      dplyr::arrange(age, exposure)
+      tibble::as_tibble()
 
     if (nrow(curve) == 0) {
       stop(
         "Original RR source has no curve for ",
         specs$cause[[i]],
         " / ",
-        specs$age[[i]],
+        paste(expected_ages, collapse = ";"),
         ".",
         call. = FALSE
       )
@@ -74,11 +83,16 @@
         "Original RR source has duplicate age/exposure rows for ",
         specs$cause[[i]],
         " / ",
-        specs$age[[i]],
+        paste(expected_ages, collapse = ";"),
         ".",
         call. = FALSE
       )
     }
+    validate_compiled_tabular_crf(
+      curve,
+      expected_ages = expected_ages,
+      data_name = paste("Compiled original", specs$cause[[i]], "table")
+    )
     readr::write_csv(curve, output_paths[[i]])
   }
 
