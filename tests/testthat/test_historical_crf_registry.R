@@ -75,7 +75,7 @@ test_that("packaged historical stores account for all active CRF profiles", {
     dplyr::filter(grepl("^historical_default_", crf_id))
   c40_added_rows <- registry %>%
     dplyr::filter(crf_id %in% sprintf("historical_l%02d_v1", 16:23))
-  remaining_rows <- registry %>%
+  south_africa_added_rows <- registry %>%
     dplyr::filter(crf_id %in% sprintf("historical_l%02d_v1", 24:25))
   expect_equal(nrow(default_rows), 15L)
   expect_true(all(default_rows$reproduction_status == "parity_verified"))
@@ -83,9 +83,13 @@ test_that("packaged historical stores account for all active CRF profiles", {
   expect_equal(nrow(c40_added_rows), 8L)
   expect_true(all(c40_added_rows$reproduction_status == "parity_verified"))
   expect_true(all(is.na(c40_added_rows$reproduction_blocking_reason)))
-  expect_equal(nrow(remaining_rows), 2L)
-  expect_true(all(remaining_rows$reproduction_status == "not_verified"))
-  expect_true(all(!is.na(remaining_rows$reproduction_blocking_reason)))
+  expect_equal(nrow(south_africa_added_rows), 2L)
+  expect_true(all(
+    south_africa_added_rows$reproduction_status == "parity_verified"
+  ))
+  expect_true(all(is.na(
+    south_africa_added_rows$reproduction_blocking_reason
+  )))
   expect_true(all(registry$scientific_review_status == "not_reviewed"))
   expect_true(all(!is.na(registry$scientific_review_reason)))
   expect_true(all(!is.na(registry$question_ids)))
@@ -172,14 +176,13 @@ test_that("packaged memberships cover every stable profile identity", {
   )
   expect_s3_class(resolved_default, "creahia_historical_crf_set")
   expect_equal(nrow(resolved_default), 15L)
-  expect_error(
-    .resolve_historical_crf_components(
-      component_ids = memberships$component_id,
-      registry = registry,
-      memberships = memberships
-    ),
-    "not parity-verified"
+  resolved_all <- .resolve_historical_crf_components(
+    component_ids = memberships$component_id,
+    registry = registry,
+    memberships = memberships
   )
+  expect_s3_class(resolved_all, "creahia_historical_crf_set")
+  expect_equal(nrow(resolved_all), 25L)
 })
 
 
