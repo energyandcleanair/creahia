@@ -76,11 +76,11 @@ test_that("historical RR inventory records current Registry data coverage", {
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_candidate"),
-    39
+    41
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_required"),
-    17
+    15
   )
 })
 
@@ -474,8 +474,8 @@ test_that("historical RR routing checklist remains fail-closed", {
       tibble::as_tibble(),
     tibble::tribble(
       ~reproduction_status, ~n,
-      "not_verified", 17L,
-      "parity_verified", 52L
+      "not_verified", 15L,
+      "parity_verified", 54L
     )
   )
   expect_true(all(
@@ -495,8 +495,8 @@ test_that("historical RR routing checklist remains fail-closed", {
       tibble::as_tibble(),
     tibble::tribble(
       ~routing_status, ~n,
-      "not_ready", 17L,
-      "ready", 52L
+      "not_ready", 15L,
+      "ready", 54L
     )
   )
   expect_true(all(inventory$routing_checklist_complete ==
@@ -643,7 +643,7 @@ test_that("GEMM YLL and YLD outcome reuse is represented only internally", {
     dplyr::filter(component_id %in% historical_registry$component_id)
 
   expect_equal(nrow(expected_components), 8L)
-  expect_equal(nrow(complete_historical_registry), 39L)
+  expect_equal(nrow(complete_historical_registry), 41L)
   expect_equal(nrow(historical_registry), 8L)
   expect_setequal(
     historical_registry$component_id,
@@ -845,7 +845,7 @@ test_that("original RR internal curves can be regenerated from the legacy source
 })
 
 
-test_that("GBD 2023 LC internal curve can be regenerated from its processed source", {
+test_that("GBD 2023 internal curves can be regenerated from their processed source", {
   output_dir <- withr::local_tempdir()
   output_paths <- .compile_historical_gbd2023_rr_curves(
     output_dir = output_dir
@@ -873,16 +873,28 @@ test_that("GBD 2023 LC internal curve can be regenerated from its processed sour
     )
   }
 
-  generated <- readr::read_csv(output_paths[[1]], show_col_types = FALSE) %>%
-    dplyr::arrange(age, exposure) %>%
-    tibble::as_tibble()
-  legacy_source <- get_rr(RR_GBD2023) %>%
-    dplyr::filter(cause == CAUSE_LUNGCANCER) %>%
-    dplyr::select(exposure, age, low, central, high) %>%
-    dplyr::arrange(age, exposure) %>%
-    tibble::as_tibble()
+  specs <- .historical_gbd2023_rr_curve_specs()
+  legacy_rr <- get_rr(RR_GBD2023)
+  for (i in seq_len(nrow(specs))) {
+    generated <- readr::read_csv(
+      output_paths[[i]],
+      show_col_types = FALSE
+    ) %>%
+      dplyr::arrange(age, exposure) %>%
+      tibble::as_tibble()
+    legacy_source <- legacy_rr %>%
+      dplyr::filter(cause == specs$cause[[i]]) %>%
+      dplyr::select(exposure, age, low, central, high) %>%
+      dplyr::arrange(age, exposure) %>%
+      tibble::as_tibble()
 
-  expect_equal(generated, legacy_source, tolerance = 0)
+    expect_equal(
+      generated,
+      legacy_source,
+      tolerance = 0,
+      info = specs$cause[[i]]
+    )
+  }
 })
 
 

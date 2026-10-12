@@ -1,7 +1,10 @@
 .historical_gbd2023_rr_curve_specs <- function() {
   tibble::tibble(
-    cause = CAUSE_LUNGCANCER,
-    filename = "historical_gbd2023_pm25_lc_25plus_v1.csv"
+    cause = c(CAUSE_LUNGCANCER, CAUSE_LRI),
+    filename = c(
+      "historical_gbd2023_pm25_lc_25plus_v1.csv",
+      "historical_gbd2023_pm25_lri_25plus_v1.csv"
+    )
   )
 }
 
