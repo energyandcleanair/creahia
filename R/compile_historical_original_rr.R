@@ -8,7 +8,9 @@
     "LRI", AGE_ADULTS,
     "historical_original_pm25_lri_25plus_v1.csv",
     "LC", AGE_ADULTS,
-    "historical_original_pm25_lc_25plus_v1.csv"
+    "historical_original_pm25_lc_25plus_v1.csv",
+    "COPD", AGE_ADULTS,
+    "historical_original_pm25_copd_25plus_v1.csv"
   )
 }
 
