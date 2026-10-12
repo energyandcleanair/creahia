@@ -1,12 +1,15 @@
 .historical_original_rr_curve_specs <- function() {
   tibble::tibble(
-    cause = c("Diabetes", "LRI.child", "LRI", "LC", "COPD", "IHD"),
+    cause = c(
+      "Diabetes", "LRI.child", "LRI", "LC", "COPD", "IHD", "Stroke"
+    ),
     ages = list(
       AGE_ADULTS,
       AGE_CHILDREN,
       AGE_ADULTS,
       AGE_ADULTS,
       AGE_ADULTS,
+      AGE_ADULTS_SPLIT,
       AGE_ADULTS_SPLIT
     ),
     filename = c(
@@ -15,7 +18,8 @@
       "historical_original_pm25_lri_25plus_v1.csv",
       "historical_original_pm25_lc_25plus_v1.csv",
       "historical_original_pm25_copd_25plus_v1.csv",
-      "historical_original_pm25_ihd_adult_v1.csv"
+      "historical_original_pm25_ihd_adult_v1.csv",
+      "historical_original_pm25_stroke_adult_v1.csv"
     )
   )
 }
