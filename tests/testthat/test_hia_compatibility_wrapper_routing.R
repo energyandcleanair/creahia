@@ -150,32 +150,40 @@ test_that("character wrapper preserves its activated-route RDS contract", {
       tibble::tibble()
     },
     compute_hia_impacts = function(...) expected_hia,
-    get_pop_year = function(...) 2022,
+    get_pop_year = function(year_desired) {
+      seen$population_year <- year_desired
+      2019
+    },
     {
-      wrappers.compute_hia_two_images.character(
-        scenarios = "scenario_a",
-        perturbation_rasters_table = tibble::tibble(
-          scenario = "scenario_a",
-          species = "pm25",
-          path = raster_path
+      expect_warning(
+        wrappers.compute_hia_two_images.character(
+          scenarios = "scenario_a",
+          perturbation_rasters_table = tibble::tibble(
+            scenario = "scenario_a",
+            species = "pm25",
+            path = raster_path
+          ),
+          baseline_rasters_table = tibble::tibble(species = "pm25"),
+          grid_raster = raster,
+          regions = tibble::tibble(region_id = "KOR"),
+          scale_base_year = 2015,
+          scale_target_year = 2019,
+          crfs_version = "C40",
+          epi_version = "C40",
+          return_concentrations = TRUE,
+          output_folder = output_dir,
+          diagnostic_folder = NULL,
+          calc_causes = make_wrapper_routing_calc_causes(),
+          gbd_causes = "default",
+          custom_glue = "hia_GBD2019_{scen}.RDS"
         ),
-        baseline_rasters_table = tibble::tibble(species = "pm25"),
-        grid_raster = raster,
-        regions = tibble::tibble(region_id = "KOR"),
-        pop_year = 2022,
-        scale_base_year = NULL,
-        crfs_version = "C40",
-        epi_version = "C40",
-        return_concentrations = TRUE,
-        output_folder = output_dir,
-        diagnostic_folder = NULL,
-        calc_causes = make_wrapper_routing_calc_causes(),
-        gbd_causes = "default"
+        "pop_year set to 2019",
+        fixed = TRUE
       )
     }
   )
 
-  result_path <- file.path(output_dir, "hia", "hia_GBD__scenario_a.RDS")
+  result_path <- file.path(output_dir, "hia", "hia_GBD2019_scenario_a.RDS")
   expect_true(file.exists(result_path))
   saved <- readRDS(result_path)
   expect_named(saved, c("hia", "concentrations"))
@@ -185,6 +193,7 @@ test_that("character wrapper preserves its activated-route RDS contract", {
   expect_equal(saved$concentrations$conc_baseline_pm25, 32.2)
   expect_equal(saved$concentrations$conc_scenario_pm25, 29)
   expect_equal(saved$concentrations$pop, 5e6)
+  expect_identical(seen$population_year, 2019)
   expect_identical(seen$crf_compute, "registry")
   expect_s3_class(seen$crfs, "creahia_crf_set")
   expect_false(has_rr_sources(seen$rr_sources))
