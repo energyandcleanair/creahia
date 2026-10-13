@@ -1,77 +1,98 @@
-# CRF Discovery Helpers
+# CRF Registry Discovery and Selection
 
 ## Purpose
 
-The CRF discovery helpers make the registry-driven CRF workflow inspectable
-before users run HIA with an explicit `crfs_set()` selection.
+The CRF Registry helpers make concentration-response function (CRF) selection
+explicit and inspectable before running a health impact assessment (HIA).
 
-They help users answer six practical questions:
+Use them to:
 
-1. Which packaged CRF presets are available?
-2. What CRFs does a preset actually select?
-3. Which CRFs and references exist in the registry?
-4. Given a preset-defined selection, what alternatives exist for matching HIA
-   slots?
-5. What would a preset-based CRF selection look like after previewed `add`,
-   `remove`, and `replace` operations?
-6. How can a previewed selection be resolved into registry CRF rows for compute?
+1. list the packaged CRF presets;
+2. inspect the Registry rows selected by a preset;
+3. search available CRFs and their references;
+4. compare alternatives for the same HIA slot;
+5. preview `add`, `remove`, and `replace` operations; and
+6. create a compute-ready `crfs_set()` object.
 
-These helpers are for inspection and selection planning. Except for
-`crfs_set()`, they do not create a compute-ready selection. None of them run HIA,
-compute PAFs, or modify package data.
+The discovery and preview helpers do not calculate population attributable
+fractions (PAFs) or health impacts. `crfs_set()` creates a selection that the
+existing compute flow can use:
 
-## Development Status
+```text
+compute_hia() -> compute_hia_paf() -> compute_hia_impacts()
+```
 
-The registry and preset migration is still incomplete. Some examples below use
-the internal `registry_fixture` only to show the shape of a replacement or
-composition request. It is test data, not scientific evidence, and the current
-selection functions deliberately reject it for user-facing CRF selection. These
-examples document the API shape temporarily; they should not be copied into a
-production HIA workflow. They will be replaced with reviewed CRF alternatives
-once the registry and presets have been fully built.
+## Current Status and Scope
+
+The public Registry now contains real, opt-in CRFs for GEMM, Fusion, GBD 2019,
+and two migrated log-linear definitions. The examples in this document use
+only those user-facing Registry rows. Internal validation fixtures are excluded
+from search, preset, preview, and Set workflows.
+
+The strongest replacement example currently available is the
+`PM25 / IHD / Deaths` slot:
+
+- `gemm_pm25_ihd_adult_deaths_v1` is part of the GEMM adult component preset;
+- `fusion_pm25_ihd_adult_deaths_v1` is part of the Fusion adult component
+  preset; and
+- both have end-to-end parity tests against their corresponding legacy paths.
+
+This makes GEMM-to-Fusion replacement suitable for demonstrating the selection
+API. It does not mean that one source is scientifically preferred over the
+other. Source choice remains an analysis decision.
+
+Registry coverage is still narrower than all historical package behavior.
+In particular, the public presets are opt-in and do not by themselves establish
+a new package default or complete the migration of every legacy outcome and
+workflow.
 
 ## Core Concepts
 
 ### Registry
 
-`inst/extdata/crf/registry.csv` is the single source of truth for CRFs. Each row
-represents one CRF and includes fields such as:
+`inst/extdata/crf/registry.csv` is the source of truth for public CRF
+definitions. Each row describes one CRF and includes:
 
-- `crf_id`
-- `pollutant`
-- `cause`
-- `outcome`
-- `double_counted`
-- `form`
-- `reference_id`
-- calculation metadata such as log-linear parameters or tabular data paths
+- its identity: `crf_id`;
+- its HIA slot: `pollutant`, `cause`, and `outcome`;
+- its form: `log_linear` or `tabular`;
+- its source: `reference_id`;
+- its age and regional applicability;
+- its double-counting metadata; and
+- the parameters or data path required for calculation.
 
-The registry is the full list of CRFs that the package knows about. It does not
-decide which CRF should be used by default.
+The Registry says which CRFs are available. It does not choose a default CRF
+for an analysis.
 
 ### Preset
 
-A preset is a human-readable selection manifest stored under
-`inst/extdata/crf/presets/`. It chooses a subset of registry rows.
-
-Conceptually, a preset says:
+A preset is a compact selection manifest under
+`inst/extdata/crf/presets/`. Each row maps one HIA slot to one `crf_id`:
 
 ```text
-For this pollutant / cause / outcome slot, use this crf_id.
+pollutant + cause + outcome -> crf_id
 ```
 
-The preset itself is intentionally compact. The full scientific metadata lives
-in the registry.
+The Registry stores the full scientific and calculation metadata; the preset
+stores the intended selection.
+
+The adult mortality presets distinguish two representations:
+
+- an aggregate preset selects `NCD.LRI`; and
+- a component preset selects its individual causes.
+
+Do not combine an aggregate preset with the corresponding component preset in
+one calculation. That would count overlapping mortality burden twice.
 
 ### HIA Slot
 
-For CRF selection, a health impact slot is identified by:
+The selection API identifies a health impact slot by:
 
 ```text
 pollutant + cause + outcome
 ```
 
-Examples:
+Examples include:
 
 ```text
 PM25 / IHD / Deaths
@@ -79,74 +100,211 @@ NO2 / NCD.LRI / Deaths
 NO2 / Asthma.1to18 / AsthmaIncidence
 ```
 
-The same slot can have several registry CRFs from different references or
-models. A preset selects one of them.
+Several Registry rows may occupy the same slot. For example, GEMM, Fusion, and
+GBD 2019 all provide a public CRF for `PM25 / IHD / Deaths`. A preset selects
+one of those alternatives.
+
+## Recommended Workflow
+
+The normal sequence is:
+
+```r
+# 1. Discover presets.
+available_crf_presets()
+
+# 2. Inspect the starting preset.
+describe_crf_preset("gemm_adult_deaths_components")
+
+# 3. Compare alternatives for one slot.
+crf_override_options(
+  presets = "gemm_adult_deaths_components",
+  pollutant = "PM25",
+  cause = "IHD",
+  outcome = "Deaths"
+)
+
+# 4. Preview an exact replacement.
+preview_crf_set(
+  presets = "gemm_adult_deaths_components",
+  replace = list(
+    list(crf_id = "fusion_pm25_ihd_adult_deaths_v1")
+  )
+)
+
+# 5. Create the compute-ready selection.
+crfs <- crfs_set(
+  presets = "gemm_adult_deaths_components",
+  replace = list(
+    list(crf_id = "fusion_pm25_ihd_adult_deaths_v1")
+  )
+)
+
+# Confirm that the final resolved rows have one CRF per HIA slot and no
+# double-counting conflict.
+validate_crf_selection(crfs, check_double_counting = TRUE)
+```
+
+This sequence keeps discovery, review, and execution separate. It also makes a
+mixed-source Set visible before it is used in HIA.
+
+## Practical Workflows
+
+### Workflow 1: Choose A Starting Preset
+
+Choose a model-family preset whose aggregate/component representation matches
+the analysis. For example, start with the GEMM adult component curves:
+
+```r
+available_crf_presets()
+describe_crf_preset("gemm_adult_deaths_components")
+```
+
+This selects the individual adult mortality causes `LRI`, `COPD`, `IHD`, `LC`,
+and `Stroke`. If the analysis instead requires the aggregate `NCD.LRI` curve,
+choose `gemm_adult_deaths_aggregate`; do not combine the two.
+
+### Workflow 2: Find CRFs For A Health Impact Slot
+
+Search the Registry when you know the pollutant, cause, and outcome but have not
+yet chosen a source:
+
+```r
+search_crf_registry(
+  pollutant = "PM25",
+  cause = "IHD",
+  outcome = "Deaths"
+)
+```
+
+The result lets you compare the available GEMM, Fusion, and GBD 2019 rows for
+the same slot. Inspect their source metadata before choosing one:
+
+```r
+available_crf_references()
+```
+
+### Workflow 3: Explore Replacement Options From A Preset
+
+Start from the GEMM component preset and inspect public alternatives for its IHD
+slot:
+
+```r
+crf_override_options(
+  presets = "gemm_adult_deaths_components",
+  pollutant = "PM25",
+  cause = "IHD",
+  outcome = "Deaths"
+)
+```
+
+Rows with `selected = TRUE` are the current GEMM selection. Rows with
+`selected = FALSE` are alternatives, including the public Fusion and GBD 2019
+IHD curves. Use `crf_id` to distinguish age structures when a source has more
+than one row for the same slot.
+
+### Workflow 4: Preview A Custom CRF Selection
+
+Preview replacing the selected GEMM IHD curve with the public Fusion adult-age
+curve:
+
+```r
+preview_crf_set(
+  presets = "gemm_adult_deaths_components",
+  replace = list(
+    list(crf_id = "fusion_pm25_ihd_adult_deaths_v1")
+  )
+)
+```
+
+The preview should show the Fusion row with `action = "replaced"`. This is a
+mixed-source selection, so record why the Fusion source is preferred for IHD.
+The same replacement can be written with exact slot metadata:
+
+```r
+preview_crf_set(
+  presets = "gemm_adult_deaths_components",
+  replace = list(
+    list(
+      pollutant = "PM25",
+      cause = "IHD",
+      outcome = "Deaths",
+      reference_id = "burnett_2022_fusion"
+    )
+  )
+)
+```
+
+### Workflow 5: Create A Compute-Ready CRF Set
+
+After reviewing the preview, pass the same exact operation to `crfs_set()`:
+
+```r
+crfs <- crfs_set(
+  presets = "gemm_adult_deaths_components",
+  replace = list(
+    list(crf_id = "fusion_pm25_ihd_adult_deaths_v1")
+  )
+)
+```
+
+You can then pass `crfs` to the existing HIA compute flow together with the
+analysis inputs:
+
+```r
+hia <- compute_hia(
+  conc_map = conc_map,
+  species = "pm25",
+  regions = regions,
+  epi = epi,
+  crfs = crfs
+)
+```
+
+The Set is compute-ready, but creating it does not run HIA or change the
+Registry. Ordinary legacy CRF inputs and package defaults remain unchanged.
 
 ## Helper Reference
 
 ### `available_crf_presets()`
 
-#### Purpose
-
-List the packaged CRF presets available in the installed package data.
-
-#### When To Use
-
-Use this first when you do not know which preset names are available.
-
-#### Example
+Lists the packaged preset names.
 
 ```r
 available_crf_presets()
 ```
 
-Example output:
+At the time of writing, the main migrated presets are:
 
-```r
-[1] "experimental_default"
-[2] "gemm_adult_deaths_aggregate"
-[3] "gemm_adult_deaths_components"
+```text
+fusion_adult_deaths_aggregate
+fusion_adult_deaths_components
+gbd2019_deaths
+gemm_adult_deaths_aggregate
+gemm_adult_deaths_components
 ```
 
-#### Interpretation
+Use the function rather than hard-coding this list because packaged presets may
+change as the migration progresses.
 
-Each returned value can be passed to helpers such as `describe_crf_preset()`,
-`crfs_preset()`, or `crf_override_options()`.
+The adult aggregate and component presets are alternatives, not additive
+building blocks:
 
-The two GEMM adult death presets are opt-in alternatives:
-
-- `gemm_adult_deaths_aggregate` selects the single `NCD.LRI` aggregate
-  mortality curve.
-- `gemm_adult_deaths_components` selects the five component mortality curves:
-  `LRI`, `COPD`, `IHD`, `LC`, and `Stroke`.
-
-Do not combine these two presets in one HIA calculation. `NCD.LRI` contains the
-component causes, so selecting both representations would double-count the same
-health burden. Neither preset changes the package's current default behavior.
-
----
+- `gemm_adult_deaths_aggregate` selects GEMM `NCD.LRI` deaths;
+- `gemm_adult_deaths_components` selects GEMM `LRI`, `COPD`, `IHD`, `LC`, and
+  `Stroke` deaths;
+- `fusion_adult_deaths_aggregate` selects Fusion `NCD.LRI` deaths; and
+- `fusion_adult_deaths_components` selects Fusion `LRI`, `COPD`, `Diabetes`,
+  `IHD`, `LC`, and `Stroke` deaths.
 
 ### `load_crf_preset(name)`
 
-#### Purpose
-
-Load a preset CSV as a compact selection table.
-
-#### When To Use
-
-Use this for low-level debugging of preset files. Most users should prefer
-`describe_crf_preset()` because it joins the preset back to the registry and
-shows scientific metadata.
-
-#### Example
+Loads the compact CSV manifest for one preset.
 
 ```r
-load_crf_preset("experimental_default")
+load_crf_preset("gemm_adult_deaths_components")
 ```
 
-#### Interpretation
-
-The result is a compact manifest with columns such as:
+The result contains:
 
 - `pollutant`
 - `cause`
@@ -154,28 +312,18 @@ The result is a compact manifest with columns such as:
 - `crf_id`
 - `notes`
 
-This table is readable, but it is not the complete CRF metadata.
-
----
+Use this mainly for debugging preset files. For analysis review, prefer
+`describe_crf_preset()`, which joins the manifest to Registry metadata.
 
 ### `describe_crf_preset(name)`
 
-#### Purpose
-
-Show what a preset actually selects after resolving it against the CRF registry.
-
-#### When To Use
-
-Use this before adopting a preset in an analysis, a report, or a validation run.
-It answers: "Which CRFs and references are included in this preset?"
-
-#### Example
+Shows the full identity of the CRFs selected by a preset.
 
 ```r
-describe_crf_preset("experimental_default")
+describe_crf_preset("fusion_adult_deaths_components")
 ```
 
-#### Output Columns
+The output contains:
 
 - `preset`
 - `pollutant`
@@ -186,34 +334,15 @@ describe_crf_preset("experimental_default")
 - `form`
 - `notes`
 
-#### Interpretation
-
-If a row shows:
-
-```text
-pollutant: PM25
-cause: IHD
-outcome: Deaths
-reference_id: burnett_2018_gemm
-form: tabular
-```
-
-then the preset selects a tabular GEMM CRF for PM2.5-attributable IHD deaths.
-
----
+Use this before adopting a preset in an analysis. For example, a row with
+`reference_id = "burnett_2022_fusion"` and `form = "tabular"` identifies a
+tabular Fusion CRF; the preset name alone should not be treated as sufficient
+scientific documentation.
 
 ### `search_crf_registry(...)`
 
-#### Purpose
-
-Search the full CRF registry with user-facing filters.
-
-#### When To Use
-
-Use this when you want to find CRFs by pollutant, cause, outcome, reference,
-form, or free-text query.
-
-#### Examples
+Searches user-facing Registry rows by exact metadata filters or a
+case-insensitive text query.
 
 Search one HIA slot:
 
@@ -225,19 +354,19 @@ search_crf_registry(
 )
 ```
 
-Search by reference:
+Search one source:
 
 ```r
-search_crf_registry(reference_id = "burnett_2018_gemm")
+search_crf_registry(reference_id = "burnett_2022_fusion")
 ```
 
-Search by text:
+Search across IDs, slot metadata, references, forms, and notes:
 
 ```r
 search_crf_registry(query = "gemm")
 ```
 
-#### Output Columns
+The output contains:
 
 - `pollutant`
 - `cause`
@@ -247,31 +376,18 @@ search_crf_registry(query = "gemm")
 - `form`
 - `notes`
 
-#### Interpretation
-
-The registry can contain several CRFs for the same HIA slot. A search result
-shows what exists; it does not say which one is selected by a preset.
-
----
+A search result shows what is available. It does not imply that a row is the
+package default or the scientifically preferred choice.
 
 ### `available_crf_references()`
 
-#### Purpose
-
-List reference metadata available to CRF registry rows.
-
-#### When To Use
-
-Use this when you need to understand or choose a `reference_id`, especially
-before planning a future `replace` entry.
-
-#### Example
+Lists the public reference metadata used by Registry rows.
 
 ```r
 available_crf_references()
 ```
 
-#### Output Columns
+The output contains:
 
 - `reference_id`
 - `author`
@@ -279,78 +395,44 @@ available_crf_references()
 - `title`
 - `notes`
 
-#### Interpretation
+Use this to interpret source keys such as `burnett_2018_gemm`,
+`burnett_2022_fusion`, and `ihme_2021_gbd2019_pm_risk_curves`. Internal fixture
+references are not returned.
 
-The `reference_id` is the compact key used in the registry. The author, year,
-title, and notes explain what the key refers to.
+### `crf_override_options(...)`
 
----
+Shows the CRFs currently selected by one or more presets together with public
+Registry alternatives for the same HIA slots. It does not change a selection.
 
-### `crf_override_options(presets, pollutant = NULL, cause = NULL, outcome = NULL)`
-
-#### Purpose
-
-Display currently selected CRFs from one or more presets together with registry
-alternatives for matching HIA slots.
-
-This is an exploration helper. It does not perform replacement.
-
-#### When To Use
-
-Use this when you want to understand what a preset currently selects and what
-could be used instead.
-
-It supports partial filters, so you can start broad and then narrow down.
-
-#### Examples
-
-Inspect every selected slot and its alternatives:
+Inspect all alternatives for the GEMM adult component slots:
 
 ```r
 crf_override_options(
-  presets = "experimental_default"
+  presets = "gemm_adult_deaths_components"
 )
 ```
 
-Inspect all PM2.5-selected slots:
+Inspect one exact slot:
 
 ```r
 crf_override_options(
-  presets = "experimental_default",
-  pollutant = "PM25"
-)
-```
-
-Inspect slots with IHD as the cause:
-
-```r
-crf_override_options(
-  presets = "experimental_default",
-  cause = "IHD"
-)
-```
-
-Inspect death outcomes using a case-insensitive partial filter:
-
-```r
-crf_override_options(
-  presets = "experimental_default",
-  outcome = "death"
-)
-```
-
-Inspect one exact HIA slot:
-
-```r
-crf_override_options(
-  presets = "experimental_default",
+  presets = "gemm_adult_deaths_components",
   pollutant = "PM25",
   cause = "IHD",
   outcome = "Deaths"
 )
 ```
 
-#### Output Columns
+Partial filters are useful during exploration:
+
+```r
+crf_override_options(
+  presets = "gemm_adult_deaths_components",
+  outcome = "death"
+)
+```
+
+The output contains:
 
 - `pollutant`
 - `cause`
@@ -362,128 +444,104 @@ crf_override_options(
 - `form`
 - `notes`
 
-#### Interpretation
+For `PM25 / IHD / Deaths`, the result includes the selected GEMM adult curve
+and public alternatives from Fusion and GBD 2019. It may also include the older
+GEMM `25+` aggregate curve. Because multiple GEMM rows share the same slot and
+reference, use `crf_id` when the intended age structure must be unambiguous.
 
-Rows with `selected = TRUE` are currently selected by the requested presets.
-Rows with `selected = FALSE` are registry alternatives for the same matching
-HIA slot.
+`crf_override_options()` always starts from packaged presets. It does not
+describe a composition that has already been changed by `add`, `remove`, or
+`replace`; use `preview_crf_set()` for that.
 
-For example, if the output contains:
+### `preview_crf_set(...)`
 
-```text
-PM25 / IHD / Deaths / selected = TRUE / burnett_2018_gemm
-PM25 / IHD / Deaths / selected = FALSE / registry_fixture
-```
+Previews a composed selection without creating a compute-ready Set or running
+HIA.
 
-then the preset currently selects the Burnett GEMM CRF for PM2.5 IHD deaths.
-The second row is an example of the kind of alternative that the API can
-display during development; `registry_fixture` is currently excluded from
-actual user-facing output and is not a valid replacement option.
-
-#### Important Boundary
-
-`crf_override_options()` describes preset-defined selections only. It does not
-represent a composed CRF set after `add`, `remove`, or `replace`.
-
-Future replacement execution should still require precise slot information.
-Exploration can be broad; modification should be exact.
-
----
-
-### `preview_crf_set(presets, add = NULL, remove = NULL, replace = NULL)`
-
-#### Purpose
-
-Preview a composed CRF selection before running HIA.
-
-This helper starts from one or more presets, then optionally previews explicit
-`add`, `remove`, and `replace` operations. It returns a table that shows which
-CRFs would be selected, added, removed, or replaced.
-
-#### When To Use
-
-Use this when you want to check a proposed CRF selection before turning it into
-a `crfs_set()` object or passing selected CRFs into a compute workflow.
-
-This is the main bridge between discovery helpers and the compute-ready Set API.
-
-#### Basic Example
-
-Preview the selected CRFs from one preset:
+#### Start From A Preset
 
 ```r
 preview_crf_set(
-  presets = "experimental_default"
+  presets = "gemm_adult_deaths_components"
 )
 ```
 
-#### Add Example
+#### Add A Missing Slot
 
-Add a slot that is not currently selected by the preset:
-
-```r
-preview_crf_set(
-  presets = "experimental_default",
-  add = list(
-    list(
-      pollutant = "NO2",
-      cause = "Asthma.1to18",
-      outcome = "AsthmaIncidence",
-      reference_id = "legacy_default_crfs"
-    )
-  )
-)
-```
-
-You can also add by explicit `crf_id`:
+Add a real, migrated NO2 childhood-asthma CRF by `crf_id`:
 
 ```r
 preview_crf_set(
-  presets = "experimental_default",
+  presets = "gemm_adult_deaths_components",
   add = list(
     list(crf_id = "legacy_no2_asthma_1to18_incidence_v1")
   )
 )
 ```
 
-#### Remove Example
-
-Remove a selected slot:
+The equivalent source-based form is:
 
 ```r
 preview_crf_set(
-  presets = "experimental_default",
-  remove = list(
+  presets = "gemm_adult_deaths_components",
+  add = list(
     list(
       pollutant = "NO2",
-      cause = "NCD.LRI",
+      cause = "Asthma.1to18",
+      outcome = "AsthmaIncidence",
+      reference_id = "khreis_2017_childhood_asthma"
+    )
+  )
+)
+```
+
+#### Remove A Selected Slot
+
+```r
+preview_crf_set(
+  presets = "gemm_adult_deaths_components",
+  remove = list(
+    list(
+      pollutant = "PM25",
+      cause = "LC",
       outcome = "Deaths"
     )
   )
 )
 ```
 
-Removed rows remain in the preview with `action = "removed"` so the user can see
-what changed.
+Removed rows remain visible with `action = "removed"`.
 
-#### Replace Example
+#### Replace A Selected Slot
 
-For example, replace the experimental IHD `25+` curve with the full adult-age
-IHD curve:
+Replace GEMM IHD with the corresponding public Fusion adult-age curve:
 
 ```r
 preview_crf_set(
-  presets = "experimental_default",
+  presets = "gemm_adult_deaths_components",
   replace = list(
-    list(crf_id = "gemm_pm25_ihd_adult_deaths_v1")
+    list(crf_id = "fusion_pm25_ihd_adult_deaths_v1")
   )
 )
 ```
 
-Both IHD rows cite the same GEMM reference, so `crf_id` is required to identify
-which age structure should be selected.
+The source-based form is also unambiguous for Fusion IHD:
 
-#### Output Columns
+```r
+preview_crf_set(
+  presets = "gemm_adult_deaths_components",
+  replace = list(
+    list(
+      pollutant = "PM25",
+      cause = "IHD",
+      outcome = "Deaths",
+      reference_id = "burnett_2022_fusion"
+    )
+  )
+)
+```
+
+The preview output contains:
 
 - `pollutant`
 - `cause`
@@ -495,478 +553,83 @@ which age structure should be selected.
 - `selected_by_preset`
 - `notes`
 
-#### Interpretation
+`action` is one of:
 
-The `action` column explains how each row entered the preview:
+- `selected`: supplied by the starting preset;
+- `added`: introduced by `add`;
+- `removed`: excluded by `remove`; or
+- `replaced`: introduced by `replace`.
 
-- `selected`: selected directly by the starting presets
-- `added`: added by the `add` argument
-- `removed`: selected by the starting presets, then marked for removal
-- `replaced`: inserted by the `replace` argument
+Rows introduced by `add` or `replace` have
+`selected_by_preset = NA` because they are explicit user choices rather than
+members of the starting preset.
 
-Rows added or replaced by user operations have `selected_by_preset = NA` because
-they did not come directly from a packaged preset.
+#### Exact-Operation Rules
 
-#### Important Boundaries
-
-`add`, `remove`, and `replace` are precise operations. They should identify exact
-HIA slots, not broad categories.
-
-- `add` requires the slot to be absent from the current preview. If the slot is
-  already present, use `replace`.
+- `add` is only for a slot absent from the current selection.
 - `remove` requires `pollutant`, `cause`, and `outcome`.
-- `replace` requires the slot to already be selected and not removed.
-- `add` and `replace` support both source-based entries using
-  `pollutant + cause + outcome + reference_id` and fallback entries using
-  `crf_id`.
-- Source-based entries must match exactly one Registry row. When multiple rows
-  share one reference, as with the two GEMM IHD age structures, use `crf_id` to
-  disambiguate.
+- `replace` is only for a slot currently selected and not removed.
+- `add` and `replace` accept either a direct `crf_id` or
+  `pollutant + cause + outcome + reference_id`.
+- A source-based request must match exactly one public Registry row.
+- Use `crf_id` when one reference contains multiple CRFs for the same slot.
 
-`preview_crf_set()` does not run HIA and does not create a `crfs_set()` object.
-It only shows what the composed selection would look like.
+### `crfs_set(...)`
 
----
+Creates a compute-ready `creahia_crf_set` from presets and optional exact
+modifications.
 
-### `crfs_set(presets, add = NULL, remove = NULL, replace = NULL)`
-
-#### Purpose
-
-Create a compute-ready CRF selection from one or more presets and optional
-`add`, `remove`, and `replace` operations.
-
-#### When To Use
-
-Use this after inspecting a preset and previewing any changes with
-`preview_crf_set()`. The result is resolved back to registry rows and can be
-passed to `compute_hia()` or `compute_hia_paf()`.
-
-#### Basic Example
+Start from one preset:
 
 ```r
 crfs <- crfs_set(
-  presets = "experimental_default"
+  presets = "fusion_adult_deaths_components"
 )
 ```
 
-You can then pass the result to the HIA compute path:
-
-```r
-compute_hia(
-  conc_map = conc_map,
-  species = "no2",
-  regions = regions,
-  epi = epi,
-  rr_sources = tibble::tibble(
-    cause = character(),
-    source = character()
-  ),
-  crfs = crfs
-)
-```
-
-#### Add Example
-
-Use `add` when the current preset does not already select the slot you want.
-The source-based form uses `pollutant + cause + outcome + reference_id`:
+Create the GEMM component selection with Fusion IHD substituted:
 
 ```r
 crfs <- crfs_set(
-  presets = "experimental_default",
-  add = list(
-    list(
-      pollutant = "NO2",
-      cause = "Asthma.1to18",
-      outcome = "AsthmaIncidence",
-      reference_id = "legacy_default_crfs"
-    )
+  presets = "gemm_adult_deaths_components",
+  replace = list(
+    list(crf_id = "fusion_pm25_ihd_adult_deaths_v1")
   )
 )
 ```
 
-You can also add by direct `crf_id`:
+Compose several operations after previewing the same request:
 
 ```r
-crfs <- crfs_set(
-  presets = "experimental_default",
+set_spec <- list(
+  presets = "gemm_adult_deaths_components",
   add = list(
     list(crf_id = "legacy_no2_asthma_1to18_incidence_v1")
-  )
-)
-```
-
-#### Remove Example
-
-Use `remove` when a preset selects a slot that should not be included in the
-final compute-ready CRF set:
-
-```r
-crfs <- crfs_set(
-  presets = "experimental_default",
-  remove = list(
-    list(
-      pollutant = "NO2",
-      cause = "NCD.LRI",
-      outcome = "Deaths"
-    )
-  )
-)
-```
-
-`remove` uses the HIA slot only. It does not need `reference_id`, because it
-removes the currently selected CRF for that slot.
-
-#### Replace Example
-
-The intended replacement form is:
-
-```r
-crfs <- crfs_set(
-  presets = "experimental_default",
-  replace = list(
-    list(
-      pollutant = "PM25",
-      cause = "IHD",
-      outcome = "Deaths",
-      reference_id = "registry_fixture"
-    )
-  )
-)
-```
-
-This is currently an API-shape example only. The fixture is rejected by the
-current implementation; a real workflow must use a reviewed registry CRF.
-
-The same operation can be expressed by direct `crf_id`:
-
-```r
-crfs <- crfs_set(
-  presets = "experimental_default",
-  replace = list(
-    list(crf_id = "test_tabular_pm25_ihd_deaths_v1")
-  )
-)
-```
-
-#### Combined Example
-
-`add`, `remove`, and `replace` can be used together. The operations are previewed
-and validated by the same rules as `preview_crf_set()` before the final
-`creahia_crf_set` is created.
-
-```r
-crfs <- crfs_set(
-  presets = "experimental_default",
-  add = list(
-    list(
-      pollutant = "NO2",
-      cause = "Asthma.1to18",
-      outcome = "AsthmaIncidence",
-      reference_id = "legacy_default_crfs"
-    )
   ),
   remove = list(
     list(
-      pollutant = "NO2",
-      cause = "NCD.LRI",
+      pollutant = "PM25",
+      cause = "LC",
       outcome = "Deaths"
     )
   ),
   replace = list(
-    list(
-      pollutant = "PM25",
-      cause = "IHD",
-      outcome = "Deaths",
-      reference_id = "registry_fixture"
-    )
+    list(crf_id = "fusion_pm25_ihd_adult_deaths_v1")
   )
 )
+
+preview <- do.call(preview_crf_set, set_spec)
+crfs <- do.call(crfs_set, set_spec)
 ```
 
-#### Interpretation
+The returned object contains the full Registry rows needed by the downstream
+PAF calculation, including `form`, `reference_id`, `double_counted`, age
+metadata, and calculation inputs.
 
-The returned object is a `creahia_crf_set`. It contains full registry rows,
-including metadata needed downstream such as `reference_id`, `form`, and
-`double_counted`.
-
-When this object is passed to `compute_hia()` or `compute_hia_paf()`, the CRF PAF
-calculation is routed through the registry path.
-
-#### Important Boundaries
-
-`crfs_set()` only composes registry-selected CRFs. It does not:
-
-- change the package registry
-- run HIA by itself
-- guarantee that all legacy CRFs have already been migrated into the registry
-- replace the default legacy path for ordinary CRF inputs
-
-`add`, `remove`, and `replace` are exact modification operations:
-
-- `add` is for slots absent from the current selection
-- `remove` requires `pollutant`, `cause`, and `outcome`
-- `replace` is for slots already present in the current selection
-- `add` and `replace` accept either the source-based form or direct `crf_id`
-
----
-
-### `crfs_preset(name)`
-
-#### Purpose
-
-Load a preset and resolve it to full registry rows.
-
-#### When To Use
-
-Use this when code needs the actual selected registry rows, not only a
-human-readable description.
-
-#### Example
+Pass it to the existing HIA flow with the other required analysis inputs:
 
 ```r
-crfs_preset("experimental_default")
-```
-
-#### Interpretation
-
-This returns registry rows selected by the preset and validates that the
-selection is well-formed.
-
----
-
-### `resolve_crf_selection(selection)`
-
-#### Purpose
-
-Resolve an explicit selection table to registry rows.
-
-#### When To Use
-
-Use this for lower-level validation when a selection table already exists. Most
-users should start from packaged presets instead.
-
-#### Example
-
-```r
-selection <- tibble::tribble(
-  ~pollutant, ~cause, ~outcome, ~crf_id,
-  "PM25", "IHD", "Deaths", "gemm_pm25_ihd_25plus_deaths_v1"
-)
-
-resolve_crf_selection(selection)
-```
-
-#### Interpretation
-
-The function checks that the selected `crf_id` exists and that each
-`pollutant + cause + outcome` slot selects one CRF source.
-
----
-
-### `crfs_override(crfs, pollutant, cause, outcome, crf_id)`
-
-#### Purpose
-
-Replace one selected CRF in an already resolved CRF selection.
-
-#### When To Use
-
-Use this as a low-level helper for direct replacement experiments. It is not the
-planned final user-facing Set API.
-
-#### Example
-
-```r
-crfs <- crfs_preset("experimental_default")
-
-crfs_override(
-  crfs,
-  pollutant = "PM25",
-  cause = "IHD",
-  outcome = "Deaths",
-  crf_id = "test_tabular_pm25_ihd_deaths_v1"
-)
-```
-
-This example illustrates the intended API shape only. The named row is an
-internal validation fixture retained for automated tests and is rejected by the
-current helper. A real workflow must use a reviewed, user-facing registry row.
-
-#### Interpretation
-
-This changes one exact slot to a replacement `crf_id`. Unlike
-`crf_override_options()`, this helper modifies the selection object that is
-passed to it.
-
-## Practical Workflows
-
-### Workflow 1: Choose A Starting Preset
-
-Start by listing available presets:
-
-```r
-available_crf_presets()
-```
-
-Then inspect a candidate:
-
-```r
-describe_crf_preset("experimental_default")
-```
-
-Use this workflow when you want to confirm which sources and CRF forms are
-included before running or validating an HIA workflow.
-
-### Workflow 2: Find CRFs For A Health Impact Slot
-
-Search the registry:
-
-```r
-search_crf_registry(
-  pollutant = "PM25",
-  cause = "IHD",
-  outcome = "Deaths"
-)
-```
-
-Then inspect references:
-
-```r
-available_crf_references()
-```
-
-Use this workflow when you want to understand the scientific sources available
-for a specific health impact slot.
-
-### Workflow 3: Explore Replacement Options From A Preset
-
-Start broad:
-
-```r
-crf_override_options(
-  presets = "experimental_default",
-  pollutant = "PM25"
-)
-```
-
-Then narrow down:
-
-```r
-crf_override_options(
-  presets = "experimental_default",
-  pollutant = "PM25",
-  cause = "IHD",
-  outcome = "Deaths"
-)
-```
-
-Use this workflow when you know the current preset but need to understand which
-CRFs could be considered as alternatives.
-
-### Workflow 4: Preview A Custom CRF Selection
-
-Use `crf_override_options()` to find the slot and possible references:
-
-```r
-crf_override_options(
-  presets = "experimental_default",
-  pollutant = "PM25"
-)
-```
-
-Then preview the exact replacement using one of the reviewed alternatives
-returned by the helper. Internal validation fixtures are excluded and cannot be
-used as replacements. The original API-shape example is shown below for
-documentation purposes only and will currently be rejected:
-
-```r
-preview_crf_set(
-  presets = "experimental_default",
-  replace = list(
-    list(
-      pollutant = "PM25",
-      cause = "IHD",
-      outcome = "Deaths",
-      reference_id = "registry_fixture"
-    )
-  )
-)
-```
-
-This keeps the exploratory lookup separate from the exact modification.
-
-### Workflow 5: Create A Compute-Ready CRF Set
-
-Once the desired slots and references are clear, first preview the exact
-composition:
-
-```r
-preview_crf_set(
-  presets = "experimental_default",
-  add = list(
-    list(
-      pollutant = "NO2",
-      cause = "Asthma.1to18",
-      outcome = "AsthmaIncidence",
-      reference_id = "legacy_default_crfs"
-    )
-  ),
-  remove = list(
-    list(
-      pollutant = "NO2",
-      cause = "NCD.LRI",
-      outcome = "Deaths"
-    )
-  ),
-  replace = list(
-    list(
-      pollutant = "PM25",
-      cause = "IHD",
-      outcome = "Deaths",
-      reference_id = "registry_fixture"
-    )
-  )
-)
-```
-
-If the preview is correct, use the same arguments in `crfs_set()`:
-
-```r
-crfs <- crfs_set(
-  presets = "experimental_default",
-  add = list(
-    list(
-      pollutant = "NO2",
-      cause = "Asthma.1to18",
-      outcome = "AsthmaIncidence",
-      reference_id = "legacy_default_crfs"
-    )
-  ),
-  remove = list(
-    list(
-      pollutant = "NO2",
-      cause = "NCD.LRI",
-      outcome = "Deaths"
-    )
-  ),
-  replace = list(
-    list(
-      pollutant = "PM25",
-      cause = "IHD",
-      outcome = "Deaths",
-      reference_id = "registry_fixture"
-    )
-  )
-)
-```
-
-This preserves the distinction between exploratory lookup, preview, and actual
-compute-ready selection.
-
-You can pass the result to the HIA compute path:
-
-```r
-compute_hia(
+hia <- compute_hia(
   conc_map = conc_map,
   species = "pm25",
   regions = regions,
@@ -975,17 +638,143 @@ compute_hia(
 )
 ```
 
-When `compute_hia()` receives a `crfs_set()` result, it uses the registry CRF PAF
-path for CRF calculations.
+When `compute_hia()` or `compute_hia_paf()` receives a `crfs_set()` result, CRF
+PAFs are calculated through the Registry path. `crfs_set()` itself does not run
+HIA, change package data, or establish a new default model.
 
-## Current Limitations
+### `crfs_preset(name)`
 
-- The current registry contains only a small number of migrated and fixture CRFs.
-- Some alternatives may be validation fixtures rather than real epidemiological
-  choices.
-- `crf_override_options()` only reflects preset-defined selections. It does not
-  account for previewed `add`, `remove`, or `replace` operations.
-- `preview_crf_set()` is a preview table, not a `crfs_set()` object.
-- `crfs_set()` is implemented for registry-selected CRFs, but registry coverage is
-  still incomplete, so it should be treated as an opt-in migration path rather
-  than the default CRF workflow.
+Resolves one preset directly to full Registry rows.
+
+```r
+crfs <- crfs_preset("gbd2019_deaths")
+```
+
+This is useful when code needs the resolved rows but does not need composition
+operations. For a compute-ready typed object, prefer `crfs_set()`.
+
+### `resolve_crf_selection(selection)`
+
+Resolves and validates an explicit selection table.
+
+```r
+selection <- tibble::tribble(
+  ~pollutant, ~cause, ~outcome, ~crf_id,
+  "PM25", "IHD", "Deaths", "fusion_pm25_ihd_adult_deaths_v1"
+)
+
+resolved <- resolve_crf_selection(selection)
+```
+
+The helper checks that every `crf_id` exists and that each
+`pollutant + cause + outcome` slot selects only one CRF. Most user workflows
+should begin with a preset instead of constructing this table manually.
+
+### `validate_crf_selection(crfs, check_double_counting = FALSE)`
+
+Validates an already resolved selection of full Registry rows. It checks that:
+
+- the selection is not empty;
+- each `crf_id` occurs once; and
+- each `pollutant + cause + outcome` slot has only one CRF.
+
+By default it does not reject overlapping causes. Set
+`check_double_counting = TRUE` to also apply the package's double-counting
+rules:
+
+```r
+crfs <- crfs_set(
+  presets = "gemm_adult_deaths_components",
+  replace = list(
+    list(crf_id = "fusion_pm25_ihd_adult_deaths_v1")
+  )
+)
+
+validate_crf_selection(crfs, check_double_counting = TRUE)
+```
+
+The function returns invisibly on success and errors with the conflicting IDs
+or slots on failure. `resolve_crf_selection()`, `crfs_override()`, and
+`crfs_set()` already call it internally. Calling it explicitly is most useful
+after a lower-level manual edit to resolved Registry rows, or as a deliberate
+final check in a reproducible HIA workflow.
+
+### `crfs_override(crfs, pollutant, cause, outcome, crf_id)`
+
+Replaces one exact slot in an already resolved Registry selection.
+
+```r
+crfs <- crfs_preset("gemm_adult_deaths_components")
+
+crfs <- crfs_override(
+  crfs,
+  pollutant = "PM25",
+  cause = "IHD",
+  outcome = "Deaths",
+  crf_id = "fusion_pm25_ihd_adult_deaths_v1"
+)
+```
+
+This lower-level helper returns resolved Registry rows but does not add the
+`creahia_crf_set` class. Prefer `preview_crf_set()` followed by `crfs_set()` for
+normal analysis workflows because that path makes the proposed composition
+easier to review.
+
+## Interpretation and Safety Boundaries
+
+### Replacement Is A Scientific Choice
+
+The API verifies that a requested CRF exists, matches the stated slot, and is
+unambiguous. It does not decide whether GEMM, Fusion, or GBD 2019 is the right
+source for a study. Record the source choice and rationale alongside the HIA
+configuration.
+
+### Mixed-Source Sets Are Explicit
+
+Replacing GEMM IHD with Fusion IHD creates a mixed-source Set. This is useful
+for demonstrating and testing the override mechanism, and it may be appropriate
+for a study with a documented rationale. The preview step is important because
+the resulting Set no longer represents the unchanged packaged GEMM preset.
+
+### Age Structure Matters
+
+Two CRFs can share a pollutant, cause, outcome, and reference while differing
+in age structure. For example, the Registry contains both a GEMM IHD `25+`
+aggregate curve and a GEMM IHD adult split-age curve. Use `crf_id` whenever a
+reference-based request would match more than one row.
+
+### Aggregate And Component Mortality Must Not Be Combined
+
+`NCD.LRI` overlaps its component causes. Choose either the aggregate
+representation or the component representation for one model family; do not
+combine both presets in the same HIA.
+
+### Public Registry Is Not The Whole Legacy Surface
+
+The available public rows now support real discovery, override, preview, and
+compute examples. However, historical reproduction data and unresolved legacy
+methodology are managed separately from public, opt-in Registry choices. Do not
+infer support for an outcome or workflow merely because a related death CRF is
+available.
+
+## Validation Checklist
+
+Before using a custom Set in an analysis:
+
+1. inspect the starting preset with `describe_crf_preset()`;
+2. use `crf_override_options()` to compare the same HIA slot;
+3. inspect reference metadata with `available_crf_references()`;
+4. preview the complete composition with `preview_crf_set()`;
+5. check that aggregate and component causes do not overlap;
+6. confirm the selected age structure and outcome match the study design; and
+7. create the final typed object with `crfs_set()`.
+
+For package development, run the focused selection tests:
+
+```r
+devtools::test(filter = "crf_select")
+devtools::test(filter = "crf_fixture_isolation")
+```
+
+When changing GEMM or Fusion Registry data or presets, also run the relevant
+end-to-end parity and fixed-fingerprint tests.

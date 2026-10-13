@@ -6,8 +6,10 @@ man/
 .Renviron
 inst/doc
 
-# Local development plans
+# Local development plans / presentation
 .github/prompts/dev/
+.codex-artifacts
+presentation/
 
 tmp/
 cache/
