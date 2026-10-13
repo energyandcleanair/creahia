@@ -145,8 +145,10 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
       }) %>%
       bind_rows(.id = 'scenario') %>%
       group_by(scenario, region_id) %>%
-      summarise(across(-pop, weighted.mean, w = pop, na.rm = T),
-                across(pop, sum, na.rm = T))
+      summarise(
+        across(-pop, function(x) weighted.mean(x, w = pop, na.rm = TRUE)),
+        across(pop, function(x) sum(x, na.rm = TRUE))
+      )
 
     hia <- list(hia = hia, concentrations = conc_regions_mean)
   }
@@ -241,8 +243,10 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
         }) %>%
         bind_rows(.id = 'scenario') %>%
         group_by(scenario, region_id) %>%
-        summarise(across(-pop, weighted.mean, w = pop, na.rm = T),
-                  across(pop, sum, na.rm = T))
+        summarise(
+          across(-pop, function(x) weighted.mean(x, w = pop, na.rm = TRUE)),
+          across(pop, function(x) sum(x, na.rm = TRUE))
+        )
 
       hia <- list(hia = hia, concentrations = conc_regions_mean)
     }
@@ -253,4 +257,3 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
                       glue(if(!is.null(custom_glue)) custom_glue else 'hia_GBD__{scen}.RDS')))
   }, ...)
 }
-
