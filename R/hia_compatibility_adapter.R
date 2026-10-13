@@ -506,3 +506,162 @@
 .hia_readiness_shadow_enabled <- function() {
   is.function(getOption("creahia.hia_readiness_shadow_observer"))
 }
+
+
+.hia_dual_run_enabled <- function() {
+  is.function(getOption("creahia.hia_dual_run_observer"))
+}
+
+
+.hia_compatibility_diagnostics_enabled <- function() {
+  .hia_readiness_shadow_enabled() || .hia_dual_run_enabled()
+}
+
+
+.new_hia_dual_run_result <- function(
+  status,
+  reason,
+  input_contract = NULL,
+  tolerance = 1e-12,
+  legacy_rows = NULL,
+  registry_rows = NULL,
+  differences = character(),
+  error = NULL
+) {
+  structure(
+    list(
+      status = status,
+      reason = reason,
+      input_contract = input_contract,
+      tolerance = tolerance,
+      legacy_rows = legacy_rows,
+      registry_rows = registry_rows,
+      differences = differences,
+      error = error
+    ),
+    class = c("creahia_hia_dual_run_result", "list")
+  )
+}
+
+
+.compare_hia_dual_run_results <- function(
+  legacy_impacts,
+  registry_impacts,
+  tolerance = 1e-12
+) {
+  differences <- all.equal(
+    registry_impacts,
+    legacy_impacts,
+    tolerance = tolerance,
+    check.attributes = TRUE
+  )
+  matched <- isTRUE(differences)
+
+  .new_hia_dual_run_result(
+    status = if (matched) "matched" else "different",
+    reason = if (matched) "outputs_match" else "outputs_differ",
+    tolerance = tolerance,
+    legacy_rows = nrow(legacy_impacts),
+    registry_rows = nrow(registry_impacts),
+    differences = if (matched) character() else as.character(differences)
+  )
+}
+
+
+.notify_hia_dual_run_observer <- function(result) {
+  observer <- getOption("creahia.hia_dual_run_observer")
+  if (is.function(observer)) {
+    tryCatch(
+      observer(result),
+      error = function(error) invisible(NULL)
+    )
+  }
+  invisible(result)
+}
+
+
+.execute_hia_compatibility_dual_run <- function(
+  observation,
+  legacy_impacts,
+  conc_map,
+  species,
+  regions,
+  scenarios,
+  epi_version,
+  epi,
+  population_scale = NULL,
+  tolerance = 1e-12
+) {
+  input_contract <- observation$input_contract %||% NULL
+  route_application <- observation$route_application %||% NULL
+  route_plan <- observation$route_plan %||% NULL
+
+  if (
+    !identical(observation$status, "resolved") ||
+    !identical(route_plan$status, "planned") ||
+    !identical(route_plan$route, "registry") ||
+    !identical(route_application$status, "applied")
+  ) {
+    return(.notify_hia_dual_run_observer(.new_hia_dual_run_result(
+      status = "not_run",
+      reason = route_plan$reason %||% observation$reason %||%
+        "registry_candidate_unavailable",
+      input_contract = input_contract,
+      tolerance = tolerance,
+      legacy_rows = nrow(legacy_impacts)
+    )))
+  }
+
+  candidate <- tryCatch(
+    {
+      compute_inputs <- route_application$compute_inputs
+      paf <- compute_hia_paf(
+        conc_map = conc_map,
+        species = species,
+        regions = regions,
+        scenarios = scenarios,
+        epi_version = epi_version,
+        rr_sources = compute_inputs$rr_sources,
+        crfs = compute_inputs$crfs,
+        diagnostic_folder = NULL,
+        crf_compute = compute_inputs$crf_compute
+      )
+      impacts <- compute_hia_impacts(
+        species = species,
+        paf = paf,
+        conc_map = conc_map,
+        regions = regions,
+        epi = epi,
+        crfs = compute_inputs$crfs
+      )
+      if (!is.null(population_scale)) {
+        impacts <- scale_hia_pop(
+          impacts,
+          base_year = population_scale$base_year,
+          target_year = population_scale$target_year
+        )
+      }
+      impacts
+    },
+    error = function(error) error
+  )
+
+  if (inherits(candidate, "error")) {
+    return(.notify_hia_dual_run_observer(.new_hia_dual_run_result(
+      status = "error",
+      reason = "registry_candidate_error",
+      input_contract = input_contract,
+      tolerance = tolerance,
+      legacy_rows = nrow(legacy_impacts),
+      error = conditionMessage(candidate)
+    )))
+  }
+
+  result <- .compare_hia_dual_run_results(
+    legacy_impacts = legacy_impacts,
+    registry_impacts = candidate,
+    tolerance = tolerance
+  )
+  result$input_contract <- input_contract
+  .notify_hia_dual_run_observer(result)
+}

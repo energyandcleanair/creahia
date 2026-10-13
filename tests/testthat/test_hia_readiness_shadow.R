@@ -57,10 +57,15 @@ make_shadow_test_boundary_context <- function(...) {
 
 test_that("ordinary HIA calls skip shadow resolution unless opted in", {
   expected <- make_shadow_test_impacts()
-  old_options <- options(creahia.hia_readiness_shadow_observer = NULL)
+  old_options <- options(
+    creahia.hia_readiness_shadow_observer = NULL,
+    creahia.hia_dual_run_observer = NULL
+  )
   on.exit(options(old_options), add = TRUE)
 
   expect_false(.hia_readiness_shadow_enabled())
+  expect_false(.hia_dual_run_enabled())
+  expect_false(.hia_compatibility_diagnostics_enabled())
 
   with_mocked_bindings(
     get_crfs = function(version = "default") make_shadow_test_crfs(),

@@ -83,7 +83,8 @@ compute_hia <- function(conc_map,
 
   validate_crfs_against_epi(crfs = crfs, epi = epi, species = species)
 
-  if (.hia_readiness_shadow_enabled()) {
+  compatibility_observation <- NULL
+  if (.hia_compatibility_diagnostics_enabled()) {
     population_year_intent <- .capture_population_year_intent(
       pop_year = supplied_population_years$pop_year,
       scale_base_year = supplied_population_years$scale_base_year,
@@ -101,7 +102,7 @@ compute_hia <- function(conc_map,
         gbd_causes = rr_selection$gbd_causes
       )
     )
-    .observe_hia_compatibility_boundary(
+    compatibility_observation <- .observe_hia_compatibility_boundary(
       crfs = crfs,
       rr_sources = rr_sources,
       epi = epi,
@@ -136,13 +137,32 @@ compute_hia <- function(conc_map,
   # Population scaling
   # Get the actual population year
   # Ideally it would be in an attribute of hia somewhere
+  population_scale <- NULL
   if(!is.null(pop_year)){
     pop_year_actual <- get_pop_year(year_desired = pop_year)
     pop_year_desired <- pop_year
     if(pop_year_actual != pop_year_desired){
       message(glue("Scaling population from {pop_year_actual} to {pop_year_desired}"))
       impacts <- scale_hia_pop(impacts, base_year = pop_year_actual, target_year = pop_year_desired)
+      population_scale <- list(
+        base_year = pop_year_actual,
+        target_year = pop_year_desired
+      )
     }
+  }
+
+  if (.hia_dual_run_enabled()) {
+    .execute_hia_compatibility_dual_run(
+      observation = compatibility_observation,
+      legacy_impacts = impacts,
+      conc_map = conc_map,
+      species = species,
+      regions = regions,
+      scenarios = scenarios,
+      epi_version = epi_version,
+      epi = epi,
+      population_scale = population_scale
+    )
   }
 
   return(impacts)
