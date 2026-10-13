@@ -187,6 +187,25 @@ test_that("RR source forms normalise to grouped components with age contracts", 
 })
 
 
+test_that("RR component normalisation preserves explicit outcome selections", {
+  components <- .normalise_rr_components(
+    tibble::tribble(
+      ~cause, ~source, ~outcome,
+      "CauseA", "source_a", "Deaths",
+      "CauseShared", "source_a", "Deaths"
+    ),
+    rr_loader = make_readiness_rr_loader(),
+    measure_map = make_readiness_measure_map()
+  )
+
+  expect_setequal(
+    paste(components$cause, components$outcome, sep = "_"),
+    c("CauseA_Deaths", "CauseShared_Deaths")
+  )
+  expect_false(any(components$outcome == "YLLs"))
+})
+
+
 test_that("RR component normalisation preserves legacy unavailable-pair filtering", {
   rr_loader <- make_readiness_rr_loader()
   measure_map <- make_readiness_measure_map()

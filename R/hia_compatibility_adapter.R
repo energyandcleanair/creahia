@@ -549,6 +549,30 @@
   registry_impacts,
   tolerance = 1e-12
 ) {
+  if (
+    identical(names(registry_impacts), names(legacy_impacts)) &&
+    identical(class(registry_impacts), class(legacy_impacts))
+  ) {
+    row_identity_columns <- intersect(
+      c(
+        "scenario",
+        "region_id",
+        "pollutant",
+        "cause",
+        "outcome",
+        "estimate",
+        "age_group",
+        "double_counted",
+        "region_name",
+        "iso3"
+      ),
+      names(legacy_impacts)
+    )
+    legacy_impacts <- legacy_impacts %>%
+      dplyr::arrange(dplyr::across(dplyr::all_of(row_identity_columns)))
+    registry_impacts <- registry_impacts %>%
+      dplyr::arrange(dplyr::across(dplyr::all_of(row_identity_columns)))
+  }
   differences <- all.equal(
     registry_impacts,
     legacy_impacts,

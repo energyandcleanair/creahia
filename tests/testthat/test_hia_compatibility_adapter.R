@@ -103,6 +103,55 @@ test_that("RR selection boundary preserves legacy translation and precedence", {
 })
 
 
+test_that("RR selection boundary preserves explicit legacy outcomes", {
+  calc_causes <- c(
+    "Stroke_YLDs",
+    "Diabetes_YLDs",
+    "COPD_YLDs",
+    "NCD.LRI_Deaths",
+    "IHD_Deaths",
+    "Stroke_Deaths",
+    "COPD_Deaths",
+    "LC_Deaths",
+    "LRI_Deaths",
+    "LRI.child_Deaths",
+    "Diabetes_Deaths"
+  )
+
+  translated <- .resolve_hia_rr_selection_boundary(
+    rr_sources = c(RR_GEMM, RR_ORIGINAL),
+    calc_causes = calc_causes,
+    gbd_causes = "default"
+  )
+
+  expect_equal(translated$mode, "legacy_cause_selectors")
+  expect_identical(translated$calc_causes, calc_causes)
+  expect_equal(nrow(translated$rr_sources), length(calc_causes))
+  expect_setequal(
+    paste(translated$rr_sources$cause, translated$rr_sources$outcome, sep = "_"),
+    calc_causes
+  )
+  expect_equal(
+    translated$rr_sources$source[
+      translated$rr_sources$cause == CAUSE_DIABETES
+    ],
+    rep(RR_ORIGINAL, 2)
+  )
+  expect_equal(
+    translated$rr_sources$source[
+      translated$rr_sources$cause == CAUSE_LRICHILD
+    ],
+    RR_ORIGINAL
+  )
+  expect_equal(
+    translated$rr_sources$source[
+      translated$rr_sources$cause == CAUSE_NCDLRI
+    ],
+    RR_GEMM
+  )
+})
+
+
 test_that("RR selection boundary preserves direct and invalid inputs", {
   direct <- list(gemm = "NCD.LRI")
   unchanged <- .resolve_hia_rr_selection_boundary(

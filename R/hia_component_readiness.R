@@ -420,6 +420,16 @@
   rr_loader = get_rr,
   measure_map = get_cause_measure()
 ) {
+  requested_outcomes <- NULL
+  if (is.data.frame(rr_sources) && "outcome" %in% names(rr_sources)) {
+    requested_outcomes <- rr_sources %>%
+      dplyr::transmute(
+        cause = as.character(cause),
+        source = as.character(source),
+        outcome = as.character(outcome)
+      ) %>%
+      dplyr::distinct()
+  }
   pairs <- .normalise_rr_source_pairs(rr_sources, rr_loader = rr_loader)
   input_mode <- attr(pairs, "input_mode")
   attr(pairs, "input_mode") <- NULL
@@ -524,6 +534,14 @@
     ) %>%
     dplyr::distinct() %>%
     dplyr::arrange(source, cause, outcome, age_contract)
+
+  if (!is.null(requested_outcomes)) {
+    components <- components %>%
+      dplyr::semi_join(
+        requested_outcomes,
+        by = c("cause", "source", "outcome")
+      )
+  }
 
   attr(components, "ignored_rr_pairs") <- ignored_rr_pairs
   components

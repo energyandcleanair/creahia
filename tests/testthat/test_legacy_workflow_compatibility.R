@@ -27,6 +27,23 @@ test_that("legacy cause arguments still translate to RR sources", {
     c(CAUSE_NCDLRI, CAUSE_LRI, CAUSE_COPD, CAUSE_IHD, CAUSE_LUNGCANCER, CAUSE_STROKE)
   )
   expect_equal(converted[[RR_ORIGINAL]], c(CAUSE_LRICHILD, CAUSE_DIABETES))
+
+  gemm_only <- convert_old_parameters_to_rr_sources(
+    calc_causes = "GEMM only",
+    gbd_causes = "default"
+  )
+  expect_named(gemm_only, RR_GEMM)
+  expect_equal(
+    gemm_only[[RR_GEMM]],
+    c(
+      CAUSE_NCDLRI,
+      CAUSE_LRI,
+      CAUSE_COPD,
+      CAUSE_IHD,
+      CAUSE_LUNGCANCER,
+      CAUSE_STROKE
+    )
+  )
 })
 
 test_that("compute_hia preserves the legacy input and output boundary", {

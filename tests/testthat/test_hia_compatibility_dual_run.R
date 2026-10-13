@@ -173,6 +173,19 @@ test_that("dual run reports differences without changing legacy output", {
   )
   expect_equal(structural_difference$status, "different")
   expect_true(length(structural_difference$differences) > 0L)
+
+  row_order_difference <- .compare_hia_dual_run_results(
+    legacy_impacts = dplyr::bind_rows(
+      legacy,
+      dplyr::mutate(legacy, region_id = "IND", number = 2)
+    ),
+    registry_impacts = dplyr::bind_rows(
+      dplyr::mutate(legacy, region_id = "IND", number = 2),
+      legacy
+    )
+  )
+  expect_equal(row_order_difference$status, "matched")
+  expect_length(row_order_difference$differences, 0L)
 })
 
 
