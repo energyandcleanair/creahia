@@ -67,10 +67,19 @@ test_that("legacy compatibility readiness states cannot hide incomplete targets"
   expect_true(all(is.na(legacy_defined$target_selection_id)))
   expect_true(all(!is.na(legacy_defined$blocking_reason)))
 
-  if (nrow(registry_ready) > 0) {
-    expect_true(all(!is.na(registry_ready$target_selection_id)))
-    expect_true(all(is.na(registry_ready$blocking_reason)))
-  }
+  expected_ready <- tibble::tribble(
+    ~compatibility_id, ~target_selection_id,
+    "legacy_default_gemm_gbd2019_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2019",
+    "c40_project_cause_vector_epi_c40_pop2022", "component_resolved|legacy_profile_c40|legacy_cause_selectors|C40"
+  )
+
+  expect_equal(
+    registry_ready %>%
+      dplyr::select(compatibility_id, target_selection_id) %>%
+      dplyr::arrange(compatibility_id),
+    expected_ready %>% dplyr::arrange(compatibility_id)
+  )
+  expect_true(all(is.na(registry_ready$blocking_reason)))
 
   expect_true(all(is.na(not_applicable$target_selection_id)))
   expect_true(all(!is.na(not_applicable$blocking_reason)))
@@ -99,7 +108,9 @@ test_that("compatibility matrix covers the historical fingerprint inventory exac
       legacy_gbd_causes,
       legacy_rr_sources,
       epi_version,
-      pop_year
+      pop_year,
+      mapping_status,
+      target_selection_id
     ) %>%
     dplyr::left_join(
       historical %>%
@@ -110,7 +121,9 @@ test_that("compatibility matrix covers the historical fingerprint inventory exac
           expected_gbd_causes = legacy_gbd_causes,
           expected_rr_sources = legacy_rr_sources,
           expected_epi_version = epi_version,
-          expected_pop_year = as.character(pop_year)
+          expected_pop_year = as.character(pop_year),
+          expected_mapping_status = mapping_status,
+          expected_target_selection_id = target_selection_id
         ),
       by = "historical_mapping_id"
     )
@@ -121,6 +134,11 @@ test_that("compatibility matrix covers the historical fingerprint inventory exac
   expect_equal(comparison$legacy_rr_sources, comparison$expected_rr_sources)
   expect_equal(comparison$epi_version, comparison$expected_epi_version)
   expect_equal(comparison$pop_year, comparison$expected_pop_year)
+  expect_equal(comparison$mapping_status, comparison$expected_mapping_status)
+  expect_equal(
+    comparison$target_selection_id,
+    comparison$expected_target_selection_id
+  )
 })
 
 test_that("required legacy profiles and wrapper modes remain in scope", {

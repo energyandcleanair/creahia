@@ -51,3 +51,20 @@ test_that("incomplete historical mappings cannot be mistaken for Registry target
   expect_true(all(!is.na(incomplete$blocking_reason)))
   expect_false(any(incomplete$target_selection_id == "experimental_default", na.rm = TRUE))
 })
+
+test_that("only fully verified historical mappings are Registry-ready", {
+  configurations <- load_historical_fingerprint_configurations()
+
+  registry_ready <- configurations %>%
+    dplyr::filter(mapping_status == "registry_ready")
+
+  expect_equal(
+    registry_ready$mapping_id,
+    "legacy_default_gemm_gbd2019_2020"
+  )
+  expect_equal(
+    registry_ready$target_selection_id,
+    "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2019"
+  )
+  expect_true(all(is.na(registry_ready$blocking_reason)))
+})
