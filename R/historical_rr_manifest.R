@@ -188,8 +188,8 @@
     )
   }
   if (!identical(
-    manifest$routing_blocking_reason,
-    manifest$routing_checklist_blocking_reason
+    as.character(manifest$routing_blocking_reason),
+    as.character(manifest$routing_checklist_blocking_reason)
   )) {
     stop(
       paste(
