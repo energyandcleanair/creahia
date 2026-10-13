@@ -59,13 +59,16 @@ test_that("ordinary HIA calls skip shadow resolution unless opted in", {
   expected <- make_shadow_test_impacts()
   old_options <- options(
     creahia.hia_readiness_shadow_observer = NULL,
-    creahia.hia_dual_run_observer = NULL
+    creahia.hia_dual_run_observer = NULL,
+    creahia.hia_compatibility_routing = NULL
   )
   on.exit(options(old_options), add = TRUE)
 
   expect_false(.hia_readiness_shadow_enabled())
   expect_false(.hia_dual_run_enabled())
+  expect_false(.hia_compatibility_routing_enabled())
   expect_false(.hia_compatibility_diagnostics_enabled())
+  expect_false(.hia_compatibility_resolution_enabled())
 
   with_mocked_bindings(
     get_crfs = function(version = "default") make_shadow_test_crfs(),
@@ -492,6 +495,131 @@ test_that("shadow Registry candidates do not change the actual compute route", {
   expect_identical(seen$paf_crfs, legacy_crfs)
   expect_true(has_rr_sources(seen$paf_rr_sources))
   expect_identical(seen$paf_crf_compute, "legacy")
+})
+
+
+test_that("temporary route activation applies ready inputs to compute_hia", {
+  seen <- new.env(parent = emptyenv())
+  expected <- make_shadow_test_impacts()
+  legacy_crfs <- make_shadow_test_crfs()
+  registry_set <- crfs_set("gbd2019_deaths")
+  old_options <- options(
+    creahia.hia_readiness_shadow_observer = NULL,
+    creahia.hia_dual_run_observer = NULL,
+    creahia.hia_compatibility_routing = TRUE
+  )
+  on.exit(options(old_options), add = TRUE)
+
+  expect_true(.hia_compatibility_routing_enabled())
+  expect_true(.hia_compatibility_resolution_enabled())
+  expect_false(.hia_compatibility_diagnostics_enabled())
+
+  with_mocked_bindings(
+    get_crfs = function(version = "default") legacy_crfs,
+    get_epi = function(version = "default") make_shadow_test_epi(),
+    parse_rr_sources = function(rr_sources) {
+      tibble::tibble(cause = "NCD.LRI", source = RR_GEMM)
+    },
+    validate_crfs_against_epi = function(...) invisible(TRUE),
+    .observe_hia_compatibility_boundary = function(...) {
+      list(
+        status = "resolved",
+        route_application = structure(
+          list(
+            status = "applied",
+            compute_inputs = list(
+              crfs = registry_set,
+              rr_sources = .empty_hia_rr_sources(),
+              crf_compute = "registry"
+            ),
+            error = NULL
+          ),
+          class = c("creahia_hia_route_application_observation", "list")
+        )
+      )
+    },
+    compute_hia_paf = function(..., crfs, rr_sources, crf_compute) {
+      seen$crfs <- crfs
+      seen$rr_sources <- rr_sources
+      seen$crf_compute <- crf_compute
+      tibble::tibble()
+    },
+    compute_hia_impacts = function(...) expected,
+    {
+      result <- run_shadow_test_hia()
+    }
+  )
+
+  expect_identical(result, expected)
+  expect_identical(seen$crfs, registry_set)
+  expect_false(has_rr_sources(seen$rr_sources))
+  expect_identical(seen$crf_compute, "registry")
+})
+
+
+test_that("temporary route activation fails closed", {
+  boundary_failure <- list(
+    status = "error",
+    error = "Readiness resolution failed."
+  )
+  application_failure <- list(
+    status = "resolved",
+    route_application = structure(
+      list(
+        status = "error",
+        compute_inputs = NULL,
+        error = "Registry Set resolution failed."
+      ),
+      class = c("creahia_hia_route_application_observation", "list")
+    )
+  )
+
+  expect_error(
+    .activate_hia_compatibility_route(boundary_failure),
+    "failed at the boundary.*Readiness resolution failed"
+  )
+  expect_error(
+    .activate_hia_compatibility_route(application_failure),
+    "could not apply.*Registry Set resolution failed"
+  )
+
+  old_options <- options(
+    creahia.hia_compatibility_routing = TRUE,
+    creahia.hia_dual_run_observer = NULL
+  )
+  on.exit(options(old_options), add = TRUE)
+  with_mocked_bindings(
+    get_crfs = function(version = "default") make_shadow_test_crfs(),
+    get_epi = function(version = "default") make_shadow_test_epi(),
+    parse_rr_sources = function(rr_sources) {
+      tibble::tibble(cause = "NCD.LRI", source = RR_GEMM)
+    },
+    validate_crfs_against_epi = function(...) invisible(TRUE),
+    .observe_hia_compatibility_boundary = function(...) boundary_failure,
+    compute_hia_paf = function(...) {
+      stop("PAF computation must not start after a routing failure.")
+    },
+    {
+      expect_error(
+        run_shadow_test_hia(),
+        "failed at the boundary.*Readiness resolution failed"
+      )
+    }
+  )
+})
+
+
+test_that("route activation and numerical dual run cannot be combined", {
+  old_options <- options(
+    creahia.hia_compatibility_routing = TRUE,
+    creahia.hia_dual_run_observer = function(...) NULL
+  )
+  on.exit(options(old_options), add = TRUE)
+
+  expect_error(
+    run_shadow_test_hia(),
+    "route activation and numerical dual-run mode.*cannot be enabled"
+  )
 })
 
 

@@ -513,8 +513,51 @@
 }
 
 
+.hia_compatibility_routing_enabled <- function() {
+  isTRUE(getOption("creahia.hia_compatibility_routing", FALSE))
+}
+
+
 .hia_compatibility_diagnostics_enabled <- function() {
   .hia_readiness_shadow_enabled() || .hia_dual_run_enabled()
+}
+
+
+.hia_compatibility_resolution_enabled <- function() {
+  .hia_compatibility_routing_enabled() ||
+    .hia_compatibility_diagnostics_enabled()
+}
+
+
+.activate_hia_compatibility_route <- function(observation) {
+  if (!is.list(observation) || is.null(observation$status)) {
+    stop(
+      "HIA compatibility routing requires a boundary observation.",
+      call. = FALSE
+    )
+  }
+  if (identical(observation$status, "error")) {
+    stop(
+      "HIA compatibility routing failed at the boundary: ",
+      observation$error %||% "Unknown compatibility boundary error.",
+      call. = FALSE
+    )
+  }
+
+  application <- observation$route_application %||% NULL
+  if (
+    !inherits(application, "creahia_hia_route_application_observation") ||
+    !identical(application$status, "applied") ||
+    is.null(application$compute_inputs)
+  ) {
+    stop(
+      "HIA compatibility routing could not apply the route plan: ",
+      application$error %||% "No applied compute inputs are available.",
+      call. = FALSE
+    )
+  }
+
+  application$compute_inputs
 }
 
 

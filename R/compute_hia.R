@@ -55,6 +55,16 @@ compute_hia <- function(conc_map,
 
   crf_compute <- match.arg(crf_compute)
 
+  if (.hia_compatibility_routing_enabled() && .hia_dual_run_enabled()) {
+    stop(
+      paste(
+        "HIA compatibility route activation and numerical dual-run mode",
+        "cannot be enabled in the same call."
+      ),
+      call. = FALSE
+    )
+  }
+
   if (is_crfs_set(crfs)) {
     crf_compute <- "registry"
   }
@@ -84,7 +94,7 @@ compute_hia <- function(conc_map,
   validate_crfs_against_epi(crfs = crfs, epi = epi, species = species)
 
   compatibility_observation <- NULL
-  if (.hia_compatibility_diagnostics_enabled()) {
+  if (.hia_compatibility_resolution_enabled()) {
     population_year_intent <- .capture_population_year_intent(
       pop_year = supplied_population_years$pop_year,
       scale_base_year = supplied_population_years$scale_base_year,
@@ -109,6 +119,15 @@ compute_hia <- function(conc_map,
       context = compatibility_context,
       population_year_intent = population_year_intent
     )
+
+    if (.hia_compatibility_routing_enabled()) {
+      compute_inputs <- .activate_hia_compatibility_route(
+        compatibility_observation
+      )
+      crfs <- compute_inputs$crfs
+      rr_sources <- compute_inputs$rr_sources
+      crf_compute <- compute_inputs$crf_compute
+    }
   }
 
   message("Computing PAF")
