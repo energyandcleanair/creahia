@@ -6,7 +6,8 @@
       CAUSE_LRICHILD,
       CAUSE_IHD,
       CAUSE_DIABETES,
-      CAUSE_COPD
+      CAUSE_COPD,
+      CAUSE_DEMENTIA
     ),
     filename = c(
       "historical_gbd2023_pm25_lc_25plus_v1.csv",
@@ -14,7 +15,8 @@
       "historical_gbd2023_pm25_lri_child_under5_v1.csv",
       "historical_gbd2023_pm25_ihd_25plus_v1.csv",
       "historical_gbd2023_pm25_diabetes_25plus_v1.csv",
-      "historical_gbd2023_pm25_copd_25plus_v1.csv"
+      "historical_gbd2023_pm25_copd_25plus_v1.csv",
+      "historical_gbd2023_pm25_dementia_25plus_v1.csv"
     )
   )
 }
