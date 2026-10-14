@@ -92,6 +92,20 @@ test_that("diagnostic Registry resolution accepts the selected component set", {
 })
 
 
+test_that("diagnostic Registry resolution accepts a CRF-only component set", {
+  specification <- historical_first_contract_specification()
+  specification$components$rr <- specification$components$rr[0, , drop = FALSE]
+
+  resolved <- expect_no_warning(
+    .resolve_hia_diagnostic_registry_set(specification)
+  )
+
+  expect_s3_class(resolved, "creahia_crf_set")
+  expect_equal(nrow(resolved), 15L)
+  expect_false(any(resolved$double_counted))
+})
+
+
 test_that("diagnostic Registry resolution treats contract names as labels", {
   specification <- historical_first_contract_specification()
   specification$input_contract <- "another-evidence-label"
