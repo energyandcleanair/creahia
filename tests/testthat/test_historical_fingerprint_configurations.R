@@ -56,15 +56,19 @@ test_that("only fully verified historical mappings are Registry-ready", {
   configurations <- load_historical_fingerprint_configurations()
 
   registry_ready <- configurations %>%
-    dplyr::filter(mapping_status == "registry_ready")
+    dplyr::filter(mapping_status == "registry_ready") %>%
+    dplyr::arrange(mapping_id)
+
+  expected_ready <- tibble::tribble(
+    ~mapping_id, ~target_selection_id,
+    "legacy_default_gbd2019_only_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2019",
+    "legacy_default_gemm_gbd2019_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2019"
+  )
 
   expect_equal(
-    registry_ready$mapping_id,
-    "legacy_default_gemm_gbd2019_2020"
-  )
-  expect_equal(
-    registry_ready$target_selection_id,
-    "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2019"
+    registry_ready %>%
+      dplyr::select(mapping_id, target_selection_id),
+    expected_ready
   )
   expect_true(all(is.na(registry_ready$blocking_reason)))
 })

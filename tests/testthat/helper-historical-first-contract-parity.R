@@ -3,9 +3,9 @@ historical_first_contract_id <- function() {
 }
 
 
-historical_first_contract_specification <- function() {
+historical_contract_specification <- function(configuration_id, calc_causes) {
   configuration <- load_historical_fingerprint_configurations() %>%
-    dplyr::filter(mapping_id == historical_first_contract_id())
+    dplyr::filter(mapping_id == configuration_id)
   legacy_crfs <- get_crfs(
     legacy_hia_configuration_value(configuration, "legacy_crfs_version")
   )
@@ -18,7 +18,7 @@ historical_first_contract_specification <- function() {
   )
   rr_selection <- .resolve_hia_rr_selection_boundary(
     rr_sources = legacy_rr_sources,
-    calc_causes = "GEMM and GBD",
+    calc_causes = calc_causes,
     gbd_causes = NULL
   )
   boundary <- .resolve_hia_compatibility_boundary(
@@ -30,21 +30,35 @@ historical_first_contract_specification <- function() {
       epi_supplied = FALSE,
       crfs_supplied = FALSE,
       epi_version = epi_version,
-      crfs_version = "default",
+      crfs_version = legacy_hia_configuration_value(
+        configuration,
+        "legacy_crfs_version"
+      ),
       crf_compute = "legacy",
       rr_selection_mode = rr_selection$mode,
       calc_causes = rr_selection$calc_causes,
       gbd_causes = rr_selection$gbd_causes
     ),
     population_year_intent = .capture_population_year_intent(
-      pop_year = 2020,
+      pop_year = legacy_hia_configuration_value(configuration, "pop_year"),
       scale_base_year = NULL,
       scale_target_year = NULL,
-      resolved_pop_year = 2020
+      resolved_pop_year = legacy_hia_configuration_value(
+        configuration,
+        "pop_year"
+      )
     )
   )
 
   boundary$specification
+}
+
+
+historical_first_contract_specification <- function() {
+  historical_contract_specification(
+    configuration_id = historical_first_contract_id(),
+    calc_causes = "GEMM and GBD"
+  )
 }
 
 
@@ -84,15 +98,21 @@ arrange_historical_first_contract_impacts <- function(impacts) {
 }
 
 
-run_historical_first_contract_parity_fixture <- function() {
-  configuration_id <- historical_first_contract_id()
+run_historical_contract_parity_fixture <- function(
+  configuration_id,
+  calc_causes,
+  activate_route = FALSE
+) {
   configuration <- load_historical_fingerprint_configurations() %>%
     dplyr::filter(mapping_id == configuration_id)
   legacy_crfs <- get_crfs(
     legacy_hia_configuration_value(configuration, "legacy_crfs_version")
   )
   legacy_rr_sources <- legacy_hia_configuration_rr_sources(configuration)
-  specification <- historical_first_contract_specification()
+  specification <- historical_contract_specification(
+    configuration_id = configuration_id,
+    calc_causes = calc_causes
+  )
   registry_crfs <- .resolve_hia_diagnostic_registry_set(specification)
   empty_rr_sources <- legacy_hia_empty_rr_sources()
   epi_version <- legacy_hia_configuration_value(configuration, "epi_version")
@@ -108,10 +128,15 @@ run_historical_first_contract_parity_fixture <- function() {
   conc_map <- legacy_default_fingerprint_conc_map()
   regions <- legacy_hia_fingerprint_regions()
   species <- c("pm25", "no2", "o3_8h", "so2")
+  pop_year <- legacy_hia_configuration_value(configuration, "pop_year")
+  activated_impacts <- NULL
 
   testthat::with_mocked_bindings(
+    get_crfs = function(...) legacy_crfs,
+    get_epi = function(...) epi,
     get_epi_count_long = function(...) epi_long,
     get_epi_location_id = function(...) 1,
+    get_pop_year = function(...) pop_year,
     diagnose_paf = function(...) invisible(NULL),
     {
       legacy_paf <- capture_historical_first_contract_warnings(
@@ -162,6 +187,31 @@ run_historical_first_contract_parity_fixture <- function() {
           diagnostic_folder = NULL
         )
       )
+      if (activate_route) {
+        activated_impacts <- withr::with_options(
+          list(
+            creahia.hia_compatibility_routing = TRUE,
+            creahia.hia_dual_run_observer = NULL,
+            creahia.hia_readiness_shadow_observer = NULL
+          ),
+          capture_historical_first_contract_warnings(
+            compute_hia(
+              conc_map = conc_map,
+              species = species,
+              regions = regions,
+              epi_version = epi_version,
+              crfs_version = legacy_hia_configuration_value(
+                configuration,
+                "legacy_crfs_version"
+              ),
+              pop_year = pop_year,
+              calc_causes = calc_causes,
+              gbd_causes = "default",
+              diagnostic_folder = NULL
+            )
+          )
+        )
+      }
     }
   )
 
@@ -172,6 +222,15 @@ run_historical_first_contract_parity_fixture <- function() {
     legacy_paf = legacy_paf,
     registry_paf = registry_paf,
     legacy_impacts = legacy_impacts,
-    registry_impacts = registry_impacts
+    registry_impacts = registry_impacts,
+    activated_impacts = activated_impacts
+  )
+}
+
+
+run_historical_first_contract_parity_fixture <- function() {
+  run_historical_contract_parity_fixture(
+    configuration_id = historical_first_contract_id(),
+    calc_causes = "GEMM and GBD"
   )
 }

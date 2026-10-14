@@ -69,6 +69,7 @@ test_that("legacy compatibility readiness states cannot hide incomplete targets"
 
   expected_ready <- tibble::tribble(
     ~compatibility_id, ~target_selection_id,
+    "legacy_default_gbd2019_only_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2019",
     "legacy_default_gemm_gbd2019_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2019",
     "c40_project_cause_vector_epi_c40_pop2022", "component_resolved|legacy_profile_c40|legacy_cause_selectors|C40",
     "c40_character_template_epi_c40_pop2019", "component_resolved|legacy_profile_c40|legacy_cause_selectors|C40",
