@@ -66,6 +66,23 @@ make_wrapper_routing_flat_concentrations <- function() {
 }
 
 
+make_krewski_wrapper_calc_causes <- function() {
+  get_calc_causes("GBD only") %>%
+    grep("Death|YLD", ., value = TRUE)
+}
+
+
+make_krewski_wrapper_flat_concentrations <- function() {
+  data.frame(
+    conc_baseline_pm25 = c(28, 35),
+    conc_scenario_pm25 = c(26, 31),
+    conc_baseline_tpm10 = c(56, 70),
+    conc_scenario_tpm10 = c(52, 62),
+    pop = c(2e6, 3e6)
+  )
+}
+
+
 test_that("default wrapper preserves list output on the activated route", {
   seen <- new.env(parent = emptyenv())
   raster <- make_wrapper_routing_raster()
@@ -197,4 +214,104 @@ test_that("character wrapper preserves its activated-route RDS contract", {
   expect_identical(seen$crf_compute, "registry")
   expect_s3_class(seen$crfs, "creahia_crf_set")
   expect_false(has_rr_sources(seen$rr_sources))
+})
+
+
+test_that("Krewski wrapper preserves its population and PM10 contracts", {
+  seen <- new.env(parent = emptyenv())
+  raster <- make_wrapper_routing_raster()
+  conc_map <- list(
+    sa_wrapper = list(
+      ZAF = make_krewski_wrapper_flat_concentrations()
+    )
+  )
+  expected_hia <- make_wrapper_routing_impacts("sa_wrapper") %>%
+    dplyr::mutate(region_id = "ZAF")
+  old_options <- options(
+    creahia.hia_compatibility_routing = TRUE,
+    creahia.hia_dual_run_observer = NULL,
+    creahia.hia_readiness_shadow_observer = NULL
+  )
+  on.exit(options(old_options), add = TRUE)
+
+  with_mocked_bindings(
+    {
+      result <- expect_warning(
+        wrappers.compute_hia_two_images.default(
+          perturbation_rasters = list(pm25 = raster),
+          baseline_rasters = list(pm25 = raster),
+          regions = tibble::tibble(region_id = "ZAF"),
+          scenario_name = "sa_wrapper",
+          scale_base_year = 2019,
+          scale_target_year = 2021,
+          crfs_version = "Krewski-South Africa",
+          epi_version = "C40",
+          return_concentrations = TRUE,
+          pm2.5_to_pm10_ratio = 0.5,
+          diagnostic_folder = NULL,
+          calc_causes = make_krewski_wrapper_calc_causes(),
+          gbd_causes = "all"
+        ),
+        "pop_year set to 2021",
+        fixed = TRUE
+      )
+    },
+    add_pop = function(concs, year_desired, ...) {
+      seen$wrapper_pop_year <- year_desired
+      seen$perturbation_species <- sub(
+        "^conc_perturbation_",
+        "",
+        grep("^conc_perturbation_", names(concs), value = TRUE)
+      )
+      seen$baseline_species <- sub(
+        "^conc_baseline_",
+        "",
+        grep("^conc_baseline_", names(concs), value = TRUE)
+      )
+      seen$perturbation_pm10 <- raster::getValues(
+        concs$conc_perturbation_tpm10[[1]]
+      )
+      seen$baseline_pm10 <- raster::getValues(
+        concs$conc_baseline_tpm10[[1]]
+      )
+      concs
+    },
+    extract_concs_and_pop = function(...) conc_map,
+    compute_hia_paf = function(..., crfs, rr_sources, crf_compute) {
+      seen$crfs <- crfs
+      seen$rr_sources <- rr_sources
+      seen$crf_compute <- crf_compute
+      tibble::tibble()
+    },
+    compute_hia_impacts = function(...) expected_hia,
+    get_pop_year = function(year_desired) {
+      seen$compute_pop_year <- year_desired
+      2020
+    },
+    scale_hia_pop = function(impacts, base_year, target_year) {
+      seen$scale_base_year <- base_year
+      seen$scale_target_year <- target_year
+      impacts
+    },
+    .package = "creahia"
+  )
+
+  expect_named(result, c("hia", "concentrations"))
+  expect_identical(result$hia, expected_hia)
+  expect_setequal(seen$perturbation_species, c("pm25", "tpm10"))
+  expect_setequal(seen$baseline_species, c("pm25", "tpm10"))
+  expect_equal(seen$perturbation_pm10, c(4, 8))
+  expect_equal(seen$baseline_pm10, c(4, 8))
+  expect_identical(seen$wrapper_pop_year, 2021)
+  expect_identical(seen$compute_pop_year, 2021)
+  expect_identical(seen$scale_base_year, 2020)
+  expect_identical(seen$scale_target_year, 2021)
+  expect_identical(seen$crf_compute, "registry")
+  expect_s3_class(seen$crfs, "creahia_crf_set")
+  expect_false(has_rr_sources(seen$rr_sources))
+  expect_equal(result$concentrations$conc_baseline_pm25, 32.2)
+  expect_equal(result$concentrations$conc_scenario_pm25, 29)
+  expect_equal(result$concentrations$conc_baseline_tpm10, 64.4)
+  expect_equal(result$concentrations$conc_scenario_tpm10, 58)
+  expect_equal(result$concentrations$pop, 5e6)
 })
