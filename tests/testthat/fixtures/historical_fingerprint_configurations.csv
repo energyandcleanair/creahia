@@ -3,7 +3,7 @@ legacy_default_gbd2019_only_2020,default,GBD only,default,,gbd2019,2020,componen
 legacy_default_gemm_gbd2019_2020,default,GEMM and GBD,default,,gbd2019,2020,component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2019,registry_ready,
 legacy_default_gbd2021_only_2020,default,GBD only,default,,gbd2021,2020,component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2021,registry_ready,
 legacy_default_gemm_gbd2021_2020,default,GEMM and GBD,default,,gbd2021,2020,component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2021,registry_ready,
-legacy_default_gemm_gbd2021_2021,default,GEMM and GBD,default,,gbd2021,2021,,legacy_defined,CRF and RR reproduction parity has not yet been verified
+legacy_default_gemm_gbd2021_2021,default,GEMM and GBD,default,,gbd2021,2021,component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2021,registry_ready,
 legacy_default_fusion_gbd2021_2021,default,,,fusion,gbd2021,2021,,legacy_defined,CRF and RR reproduction parity has not yet been verified
 legacy_default_gbd2023_gbd2021_2021,default,,,gbd2023,gbd2021,2021,,legacy_defined,CRF and RR reproduction parity has not yet been verified
 legacy_default_fusion_gbd2023_2023,default,,,fusion,gbd2023,2023,,legacy_defined,CRF and RR reproduction parity has not yet been verified

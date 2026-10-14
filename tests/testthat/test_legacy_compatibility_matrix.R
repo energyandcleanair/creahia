@@ -73,6 +73,7 @@ test_that("legacy compatibility readiness states cannot hide incomplete targets"
     "legacy_default_gemm_gbd2019_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2019",
     "legacy_default_gbd2021_only_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2021",
     "legacy_default_gemm_gbd2021_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2021",
+    "legacy_default_gemm_gbd2021_2021", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2021",
     "c40_project_cause_vector_epi_c40_pop2022", "component_resolved|legacy_profile_c40|legacy_cause_selectors|C40",
     "c40_character_template_epi_c40_pop2019", "component_resolved|legacy_profile_c40|legacy_cause_selectors|C40",
     "krewski_sa_gbd_only_all_epi_c40_pop2021", "component_resolved|legacy_profile_krewski_south_africa|legacy_cause_selectors|C40"

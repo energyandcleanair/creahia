@@ -129,6 +129,7 @@ run_historical_contract_parity_fixture <- function(
   regions <- legacy_hia_fingerprint_regions()
   species <- c("pm25", "no2", "o3_8h", "so2")
   pop_year <- legacy_hia_configuration_value(configuration, "pop_year")
+  population_projection <- legacy_hia_population_projection_fixture()
   activated_impacts <- NULL
 
   testthat::with_mocked_bindings(
@@ -136,7 +137,8 @@ run_historical_contract_parity_fixture <- function(
     get_epi = function(...) epi,
     get_epi_count_long = function(...) epi_long,
     get_epi_location_id = function(...) 1,
-    get_pop_year = function(...) pop_year,
+    get_pop_year = function(...) 2020L,
+    get_pop_proj = function() population_projection,
     diagnose_paf = function(...) invisible(NULL),
     {
       legacy_paf <- capture_historical_first_contract_warnings(
@@ -171,6 +173,7 @@ run_historical_contract_parity_fixture <- function(
           epi_version = epi_version,
           epi = epi,
           crfs = legacy_crfs,
+          pop_year = pop_year,
           diagnostic_folder = NULL,
           crf_compute = "legacy"
         )
@@ -184,6 +187,7 @@ run_historical_contract_parity_fixture <- function(
           epi_version = epi_version,
           epi = epi,
           crfs = registry_crfs,
+          pop_year = pop_year,
           diagnostic_folder = NULL
         )
       )

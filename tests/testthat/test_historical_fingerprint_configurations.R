@@ -64,7 +64,8 @@ test_that("only fully verified historical mappings are Registry-ready", {
     "legacy_default_gbd2019_only_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2019",
     "legacy_default_gemm_gbd2019_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2019",
     "legacy_default_gbd2021_only_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2021",
-    "legacy_default_gemm_gbd2021_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2021"
+    "legacy_default_gemm_gbd2021_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2021",
+    "legacy_default_gemm_gbd2021_2021", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2021"
   )
 
   expect_equal(
