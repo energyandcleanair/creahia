@@ -4,6 +4,7 @@ export("%>%")
 export(`wrappers.compute_hia_two_images`)
 S3method(`wrappers.compute_hia_two_images`, default)
 S3method(`wrappers.compute_hia_two_images`, character)
+S3method(print,creahia_hia_configuration_inspection)
 
 exportPattern("^[[:alpha:]]|\\%+")
 

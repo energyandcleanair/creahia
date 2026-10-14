@@ -263,7 +263,102 @@ hia <- compute_hia(
 The Set is compute-ready, but creating it does not run HIA or change the
 Registry. Ordinary legacy CRF inputs and package defaults remain unchanged.
 
+### Workflow 6: Inspect An Unchanged Legacy Configuration
+
+HIA users can keep their existing wrapper arguments and inspect how those
+selectors resolve before running the calculation. For example, define the same
+C40 cause vector used by the wrapper call:
+
+```r
+causes_to_include <- c(
+  "Stroke_YLDs",
+  "Diabetes_YLDs",
+  "COPD_YLDs",
+  "NCD.LRI_Deaths",
+  "IHD_Deaths",
+  "Stroke_Deaths",
+  "COPD_Deaths",
+  "LC_Deaths",
+  "LRI_Deaths",
+  "LRI.child_Deaths",
+  "Diabetes_Deaths"
+)
+
+inspection <- inspect_hia_configuration(
+  crfs_version = "C40",
+  epi_version = "C40",
+  calc_causes = causes_to_include,
+  gbd_causes = "default",
+  pop_year = 2022
+)
+
+inspection
+```
+
+The printed summary reports whether the call can use Registry routing, its
+canonical input contract, component counts, and reference count. Inspect the
+underlying tables when more detail is needed:
+
+```r
+inspection$components %>%
+  dplyr::select(
+    component_type,
+    component_id,
+    source,
+    cause,
+    outcome,
+    age_contract,
+    lifecycle,
+    routing_status,
+    scientific_review_status
+  )
+
+inspection$registry_set %>%
+  dplyr::select(
+    crf_id,
+    pollutant,
+    cause,
+    outcome,
+    form,
+    reference_id
+  )
+
+inspection$references %>%
+  dplyr::select(reference_id, author, year, title, doi, url)
+```
+
+This inspection does not calculate PAFs or impacts, alter routing options, or
+trigger diagnostic observers. It uses the same compatibility resolver as the
+production route, so it explains the selection without maintaining a second
+legacy-to-Registry mapping.
+
 ## Helper Reference
+
+### `inspect_hia_configuration(...)`
+
+Explains how legacy HIA selectors resolve at the compatibility boundary without
+running HIA.
+
+The main output fields are:
+
+- `route`: `registry`, `legacy`, or `unchanged`;
+- `reason`: why that route was planned;
+- `input_contract`: the canonical component-selection identity;
+- `canonical_specification`: the structured CRF, RR, EPI, and population-year
+  specification used by routing;
+- `components`: one table containing all resolved CRF, RR, and EPI components;
+- `registry_set`: the compute-ready Registry Set when all components are ready;
+- `references`: bibliographic metadata used by the resolved Registry Set;
+- `blocking_components`: components preventing Registry routing; and
+- `population_year`: supplied and resolved population-year intent.
+
+For a Registry-ready call, `registry_set` and `references` contain the exact
+inputs that the compatibility route would pass to the shared engine. For an
+unready call, `route` is `legacy`, `registry_set` is `NULL`, and
+`blocking_components` explains what is missing. Definitions marked
+`historical_reproduction` or `not_reviewed` support compatibility only and must
+not be interpreted as approved public methodology. EPI is validated at runtime
+and therefore does not use the CRF/RR Registry lifecycle label.
 
 ### `available_crf_presets()`
 
