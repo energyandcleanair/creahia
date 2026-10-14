@@ -62,13 +62,14 @@ test_that("only fully verified historical mappings are Registry-ready", {
   expected_ready <- tibble::tribble(
     ~mapping_id, ~target_selection_id,
     "legacy_default_gbd2019_only_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2019",
-    "legacy_default_gemm_gbd2019_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2019"
+    "legacy_default_gemm_gbd2019_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2019",
+    "legacy_default_gbd2021_only_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2021"
   )
 
   expect_equal(
     registry_ready %>%
       dplyr::select(mapping_id, target_selection_id),
-    expected_ready
+    expected_ready %>% dplyr::arrange(mapping_id)
   )
   expect_true(all(is.na(registry_ready$blocking_reason)))
 })

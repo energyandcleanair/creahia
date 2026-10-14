@@ -234,3 +234,71 @@ run_historical_first_contract_parity_fixture <- function() {
     calc_causes = "GEMM and GBD"
   )
 }
+
+
+expect_historical_contract_parity <- function(
+  results,
+  expected_rr_source,
+  expected_paf_rows
+) {
+  registry_set <- results$registry_crfs
+  internal_rr <- .load_historical_rr_registry() %>%
+    dplyr::filter(crf_id %in% registry_set$crf_id)
+
+  testthat::expect_true(results$specification$readiness$ready)
+  testthat::expect_s3_class(registry_set, "creahia_crf_set")
+  testthat::expect_equal(nrow(registry_set), expected_paf_rows)
+  testthat::expect_equal(nrow(internal_rr), expected_paf_rows - 15L)
+  testthat::expect_setequal(unique(internal_rr$source), expected_rr_source)
+
+  expected_warnings <- c(
+    "PAF estimates are not properly ordered or of the same sign for Diabetes Deaths",
+    "PAF estimates are not properly ordered or of the same sign for Diabetes YLDs"
+  )
+  observed_warning_sets <- list(
+    legacy_paf = results$legacy_paf$warnings,
+    registry_paf = results$registry_paf$warnings,
+    legacy_impacts = results$legacy_impacts$warnings,
+    registry_impacts = results$registry_impacts$warnings,
+    activated_impacts = results$activated_impacts$warnings
+  )
+  for (warning_name in names(observed_warning_sets)) {
+    testthat::expect_equal(
+      sort(observed_warning_sets[[warning_name]]),
+      sort(expected_warnings),
+      info = warning_name
+    )
+  }
+
+  legacy_paf <- results$legacy_paf$value %>%
+    arrange_historical_first_contract_paf()
+  registry_paf <- results$registry_paf$value %>%
+    arrange_historical_first_contract_paf()
+  testthat::expect_equal(nrow(legacy_paf), expected_paf_rows)
+  testthat::expect_equal(registry_paf, legacy_paf, tolerance = 1e-12)
+
+  legacy_impacts <- results$legacy_impacts$value %>%
+    arrange_historical_first_contract_impacts()
+  registry_impacts <- results$registry_impacts$value %>%
+    arrange_historical_first_contract_impacts()
+  activated_impacts <- results$activated_impacts$value %>%
+    arrange_historical_first_contract_impacts()
+  testthat::expect_equal(nrow(legacy_impacts), expected_paf_rows * 3L)
+  testthat::expect_equal(registry_impacts, legacy_impacts, tolerance = 1e-12)
+  testthat::expect_equal(activated_impacts, legacy_impacts, tolerance = 1e-12)
+
+  actual_fingerprint <- legacy_hia_fingerprint(
+    activated_impacts,
+    results$configuration_id
+  )
+  expected_fingerprint <-
+    read_legacy_historical_configurations_hia_fingerprint() %>%
+    dplyr::filter(configuration_id == results$configuration_id)
+
+  testthat::expect_equal(nrow(actual_fingerprint), expected_paf_rows)
+  testthat::expect_equal(
+    actual_fingerprint,
+    expected_fingerprint,
+    tolerance = 1e-12
+  )
+}
