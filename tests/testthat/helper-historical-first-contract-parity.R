@@ -242,14 +242,13 @@ expect_historical_contract_parity <- function(
   expected_paf_rows
 ) {
   registry_set <- results$registry_crfs
-  internal_rr <- .load_historical_rr_registry() %>%
-    dplyr::filter(crf_id %in% registry_set$crf_id)
+  rr_components <- results$specification$components$rr
 
   testthat::expect_true(results$specification$readiness$ready)
   testthat::expect_s3_class(registry_set, "creahia_crf_set")
   testthat::expect_equal(nrow(registry_set), expected_paf_rows)
-  testthat::expect_equal(nrow(internal_rr), expected_paf_rows - 15L)
-  testthat::expect_setequal(unique(internal_rr$source), expected_rr_source)
+  testthat::expect_equal(nrow(rr_components), expected_paf_rows - 15L)
+  testthat::expect_setequal(unique(rr_components$source), expected_rr_source)
 
   expected_warnings <- c(
     "PAF estimates are not properly ordered or of the same sign for Diabetes Deaths",
