@@ -3,7 +3,10 @@ historical_first_contract_id <- function() {
 }
 
 
-historical_contract_specification <- function(configuration_id, calc_causes) {
+historical_contract_specification <- function(
+  configuration_id,
+  calc_causes = NULL
+) {
   configuration <- load_historical_fingerprint_configurations() %>%
     dplyr::filter(mapping_id == configuration_id)
   legacy_crfs <- get_crfs(
@@ -100,7 +103,7 @@ arrange_historical_first_contract_impacts <- function(impacts) {
 
 run_historical_contract_parity_fixture <- function(
   configuration_id,
-  calc_causes,
+  calc_causes = NULL,
   activate_route = FALSE
 ) {
   configuration <- load_historical_fingerprint_configurations() %>%
@@ -192,6 +195,24 @@ run_historical_contract_parity_fixture <- function(
         )
       )
       if (activate_route) {
+        activated_args <- list(
+          conc_map = conc_map,
+          species = species,
+          regions = regions,
+          epi_version = epi_version,
+          crfs_version = legacy_hia_configuration_value(
+            configuration,
+            "legacy_crfs_version"
+          ),
+          pop_year = pop_year,
+          diagnostic_folder = NULL
+        )
+        if (is.null(calc_causes)) {
+          activated_args$rr_sources <- legacy_rr_sources
+        } else {
+          activated_args$calc_causes <- calc_causes
+          activated_args$gbd_causes <- "default"
+        }
         activated_impacts <- withr::with_options(
           list(
             creahia.hia_compatibility_routing = TRUE,
@@ -199,20 +220,7 @@ run_historical_contract_parity_fixture <- function(
             creahia.hia_readiness_shadow_observer = NULL
           ),
           capture_historical_first_contract_warnings(
-            compute_hia(
-              conc_map = conc_map,
-              species = species,
-              regions = regions,
-              epi_version = epi_version,
-              crfs_version = legacy_hia_configuration_value(
-                configuration,
-                "legacy_crfs_version"
-              ),
-              pop_year = pop_year,
-              calc_causes = calc_causes,
-              gbd_causes = "default",
-              diagnostic_folder = NULL
-            )
+            do.call(compute_hia, activated_args)
           )
         )
       }
@@ -243,7 +251,11 @@ run_historical_first_contract_parity_fixture <- function() {
 expect_historical_contract_parity <- function(
   results,
   expected_rr_source,
-  expected_paf_rows
+  expected_paf_rows,
+  expected_warnings = c(
+    "PAF estimates are not properly ordered or of the same sign for Diabetes Deaths",
+    "PAF estimates are not properly ordered or of the same sign for Diabetes YLDs"
+  )
 ) {
   registry_set <- results$registry_crfs
   rr_components <- results$specification$components$rr
@@ -254,10 +266,6 @@ expect_historical_contract_parity <- function(
   testthat::expect_equal(nrow(rr_components), expected_paf_rows - 15L)
   testthat::expect_setequal(unique(rr_components$source), expected_rr_source)
 
-  expected_warnings <- c(
-    "PAF estimates are not properly ordered or of the same sign for Diabetes Deaths",
-    "PAF estimates are not properly ordered or of the same sign for Diabetes YLDs"
-  )
   observed_warning_sets <- list(
     legacy_paf = results$legacy_paf$warnings,
     registry_paf = results$registry_paf$warnings,
