@@ -186,8 +186,8 @@ legacy_hia_configuration_compute_args <- function(configuration) {
 legacy_hia_population_projection_fixture <- function() {
   tibble::tibble(
     iso3 = "FPR",
-    year = c(2020L, 2021L, 2023L),
-    pop = c(100, 110, 130)
+    year = c(2020L, 2021L, 2023L, 2025L),
+    pop = c(100, 110, 130, 150)
   )
 }
 
