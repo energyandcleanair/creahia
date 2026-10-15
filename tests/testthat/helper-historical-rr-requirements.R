@@ -15,7 +15,7 @@ historical_configuration_rr_sources <- function(configuration) {
 derive_historical_rr_components <- function(
   configurations = load_historical_fingerprint_configurations(),
   include_actual_default = TRUE,
-  direct_rr_sources = RR_GBD2019
+  direct_rr_sources = c(RR_GBD2019, RR_GBD2021)
 ) {
   configured <- purrr::map_dfr(seq_len(nrow(configurations)), function(i) {
     configuration <- configurations[i, , drop = FALSE]

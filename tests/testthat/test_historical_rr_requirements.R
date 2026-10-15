@@ -10,7 +10,7 @@ test_that("historical RR manifest covers named and direct-source contracts", {
     "required_by"
   )
 
-  expect_equal(nrow(inventory), 85)
+  expect_equal(nrow(inventory), 101)
   expect_equal(dplyr::n_distinct(inventory$component_id), nrow(inventory))
   expect_equal(
     inventory %>%
@@ -24,12 +24,19 @@ test_that("historical RR manifest covers named and direct-source contracts", {
   )
   expect_equal(
     sum(lengths(strsplit(inventory$age_contract, ";", fixed = TRUE))),
-    404
+    420
   )
   expect_false(any(grepl("25\\+;25-29", inventory$age_contract)))
   expect_setequal(
     unique(inventory$source),
-    c(RR_ORIGINAL, RR_GEMM, RR_FUSION, RR_GBD2019, RR_GBD2023)
+    c(
+      RR_ORIGINAL,
+      RR_GEMM,
+      RR_FUSION,
+      RR_GBD2019,
+      RR_GBD2021,
+      RR_GBD2023
+    )
   )
   expect_setequal(unique(inventory$outcome), c("Deaths", "YLLs", "YLDs"))
 })
@@ -76,7 +83,7 @@ test_that("historical RR inventory records current Registry data coverage", {
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_candidate"),
-    65
+    81
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_required"),
@@ -474,7 +481,7 @@ test_that("historical RR routing checklist remains fail-closed", {
       tibble::as_tibble(),
     tibble::tribble(
       ~reproduction_status, ~n,
-      "parity_verified", 85L
+      "parity_verified", 101L
     )
   )
   expect_true(all(
@@ -494,7 +501,7 @@ test_that("historical RR routing checklist remains fail-closed", {
       tibble::as_tibble(),
     tibble::tribble(
       ~routing_status, ~n,
-      "ready", 85L
+      "ready", 101L
     )
   )
   expect_true(all(inventory$routing_checklist_complete ==
@@ -645,7 +652,7 @@ test_that("GEMM YLL and YLD outcome reuse is represented only internally", {
     dplyr::filter(component_id %in% historical_registry$component_id)
 
   expect_equal(nrow(expected_components), 8L)
-  expect_equal(nrow(complete_historical_registry), 65L)
+  expect_equal(nrow(complete_historical_registry), 81L)
   expect_equal(nrow(historical_registry), 8L)
   expect_setequal(
     historical_registry$component_id,
@@ -958,7 +965,7 @@ test_that("runtime component manifest combines historical CRF and RR identities"
   rr_manifest <- .load_historical_rr_manifest()
   crf_memberships <- .load_historical_crf_memberships()
 
-  expect_equal(nrow(manifest), 140)
+  expect_equal(nrow(manifest), 156)
   expect_equal(dplyr::n_distinct(manifest$component_id), nrow(manifest))
   expect_setequal(
     manifest$component_id[manifest$component_type == "rr"],

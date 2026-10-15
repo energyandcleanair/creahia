@@ -63,7 +63,7 @@ test_that("legacy compatibility readiness states cannot hide incomplete targets"
   not_applicable <- matrix %>%
     dplyr::filter(mapping_status == "not_applicable")
 
-  expect_gt(nrow(legacy_defined), 0)
+  expect_equal(nrow(legacy_defined), 0)
   expect_true(all(is.na(legacy_defined$target_selection_id)))
   expect_true(all(!is.na(legacy_defined$blocking_reason)))
 
@@ -81,7 +81,8 @@ test_that("legacy compatibility readiness states cannot hide incomplete targets"
     "c40_project_cause_vector_epi_c40_pop2022", "component_resolved|legacy_profile_c40|legacy_cause_selectors|C40",
     "c40_character_template_epi_c40_pop2019", "component_resolved|legacy_profile_c40|legacy_cause_selectors|C40",
     "krewski_sa_gbd_only_all_epi_c40_pop2021", "component_resolved|legacy_profile_krewski_south_africa|legacy_cause_selectors|C40",
-    "default_project_defaults_pop2025", "component_resolved|legacy_profile_default|rr_sources|default"
+    "default_project_defaults_pop2025", "component_resolved|legacy_profile_default|rr_sources|default",
+    "default_explicit_rr_source_families_pop2020", "component_resolved|legacy_profile_default|rr_sources|default"
   )
 
   expect_equal(
