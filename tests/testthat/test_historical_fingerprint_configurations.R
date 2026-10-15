@@ -67,6 +67,7 @@ test_that("only fully verified historical mappings are Registry-ready", {
     "legacy_default_gemm_gbd2021_2020", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2021",
     "legacy_default_gemm_gbd2021_2021", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2021",
     "legacy_default_fusion_gbd2021_2021", "component_resolved|legacy_profile_default|rr_sources|gbd2021",
+    "legacy_default_gbd2023_gbd2021_2021", "component_resolved|legacy_profile_default|rr_sources|gbd2021",
     "legacy_default_fusion_gbd2023_2023", "component_resolved|legacy_profile_default|rr_sources|gbd2023"
   )
 
