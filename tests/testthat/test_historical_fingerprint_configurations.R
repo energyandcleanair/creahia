@@ -40,13 +40,12 @@ test_that("historical fingerprint configurations preserve the current legacy tes
   )
 })
 
-test_that("incomplete historical mappings cannot be mistaken for Registry targets", {
+test_that("any incomplete historical mappings cannot be mistaken for Registry targets", {
   configurations <- load_historical_fingerprint_configurations()
 
   incomplete <- configurations %>%
     dplyr::filter(mapping_status == "legacy_defined")
 
-  expect_true(nrow(incomplete) > 0)
   expect_true(all(is.na(incomplete$target_selection_id)))
   expect_true(all(!is.na(incomplete$blocking_reason)))
   expect_false(any(incomplete$target_selection_id == "experimental_default", na.rm = TRUE))
@@ -68,7 +67,8 @@ test_that("only fully verified historical mappings are Registry-ready", {
     "legacy_default_gemm_gbd2021_2021", "component_resolved|legacy_profile_default|legacy_cause_selectors|gbd2021",
     "legacy_default_fusion_gbd2021_2021", "component_resolved|legacy_profile_default|rr_sources|gbd2021",
     "legacy_default_gbd2023_gbd2021_2021", "component_resolved|legacy_profile_default|rr_sources|gbd2021",
-    "legacy_default_fusion_gbd2023_2023", "component_resolved|legacy_profile_default|rr_sources|gbd2023"
+    "legacy_default_fusion_gbd2023_2023", "component_resolved|legacy_profile_default|rr_sources|gbd2023",
+    "legacy_default_gbd2023_gbd2023_2023", "component_resolved|legacy_profile_default|rr_sources|gbd2023"
   )
 
   expect_equal(

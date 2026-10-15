@@ -7,4 +7,4 @@ legacy_default_gemm_gbd2021_2021,default,GEMM and GBD,default,,gbd2021,2021,comp
 legacy_default_fusion_gbd2021_2021,default,,,fusion,gbd2021,2021,component_resolved|legacy_profile_default|rr_sources|gbd2021,registry_ready,
 legacy_default_gbd2023_gbd2021_2021,default,,,gbd2023,gbd2021,2021,component_resolved|legacy_profile_default|rr_sources|gbd2021,registry_ready,
 legacy_default_fusion_gbd2023_2023,default,,,fusion,gbd2023,2023,component_resolved|legacy_profile_default|rr_sources|gbd2023,registry_ready,
-legacy_default_gbd2023_gbd2023_2023,default,,,gbd2023,gbd2023,2023,,legacy_defined,CRF and RR reproduction parity has not yet been verified
+legacy_default_gbd2023_gbd2023_2023,default,,,gbd2023,gbd2023,2023,component_resolved|legacy_profile_default|rr_sources|gbd2023,registry_ready,
