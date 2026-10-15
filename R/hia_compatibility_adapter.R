@@ -514,7 +514,12 @@
 
 
 .hia_compatibility_routing_enabled <- function() {
-  isTRUE(getOption("creahia.hia_compatibility_routing", FALSE))
+  configured <- getOption("creahia.hia_compatibility_routing", NULL)
+  if (!is.null(configured)) {
+    return(isTRUE(configured))
+  }
+
+  !.hia_compatibility_diagnostics_enabled()
 }
 
 

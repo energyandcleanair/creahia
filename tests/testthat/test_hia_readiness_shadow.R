@@ -55,8 +55,10 @@ make_shadow_test_boundary_context <- function(...) {
 }
 
 
-test_that("ordinary HIA calls skip shadow resolution unless opted in", {
+test_that("ordinary HIA calls activate compatibility routing by default", {
+  seen <- new.env(parent = emptyenv())
   expected <- make_shadow_test_impacts()
+  registry_set <- crfs_set("gbd2019_deaths")
   old_options <- options(
     creahia.hia_readiness_shadow_observer = NULL,
     creahia.hia_dual_run_observer = NULL,
@@ -66,9 +68,9 @@ test_that("ordinary HIA calls skip shadow resolution unless opted in", {
 
   expect_false(.hia_readiness_shadow_enabled())
   expect_false(.hia_dual_run_enabled())
-  expect_false(.hia_compatibility_routing_enabled())
+  expect_true(.hia_compatibility_routing_enabled())
   expect_false(.hia_compatibility_diagnostics_enabled())
-  expect_false(.hia_compatibility_resolution_enabled())
+  expect_true(.hia_compatibility_resolution_enabled())
 
   with_mocked_bindings(
     get_crfs = function(version = "default") make_shadow_test_crfs(),
@@ -77,13 +79,29 @@ test_that("ordinary HIA calls skip shadow resolution unless opted in", {
       tibble::tibble(cause = "NCD.LRI", source = RR_GEMM)
     },
     validate_crfs_against_epi = function(...) invisible(TRUE),
-    .capture_population_year_intent = function(...) {
-      stop("disabled shadow mode must not build a diagnostic specification")
-    },
     .observe_hia_compatibility_boundary = function(...) {
-      stop("disabled shadow mode must not resolve compatibility")
+      list(
+        status = "resolved",
+        route_application = structure(
+          list(
+            status = "applied",
+            compute_inputs = list(
+              crfs = registry_set,
+              rr_sources = .empty_hia_rr_sources(),
+              crf_compute = "registry"
+            ),
+            error = NULL
+          ),
+          class = c("creahia_hia_route_application_observation", "list")
+        )
+      )
     },
-    compute_hia_paf = function(...) tibble::tibble(),
+    compute_hia_paf = function(..., crfs, rr_sources, crf_compute) {
+      seen$crfs <- crfs
+      seen$rr_sources <- rr_sources
+      seen$crf_compute <- crf_compute
+      tibble::tibble()
+    },
     compute_hia_impacts = function(...) expected,
     {
       result <- run_shadow_test_hia()
@@ -91,6 +109,9 @@ test_that("ordinary HIA calls skip shadow resolution unless opted in", {
   )
 
   expect_identical(result, expected)
+  expect_identical(seen$crfs, registry_set)
+  expect_false(has_rr_sources(seen$rr_sources))
+  expect_identical(seen$crf_compute, "registry")
 })
 
 

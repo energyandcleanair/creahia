@@ -132,7 +132,7 @@ run_default_project_contract_fixture <- function() {
       )
       activated_wrapper <- withr::with_options(
         list(
-          creahia.hia_compatibility_routing = TRUE,
+          creahia.hia_compatibility_routing = NULL,
           creahia.hia_dual_run_observer = NULL,
           creahia.hia_readiness_shadow_observer = NULL
         ),
