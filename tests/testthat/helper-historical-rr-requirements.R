@@ -14,7 +14,8 @@ historical_configuration_rr_sources <- function(configuration) {
 
 derive_historical_rr_components <- function(
   configurations = load_historical_fingerprint_configurations(),
-  include_actual_default = TRUE
+  include_actual_default = TRUE,
+  direct_rr_sources = RR_GBD2019
 ) {
   configured <- purrr::map_dfr(seq_len(nrow(configurations)), function(i) {
     configuration <- configurations[i, , drop = FALSE]
@@ -25,15 +26,23 @@ derive_historical_rr_components <- function(
       dplyr::mutate(mapping_id = configuration$mapping_id[[1]])
   })
 
-  if (!include_actual_default) {
-    return(configured)
-  }
-
-  dplyr::bind_rows(
-    configured,
+  actual_default <- if (include_actual_default) {
     .normalise_rr_components(c(RR_GEMM, RR_ORIGINAL)) %>%
       dplyr::mutate(mapping_id = "actual_no_argument_default")
+  } else {
+    tibble::tibble()
+  }
+  direct_source_components <- purrr::map_dfr(
+    direct_rr_sources,
+    function(source) {
+      .normalise_rr_components(source) %>%
+        dplyr::mutate(
+          mapping_id = "default_explicit_rr_source_families_pop2020"
+        )
+    }
   )
+
+  dplyr::bind_rows(configured, actual_default, direct_source_components)
 }
 
 
