@@ -14,7 +14,7 @@ HIA methodology and does not by itself mark Phase 1 complete.
 
 - Date: 2026-10-16
 - Branch: `feat/unify_rr_and_crf`
-- Base commit: `47c498e` (package-check fixes remain uncommitted in this slice)
+- Commit: `ee88549`
 - Required compatibility contracts: 14 of 14 `registry_ready`
 - Ordinary supported legacy calls: Registry routing enabled by default
 - Explicit legacy comparison override: retained pending discussion with Hubert
@@ -131,14 +131,14 @@ scientifically approved.
   numerical evidence.
 - Fixed snapshots and live legacy-versus-Registry comparisons both pass.
 - No unexplained numerical change was accepted or written into a fixture.
+- Known limitations and historical authorised differences are consolidated in
+  `doc/phase1-known-limitations-and-authorised-differences.md`.
 - Existing Diabetes PAF ordering warnings remain reproducible; their scientific
   interpretation remains an Open Questions item rather than an engineering
   compatibility failure.
 
 ## Remaining Phase 1 gates
 
-- Consolidate known limitations and authorised differences into a reviewable
-  record.
 - Finalise the installation and rollback options without choosing the release
   vehicle prematurely.
 - Discuss the Hubert maintainer runbook and root `AGENTS.md` changes after the
