@@ -229,8 +229,7 @@ test_that("get_valuations returns correct VSL for ZAF 2019 - Worldbank version",
 
   # Cached WB GDP indicators for ZAF + OED 2011–2019 (avoids flaky api.worldbank.org in CI)
   vsls <- readr::read_csv(
-    testthat::test_path("..", "..", "inst", "testdata", "worldbank",
-                        "gdp_zaf_oed_2011_2019.csv"),
+    get_testdata_file("worldbank", "gdp_zaf_oed_2011_2019.csv"),
     show_col_types = FALSE
   ) %>%
     select(iso3c, date, gdp_current, gdp_ppp_constant, gdp_current_lcu, gdp_ppp_current) %>%
@@ -279,8 +278,7 @@ test_that("get_valuations returns correct VSL for ZAF 2019 - Viscusi version", {
 
   # Cached WB GDP/GNI indicators for ZAF + USA 2015–2019 (avoids flaky api.worldbank.org in CI)
   vsls <- readr::read_csv(
-    testthat::test_path("..", "..", "inst", "testdata", "worldbank",
-                        "gdp_gni_zaf_usa_2015_2019.csv"),
+    get_testdata_file("worldbank", "gdp_gni_zaf_usa_2015_2019.csv"),
     show_col_types = FALSE
   ) %>%
     select(iso3c, date, gni_constant, gni_current) %>%

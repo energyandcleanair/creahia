@@ -14,6 +14,7 @@ Encoding: UTF-8
 LazyData: true
 Imports:
     countrycode,
+    dplyr,
     magrittr,
     readxl,
     readr,
@@ -32,7 +33,9 @@ Imports:
     foreach,
     priceR,
     terra,
+    tidyr,
     logger,
+    lubridate,
     matrixStats,
     rlang,
     sf,
@@ -42,7 +45,9 @@ Imports:
     jsonlite,
     ggspatial,
     doParallel,
-    creaexposure
+    creaexposure,
+    RColorBrewer,
+    zoo
 Depends:
     tidyverse,
     creahelpers,
@@ -53,7 +58,6 @@ Remotes:
     laurimyllyvirta/lauR,
     nset-ornl/wbstats
 RoxygenNote: 7.2.3
-Suggests: 
+Suggests:
     knitr,
     rmarkdown
-VignetteBuilder: knitr

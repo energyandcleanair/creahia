@@ -49,8 +49,11 @@ test_that("legacy compatibility matrix has a stable auditable contract", {
   expect_false(any(is.na(matrix$evidence_path)))
   expect_false(any(is.na(matrix$decision_owner)))
 
-  project_root <- normalizePath(testthat::test_path("..", ".."), mustWork = TRUE)
-  expect_true(all(file.exists(file.path(project_root, matrix$evidence_path))))
+  # Private planning evidence is intentionally excluded from installed packages.
+  if (!nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))) {
+    project_root <- normalizePath(testthat::test_path("..", ".."), mustWork = TRUE)
+    expect_true(all(file.exists(file.path(project_root, matrix$evidence_path))))
+  }
 })
 
 test_that("legacy compatibility readiness states cannot hide incomplete targets", {

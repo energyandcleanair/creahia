@@ -252,6 +252,11 @@ detect_breaks <- function(data, authorised_breaks) {
 
 test_that("Estimates are compatible with previous versions", {
 
+  skip_if(
+    nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")),
+    "Version fingerprints are validated outside R CMD check"
+  )
+
   library(terra)
   library(creahelpers)
   library(dplyr)

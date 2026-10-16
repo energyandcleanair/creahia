@@ -1,7 +1,11 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^README\.Rmd$
-cache
-validation
+(^|/)cache($|/)
+(^|/)validation($|/)
 ^AGENTS\.md$
 ^\.github/prompts$
+^\.codex-artifacts$
+^\.posit$
+^\.vscode$
+^plans$
