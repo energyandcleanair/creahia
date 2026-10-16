@@ -14,7 +14,7 @@ HIA methodology and does not by itself mark Phase 1 complete.
 
 - Date: 2026-10-16
 - Branch: `feat/unify_rr_and_crf`
-- Commit: `ee88549`
+- Baseline before the merge-protection audit: `2c68931`
 - Required compatibility contracts: 14 of 14 `registry_ready`
 - Ordinary supported legacy calls: Registry routing enabled by default
 - Explicit legacy comparison override: retained pending discussion with Hubert
@@ -124,6 +124,11 @@ declarations, S3 signature consistency, missing documentation, the current
 development directories, startup output, and static global-binding notes.
 They remain follow-up maintenance work rather than evidence that Phase 1 is
 scientifically approved.
+
+The branch-to-`master` protection review, evidence boundaries, and suggested
+Hubert confidence statement are recorded in
+`doc/phase1-merge-protection-audit.md`. CI now repeats both the development
+test suite and an error-gated installed-package check.
 
 ## What this evidence closes
 
