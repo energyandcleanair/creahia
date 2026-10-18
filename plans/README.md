@@ -1,7 +1,7 @@
 # CREAHIA Maintainer Plans
 
 - Last reviewed: 2026-10-19
-- Verified against: `cc3aee8`
+- Verified against: `9d4454d`
 
 ## Purpose
 
@@ -36,14 +36,15 @@ This directory is being built in small reviewable slices.
 
 | Task | Read next | Current status |
 | --- | --- | --- |
-| Understand the refactor and current data flow | `rr-crf-architecture.md` | Planned next |
-| Fix or extend RR/CRF/EPI behavior safely | `rr-crf-maintenance-runbook.md` | Planned after the architecture guide |
+| Understand the refactor and current data flow | `rr-crf-architecture.md` | Available |
+| Fix or extend RR/CRF/EPI behavior safely | `rr-crf-maintenance-runbook.md` | Planned next |
 | Review unresolved HIA methodology | `doc/hia-methodology-validation-open-questions.md` | Available |
 | Use CRF Registry selections | `doc/crf-registry-selection.md` | Available |
 | Inspect detailed historical planning evidence | `.github/prompts/dev/rr_crf_redesign/` | Private supporting history; read only when needed |
 
-Until the architecture guide and runbook are complete, follow the safeguards
-in `AGENTS.md` and inspect the relevant implementation and tests directly.
+Until the runbook is complete, use the architecture guide to locate the
+relevant implementation, follow the safeguards in `AGENTS.md`, and inspect the
+corresponding tests directly.
 
 ## Current source map
 
