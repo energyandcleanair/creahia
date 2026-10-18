@@ -11,6 +11,9 @@ inst/doc
 .codex-artifacts
 presentation/
 
+# Shared agent instructions are part of the repository.
+!AGENTS.md
+
 tmp/
 cache/
 keys/
