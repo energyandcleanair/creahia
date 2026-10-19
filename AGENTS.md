@@ -77,6 +77,9 @@ historical planning file still describes the current repository.
   structure checks.
 - Run the broader development suite when shared computation, selection,
   Registry compilation, or compatibility behavior changes.
+- The current full development suite includes a cross-version test that may
+  install old releases and write fingerprint files. Follow the runbook's
+  side-effect checks before running it.
 - Run an installed-package check when package contents, dependencies, build
   exclusions, or installed-file lookup may be affected.
 - Report development-test results, installed-package results, environment-only

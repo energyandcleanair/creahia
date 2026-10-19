@@ -1,7 +1,7 @@
 # RR/CRF Architecture
 
 - Last reviewed: 2026-10-19
-- Verified against: `9d4454d`
+- Verified against: `40602d4`
 
 ## Purpose
 
@@ -138,7 +138,8 @@ Primary files and data:
 
 A Preset is a named, reusable selection of Registry CRFs. A Set is the explicit
 resolved collection used by a calculation. `crfs_set()` can combine presets
-with reviewed additions, removals, or replacements and validates the result.
+with reviewed additions, removals, or replacements and validates the Registry
+shape of the result. It does not reject aggregate/component overlap by default.
 
 Public discovery filters out internal fixtures. Historical-compatibility rows
 live in separate internal storage and therefore do not enter public discovery.
@@ -234,8 +235,11 @@ Primary files and data:
 
 Some aggregate causes overlap with their component causes. For example, an
 aggregate burden must not be added to the component burdens that it already
-contains. Selection validation detects these combinations, and the resolved
-compatibility Set preserves the overlap marking expected by historical output.
+contains. Ordinary Set construction allows both alternatives to be retained
+for comparison. A maintainer must explicitly request strict overlap validation
+with `validate_crf_selection(..., check_double_counting = TRUE)` before treating
+a selection as non-overlapping or summable. The resolved compatibility Set
+also preserves the overlap marking expected by historical output.
 
 Passing numerical parity does not by itself approve a new aggregate mapping.
 Changing an overlap group or interpreting a new aggregate requires methodology
@@ -273,7 +277,7 @@ do not define scientific approval.
 | Both routes change together | Fixed PAF and final-impact fingerprints |
 | Historical releases legitimately differ | Narrow rules in `tests/testthat/test_results_immutability.R` |
 | Source checkout works but installed package is incomplete | Installed-package check in `.github/workflows/tests.yaml` |
-| Aggregate and component burden are mixed | Double-counting validation and Set tests |
+| Aggregate and component burden are mixed | Explicit strict double-counting validation and Set tests; ordinary Set construction is not a summability guarantee |
 
 Never update a fixed result or authorised-difference rule until the cause and
 review owner are known. The maintenance runbook will provide the task-specific

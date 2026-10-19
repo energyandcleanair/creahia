@@ -1,7 +1,7 @@
 # CREAHIA Maintainer Plans
 
 - Last reviewed: 2026-10-19
-- Verified against: `c957b47`
+- Verified against: `40602d4`
 
 ## Purpose
 

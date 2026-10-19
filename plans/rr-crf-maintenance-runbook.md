@@ -1,7 +1,7 @@
 # RR/CRF Maintenance Runbook
 
 - Last reviewed: 2026-10-19
-- Verified against: `c957b47`
+- Verified against: `40602d4`
 
 ## Purpose
 
@@ -121,7 +121,7 @@ Rscript -e 'devtools::test(filter = "fingerprint|parity|compatibility|contract",
 This combines live old-versus-new comparisons with fixed expected results. It
 does not replace the full package suite.
 
-### Level 3: full development suite
+### Level 3: full development suite with known side effects
 
 Use after changing shared computation, routing, selection, packaged data, or
 several test families:
@@ -129,6 +129,15 @@ several test families:
 ```sh
 Rscript -e 'devtools::test(stop_on_failure = TRUE)'
 ```
+
+This command includes `test_results_immutability.R`. That test can install old
+package releases, regenerate current-version fingerprint files, and create a
+missing historical fingerprint. Before running it, require a clean working
+tree, confirm that network/package installation is acceptable, and compare
+`git status` before and after. If those side effects are not appropriate for
+the current task, stop after the focused protection levels and schedule the
+full suite as an explicit release-validation step. Do not describe the reduced
+run as the full suite.
 
 ### Level 4: installed-package check
 
@@ -152,10 +161,10 @@ Use for release-level work or a deliberate result change:
 Rscript -e 'devtools::test(filter = "results_immutability", stop_on_failure = TRUE)'
 ```
 
-This test can install older package releases and regenerate current-version
-fingerprint files. It may need network access and local package dependencies.
-Record `git status` before and after it, inspect every generated file, and do
-not retain an unexplained change.
+This test can install older package releases, regenerate current-version
+fingerprints, and create a missing historical fingerprint. It may need network
+access and local package dependencies. Record `git status` before and after it,
+inspect every generated file, and do not retain an unexplained change.
 
 ## Task A: urgent report or workflow failure
 
@@ -195,19 +204,25 @@ restore a report.
 
 ## Task B: package installation or installed-only failure
 
-Source-checkout success does not prove that the installed package contains the
-same files.
+Source-checkout success does not prove that the installed package exposes the
+same behavior and packaged data. Installed R packages normally do not retain
+the individual files under `R/`, so the absence of an installed
+`R/some_function.R` file is not by itself a defect.
 
 ### Diagnose
 
-1. Check `DESCRIPTION`, `.Rbuildignore`, and the relevant path under
-   `inst/extdata/`.
-2. Confirm that `get_hia_path()` can resolve the file after installation.
-3. Check whether a test relies on repository-only folders such as `examples/`,
+1. For R code, confirm that the required function is available through the
+   installed namespace and test its behavior. Do not test for its original
+   source filename after installation.
+2. For packaged data or other artifacts, check `DESCRIPTION`, `.Rbuildignore`,
+   and the relevant path under `inst/extdata/`.
+3. Confirm that `get_hia_path()` or `system.file()` can resolve the packaged
+   artifact after installation.
+4. Check whether a test relies on repository-only folders such as `examples/`,
    private plans, or local raw data.
-4. Check direct dependency declarations rather than relying on a package being
+5. Check direct dependency declarations rather than relying on a package being
    attached indirectly.
-5. Run the installed-package check above.
+6. Run the installed-package check above.
 
 ### Stop conditions
 
@@ -220,7 +235,8 @@ same files.
 ### Completion evidence
 
 - the source-checkout behavior passes;
-- the installed package contains and resolves the required file;
+- the installed namespace exposes the required R behavior;
+- the installed package contains and resolves each required packaged artifact;
 - installed-package tests have no failures; and
 - `devtools::check()` has no errors.
 
@@ -357,14 +373,24 @@ location mapping is wrong.
 1. Record the upstream release, download date, geography, measure, unit, and
    transformation steps.
 2. Keep the EPI version independent of the RR source and CRF profile.
-3. Confirm that `low`, `central`, and `high` estimates exist for every required
-   metric key.
+3. Inspect the generated or packaged data before runtime imputation. Confirm
+   where `low`, `central`, or `high` values are wholly or partly missing for
+   each required metric key.
 4. Check cause and outcome names after `fix_epi_cols()` and other recoding.
 5. Check location IDs, population fields, missing locations, and duplicate
    estimates.
 6. Compare changed final impacts with unchanged PAFs to isolate the EPI effect.
 7. Obtain data/method review before replacing packaged values or changing the
    default EPI version.
+
+Current behavior matters when interpreting these checks: `get_epi()` calls
+`adddefos()` before component-readiness validation. That helper can fill
+numeric missing values from regional/income-group and then estimate-wide
+medians. The readiness check proves that every required metric/estimate exists
+somewhere after that processing; it does not prove that every location had an
+original non-missing value. Inspect pre-imputation data for partial gaps, and
+do not broaden or approve median imputation for a new dataset without data or
+method review.
 
 ### Minimum tests
 
@@ -394,9 +420,13 @@ individually valid.
 1. State the intended analysis choice in pollutant/cause/outcome terms.
 2. Preview the selection before constructing the final Set.
 3. Confirm every CRF is public and reviewed for the intended use.
-4. Validate the Set and inspect aggregate/component conflicts.
+4. Run strict overlap validation explicitly:
+   `validate_crf_selection(crfs, check_double_counting = TRUE)`.
+   Ordinary `crfs_set()` construction and default selection validation do not
+   reject an aggregate/component conflict.
 5. Keep aggregate and component alternatives separately selectable when they
-   represent overlapping burden.
+   represent overlapping burden. They may coexist for comparison, but must not
+   be summed or presented as non-overlapping.
 6. Update user documentation when public discovery or examples change.
 
 ### Minimum tests
@@ -558,14 +588,19 @@ conclusions:
    numerical layer and request review.
 2. **A new CRF is requested:** establish source, review status, destination,
    compiler, Registry/Reference records, and parity evidence before selection.
-3. **EPI lacks an uncertainty estimate:** treat the component as incomplete;
-   do not silently fill the missing estimate in a maintenance fix.
+3. **EPI lacks an uncertainty estimate:** if an entire required estimate is
+   absent, treat the component as incomplete. If only some locations are
+   missing, inspect the pre-imputation data and the existing `adddefos()`
+   result; do not silently approve or broaden imputation in a maintenance fix.
 4. **A report is urgently blocked:** fix established software behavior, but
    stop if recovery requires a new scientific choice.
-5. **A Preset mixes aggregate and component burden:** fail validation and ask
-   for an explicit analysis choice; do not make the combination summable.
-6. **An installed package lacks a source file:** inspect build exclusions and
-   package paths, then prove the fix with an installed-package check.
+5. **A Preset mixes aggregate and component burden:** run explicit strict
+   overlap validation and expect it to fail. Do not assume Set construction
+   blocks the combination, and do not make the results summable.
+6. **Installed behavior or packaged data is missing:** test R behavior through
+   the installed namespace and data through installed package paths. The
+   absence of an individual installed `R/*.R` source file is not itself a
+   defect.
 7. **A request removes legacy arguments or the comparison route:** classify it
    as an approved Phase 2 or architecture decision, not routine cleanup.
 
