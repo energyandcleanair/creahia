@@ -695,3 +695,58 @@ test_that("custom epi is validated against resolved component metrics", {
     "missing required metric columns"
   )
 })
+
+
+test_that("partial-location EPI gaps are imputed before readiness assessment", {
+  raw_epi <- tibble::tibble(
+    location_id = rep(c(1, 2), each = 3),
+    iso3 = rep(c("HKG", "MAC"), each = 3),
+    estimate = rep(c("low", "central", "high"), times = 2),
+    region = "Shared region",
+    income_group = "Shared income group",
+    CauseA_Deaths = c(8, 10, NA_real_, 18, 20, 22)
+  )
+
+  imputed_epi <- with_mocked_bindings(
+    get_epi_versions = function() list(test = "unused.csv"),
+    get_hia_path = function(...) "unused.csv",
+    read_csv = function(...) raw_epi,
+    fix_epi_cols = identity,
+    add_location_details = identity,
+    get_epi("test")
+  )
+
+  expect_equal(
+    imputed_epi$CauseA_Deaths[
+      imputed_epi$location_id == 1 & imputed_epi$estimate == "high"
+    ],
+    22
+  )
+  expect_false(anyNA(imputed_epi$CauseA_Deaths))
+
+  epi_component <- .normalise_epi_component(
+    epi = imputed_epi,
+    required_metric_keys = "CauseA_Deaths",
+    epi_version = "custom"
+  )
+  expect_true(epi_component$runtime_ready)
+
+  no_high_values <- raw_epi %>%
+    dplyr::mutate(
+      CauseA_Deaths = dplyr::if_else(
+        estimate == "high",
+        NA_real_,
+        CauseA_Deaths
+      )
+    ) %>%
+    adddefos()
+
+  expect_error(
+    .normalise_epi_component(
+      epi = no_high_values,
+      required_metric_keys = "CauseA_Deaths",
+      epi_version = "custom"
+    ),
+    "missing values for required metric/estimate combinations"
+  )
+})
