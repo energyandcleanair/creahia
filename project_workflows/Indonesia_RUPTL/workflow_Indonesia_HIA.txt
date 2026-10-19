@@ -1,0 +1,8 @@
+creapuff/project_workflows/Indonesia_RUPTL2025/indonesia_RUPTL_emissions_processing_2026.R
+
+>> writes indonesia_RUPTL_emission_pathways_October_2026.RDS
+
+
+C:/Users/lauri/Documents/creahia/project_workflows/workflow_hia_RUPTL_memorysafe.R
+
+>> sources C:/Users/lauri/Documents/CALPUFF/creapuff/project_workflows/Indonesia_RUPTL2025/read_RUPTL2025_emissions.R

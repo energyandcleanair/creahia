@@ -69,15 +69,18 @@ calpuff_files <- get_calpuff_files(ext=".tif", gasunit = 'ug', dir=input_dir, hg
 
 
 # 02: Get base concentration levels -------------------------------------------------------------
-grid_ll <- grid_raster %>% terra::project('epsg:4326', res=.01) %>% terra::extend(200)
-conc_ll <- get_conc_baseline(species=unique(calpuff_files$species), grid_raster=grid_ll, no2_targetyear = 2023) # 2020 # Target year of model simulations (CALPUFF and WRF)
-conc_base <- conc_ll
-conc_base$conc_baseline %>% lapply(terra::project, y=grid_raster, method='average')
-
-#conc_base <- get_conc_baseline(species=unique(calpuff_files$species), grid_raster=grid_raster, no2_targetyear = 2023) # 2020 # Target year of model simulations (CALPUFF and WRF)
-
-conc_base %>% saveRDS(file.path(output_dir, 'conc_base.RDS'))
 conc_base <- readRDS(file.path(project_dir, 'HIA', 'conc_base.RDS'))
+
+if(!exists(conc_base)) {
+  grid_ll <- grid_raster %>% terra::project('epsg:4326', res=.01) %>% terra::extend(200)
+  conc_ll <- get_conc_baseline(species=unique(calpuff_files$species), grid_raster=grid_ll, no2_targetyear = 2023) # 2020 # Target year of model simulations (CALPUFF and WRF)
+  conc_base <- conc_ll
+  conc_base$conc_baseline %>% lapply(terra::project, y=grid_raster, method='average')
+
+  #conc_base <- get_conc_baseline(species=unique(calpuff_files$species), grid_raster=grid_raster, no2_targetyear = 2023) # 2020 # Target year of model simulations (CALPUFF and WRF)
+
+  conc_base %>% saveRDS(file.path(output_dir, 'conc_base.RDS'))
+}
 
 conc_base$conc_baseline[[which(conc_base$species=='no2')]] %<>% max(1)
 
@@ -193,10 +196,11 @@ hia_per_t %>% saveRDS(file.path(output_dir, 'hia_per_t.RDS'))
 #HIA for scenarios
 #depends on creapuff/project_workflows/Indonesia_RUPTL2025/indonesia_RUPTL_emissions_processing.R
 #indonesia_RUPTL_read_plantdata.R
+emission_file = 'indonesia_RUPTL_emission_pathways_October_2026.RDS'
 source('~/CALPUFF/creapuff/project_workflows/Indonesia_RUPTL2025/read_RUPTL2025_emissions.R') #needs to be updated
 
 hia_per_t <- readRDS(file.path(output_dir, 'hia_per_t.RDS'))
-emis <- readRDS(file.path(emissions_dir, 'indonesia_RUPTL_emission_pathways_July_2026.RDS'))
+emis <- readRDS(file.path(emissions_dir, 'indonesia_RUPTL_emission_pathways_October_2026.RDS'))
 
 emis %>% ungroup %>%
   filter(COD<=year, year_retire>=year,
@@ -219,8 +223,8 @@ emis %>% ungroup %>%
 
 
 
-hia_scenarios %>% saveRDS(file.path(output_dir, 'hia_scenarios.RDS'))
-hia_scenarios <- readRDS(file.path(output_dir, 'hia_scenarios.RDS'))
+hia_scenarios %>% saveRDS(file.path(output_dir, 'hia_scenarios_October_2026.RDS'))
+hia_scenarios <- readRDS(file.path(output_dir, 'hia_scenarios_October_2026.RDS'))
 
 hia_scenarios %>%
   group_by(scenario, plant_category=ifelse(Owner=='captive', 'captive', 'utility'),
@@ -228,8 +232,8 @@ hia_scenarios %>%
   summarise(across(c(number, cost_mn_currentUSD), sum)) ->
   hia_scenarios_totals
 
-hia_scenarios_totals %>% saveRDS(file.path(output_dir, 'hia_scenarios_totals.RDS'))
-hia_scenarios_totals <- readRDS(file.path(output_dir, 'hia_scenarios_totals.RDS'))
+hia_scenarios_totals %>% saveRDS(file.path(output_dir, 'hia_scenarios_totals_October_2026.RDS'))
+hia_scenarios_totals <- readRDS(file.path(output_dir, 'hia_scenarios_totals_October_2026.RDS'))
 
 hia_scenarios_totals %<>% filter(!double_counted, !grepl("economic costs", outcome)) %>%
   group_by(scenario, plant_category, year, estimate) %>%
@@ -278,7 +282,7 @@ hia_scenarios_totals %>%
   write_csv(file.path(output_dir, 'annual HIA.csv'))
 
 
-hia_scenarios_totals %>% filter(year>2024) %>%
+hia_scenarios_totals %>% filter(year>2025) %>%
   group_by(scenario, plant_category, estimate, outcome, cause, pollutant, double_counted) %>%
   summarise(across(c(number, cost_mn_currentUSD), sum)) ->
   hia_cum
@@ -294,7 +298,7 @@ hia_cum %>% filter(estimate=='central', !double_counted, grepl('Death', outcome)
   x_at_zero(labels=scales::comma) +
   coord_flip() +
   labs(title='Cumulative air pollution deaths by scenario',
-       subtitle='2025 to end-of-life',
+       subtitle='2026 to end-of-life',
        x='', y='', alpha='plant category')
 quicksave(file.path(output_dir, 'Cumulative deaths by scenario.png'), scale=1)
 
@@ -310,7 +314,7 @@ hia_cum %>%
   x_at_zero(labels=scales::comma) +
   coord_flip() +
   labs(title='Cumulative air pollution costs by scenario',
-       subtitle='2025 to end-of-life',
+       subtitle='2026 to end-of-life',
        x='', y='USD bn', alpha='plant category')
 quicksave(file.path(output_dir, 'Cumulative costs by scenario.png'), scale=1)
 
@@ -321,7 +325,7 @@ hia_cum %>%
          estimate, number) %>%
   pivot_wider(names_from=estimate, values_from=number) %>%
   relocate(high, .after = low) %>%
-  write_csv(file.path(output_dir, 'cumulative HIA 2025 to end-of-life.csv'))
+  write_csv(file.path(output_dir, 'cumulative HIA 2026 to end-of-life.csv'))
 
 #results by plant
 hia_per_t %>%
