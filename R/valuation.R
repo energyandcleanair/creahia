@@ -152,17 +152,16 @@ transfer_to_usd <- function(raw_valuation){
 
 #' Get hardcoded exchange rates for common currencies and years
 #'
+#' Annual average rates to USD from the ECB (EXR dataset), GBP derived via EUR cross rates.
+#'
 #' @param exchange_data Data frame with currency and year columns
 #'
 #' @return Data frame with hardcoded exchange rates
 get_hardcoded_exchange_rates <- function(exchange_data) {
 
-  # Hardcoded exchange rates for common cases
-  hardcoded_rates <- data.frame(
-    currency = c("GBP", "EUR"),
-    year = c(2018, 2010),
-    exchange = c(1.334946, 1.326974)
-  )
+  hardcoded_rates <- read_csv(get_hia_path(file.path("valuations", "exchange_rates.csv")),
+                              col_types = cols()) %>%
+    select(currency, year, exchange)
 
   # Filter to only include the requested currency/year combinations
   exchange_data %>%
