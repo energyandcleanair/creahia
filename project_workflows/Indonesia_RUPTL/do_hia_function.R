@@ -13,7 +13,10 @@ do_hia <- function(emis, hia_per_t_file=NULL, project_dir="G:/IndonesiaIESR") {
       message(group)
       df %>%
         inner_join(hia_per_t %>% filter(cluster==group$cluster, year==group$year)) %>%
-        group_by(CFPP.name, MW, utilization, scenario, Outcome, Cause, Pollutant, double_counted, estimate, unit) %>%
+        group_by(across(any_of(c('CFPP.name', 'MW', 'utilization', 'scenario',
+                                 'Outcome', 'Cause', 'Pollutant',
+                                 'outcome', 'cause', 'pollutant',
+                                 'double_counted', 'estimate', 'unit')))) %>%
         mutate(across(c(number, cost_mn_currentUSD), ~.x*emissions_t)) %>%
         summarise(across(c(number, cost_mn_currentUSD), sum))
     }) %>%
