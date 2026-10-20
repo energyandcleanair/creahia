@@ -1,7 +1,7 @@
 # CREAHIA Maintainer Plans
 
-- Last reviewed: 2026-10-19
-- Verified against: `40602d4`
+- Last reviewed: 2026-10-20
+- Verified against: `1f59070` (latest `master` integrated)
 
 ## Purpose
 
@@ -24,8 +24,15 @@ The package is in the compatibility-preserving Phase 1 architecture:
   `compute_hia()` -> `compute_hia_paf()` -> `compute_hia_impacts()`;
 - historical configurations have parity and fixed-result protection;
 - historical reproduction remains separate from scientific endorsement; and
-- an explicit legacy comparison route remains temporarily available pending a
-  separate review decision.
+- the package will be introduced through a direct shared-package update; and
+- an explicit legacy comparison route remains temporarily available as a
+  controlled software-regression fallback.
+
+The Phase 1 scope is frozen. Release work may integrate `master`, complete
+validation and review, install the shared package, verify representative
+workflows, and finish user and maintainer handover material. New scientific
+content, public-interface redesign, broad refactoring, and removal of the
+temporary comparison route are outside this frozen scope.
 
 Phase 2 is a future Registry-first public-interface transition. It must not be
 treated as current behavior or implemented as incidental maintenance work.
@@ -38,6 +45,7 @@ This directory is being built in small reviewable slices.
 | --- | --- | --- |
 | Understand the refactor and current data flow | `rr-crf-architecture.md` | Available |
 | Fix or extend RR/CRF/EPI behavior safely | `rr-crf-maintenance-runbook.md` | Available |
+| Prepare the Phase 1 merge and shared-package cutover | `phase1-release-and-cutover.md` | Decision recorded; release gates pending |
 | Review unresolved HIA methodology | `doc/hia-methodology-validation-open-questions.md` | Available |
 | Use CRF Registry selections | `doc/crf-registry-selection.md` | Available |
 | Inspect detailed historical planning evidence | `.github/prompts/dev/rr_crf_redesign/` | Private supporting history; read only when needed |
