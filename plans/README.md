@@ -1,7 +1,6 @@
 # CREAHIA Maintainer Plans
 
 - Last reviewed: 2026-10-20
-- Verified against: `1f59070` (latest `master` integrated)
 
 ## Purpose
 
@@ -38,9 +37,8 @@ This directory is being built in small reviewable slices.
 | --- | --- | --- |
 | Understand the refactor and current data flow | `rr-crf-architecture.md` | Available |
 | Fix or extend RR/CRF/EPI behavior safely | `rr-crf-maintenance-runbook.md` | Available |
-| Review unresolved HIA methodology | `doc/hia-methodology-validation-open-questions.md` | Available |
 | Use CRF Registry selections | `doc/crf-registry-selection.md` | Available |
-| Inspect detailed historical planning evidence | `.github/prompts/dev/rr_crf_redesign/` | Private supporting history; read only when needed |
+| User guide for phase1 refactor | `doc/phase1-hia-user-guide.md` | Available |
 
 Use the architecture guide to locate the responsible layer and the maintenance
 runbook to choose the required checks and review boundary.

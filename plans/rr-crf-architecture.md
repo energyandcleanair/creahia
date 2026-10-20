@@ -1,7 +1,6 @@
 # RR/CRF Architecture
 
 - Last reviewed: 2026-10-19
-- Verified against: `40602d4`
 
 ## Purpose
 
