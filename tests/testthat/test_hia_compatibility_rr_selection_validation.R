@@ -77,7 +77,18 @@ test_that("legacy RR conversion preserves established valid selections", {
   )
   expect_identical(
     convert_old_parameters_to_rr_sources("GEMM only", "default"),
-    list(gemm = c("NCD.LRI", "LRI", "COPD", "IHD", "LC", "Stroke"))
+    tibble::tribble(
+      ~cause, ~source, ~outcome,
+      "NCD.LRI", "gemm", "YLLs",
+      "Stroke", "gemm", "YLDs",
+      "COPD", "gemm", "YLDs",
+      "NCD.LRI", "gemm", "Deaths",
+      "IHD", "gemm", "Deaths",
+      "Stroke", "gemm", "Deaths",
+      "COPD", "gemm", "Deaths",
+      "LC", "gemm", "Deaths",
+      "LRI", "gemm", "Deaths"
+    )
   )
   expect_identical(
     convert_old_parameters_to_rr_sources(

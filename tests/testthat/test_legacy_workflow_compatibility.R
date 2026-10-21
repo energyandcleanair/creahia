@@ -32,18 +32,27 @@ test_that("legacy cause arguments still translate to RR sources", {
     calc_causes = "GEMM only",
     gbd_causes = "default"
   )
-  expect_named(gemm_only, RR_GEMM)
-  expect_equal(
-    gemm_only[[RR_GEMM]],
-    c(
-      CAUSE_NCDLRI,
-      CAUSE_LRI,
-      CAUSE_COPD,
-      CAUSE_IHD,
-      CAUSE_LUNGCANCER,
-      CAUSE_STROKE
+  # Matches the "GEMM only" preset of get_calc_causes_old(): no component YLLs.
+  expect_identical(
+    gemm_only,
+    tibble::tribble(
+      ~cause, ~source, ~outcome,
+      "NCD.LRI", "gemm", "YLLs",
+      "Stroke", "gemm", "YLDs",
+      "COPD", "gemm", "YLDs",
+      "NCD.LRI", "gemm", "Deaths",
+      "IHD", "gemm", "Deaths",
+      "Stroke", "gemm", "Deaths",
+      "COPD", "gemm", "Deaths",
+      "LC", "gemm", "Deaths",
+      "LRI", "gemm", "Deaths"
     )
   )
+  gemm_only_slots <- get_cause_source(gemm_only, add_measure = TRUE)
+  expect_false(any(
+    gemm_only_slots$measure == MEASURE_YLLS &
+      gemm_only_slots$cause != CAUSE_NCDLRI
+  ))
 })
 
 test_that("compute_hia preserves the legacy input and output boundary", {

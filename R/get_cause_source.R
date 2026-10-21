@@ -239,7 +239,21 @@ convert_old_parameters_to_rr_sources <- function(calc_causes, gbd_causes){
   }
 
   if(gbd_causes == "default" && calc_causes == "GEMM only"){
-    rr_sources[[RR_GEMM]] <- c(CAUSE_NCDLRI, CAUSE_LRI, CAUSE_COPD, CAUSE_IHD, CAUSE_LUNGCANCER, CAUSE_STROKE)
+    # Same cause/outcome set as the "GEMM only" preset of get_calc_causes_old():
+    # component YLLs are not part of this legacy selection.
+    gemm_only_causes <- c(
+      paste0(CAUSE_NCDLRI, "_", MEASURE_YLLS),
+      paste0(c(CAUSE_STROKE, CAUSE_COPD), "_", MEASURE_YLDS),
+      paste0(
+        c(CAUSE_NCDLRI, CAUSE_IHD, CAUSE_STROKE, CAUSE_COPD, CAUSE_LUNGCANCER, CAUSE_LRI),
+        "_",
+        MEASURE_DEATHS
+      )
+    )
+    return(convert_old_parameters_to_rr_sources(
+      calc_causes = gemm_only_causes,
+      gbd_causes = gbd_causes
+    ))
   }
 
   if(length(rr_sources) == 0) stop("Invalid combination of gbd_causes and calc_causes. Please check the input values.")
