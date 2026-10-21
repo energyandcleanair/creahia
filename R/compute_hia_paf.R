@@ -210,6 +210,10 @@ compute_hia_paf_crfs <- function(species,
 #' @param epi_version EPI data version
 #' @param rr_sources Vector of RR sources (for RR-based PAF)
 #' @param crfs CRF data table (for CRF-based PAF)
+#' @param diagnostic_folder Folder for PAF diagnostic plots, or NULL to skip them
+#' @param crf_compute Internal routing switch ("legacy" or "registry");
+#'   not part of the supported public interface and may be removed in Phase 2.
+#'   A `crfs_set()` input always uses "registry".
 #' @return Combined dataframe of PAF values from both methods
 #' @export
 compute_hia_paf <- function(conc_map,
@@ -219,9 +223,16 @@ compute_hia_paf <- function(conc_map,
                            epi_version = "default",
                            rr_sources = c(),
                            crfs = get_crfs(),
-                           diagnostic_folder = "diagnostic"
+                           diagnostic_folder = "diagnostic",
+                           crf_compute = c("legacy", "registry")
                            ) {
+  
+  crf_compute <- match.arg(crf_compute)
 
+  if (is_crfs_set(crfs)) {
+    crf_compute <- "registry"
+  }
+  
   paf <- tibble::tibble(
     scenario = character(),
     pollutant = character(),
@@ -233,35 +244,254 @@ compute_hia_paf <- function(conc_map,
     high = numeric()
   )
 
-  # Compute RR-based PAF if rr_sources are provided
-  if(length(rr_sources) > 0) {
+  
+  if (has_rr_sources(rr_sources)) {
     print("Computing RR-based PAF")
-    paf_rr <- compute_hia_paf_rr_curves(conc_map = conc_map,
-                                        scenarios = scenarios,
-                                        epi_version = epi_version,
-                                        rr_sources = rr_sources)
-    paf_rr_combined <- paf_rr %>%
-      bind_rows(.id = 'scenario')
-    paf <- bind_rows(paf, paf_rr_combined)
+
+    paf_rr <- compute_hia_paf_rr_curves(
+      conc_map = conc_map,
+      scenarios = scenarios,
+      epi_version = epi_version,
+      rr_sources = rr_sources
+    )
+
+    paf <- bind_rows(
+      paf,
+      bind_rows(paf_rr, .id = "scenario")
+    )
   }
 
   # Compute CRF-based PAF
   print("Computing CRF-based PAF")
-  paf_crf <- compute_hia_paf_crfs(species = species,
-                                  conc_map = conc_map,
-                                  regions = regions,
-                                  crfs = crfs)
-  paf_crf_combined <- paf_crf %>%
-    bind_rows(.id = 'scenario')
-  paf <- bind_rows(paf, paf_crf_combined)
 
+  if (identical(crf_compute, "registry")) {
+    paf_crf <- compute_hia_paf_crfs_registry(
+      species = species,
+      conc_map = conc_map,
+      regions = regions,
+      crfs = crfs,
+      epi_version = epi_version
+    )
+  } else {
+    paf_crf <- compute_hia_paf_crfs(
+      species = species,
+      conc_map = conc_map,
+      regions = regions,
+      crfs = crfs
+    )
+  }
 
-  # Plot diagnostics
+  paf <- bind_rows(
+    paf,
+    bind_rows(paf_crf, .id = "scenario")
+  )
+
   diagnose_paf(paf, diagnostic_folder)
 
-  return(paf)
+  paf
 }
 
+compute_hia_paf_crfs_registry <- function(species,
+                                          conc_map,
+                                          regions,
+                                          crfs,
+                                          epi_version = "default") {
+  hia_polls <- species_to_hiapoll(species)
+  scenarios <- names(conc_map)
+  compatibility_rr_crf_ids <- .hia_compatibility_rr_crf_ids(crfs)
+  diagnostic_set <- inherits(crfs, "creahia_hia_diagnostic_set")
+
+  empty_crf_df <- tibble::tibble(
+    pollutant = character(),
+    cause = character(),
+    outcome = character(),
+    region_id = character(),
+    low = numeric(),
+    central = numeric(),
+    high = numeric()
+  )
+
+  selected_crfs <- crfs %>% filter(pollutant %in% hia_polls)
+  paf_crfs <- list()
+  region_errors <- list()
+
+  for (scenario in scenarios) {
+    conc_scenario <- conc_map[[scenario]]
+    conc_df <- dplyr::bind_rows(conc_scenario, .id = "region_id")
+    # RR-curve CRFs (compatibility RR rows, and tabular rows of an explicit
+    # Set) keep the unfiltered rows so their missingness matches
+    # compute_hia_paf_rr_curves(); log-linear CRFs keep the whole-table rule.
+    unfiltered_conc_scenario <- split(conc_df, conc_df$region_id)
+
+    if (!all(complete.cases(conc_df))) {
+      warning("missing values in concentration or population data")
+      conc_df <- stats::na.omit(conc_df)
+    }
+
+    conc_scenario <- split(conc_df, conc_df$region_id)
+    scenario_rows <- list()
+    scenario_row_rr_regions <- character()
+    failed_rr_regions <- character()
+
+    for (crf_i in seq_len(nrow(selected_crfs))) {
+      crf <- selected_crfs[crf_i, , drop = FALSE]
+      is_compatibility_rr_crf <- crf$crf_id %in% compatibility_rr_crf_ids
+      uses_crf_columns_only <- is_compatibility_rr_crf ||
+        (!diagnostic_set && identical(crf$form, CRF_FORM_TABULAR))
+      species_name <- hiapoll_to_species(crf$pollutant)
+
+      if (length(species_name) != 1 || is.na(species_name)) {
+        stop("No concentration species mapping found for pollutant: ", crf$pollutant, call. = FALSE)
+      }
+
+      base_name <- paste0("conc_baseline_", species_name)
+      perm_name <- paste0("conc_scenario_", species_name)
+      crf_conc_scenario <- if (uses_crf_columns_only) {
+        unfiltered_conc_scenario
+      } else {
+        conc_scenario
+      }
+
+      for (region_id in names(crf_conc_scenario)) {
+        if (
+          is_compatibility_rr_crf &&
+          region_id %in% failed_rr_regions
+        ) {
+          next
+        }
+
+        compute_region_effect <- function() {
+          region_conc <- crf_conc_scenario[[region_id]]
+          required_cols <- c(base_name, perm_name, "pop")
+          missing_cols <- setdiff(required_cols, names(region_conc))
+
+          if (length(missing_cols) > 0) {
+            stop(
+              "Concentration data for region ", region_id,
+              " is missing required columns: ",
+              paste(missing_cols, collapse = ", "),
+              call. = FALSE
+            )
+          }
+          if (uses_crf_columns_only) {
+            region_conc <- region_conc[
+              stats::complete.cases(
+                region_conc[, required_cols, drop = FALSE]
+              ),
+              ,
+              drop = FALSE
+            ]
+            if (nrow(region_conc) == 0) {
+              return(NULL)
+            }
+          }
+
+          apply_crf(
+            crf = crf,
+            conc_base = region_conc[[base_name]],
+            conc_perm = region_conc[[perm_name]],
+            pop = region_conc[["pop"]],
+            region_id = region_id,
+            epi_version = epi_version
+          )
+        }
+
+        if (is_compatibility_rr_crf) {
+          attempt <- tryCatch(
+            list(value = compute_region_effect(), error = NULL),
+            error = function(error) list(value = NULL, error = error)
+          )
+          if (!is.null(attempt$error)) {
+            failed_rr_regions <- c(failed_rr_regions, region_id)
+            warning_message <- paste(
+              "Failed for region ", region_id, ": ",
+              paste0(
+                "[", crf$crf_id, " ",
+                crf$pollutant, "/", crf$cause, "/", crf$outcome, "] ",
+                conditionMessage(attempt$error)
+              )
+            )
+            logger::log_warn(warning_message)
+            warning(warning_message)
+            next
+          }
+          effect_df <- attempt$value
+        } else {
+          # Other Registry CRFs stay fail-fast, but every failing region is
+          # collected first so one error reports all of them.
+          attempt <- tryCatch(
+            list(value = compute_region_effect(), error = NULL),
+            error = function(error) list(value = NULL, error = error)
+          )
+          if (!is.null(attempt$error)) {
+            region_errors[[length(region_errors) + 1]] <- list(
+              scenario = scenario,
+              region_id = region_id,
+              crf = crf,
+              message = conditionMessage(attempt$error)
+            )
+            next
+          }
+          effect_df <- attempt$value
+        }
+
+        if (!is.null(effect_df)) {
+          scenario_rows[[length(scenario_rows) + 1]] <- effect_df
+          scenario_row_rr_regions <- c(
+            scenario_row_rr_regions,
+            if (is_compatibility_rr_crf) region_id else NA_character_
+          )
+        }
+      }
+    }
+
+    if (length(failed_rr_regions) > 0) {
+      # Match compute_hia_paf_rr_curves() by discarding the whole failed region.
+      keep_row <- is.na(scenario_row_rr_regions) |
+        !(scenario_row_rr_regions %in% failed_rr_regions)
+      scenario_rows <- scenario_rows[keep_row]
+    }
+
+    paf_crfs[[scenario]] <- if (length(scenario_rows) == 0) {
+      empty_crf_df
+    } else {
+      dplyr::bind_rows(scenario_rows)
+    }
+  }
+
+  if (length(region_errors) > 0) {
+    stop(.format_registry_region_errors(region_errors), call. = FALSE)
+  }
+
+  paf_crfs
+}
+
+.format_registry_region_errors <- function(region_errors, max_listed = 50L) {
+  lines <- vapply(region_errors, function(failure) {
+    crf <- failure$crf
+    paste0(
+      "- scenario ", failure$scenario,
+      ", region ", failure$region_id,
+      ", ", crf$crf_id,
+      " (", crf$pollutant, "/", crf$cause, "/", crf$outcome, "): ",
+      failure$message
+    )
+  }, character(1))
+  regions <- unique(vapply(region_errors, `[[`, character(1), "region_id"))
+
+  listed <- utils::head(lines, max_listed)
+  if (length(lines) > max_listed) {
+    listed <- c(listed, paste0("- ... and ", length(lines) - max_listed, " more"))
+  }
+
+  paste0(
+    "Registry CRF calculation failed for ", length(regions), " region(s): ",
+    paste(regions, collapse = ", "),
+    ". No results were returned. Fix these inputs or exclude these regions ",
+    "before rerunning.\n",
+    paste(listed, collapse = "\n")
+  )
+}
 
 # define a function to calculate the hazard ratio for a specific concentration, cause and age group
 get_hazard_ratio <- function(pm,
@@ -394,4 +624,16 @@ diagnose_paf <- function(paf, diagnostic_folder) {
     ggsave(filename = file.path(diagnostic_folder, "paf_by_outcome.png"), plot = plot, width = 10, height = 6)
 
   }
+}
+
+has_rr_sources <- function(rr_sources) {
+  if (is.null(rr_sources)) {
+    return(FALSE)
+  }
+
+  if (is.data.frame(rr_sources)) {
+    return(nrow(rr_sources) > 0)
+  }
+
+  length(rr_sources) > 0
 }

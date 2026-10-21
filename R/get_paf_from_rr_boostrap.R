@@ -68,7 +68,11 @@ get_paf_from_rr_boostrap <- function(rr_base, rr_perm, age_weights, pop, n_boot 
   library(foreach)
   library(doParallel)
 
-  num_cores <- detectCores() - 1
+  detected_cores <- detectCores()
+  num_cores <- if (is.na(detected_cores)) 1L else max(1L, detected_cores - 1L)
+  if (tolower(Sys.getenv("_R_CHECK_LIMIT_CORES_")) == "true") {
+    num_cores <- min(num_cores, 2L)
+  }
 
   # Register the parallel backend
   cl <- makeCluster(num_cores)

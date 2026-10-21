@@ -127,7 +127,8 @@ run_compute_hia_deaths <- function(grid, baseline_val = 60, target_val = 20) {
     pop_year             = 2020,
     epi_version          = "gbd2023",
     scale_base_year      = NULL,
-    scale_target_year    = NULL
+    scale_target_year    = NULL,
+    diagnostic_folder   = NULL
   )
 
   hia %>%

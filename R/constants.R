@@ -60,3 +60,15 @@ AGE_ADULTS_SPLIT = c(
   "75-79",
   "80+"
 )
+
+# form of CRF
+CRF_FORM_LOG_LINEAR = "log_linear"
+CRF_FORM_TABULAR = "tabular"
+CRF_FORM_VALUES = c(CRF_FORM_LOG_LINEAR, CRF_FORM_TABULAR)
+
+# Registry rows reserved for deterministic internal validation tests.
+CRF_INTERNAL_REFERENCE_IDS = "registry_fixture"
+
+# Packaged presets reserved for development and deterministic smoke tests.
+CRF_INTERNAL_PRESETS = "experimental_default"
+CRF_INTERNAL_PRESET_NOTE = " [Internal development preset; not reviewed or recommended.]"

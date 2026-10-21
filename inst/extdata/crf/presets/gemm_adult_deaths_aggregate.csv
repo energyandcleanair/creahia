@@ -1,0 +1,2 @@
+pollutant,cause,outcome,crf_id,notes
+PM25,NCD.LRI,Deaths,gemm_pm25_ncd_lri_adult_deaths_v1,Opt-in GEMM adult aggregate mortality curve; do not combine with the component preset

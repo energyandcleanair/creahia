@@ -6,6 +6,14 @@ man/
 .Renviron
 inst/doc
 
+# Local development plans / presentation
+.github/prompts/dev/
+.codex-artifacts
+presentation/
+
+# Shared agent instructions are part of the repository.
+!AGENTS.md
+
 tmp/
 cache/
 keys/
@@ -14,3 +22,5 @@ validation/*.RDS
 examples/example_ph/
 examples/example_ph_who/
 examples/example_meteosim/
+tests/testthat/diagnostic/
+.DS_Store

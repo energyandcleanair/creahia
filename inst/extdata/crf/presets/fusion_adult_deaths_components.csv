@@ -1,0 +1,7 @@
+pollutant,cause,outcome,crf_id,notes
+PM25,LRI,Deaths,fusion_pm25_lri_25plus_deaths_v1,Opt-in Fusion adult component mortality curve
+PM25,COPD,Deaths,fusion_pm25_copd_25plus_deaths_v1,Opt-in Fusion adult component mortality curve
+PM25,Diabetes,Deaths,fusion_pm25_diabetes_25plus_deaths_v1,Opt-in Fusion adult component mortality curve
+PM25,IHD,Deaths,fusion_pm25_ihd_adult_deaths_v1,Opt-in Fusion adult component mortality curve
+PM25,LC,Deaths,fusion_pm25_lc_25plus_deaths_v1,Opt-in Fusion adult component mortality curve
+PM25,Stroke,Deaths,fusion_pm25_stroke_adult_deaths_v1,Opt-in Fusion adult component mortality curve

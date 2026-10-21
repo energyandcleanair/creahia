@@ -1,19 +1,20 @@
 Package: creahia
 Type: Package
 Title: CREA HIA
-Version: 0.7.6
+Version: 0.8.0
 Authors@R: c(
     person("Hubert", "Thieriot", email = "hubert@energyandcleanair.org", role = c("cre", "aut")),
     person("Lauri", "Myllyvirta", email = "lauri@energyandcleanair.org", role = c("aut")),
     person("Danny", "Hartono", email = "danny@energyandcleanair.org", role = c("ctb"))
     )
 Maintainer: Hubert Thieriot <hubert@energyandcleanair.org>
-Description: Health impact assessment from gridded concentration data
+Description: Health impact assessment from gridded concentration data.
 License: GPL 3.0
 Encoding: UTF-8
 LazyData: true
 Imports:
     countrycode,
+    dplyr,
     magrittr,
     readxl,
     readr,
@@ -32,7 +33,9 @@ Imports:
     foreach,
     priceR,
     terra,
+    tidyr,
     logger,
+    lubridate,
     matrixStats,
     rlang,
     sf,
@@ -42,7 +45,9 @@ Imports:
     jsonlite,
     ggspatial,
     doParallel,
-    creaexposure
+    creaexposure,
+    RColorBrewer,
+    zoo
 Depends:
     tidyverse,
     creahelpers,
@@ -53,7 +58,6 @@ Remotes:
     laurimyllyvirta/lauR,
     nset-ornl/wbstats
 RoxygenNote: 7.2.3
-Suggests: 
+Suggests:
     knitr,
     rmarkdown
-VignetteBuilder: knitr

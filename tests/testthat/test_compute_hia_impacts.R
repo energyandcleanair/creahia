@@ -792,3 +792,27 @@ test_that("to_long_hia extracts pollutant from column names when not present as 
   expect_gt(nrow(no2_ihd_rows), 0)
   expect_equal(unique(no2_ihd_rows$number), -30)
 })
+
+test_that("add_double_counted accepts crfs_set output with registry metadata", {
+  hia_data <- tibble::tibble(
+    cause = "NCD.LRI",
+    outcome = "Deaths",
+    pollutant = "NO2",
+    number = 10
+  )
+
+  epi_minimal <- tibble::tibble(
+    location_id = 1,
+    estimate = "central"
+  )
+
+  result <- add_double_counted(
+    hia = hia_data,
+    crfs = crfs_set(presets = "experimental_default"),
+    epi = epi_minimal
+  )
+
+  expect_true("double_counted" %in% names(result))
+  expect_false(any(is.na(result$double_counted)))
+  expect_false(result$double_counted)
+})
