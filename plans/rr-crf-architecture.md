@@ -247,6 +247,13 @@ for comparison. A maintainer must explicitly request strict overlap validation
 with `validate_crf_selection(..., check_double_counting = TRUE)` before treating
 a selection as non-overlapping or summable. The resolved compatibility Set
 also preserves the overlap marking expected by historical output.
+Calculation output from an explicit `crfs_set()` likewise applies `dc_groups`:
+when an aggregate is present for a pollutant/outcome group, its component impact
+rows are marked `double_counted = TRUE`. The choice is made by Set class:
+compatibility (`creahia_hia_diagnostic_set`) and historical
+(`creahia_historical_crf_set`) Sets keep their legacy marking, and every other
+`crfs_set()` is marked from `dc_groups`, so an unrecognised Set errs toward
+flagging overlap.
 
 Passing numerical parity does not by itself approve a new aggregate mapping.
 Changing an overlap group or interpreting a new aggregate requires methodology
@@ -256,7 +263,7 @@ review.
 
 | Input situation | Current behavior |
 | --- | --- |
-| Explicit `crfs_set()` | Use the Registry calculation directly |
+| Explicit `crfs_set()` | Use the complete Registry Set directly; omitted `rr_sources` adds no legacy RR, explicit non-overlapping RR may be combined, and overlapping slots are rejected before PAF calculation |
 | Supported legacy-shaped configuration with all components ready | Resolve a canonical specification and use an internal Registry Set |
 | Explicit CRF data frame | Leave unchanged; it does not enter the current compatibility-adapter slice |
 | CRF profile absent from compatibility storage | Leave unchanged |
@@ -266,7 +273,8 @@ review.
 `inspect_hia_configuration()` in `R/hia_configuration_inspection.R` exposes the
 planned route, resolved components, references, blockers, and population intent
 without running the HIA. Use it to understand a configuration before debugging
-the numerical calculation.
+the numerical calculation. Its `registry_set` can be reused as a complete Set;
+RR-derived rows retain compatibility missingness and regional error isolation.
 
 Shadow and dual-run observers are diagnostic tools. When a diagnostic observer
 is enabled and routing has not been explicitly configured, routing defaults to

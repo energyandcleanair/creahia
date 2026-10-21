@@ -333,6 +333,13 @@
     dplyr::distinct(crf_id, .keep_all = TRUE)
   validate_crf_selection(crfs)
 
+  .new_historical_crf_set(crfs)
+}
+
+
+# Historical CRF and RR rows carry legacy double_counted values that dc_groups
+# cannot re-derive, so Sets built from them must declare their origin.
+.new_historical_crf_set <- function(crfs) {
   crfs <- new_crfs_set(crfs)
   class(crfs) <- unique(c("creahia_historical_crf_set", class(crfs)))
   crfs

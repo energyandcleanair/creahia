@@ -190,6 +190,10 @@ inspection$references |>
 `historical_reproduction` or `not_reviewed` can support compatibility
 reproduction without being recommended as a formal scientific default.
 
+`inspection$registry_set` is the Set that the calculation will actually use.
+Passing it back to `compute_hia()` as `crfs` reproduces the results of the
+original call.
+
 ## Recommended Workflow 2: Find a Suitable Preset and CRF
 
 First list the available Presets, then inspect the CRFs selected by one Preset:
@@ -311,6 +315,12 @@ hia <- compute_hia(
 )
 ```
 
+`crfs_set()` is the complete method Set for this analysis. When it is supplied
+without `rr_sources`, `compute_hia()` does not additionally calculate legacy RR
+curves. To use a corresponding RR-derived method, include its CRF in the Set
+rather than selecting the same slot again through `rr_sources`; explicitly
+overlapping selections are rejected before PAF calculation.
+
 Creating a `crfs_set()` does not modify the Registry or package data, and it
 does not run an HIA by itself.
 
@@ -327,6 +337,11 @@ stops and identifies the conflict. Use `replace` to change an existing slot.
 For example, the `NCD.LRI` aggregate overlaps with component causes including
 IHD, Stroke, COPD, LC, and LRI. The system can retain both types of result for
 comparison, but they must not all be added together.
+
+Calculation output marks the component rows as `double_counted = TRUE` when
+their aggregate is present in the same pollutant and outcome group, whether the
+aggregate comes from the Set itself or from a non-overlapping explicit RR
+selection. Exclude those rows when adding results.
 
 Use strict validation for a formal method Set:
 
@@ -379,8 +394,8 @@ incompatible public interface. Those problems require fixing the environment
 or reinstalling a known earlier package version.
 
 An analysis that explicitly supplies a `crfs_set()` continues to use its
-Registry selection directly. Do not treat `FALSE` as a routine switch between
-scientific methods.
+complete Registry selection directly and does not add default legacy RR
+curves. Do not treat `FALSE` as a routine switch between scientific methods.
 
 ## Important Points When Using the Results
 

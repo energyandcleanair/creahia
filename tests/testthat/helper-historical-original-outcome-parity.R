@@ -5,7 +5,7 @@ historical_original_outcome_registry <- function() {
       cause %in% c("Diabetes", CAUSE_LRICHILD)
     ) %>%
     dplyr::select(dplyr::all_of(CRF_REGISTRY_REQUIRED_COLUMNS)) %>%
-    new_crfs_set()
+    .new_historical_crf_set()
 }
 
 

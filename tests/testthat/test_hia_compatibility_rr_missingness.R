@@ -423,42 +423,124 @@ test_that("NO2 log-linear CRFs retain the whole-table complete-case rule", {
 })
 
 
-test_that("explicit CRF Sets deliberately retain whole-table missingness pending a maintainer decision", {
+compute_explicit_set_missingness_paf <- function(case, explicit_set) {
   fixture <- rr_missingness_fixture()
-  explicit_set <- crfs_set(presets = "gemm_adult_deaths_components")
 
-  compute_explicit <- function(case) {
-    testthat::with_mocked_bindings(
-      get_epi_count_long = function(...) fixture$epi_long,
-      compute_hia_paf(
-        conc_map = rr_missingness_conc_map(case),
-        species = c("pm25", "no2"),
-        regions = fixture$regions,
-        rr_sources = character(),
-        crfs = explicit_set,
-        diagnostic_folder = NULL,
-        crf_compute = "registry"
-      ),
-      .package = "creahia"
-    )
+  suppressWarnings(testthat::with_mocked_bindings(
+    get_epi_count_long = function(...) fixture$epi_long,
+    compute_hia_paf(
+      conc_map = rr_missingness_conc_map(case),
+      species = c("pm25", "no2"),
+      regions = fixture$regions,
+      rr_sources = character(),
+      crfs = explicit_set,
+      diagnostic_folder = NULL,
+      crf_compute = "registry"
+    ),
+    .package = "creahia"
+  ))
+}
+
+
+test_that("explicit Set tabular CRFs use only their pollutant's columns", {
+  explicit_set <- crfs_set(presets = "gemm_adult_deaths_components")
+  select_pm25 <- function(paf) {
+    paf %>%
+      dplyr::filter(.data$pollutant == "PM25") %>%
+      arrange_rr_missingness_paf()
   }
 
-  mixed <- suppressWarnings(compute_explicit("other_pollutant_missing"))
-  reference <- compute_explicit("complete_case_reference")
-  select_ihd_deaths <- function(paf) {
+  explicit <- compute_explicit_set_missingness_paf(
+    "other_pollutant_missing",
+    explicit_set
+  )
+  routed <- run_rr_missingness_route(
+    "other_pollutant_missing",
+    routing = TRUE,
+    capture_paf = TRUE
+  )$value
+  whole_table <- compute_explicit_set_missingness_paf(
+    "complete_case_reference",
+    explicit_set
+  )
+
+  # The same GEMM curves give the same PAF through an explicit Set and through
+  # compatibility routing, rather than dropping cells where only NO2 is missing.
+  explicit_rows <- select_pm25(explicit)
+  routed_rows <- select_pm25(routed) %>%
+    dplyr::semi_join(
+      explicit_rows,
+      by = c("pollutant", "cause", "outcome", "region_id")
+    ) %>%
+    dplyr::select(dplyr::all_of(names(explicit_rows)))
+  expect_equal(nrow(explicit_rows), 5L)
+  expect_equal(explicit_rows, routed_rows, tolerance = 1e-12)
+
+  ihd_deaths <- function(paf) {
     paf %>%
-      dplyr::filter(
-        .data$pollutant == "PM25",
-        .data$cause == "IHD",
-        .data$outcome == "Deaths"
-      ) %>%
+      dplyr::filter(.data$cause == "IHD", .data$outcome == "Deaths") %>%
       dplyr::pull("central")
   }
+  expect_false(isTRUE(all.equal(
+    ihd_deaths(explicit_rows),
+    ihd_deaths(select_pm25(whole_table))
+  )))
+})
+
+
+test_that("explicit Set log-linear CRFs keep the whole-table complete-case rule", {
+  explicit_set <- crfs_set(
+    presets = "gemm_adult_deaths_components",
+    add = list(list(crf_id = "legacy_no2_asthma_1to18_incidence_v1"))
+  )
+  select_no2 <- function(paf) {
+    paf %>%
+      dplyr::filter(.data$pollutant == "NO2") %>%
+      arrange_rr_missingness_paf()
+  }
+
+  # pm25_missing drops its first row from the whole table; its second row is
+  # complete_case_reference.
+  mixed <- compute_explicit_set_missingness_paf("pm25_missing", explicit_set)
+  reference <- compute_explicit_set_missingness_paf(
+    "complete_case_reference",
+    explicit_set
+  )
+
+  expect_equal(nrow(select_no2(mixed)), 1L)
+  expect_true(select_no2(mixed)$central != 0)
+  expect_equal(select_no2(mixed), select_no2(reference), tolerance = 1e-12)
+})
+
+
+test_that("mixed missingness PM2.5 PAF matches fixed values", {
+  routed <- run_rr_missingness_route(
+    "other_pollutant_missing",
+    routing = TRUE,
+    capture_paf = TRUE
+  )$value
+
+  # Fixed values from the established legacy RR route (routing = FALSE) with
+  # the packaged default EPI. Live parity cannot detect both routes drifting
+  # together; do not update these values without explaining the change.
+  observed <- routed %>%
+    dplyr::filter(
+      .data$pollutant == "PM25",
+      .data$cause == "IHD",
+      .data$outcome %in% c("Deaths", "YLLs")
+    ) %>%
+    dplyr::arrange(.data$outcome) %>%
+    dplyr::select(outcome, low, central, high)
 
   expect_equal(
-    select_ihd_deaths(mixed),
-    select_ihd_deaths(reference),
-    tolerance = 1e-12
+    as.data.frame(observed),
+    data.frame(
+      outcome = c("Deaths", "YLLs"),
+      low = c(0.0462333536229005, 0.0533990821100956),
+      central = c(0.0513365714490304, 0.0593136453905775),
+      high = c(0.0564673488156938, 0.0652641776583348)
+    ),
+    tolerance = 1e-10
   )
 })
 

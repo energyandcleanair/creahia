@@ -271,6 +271,11 @@ hia <- compute_hia(
 )
 ```
 
+The Set is the complete method selection, so omitting `rr_sources` does not add
+the default legacy RR curves. Add the required RR-derived CRF to the Set instead
+of selecting an overlapping slot through both interfaces; explicit overlaps
+are rejected before PAF calculation.
+
 The Set is compute-ready, but creating it does not run HIA or change the
 Registry. Ordinary legacy CRF inputs and package defaults remain unchanged.
 
@@ -364,7 +369,10 @@ The main output fields are:
 - `population_year`: supplied and resolved population-year intent.
 
 For a Registry-ready call, `registry_set` and `references` contain the exact
-inputs that the compatibility route would pass to the shared engine. For an
+inputs that the compatibility route would pass to the shared engine. Passing
+that `registry_set` back as `crfs` reproduces the results of the original
+legacy-shaped call, including its missing-value handling, regional error
+isolation, and `double_counted` marking. For an
 unready call, `route` is `legacy`, `registry_set` is `NULL`, and
 `blocking_components` explains what is missing. Definitions marked
 `historical_reproduction` or `not_reviewed` support compatibility only and must

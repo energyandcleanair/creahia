@@ -152,6 +152,17 @@ hiapoll_to_species <- function(hiapoll) {
 }
 
 
+# Compatibility and historical Sets carry the legacy double_counted marking
+# expected by historical output. Every other crfs_set() is marked from
+# dc_groups, so a Set whose origin is not recognised errs toward flagging
+# overlap rather than allowing aggregate and component rows to be summed.
+.crfs_set_uses_dc_groups <- function(crfs) {
+  is_crfs_set(crfs) &&
+    !inherits(crfs, c("creahia_hia_diagnostic_set", "creahia_historical_crf_set")) &&
+    !any(crfs$reference_id %in% CRF_INTERNAL_REFERENCE_IDS)
+}
+
+
 #' Key function to add a double_counted field to hia results
 #'
 #' @param hia
@@ -182,8 +193,14 @@ add_double_counted <- function(hia, crfs, epi) {
         by = c('cause', 'outcome', 'pollutant')
       )
 
+  public_set_output <- .crfs_set_uses_dc_groups(crfs)
+  if (public_set_output) {
+    joined <- joined %>%
+      dplyr::mutate(double_counted = NA)
+  }
+
   # Except PM25, all of them should have been found in CRFs
-  if(nrow(joined %>% filter(is.na(double_counted) & pollutant != 'PM25' & number > 0)) > 0) {
+  if(!public_set_output && nrow(joined %>% filter(is.na(double_counted) & pollutant != 'PM25' & number > 0)) > 0) {
     stop('merged has failed in double counting detection')
   }
 

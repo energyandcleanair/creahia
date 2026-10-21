@@ -68,8 +68,19 @@ compute_hia <- function(conc_map,
     )
   }
 
-  if (is_crfs_set(crfs)) {
+  crfs_set_input <- is_crfs_set(crfs)
+  if (crfs_set_input) {
     crf_compute <- "registry"
+    if (
+      !argument_provenance$rr_sources_supplied &&
+      is.null(calc_causes) &&
+      is.null(gbd_causes)
+    ) {
+      rr_sources <- tibble::tibble(
+        cause = character(),
+        source = character()
+      )
+    }
   }
 
   # Fix inputs: if scale_base_year or scale_target_year is not null,
@@ -93,6 +104,7 @@ compute_hia <- function(conc_map,
 
   # Parse sources of relative risk
   rr_sources <- parse_rr_sources(rr_selection$rr_sources)
+  .validate_hia_crfs_set_rr_overlap(crfs, rr_sources)
 
   validate_crfs_against_epi(crfs = crfs, epi = epi, species = species)
 
@@ -188,4 +200,52 @@ compute_hia <- function(conc_map,
   }
 
   return(impacts)
+}
+
+
+.hia_crfs_set_rr_overlap <- function(crfs, rr_sources) {
+  if (!is_crfs_set(crfs) || !has_rr_sources(rr_sources)) {
+    return(tibble::tibble())
+  }
+
+  # RR curves are PM2.5-only, matching compute_hia_paf_rr_curves().
+  rr_slots <- get_cause_source(rr_sources, add_measure = TRUE) %>%
+    dplyr::transmute(
+      pollutant = "PM25",
+      cause = .data$cause,
+      outcome = .data$measure
+    ) %>%
+    dplyr::distinct()
+  crf_slots <- crfs %>%
+    dplyr::distinct(.data$pollutant, .data$cause, .data$outcome)
+
+  dplyr::inner_join(
+    crf_slots,
+    rr_slots,
+    by = c("pollutant", "cause", "outcome")
+  ) %>%
+    dplyr::arrange(.data$pollutant, .data$cause, .data$outcome)
+}
+
+
+.validate_hia_crfs_set_rr_overlap <- function(crfs, rr_sources) {
+  overlap <- .hia_crfs_set_rr_overlap(crfs, rr_sources)
+  if (nrow(overlap) == 0) {
+    return(invisible(TRUE))
+  }
+
+  overlap_labels <- paste(
+    overlap$pollutant,
+    overlap$cause,
+    overlap$outcome,
+    sep = "/"
+  )
+  stop(
+    paste0(
+      "crfs and rr_sources select overlapping HIA slots: ",
+      paste(overlap_labels, collapse = ", "),
+      ". Remove the overlapping rr_sources or include those methods only in the crfs Set."
+    ),
+    call. = FALSE
+  )
 }

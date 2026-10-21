@@ -5,7 +5,7 @@ historical_rr_parity_registry <- function(source, cause) {
       .data$cause == .env$cause
     ) %>%
     dplyr::select(dplyr::all_of(CRF_REGISTRY_REQUIRED_COLUMNS)) %>%
-    new_crfs_set()
+    .new_historical_crf_set()
 }
 
 

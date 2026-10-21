@@ -58,6 +58,13 @@ get_cause_source <- function(rr_sources, add_measure=F) {
 #' # Direct tibble input
 #' parse_rr_sources(tibble(cause = c("cause1", "cause2"), source = c(RR_GEMM, RR_ORIGINAL)))
 parse_rr_sources <- function(rr_sources) {
+
+  if (is.null(rr_sources) || length(rr_sources) == 0) {
+    return(tibble::tibble(
+      cause = character(),
+      source = character()
+    ))
+  }
   
   # Case 1: If already a tibble with cause and source, return directly
   if (is.data.frame(rr_sources) && all(c("cause", "source") %in% names(rr_sources))) {

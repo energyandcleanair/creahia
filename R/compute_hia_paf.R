@@ -299,6 +299,7 @@ compute_hia_paf_crfs_registry <- function(species,
   hia_polls <- species_to_hiapoll(species)
   scenarios <- names(conc_map)
   compatibility_rr_crf_ids <- .hia_compatibility_rr_crf_ids(crfs)
+  diagnostic_set <- inherits(crfs, "creahia_hia_diagnostic_set")
 
   empty_crf_df <- tibble::tibble(
     pollutant = character(),
@@ -316,9 +317,10 @@ compute_hia_paf_crfs_registry <- function(species,
   for (scenario in scenarios) {
     conc_scenario <- conc_map[[scenario]]
     conc_df <- dplyr::bind_rows(conc_scenario, .id = "region_id")
-    # Compatibility RR CRFs retain the unfiltered rows so their missingness
-    # matches compute_hia_paf_rr_curves(); other CRFs keep the legacy rule.
-    compatibility_rr_conc_scenario <- split(conc_df, conc_df$region_id)
+    # RR-curve CRFs (compatibility RR rows, and tabular rows of an explicit
+    # Set) keep the unfiltered rows so their missingness matches
+    # compute_hia_paf_rr_curves(); log-linear CRFs keep the whole-table rule.
+    unfiltered_conc_scenario <- split(conc_df, conc_df$region_id)
 
     if (!all(complete.cases(conc_df))) {
       warning("missing values in concentration or population data")
@@ -333,6 +335,8 @@ compute_hia_paf_crfs_registry <- function(species,
     for (crf_i in seq_len(nrow(selected_crfs))) {
       crf <- selected_crfs[crf_i, , drop = FALSE]
       is_compatibility_rr_crf <- crf$crf_id %in% compatibility_rr_crf_ids
+      uses_crf_columns_only <- is_compatibility_rr_crf ||
+        (!diagnostic_set && identical(crf$form, CRF_FORM_TABULAR))
       species_name <- hiapoll_to_species(crf$pollutant)
 
       if (length(species_name) != 1 || is.na(species_name)) {
@@ -341,8 +345,8 @@ compute_hia_paf_crfs_registry <- function(species,
 
       base_name <- paste0("conc_baseline_", species_name)
       perm_name <- paste0("conc_scenario_", species_name)
-      crf_conc_scenario <- if (is_compatibility_rr_crf) {
-        compatibility_rr_conc_scenario
+      crf_conc_scenario <- if (uses_crf_columns_only) {
+        unfiltered_conc_scenario
       } else {
         conc_scenario
       }
@@ -368,7 +372,7 @@ compute_hia_paf_crfs_registry <- function(species,
               call. = FALSE
             )
           }
-          if (is_compatibility_rr_crf) {
+          if (uses_crf_columns_only) {
             region_conc <- region_conc[
               stats::complete.cases(
                 region_conc[, required_cols, drop = FALSE]
