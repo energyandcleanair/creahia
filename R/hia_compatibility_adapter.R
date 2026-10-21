@@ -19,11 +19,11 @@
   gbd_causes
 ) {
   if (!is.null(calc_causes) || !is.null(gbd_causes)) {
-    log_info("Using old parameters for calc_causes and gbd_causes. Ignoring rr_sources.")
     translated_rr_sources <- convert_old_parameters_to_rr_sources(
       calc_causes = calc_causes,
       gbd_causes = gbd_causes
     )
+    log_info("Using old parameters for calc_causes and gbd_causes. Ignoring rr_sources.")
 
     return(list(
       rr_sources = translated_rr_sources,

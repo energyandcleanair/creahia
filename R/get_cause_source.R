@@ -130,6 +130,26 @@ parse_rr_sources <- function(rr_sources) {
 convert_old_parameters_to_rr_sources <- function(calc_causes, gbd_causes){
 
   rr_sources <- list()
+
+  if (identical(calc_causes, "none")) {
+    return(tibble::tibble(
+      cause = character(),
+      source = character(),
+      outcome = character()
+    ))
+  }
+
+  if (length(calc_causes) == 0) {
+    stop(
+      paste(
+        "calc_causes must be provided as a preset name,",
+        "a '<cause>_<outcome>' vector, or \"none\";",
+        "NULL and empty character vectors are not valid conversion inputs."
+      ),
+      call. = FALSE
+    )
+  }
+
   gbd_causes <- gbd_causes %||% "default"
 
   preset_labels <- c("GEMM and GBD", "GBD only", "GEMM only")
@@ -137,13 +157,6 @@ convert_old_parameters_to_rr_sources <- function(calc_causes, gbd_causes){
     !(calc_causes %in% preset_labels)
 
   if (explicit_selection) {
-    if (identical(calc_causes, "none") || length(calc_causes) == 0) {
-      return(tibble::tibble(
-        cause = character(),
-        source = character(),
-        outcome = character()
-      ))
-    }
     if (!is.character(calc_causes) || any(!grepl("_", calc_causes))) {
       stop(
         paste(
