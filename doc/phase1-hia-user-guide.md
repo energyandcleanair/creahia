@@ -56,7 +56,7 @@ find.package("creahia")
 
 `packageVersion("creahia")` should report `0.8.0`. The path returned by
 `find.package("creahia")` is the library used on your computer; it is useful
-when diagnosing a local installation. When reporting an issue, include both 
+when diagnosing a local installation. When reporting an issue, include both
 outputs and the relevant workflow.
 
 ## What Does Not Need to Change in Existing Workflows?

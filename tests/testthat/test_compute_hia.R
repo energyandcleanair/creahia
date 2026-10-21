@@ -1,3 +1,18 @@
+test_that("compute_hia preserves positional arguments before dots", {
+  expected_before_dots <- c(
+    "conc_map", "species", "regions", "scenarios", "rr_sources",
+    "epi_version", "epi", "crfs_version", "crfs", "diagnostic_folder",
+    "pop_year", "scale_base_year", "scale_target_year", "calc_causes",
+    "gbd_causes"
+  )
+  argument_names <- names(formals(compute_hia))
+  dots_position <- match("...", argument_names)
+
+  expect_equal(argument_names[seq_len(dots_position - 1L)], expected_before_dots)
+  expect_gt(match("crf_compute", argument_names), dots_position)
+})
+
+
 test_that("compute_hia switches to registry path for crfs_set output", {
   registry_crfs <- crfs_set(presets = "experimental_default")
   seen <- new.env(parent = emptyenv())

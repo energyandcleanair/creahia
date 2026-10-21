@@ -17,6 +17,9 @@
 #' @param rr_version
 #' @param pop_year
 #' @param gbd_rr
+#' @param crf_compute Internal routing switch ("legacy" or "registry") for
+#'   maintainer diagnostics; not part of the supported public interface and may
+#'   be removed in Phase 2. A `crfs_set()` input always uses "registry".
 #'
 #' @return
 #' @export
@@ -32,7 +35,6 @@ compute_hia <- function(conc_map,
                         crfs_version = "default",
                         crfs = get_crfs(version = crfs_version),
                         diagnostic_folder = 'diagnostic',
-                        crf_compute = c("legacy", "registry"),
                         # Years
                         pop_year = NULL,
                         scale_base_year = NULL,
@@ -40,7 +42,8 @@ compute_hia <- function(conc_map,
                         # Old parameters
                         calc_causes = NULL,
                         gbd_causes = NULL,
-                        ...){
+                        ...,
+                        crf_compute = c("legacy", "registry")){
 
   argument_provenance <- list(
     rr_sources_supplied = !missing(rr_sources),

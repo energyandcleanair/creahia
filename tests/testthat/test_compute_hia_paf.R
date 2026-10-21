@@ -1,5 +1,39 @@
 # Test PAF computation functions
 
+test_that("compute_hia_paf keeps RR rows before CRF rows", {
+  rr_sources <- tibble::tibble(cause = "IHD", source = "gemm")
+  crfs <- tibble::tibble(
+    pollutant = "NO2", cause = "Asthma.1to18", outcome = "AsthmaIncidence"
+  )
+
+  with_mocked_bindings(
+    compute_hia_paf_rr_curves = function(...) list(
+      scenario1 = tibble::tibble(
+        pollutant = "PM25", cause = "rr", outcome = "Deaths", region_id = "BGD",
+        low = -0.1, central = -0.2, high = -0.3
+      )
+    ),
+    compute_hia_paf_crfs = function(...) list(
+      scenario1 = tibble::tibble(
+        pollutant = "NO2", cause = "crf", outcome = "AsthmaIncidence", region_id = "BGD",
+        low = -0.1, central = -0.2, high = -0.3
+      )
+    ),
+    {
+      result <- compute_hia_paf(
+        conc_map = list(scenario1 = list(BGD = data.frame(pop = 100))),
+        species = c("pm25", "no2"),
+        regions = data.frame(region_id = "BGD"),
+        rr_sources = rr_sources,
+        crfs = crfs,
+        diagnostic_folder = NULL
+      )
+    }
+  )
+
+  expect_identical(result$cause, c("rr", "crf"))
+})
+
 # Test data setup
 setup_test_data <- function() {
   # Create mock concentration data

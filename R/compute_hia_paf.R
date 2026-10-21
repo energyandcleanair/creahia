@@ -210,6 +210,10 @@ compute_hia_paf_crfs <- function(species,
 #' @param epi_version EPI data version
 #' @param rr_sources Vector of RR sources (for RR-based PAF)
 #' @param crfs CRF data table (for CRF-based PAF)
+#' @param diagnostic_folder Folder for PAF diagnostic plots, or NULL to skip them
+#' @param crf_compute Internal routing switch ("legacy" or "registry");
+#'   not part of the supported public interface and may be removed in Phase 2.
+#'   A `crfs_set()` input always uses "registry".
 #' @return Combined dataframe of PAF values from both methods
 #' @export
 compute_hia_paf <- function(conc_map,
@@ -241,6 +245,22 @@ compute_hia_paf <- function(conc_map,
   )
 
   
+  if (has_rr_sources(rr_sources)) {
+    print("Computing RR-based PAF")
+
+    paf_rr <- compute_hia_paf_rr_curves(
+      conc_map = conc_map,
+      scenarios = scenarios,
+      epi_version = epi_version,
+      rr_sources = rr_sources
+    )
+
+    paf <- bind_rows(
+      paf,
+      bind_rows(paf_rr, .id = "scenario")
+    )
+  }
+
   # Compute CRF-based PAF
   print("Computing CRF-based PAF")
 
@@ -265,22 +285,6 @@ compute_hia_paf <- function(conc_map,
     paf,
     bind_rows(paf_crf, .id = "scenario")
   )
-
-  if (has_rr_sources(rr_sources)) {
-    print("Computing RR-based PAF")
-
-    paf_rr <- compute_hia_paf_rr_curves(
-      conc_map = conc_map,
-      scenarios = scenarios,
-      epi_version = epi_version,
-      rr_sources = rr_sources
-    )
-
-    paf <- bind_rows(
-      paf,
-      bind_rows(paf_rr, .id = "scenario")
-    )
-  }
 
   diagnose_paf(paf, diagnostic_folder)
 
