@@ -313,6 +313,7 @@ compute_hia_paf_crfs_registry <- function(species,
 
   selected_crfs <- crfs %>% filter(pollutant %in% hia_polls)
   paf_crfs <- list()
+  region_errors <- list()
 
   for (scenario in scenarios) {
     conc_scenario <- conc_map[[scenario]]
@@ -416,7 +417,22 @@ compute_hia_paf_crfs_registry <- function(species,
           }
           effect_df <- attempt$value
         } else {
-          effect_df <- compute_region_effect()
+          # Other Registry CRFs stay fail-fast, but every failing region is
+          # collected first so one error reports all of them.
+          attempt <- tryCatch(
+            list(value = compute_region_effect(), error = NULL),
+            error = function(error) list(value = NULL, error = error)
+          )
+          if (!is.null(attempt$error)) {
+            region_errors[[length(region_errors) + 1]] <- list(
+              scenario = scenario,
+              region_id = region_id,
+              crf = crf,
+              message = conditionMessage(attempt$error)
+            )
+            next
+          }
+          effect_df <- attempt$value
         }
 
         if (!is.null(effect_df)) {
@@ -443,7 +459,38 @@ compute_hia_paf_crfs_registry <- function(species,
     }
   }
 
+  if (length(region_errors) > 0) {
+    stop(.format_registry_region_errors(region_errors), call. = FALSE)
+  }
+
   paf_crfs
+}
+
+.format_registry_region_errors <- function(region_errors, max_listed = 50L) {
+  lines <- vapply(region_errors, function(failure) {
+    crf <- failure$crf
+    paste0(
+      "- scenario ", failure$scenario,
+      ", region ", failure$region_id,
+      ", ", crf$crf_id,
+      " (", crf$pollutant, "/", crf$cause, "/", crf$outcome, "): ",
+      failure$message
+    )
+  }, character(1))
+  regions <- unique(vapply(region_errors, `[[`, character(1), "region_id"))
+
+  listed <- utils::head(lines, max_listed)
+  if (length(lines) > max_listed) {
+    listed <- c(listed, paste0("- ... and ", length(lines) - max_listed, " more"))
+  }
+
+  paste0(
+    "Registry CRF calculation failed for ", length(regions), " region(s): ",
+    paste(regions, collapse = ", "),
+    ". No results were returned. Fix these inputs or exclude these regions ",
+    "before rerunning.\n",
+    paste(listed, collapse = "\n")
+  )
 }
 
 # define a function to calculate the hazard ratio for a specific concentration, cause and age group

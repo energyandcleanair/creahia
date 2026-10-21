@@ -208,6 +208,27 @@ On the Registry compatibility route, historical RR curves have already been
 represented as Registry-shaped CRFs. The separate legacy `rr_sources` input is
 therefore emptied to prevent the same burden from being calculated twice.
 
+Compatibility-generated RR CRFs are identified by the internal `rr_crf_ids`
+provenance marker. Their complete cases use only that pollutant's baseline,
+scenario, and population columns, matching the legacy RR route. Errors are
+isolated per scenario and region: a `Failed for region` warning naming the
+failed `crf_id` and pollutant/cause/outcome is emitted and all RR results for
+that region are omitted. Log-linear CRFs retain their existing whole-table
+missingness and fail-fast behavior. Tabular CRFs in an explicit `crfs_set()`
+use the same per-pollutant complete-case rule as compatibility RR CRFs, so the
+same curve gives the same PAF through either entry point; log-linear CRFs in an
+explicit Set keep the whole-table rule. All other Registry CRFs, including
+every CRF of an explicit `crfs_set()`, are fail-fast by maintainer decision so
+that a failing region never silently lowers totals: the calculation still
+visits every scenario, region and CRF, collects each failure, and then stops
+once with an error listing every failing region, `crf_id`, slot and message
+(`.format_registry_region_errors()`). No partial results are returned. Users
+who need the legacy skip behaviour use the legacy-shaped call or exclude the
+listed regions. An opt-in skip mode is a Phase 2 interface decision. An
+inspected compatibility Registry Set reused directly as `crfs` is
+treated as a continuation of that legacy configuration and retains its
+diagnostic provenance, so it reproduces the legacy-shaped call's results.
+
 ### 8. Impact calculation
 
 Primary files:

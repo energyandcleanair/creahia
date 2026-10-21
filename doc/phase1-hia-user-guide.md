@@ -410,6 +410,11 @@ curves. Do not treat `FALSE` as a routine switch between scientific methods.
   is recommended.
 - Aggregate and component results may be viewed together, but they must not be
   summed without an explicit overlap review.
+- Existing workflows keep skipping a region that cannot be calculated, with a
+  `Failed for region` warning; check warnings before reporting totals. An
+  analysis that supplies a `crfs_set()` instead stops with one error listing
+  every failing region, so totals are never silently incomplete. Fix or
+  exclude the listed regions and run again.
 - Phase 1 preserves the existing public workflow. A Registry-first public API
   belongs to the future Phase 2 and is outside the scope of this update.
 

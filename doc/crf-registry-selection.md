@@ -758,6 +758,28 @@ When `compute_hia()` or `compute_hia_paf()` receives a `crfs_set()` result, CRF
 PAFs are calculated through the Registry path. `crfs_set()` itself does not run
 HIA, change package data, or establish a new default model.
 
+The `crf_compute` argument of `compute_hia()` and `compute_hia_paf()` is an
+internal routing switch for maintainer diagnostics. It is not part of the
+supported public interface and may be removed in Phase 2; pass a `crfs_set()`
+result instead of setting it.
+
+For `compute_hia()`, a supplied Set is complete: default legacy RR curves are
+not calculated in addition to it. Explicit non-overlapping `rr_sources` can be
+combined with the Set, while overlapping pollutant/cause/outcome slots are
+rejected before PAF calculation.
+
+If a calculation output contains an aggregate cause and its components in the
+same pollutant/outcome group, `compute_hia()` uses `dc_groups` to mark component
+rows `double_counted = TRUE`; exclude those rows from totals.
+
+An explicit Set never skips a failing region silently. If any region fails, for
+example because its exposure is outside a CRF's range or its EPI data are
+missing, `compute_hia()` still checks every region and then stops with one
+error that lists each failing scenario, region, `crf_id` and reason. No partial
+results are returned. Fix those inputs or exclude the listed regions and run
+again. Legacy-shaped calls keep their established behaviour of skipping a
+failed region with a `Failed for region` warning.
+
 ### `crfs_preset(name)`
 
 Resolves one preset directly to full Registry rows.
