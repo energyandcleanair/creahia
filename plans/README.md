@@ -39,6 +39,7 @@ This directory is being built in small reviewable slices.
 | Fix or extend RR/CRF/EPI behavior safely | `rr-crf-maintenance-runbook.md` | Available |
 | Use CRF Registry selections | `doc/crf-registry-selection.md` | Available |
 | User guide for phase1 refactor | `doc/phase1-hia-user-guide.md` | Available |
+| Track unresolved HIA methodology questions | [CREAHIA HIA Methodology Open Questions](https://docs.google.com/document/d/16aC5YlKkQ_-OQx6dRNN5rRx2otzpK1NXq9xPCfxcOmw/edit) (HIA team discussion and decisions; record confirmed decisions in the related change) | Available |
 
 Use the architecture guide to locate the responsible layer and the maintenance
 runbook to choose the required checks and review boundary.
@@ -52,7 +53,7 @@ runbook to choose the required checks and review boundary.
 | CRF compilation | `R/compile_crfs_*.R`, `R/compile_crfs_utils.R` |
 | Preset and Set selection | `R/crf_select.R`, `tests/testthat/test_crf_select.R` |
 | Double-counting protection | `R/crf_double_counting.R`, `tests/testthat/test_crf_double_counting.R` |
-| Legacy-call translation and routing | `R/hia_compatibility_adapter.R`, compatibility tests under `tests/testthat/` |
+| Legacy-call translation and routing | `R/hia_compatibility_adapter.R`, `tests/testthat/test_hia_compatibility_rr_missingness.R`, `tests/testthat/test_hia_compatibility_partial_region_errors.R`, `tests/testthat/test_hia_compatibility_rr_selection_validation.R`, and other compatibility tests under `tests/testthat/` |
 | Historical reproduction boundary | `R/historical_crf_registry.R`, historical Registry and migration tests |
 | EPI readiness | `R/crf_epi_validation.R`, `R/generate_epi_helpers.R`, `tests/testthat/test_crf_epi_validation.R` |
 | Cross-version fixed results | `tests/testthat/test_results_immutability.R` and fingerprint helpers/fixtures |
