@@ -209,7 +209,8 @@ test_that("compute_hia_paf coordinator function works", {
         regions = test_data$regions,
         scenarios = names(test_data$conc_map),
         rr_sources = test_data$rr_sources,
-        crfs = test_data$crfs
+        crfs = test_data$crfs,
+        diagnostic_folder = NULL
       )
 
       # Check structure - new structure is a single tibble
@@ -241,7 +242,8 @@ test_that("compute_hia_paf handles empty rr_sources", {
         regions = test_data$regions,
         scenarios = names(test_data$conc_map),
         rr_sources = c(),  # Empty RR sources
-        crfs = test_data$crfs
+        crfs = test_data$crfs,
+        diagnostic_folder = NULL
       )
 
       # Should only have CRF results (new structure is single tibble)
@@ -277,7 +279,8 @@ test_that("compute_hia_paf skips RR path for empty parsed rr_sources table", {
         regions = test_data$regions,
         scenarios = names(test_data$conc_map),
         rr_sources = empty_rr_sources,
-        crfs = test_data$crfs
+        crfs = test_data$crfs,
+        diagnostic_folder = NULL
       )
     }
   )
@@ -285,6 +288,31 @@ test_that("compute_hia_paf skips RR path for empty parsed rr_sources table", {
   expect_true(is.data.frame(result))
   expect_true("scenario" %in% names(result))
   expect_true(any(result$pollutant == "NO2"))
+})
+
+test_that("compute_hia_paf writes no files when diagnostic_folder is NULL", {
+  test_data <- setup_test_data()
+  test_dir <- tempfile("creahia-no-diagnostics-")
+  dir.create(test_dir)
+  old_dir <- setwd(test_dir)
+  on.exit({
+    setwd(old_dir)
+    unlink(test_dir, recursive = TRUE, force = TRUE)
+  }, add = TRUE)
+
+  result <- compute_hia_paf(
+    conc_map = test_data$conc_map,
+    species = test_data$species,
+    regions = test_data$regions,
+    scenarios = names(test_data$conc_map),
+    rr_sources = c(),
+    crfs = test_data$crfs,
+    diagnostic_folder = NULL
+  )
+
+  expect_s3_class(result, "data.frame")
+  expect_false(dir.exists("diagnostic"))
+  expect_length(list.files(".", all.files = TRUE, no.. = TRUE), 0L)
 })
 
 

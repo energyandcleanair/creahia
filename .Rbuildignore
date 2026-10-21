@@ -9,3 +9,5 @@
 ^\.posit$
 ^\.vscode$
 ^plans$
+^tests/testthat/diagnostic$
+^tests/testthat/tmp$

@@ -22,4 +22,5 @@ validation/*.RDS
 examples/example_ph/
 examples/example_ph_who/
 examples/example_meteosim/
+tests/testthat/diagnostic/
 .DS_Store
