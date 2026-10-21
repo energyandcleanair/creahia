@@ -426,7 +426,7 @@ individually valid.
 5. Keep aggregate and component alternatives separately selectable when they
    represent overlapping burden. They may coexist for comparison, but must not
    be summed or presented as non-overlapping.
-6. Update user documentation when public discovery or examples change.
+6. Update user documentation when public discovery or examples change; internal presets must not appear in user discovery or become defaults. An explicit internal name is development-only, not reviewed, and not a recommended method.
 
 ### Minimum tests
 

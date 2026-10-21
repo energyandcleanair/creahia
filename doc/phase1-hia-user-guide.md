@@ -242,7 +242,7 @@ The following example starts from the GEMM adult component Preset:
 
 ```r
 add <- list(
-  list(crf_id = "legacy_no2_asthma_1to18_incidence_v1")
+  list(crf_id = "fusion_pm25_diabetes_25plus_deaths_v1")
 )
 
 remove <- list(
@@ -282,6 +282,21 @@ validate_crf_selection(
   check_double_counting = TRUE
 )
 ```
+
+This is syntax-only: it adds a public Diabetes deaths CRF so the `add` workflow
+can be reviewed without selecting a legacy row. It does not recommend mixing
+different RR families in a scientific analysis; source choice remains a
+methodology decision.
+
+### Legacy Registry rows
+
+The public Registry currently includes two `legacy_` rows migrated from the
+previous `CRFs.csv` table. They can be searched and explicitly selected, but
+are not methodologically reviewed or recommended defaults.
+`legacy_no2_ncdlri_deaths_v1` cites `legacy_default_crfs`, a temporary
+provenance record rather than a scientific source.
+`legacy_no2_asthma_1to18_incidence_v1` cites `khreis_2017_childhood_asthma`;
+a recovered citation is not a methodology endorsement.
 
 The resulting `crfs` object can then be passed to the existing HIA compute
 flow:

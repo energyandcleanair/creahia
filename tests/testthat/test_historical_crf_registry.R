@@ -340,22 +340,22 @@ test_that("historical storage is invisible to public Registry selection", {
   expect_equal(nrow(search_crf_registry(query = historical_id)), 0)
 
   override_options <- crf_override_options(
-    presets = "experimental_default"
+    presets = "gemm_adult_deaths_components"
   )
   expect_false(historical_id %in% override_options$crf_id)
 
-  preview <- preview_crf_set(presets = "experimental_default")
+  preview <- preview_crf_set(presets = "gemm_adult_deaths_components")
   expect_false(historical_id %in% preview$crf_id)
   expect_error(
     preview_crf_set(
-      presets = "experimental_default",
+      presets = "gemm_adult_deaths_components",
       add = list(list(crf_id = historical_id))
     ),
     "Unknown addition crf_id"
   )
   expect_error(
     crfs_set(
-      presets = "experimental_default",
+      presets = "gemm_adult_deaths_components",
       add = list(list(crf_id = historical_id))
     ),
     "Unknown addition crf_id"

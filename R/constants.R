@@ -68,3 +68,7 @@ CRF_FORM_VALUES = c(CRF_FORM_LOG_LINEAR, CRF_FORM_TABULAR)
 
 # Registry rows reserved for deterministic internal validation tests.
 CRF_INTERNAL_REFERENCE_IDS = "registry_fixture"
+
+# Packaged presets reserved for development and deterministic smoke tests.
+CRF_INTERNAL_PRESETS = "experimental_default"
+CRF_INTERNAL_PRESET_NOTE = " [Internal development preset; not reviewed or recommended.]"

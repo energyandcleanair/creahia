@@ -2,10 +2,62 @@ CRF_SELECTION_REQUIRED_COLUMNS <- c("pollutant", "cause", "outcome", "crf_id")
 CRF_PRESET_REQUIRED_COLUMNS <- c("pollutant", "cause", "outcome", "crf_id", "notes")
 
 available_crf_presets <- function() {
+  .available_crf_presets()
+}
+
+.available_crf_presets <- function(include_internal = FALSE) {
   preset_dir <- get_hia_path("crf/presets", error_if_not_exists = TRUE)
   preset_files <- list.files(preset_dir, pattern = "\\.csv$", full.names = FALSE)
+  preset_names <- sort(sub("\\.csv$", "", preset_files))
 
-  sort(sub("\\.csv$", "", preset_files))
+  if (!include_internal) {
+    preset_names <- setdiff(preset_names, CRF_INTERNAL_PRESETS)
+  }
+
+  preset_names
+}
+
+assert_crf_preset_name <- function(name) {
+  if (missing(name) || length(name) == 0 || any(is.na(name)) || any(name == "")) {
+    stop(
+      "`name` must be a non-empty CRF preset name. Use `available_crf_presets()` to list available presets.",
+      call. = FALSE
+    )
+  }
+
+  available_presets <- .available_crf_presets(include_internal = TRUE)
+
+  if (!all(name %in% available_presets)) {
+    stop(
+      "Unknown CRF preset: ", paste(setdiff(name, available_presets), collapse = ", "),
+      ". Available presets: ", paste(available_crf_presets(), collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  invisible(TRUE)
+}
+
+assert_single_crf_preset_name <- function(name) {
+  assert_crf_preset_name(name)
+
+  if (length(name) != 1) {
+    stop("`name` must contain exactly one CRF preset name.", call. = FALSE)
+  }
+
+  invisible(TRUE)
+}
+
+mark_internal_preset_notes <- function(notes, internal_preset) {
+  if (length(internal_preset) == 1) {
+    internal_preset <- rep(internal_preset, length(notes))
+  }
+
+  ifelse(
+    internal_preset,
+    paste0(notes, CRF_INTERNAL_PRESET_NOTE),
+    notes
+  )
 }
 
 filter_user_facing_crf_registry <- function(registry) {
@@ -28,7 +80,9 @@ assert_no_internal_crfs <- function(crfs, context = "user-facing CRF selection")
   invisible(TRUE)
 }
 
-load_crf_preset <- function(name = "experimental_default") {
+load_crf_preset <- function(name) {
+  assert_single_crf_preset_name(name)
+
   path <- get_hia_path(
     file.path("crf/presets", paste0(name, ".csv")),
     error_if_not_exists = TRUE
@@ -48,16 +102,8 @@ load_crf_preset <- function(name = "experimental_default") {
   preset
 }
 
-crfs_preset <- function(name = "experimental_default", registry = load_crf_registry()) {
-  available_presets <- available_crf_presets()
-
-  if (!name %in% available_presets) {
-    stop(
-      "Unknown CRF preset: ", name,
-      ". Available presets: ", paste(available_presets, collapse = ", "),
-      call. = FALSE
-    )
-  }
+crfs_preset <- function(name, registry = load_crf_registry()) {
+  assert_single_crf_preset_name(name)
 
   selection <- load_crf_preset(name) %>%
     dplyr::select(dplyr::all_of(CRF_SELECTION_REQUIRED_COLUMNS))
@@ -196,16 +242,9 @@ validate_crf_selection <- function(
 }
 
 
-describe_crf_preset <- function(name, registry = load_crf_registry()) {
-  available_presets <- available_crf_presets()
-
-  if (!name %in% available_presets) {
-    stop(
-      "Unknown CRF preset: ", name,
-      ". Available presets: ", paste(available_presets, collapse = ", "),
-      call. = FALSE
-    )
-  }
+.describe_crf_preset <- function(name, registry = load_crf_registry()) {
+  assert_single_crf_preset_name(name)
+  internal_preset <- name %in% CRF_INTERNAL_PRESETS
 
   preset <- load_crf_preset(name) %>%
     dplyr::rename(preset_notes = notes)
@@ -242,7 +281,10 @@ describe_crf_preset <- function(name, registry = load_crf_registry()) {
   }
 
   described %>%
-    dplyr::mutate(preset = name) %>%
+    dplyr::mutate(
+      preset = name,
+      notes = mark_internal_preset_notes(.data$preset_notes, internal_preset)
+    ) %>%
     dplyr::select(
       preset,
       pollutant,
@@ -251,8 +293,12 @@ describe_crf_preset <- function(name, registry = load_crf_registry()) {
       crf_id,
       reference_id,
       form,
-      notes = preset_notes
+      notes
     )
+}
+
+describe_crf_preset <- function(name, registry = load_crf_registry()) {
+  .describe_crf_preset(name, registry = registry)
 }
 
 search_crf_registry <- function(
@@ -364,23 +410,12 @@ crf_override_options <- function(
     )
   }
 
-  available_presets <- available_crf_presets()
-  unknown_presets <- setdiff(presets, available_presets)
-
-  if (length(unknown_presets) > 0) {
-    stop(
-      "Unknown CRF preset: ",
-      paste(unknown_presets, collapse = ", "),
-      ". Available presets: ",
-      paste(available_presets, collapse = ", "),
-      call. = FALSE
-    )
-  }
+  assert_crf_preset_name(presets)
 
   selected <- dplyr::bind_rows(
     lapply(
       presets,
-      describe_crf_preset,
+      .describe_crf_preset,
       registry = registry
     )
   )
@@ -410,6 +445,7 @@ crf_override_options <- function(
     ) %>%
     dplyr::summarise(
       selected_by_preset = paste(unique(.data$preset), collapse = ", "),
+      selected_by_internal_preset = any(.data$preset %in% CRF_INTERNAL_PRESETS),
       .groups = "drop"
     )
 
@@ -423,7 +459,11 @@ crf_override_options <- function(
       by = c("pollutant", "cause", "outcome", "crf_id")
     ) %>%
     dplyr::mutate(
-      selected = !is.na(.data$selected_by_preset)
+      selected = !is.na(.data$selected_by_preset),
+      notes = mark_internal_preset_notes(
+        .data$notes,
+        dplyr::coalesce(.data$selected_by_internal_preset, FALSE)
+      )
     ) %>%
     dplyr::arrange(
       .data$pollutant,
@@ -476,7 +516,7 @@ preview_crf_set <- function(
   selected <- dplyr::bind_rows(
     lapply(
       presets,
-      describe_crf_preset,
+      .describe_crf_preset,
       registry = registry
     )
   )

@@ -27,7 +27,18 @@ compute_hia() -> compute_hia_paf() -> compute_hia_impacts()
 The public Registry now contains real, opt-in CRFs for GEMM, Fusion, GBD 2019,
 and two migrated log-linear definitions. The examples in this document use
 only those user-facing Registry rows. Internal validation fixtures are excluded
-from search, preset, preview, and Set workflows.
+from public search, preset, preview, and Set workflows. Internal development
+presets are omitted from public discovery and are never defaults. They can be
+loaded by explicit name, but are for development only, are not reviewed, and
+are not recommended methods.
+
+The two public `legacy_` rows were migrated from the previous `CRFs.csv` table.
+They remain searchable and selectable, but are not methodologically reviewed or
+recommended defaults. `legacy_no2_ncdlri_deaths_v1` cites
+`legacy_default_crfs`, a temporary provenance record rather than a scientific
+source. `legacy_no2_asthma_1to18_incidence_v1` cites
+`khreis_2017_childhood_asthma`; a recovered citation is not a methodology
+endorsement.
 
 The strongest replacement example currently available is the
 `PM25 / IHD / Deaths` slot:
@@ -395,6 +406,8 @@ building blocks:
 
 Loads the compact CSV manifest for one preset.
 
+`name` is required; use `available_crf_presets()` to find public preset names.
+
 ```r
 load_crf_preset("gemm_adult_deaths_components")
 ```
@@ -740,6 +753,8 @@ HIA, change package data, or establish a new default model.
 ### `crfs_preset(name)`
 
 Resolves one preset directly to full Registry rows.
+
+`name` is required; use `available_crf_presets()` to find public preset names.
 
 ```r
 crfs <- crfs_preset("gbd2019_deaths")

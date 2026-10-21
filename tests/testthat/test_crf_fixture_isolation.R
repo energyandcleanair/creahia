@@ -1,4 +1,4 @@
-test_that("internal registry fixtures are retained for tests but hidden from discovery", {
+test_that("internal fixtures and presets are retained for tests but hidden from discovery", {
   registry <- load_crf_registry()
   references <- load_crf_references()
 
@@ -9,6 +9,7 @@ test_that("internal registry fixtures are retained for tests but hidden from dis
 
   available_references <- available_crf_references(references = references)
   expect_false(any(available_references$reference_id == CRF_INTERNAL_REFERENCE_IDS))
+  expect_false("experimental_default" %in% available_crf_presets())
 
   preset_rows <- crfs_preset("experimental_default")
   expect_false(any(preset_rows$reference_id == CRF_INTERNAL_REFERENCE_IDS))

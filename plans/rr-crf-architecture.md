@@ -140,10 +140,18 @@ resolved collection used by a calculation. `crfs_set()` can combine presets
 with reviewed additions, removals, or replacements and validates the Registry
 shape of the result. It does not reject aggregate/component overlap by default.
 
-Public discovery filters out internal fixtures. Historical-compatibility rows
-live in separate internal storage and therefore do not enter public discovery.
-A test fixture is not a user option, and a historical profile is not a
-recommended default merely because the package can reproduce it.
+Public discovery filters out internal fixtures and internal presets. Internal
+presets are never defaults; an explicit name can load one for development, but
+it is not reviewed or a recommended method.
+Historical-compatibility rows live in separate internal storage and therefore
+do not enter public discovery. Separately, the public Registry currently has
+two `legacy_` rows migrated from the old `CRFs.csv` table. They can be found and
+selected, but are not methodologically approved or recommended defaults.
+`legacy_no2_ncdlri_deaths_v1` cites the temporary `legacy_default_crfs`
+provenance record; `legacy_no2_asthma_1to18_incidence_v1` cites
+`khreis_2017_childhood_asthma`. A test
+fixture is not a user option, and a historical profile is not a recommended
+default merely because the package can reproduce it.
 
 ### 5. Historical reproduction storage
 

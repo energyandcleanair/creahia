@@ -52,11 +52,32 @@ test_that("crfs_preset errors on unknown preset", {
   )
 })
 
+test_that("crfs_preset and load_crf_preset require an explicit name", {
+  expect_error(
+    crfs_preset(),
+    "Use `available_crf_presets()` to list available presets.",
+    fixed = TRUE
+  )
+  expect_error(
+    load_crf_preset(),
+    "Use `available_crf_presets()` to list available presets.",
+    fixed = TRUE
+  )
+})
+
+test_that("single-preset helpers reject multiple names", {
+  preset_names <- c("gemm_adult_deaths_components", "gbd2019_deaths")
+
+  expect_error(load_crf_preset(preset_names), "exactly one CRF preset name")
+  expect_error(crfs_preset(preset_names), "exactly one CRF preset name")
+  expect_error(describe_crf_preset(preset_names), "exactly one CRF preset name")
+})
+
 test_that("describe_crf_preset returns human-readable registry-backed rows", {
-  described <- describe_crf_preset("experimental_default")
+  described <- describe_crf_preset("gemm_adult_deaths_components")
 
   expect_s3_class(described, "data.frame")
-  expect_equal(nrow(described), 2)
+  expect_equal(nrow(described), 5)
 
   expect_true(all(c(
     "preset",
@@ -69,9 +90,8 @@ test_that("describe_crf_preset returns human-readable registry-backed rows", {
     "notes"
   ) %in% names(described)))
 
-  expect_true(all(described$preset == "experimental_default"))
+  expect_true(all(described$preset == "gemm_adult_deaths_components"))
   expect_true("burnett_2018_gemm" %in% described$reference_id)
-  expect_true("legacy_default_crfs" %in% described$reference_id)
 })
 
 test_that("describe_crf_preset errors on unknown preset", {
@@ -211,29 +231,29 @@ test_that("crf_override_options errors when presets are missing or empty", {
 
 test_that("crf_override_options supports partial pollutant filter", {
   options <- crf_override_options(
-    presets = "experimental_default",
+    presets = "gemm_adult_deaths_components",
     pollutant = "PM25"
   )
 
   expect_gt(nrow(options), 0)
   expect_true(all(options$pollutant == "PM25"))
-  expect_true("gemm_pm25_ihd_25plus_deaths_v1" %in% options$crf_id)
+  expect_true("gemm_pm25_ihd_adult_deaths_v1" %in% options$crf_id)
 })
 
 test_that("crf_override_options supports partial cause filter", {
   options <- crf_override_options(
-    presets = "experimental_default",
+    presets = "gemm_adult_deaths_components",
     cause = "IHD"
   )
 
   expect_gt(nrow(options), 0)
   expect_true(all(options$cause == "IHD"))
-  expect_true("gemm_pm25_ihd_25plus_deaths_v1" %in% options$crf_id)
+  expect_true("gemm_pm25_ihd_adult_deaths_v1" %in% options$crf_id)
 })
 
 test_that("crf_override_options supports case-insensitive partial outcome filter", {
   options <- crf_override_options(
-    presets = "experimental_default",
+    presets = "gemm_adult_deaths_components",
     outcome = "death"
   )
 
@@ -243,7 +263,7 @@ test_that("crf_override_options supports case-insensitive partial outcome filter
 
 test_that("crf_override_options returns empty result when no selected slots match filters", {
   options <- crf_override_options(
-    presets = "experimental_default",
+    presets = "gemm_adult_deaths_components",
     pollutant = "missing_pollutant"
   )
 
@@ -292,8 +312,28 @@ test_that("crfs_override errors on unknown replacement crf_id", {
   )
 })
 
-test_that("available_crf_presets includes experimental_default", {
-  expect_true("experimental_default" %in% available_crf_presets())
+test_that("available_crf_presets excludes internal presets", {
+  expect_false("experimental_default" %in% available_crf_presets())
+  expect_true("experimental_default" %in% .available_crf_presets(include_internal = TRUE))
+})
+
+test_that("explicit internal presets are marked but remain selectable", {
+  described <- describe_crf_preset("experimental_default")
+  expect_true(all(grepl(
+    "Internal development preset; not reviewed or recommended.",
+    described$notes,
+    fixed = TRUE
+  )))
+
+  options <- crf_override_options(
+    presets = "experimental_default",
+    cause = "IHD"
+  )
+  selected <- options %>% dplyr::filter(selected)
+  unselected <- options %>% dplyr::filter(!selected)
+  expect_equal(nrow(selected), 1)
+  expect_true(grepl(CRF_INTERNAL_PRESET_NOTE, selected$notes, fixed = TRUE))
+  expect_false(any(grepl(CRF_INTERNAL_PRESET_NOTE, unselected$notes, fixed = TRUE)))
 })
 
 test_that("GEMM adult death presets keep aggregate and components separate", {
