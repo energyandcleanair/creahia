@@ -288,6 +288,40 @@ test_that("compatibility routing isolates an out-of-range historical RR region",
 })
 
 
+test_that("compatibility RR region warnings name the failed CRF and requested range", {
+  conc_map <- partial_region_concentrations(
+    tha_baseline = c(20, 3000),
+    tha_scenario = c(25, 3005)
+  )
+
+  routed <- run_routed_partial_region_paf(TRUE, conc_map)
+  fixture <- partial_region_fixture()
+  rr_crfs <- fixture$registry_crfs %>%
+    dplyr::filter(
+      .data$crf_id %in% .hia_compatibility_rr_crf_ids(fixture$registry_crfs)
+    )
+  tha_warning <- grep("^Failed for region .*THA", routed$warnings, value = TRUE)
+  failed_crf <- rr_crfs %>%
+    dplyr::filter(vapply(
+      .data$crf_id,
+      function(id) grepl(paste0("[", id, " "), tha_warning, fixed = TRUE),
+      logical(1)
+    ))
+
+  expect_length(tha_warning, 1L)
+  expect_equal(nrow(failed_crf), 1L)
+  expect_true(grepl(
+    paste0(
+      failed_crf$pollutant, "/", failed_crf$cause, "/", failed_crf$outcome, "] "
+    ),
+    tha_warning,
+    fixed = TRUE
+  ))
+  expect_match(tha_warning, "Exposure out of CRF range", fixed = TRUE)
+  expect_match(tha_warning, "requested: \\[20, 30(00|05)\\]")
+})
+
+
 test_that("compatibility RR provenance is internal and explicit Sets remain unmarked", {
   fixture <- partial_region_fixture()
   rr_crf_ids <- .hia_compatibility_rr_crf_ids(fixture$registry_crfs)
@@ -578,9 +612,9 @@ test_that("compatibility RR failures are isolated within each scenario", {
 })
 
 
-test_that("explicit crfs_set remains fail-fast pending maintainer policy decision", {
-  # This intentionally preserves current explicit Registry behavior until the
-  # maintainer decides whether explicit Sets should also isolate region errors.
+test_that("explicit crfs_set remains fail-fast by maintainer decision", {
+  # Maintainer decision: explicit Sets do not inherit the legacy region skip,
+  # because a skipped region silently lowers totals.
   explicit_set <- crfs_set("gemm_adult_deaths_components")
   conc_map <- partial_region_concentrations(
     tha_baseline = c(20, 3000),

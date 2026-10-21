@@ -400,7 +400,11 @@ compute_hia_paf_crfs_registry <- function(species,
             failed_rr_regions <- c(failed_rr_regions, region_id)
             warning_message <- paste(
               "Failed for region ", region_id, ": ",
-              conditionMessage(attempt$error)
+              paste0(
+                "[", crf$crf_id, " ",
+                crf$pollutant, "/", crf$cause, "/", crf$outcome, "] ",
+                conditionMessage(attempt$error)
+              )
             )
             logger::log_warn(warning_message)
             warning(warning_message)

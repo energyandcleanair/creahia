@@ -202,8 +202,10 @@ get_hazard_ratio_tabular <- function(conc, rr, age) {
   exp_max <- max(rr_filtered$exposure, na.rm = TRUE)
 
   if (any(conc < exp_min | conc > exp_max, na.rm = TRUE)) {
+    req_min <- suppressWarnings(min(conc, na.rm = TRUE))
+    req_max <- suppressWarnings(max(conc, na.rm = TRUE))
     stop(glue::glue(
-      "Exposure out of CRF range for age {age}. Allowed: [{exp_min}, {exp_max}]"
+      "Exposure out of CRF range for age {age}. Allowed: [{exp_min}, {exp_max}], requested: [{req_min}, {req_max}]"
     ), call. = FALSE)
   }
 
