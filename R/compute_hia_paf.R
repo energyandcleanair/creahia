@@ -294,6 +294,7 @@ compute_hia_paf_crfs_registry <- function(species,
                                           epi_version = "default") {
   hia_polls <- species_to_hiapoll(species)
   scenarios <- names(conc_map)
+  compatibility_rr_crf_ids <- .hia_compatibility_rr_crf_ids(crfs)
 
   empty_crf_df <- tibble::tibble(
     pollutant = character(),
@@ -311,6 +312,9 @@ compute_hia_paf_crfs_registry <- function(species,
   for (scenario in scenarios) {
     conc_scenario <- conc_map[[scenario]]
     conc_df <- dplyr::bind_rows(conc_scenario, .id = "region_id")
+    # Compatibility RR CRFs retain the unfiltered rows so their missingness
+    # matches compute_hia_paf_rr_curves(); other CRFs keep the legacy rule.
+    compatibility_rr_conc_scenario <- split(conc_df, conc_df$region_id)
 
     if (!all(complete.cases(conc_df))) {
       warning("missing values in concentration or population data")
@@ -319,9 +323,12 @@ compute_hia_paf_crfs_registry <- function(species,
 
     conc_scenario <- split(conc_df, conc_df$region_id)
     scenario_rows <- list()
+    scenario_row_rr_regions <- character()
+    failed_rr_regions <- character()
 
     for (crf_i in seq_len(nrow(selected_crfs))) {
       crf <- selected_crfs[crf_i, , drop = FALSE]
+      is_compatibility_rr_crf <- crf$crf_id %in% compatibility_rr_crf_ids
       species_name <- hiapoll_to_species(crf$pollutant)
 
       if (length(species_name) != 1 || is.na(species_name)) {
@@ -330,34 +337,91 @@ compute_hia_paf_crfs_registry <- function(species,
 
       base_name <- paste0("conc_baseline_", species_name)
       perm_name <- paste0("conc_scenario_", species_name)
+      crf_conc_scenario <- if (is_compatibility_rr_crf) {
+        compatibility_rr_conc_scenario
+      } else {
+        conc_scenario
+      }
 
-      for (region_id in names(conc_scenario)) {
-        region_conc <- conc_scenario[[region_id]]
-        required_cols <- c(base_name, perm_name, "pop")
-        missing_cols <- setdiff(required_cols, names(region_conc))
+      for (region_id in names(crf_conc_scenario)) {
+        if (
+          is_compatibility_rr_crf &&
+          region_id %in% failed_rr_regions
+        ) {
+          next
+        }
 
-        if (length(missing_cols) > 0) {
-          stop(
-            "Concentration data for region ", region_id,
-            " is missing required columns: ",
-            paste(missing_cols, collapse = ", "),
-            call. = FALSE
+        compute_region_effect <- function() {
+          region_conc <- crf_conc_scenario[[region_id]]
+          required_cols <- c(base_name, perm_name, "pop")
+          missing_cols <- setdiff(required_cols, names(region_conc))
+
+          if (length(missing_cols) > 0) {
+            stop(
+              "Concentration data for region ", region_id,
+              " is missing required columns: ",
+              paste(missing_cols, collapse = ", "),
+              call. = FALSE
+            )
+          }
+          if (is_compatibility_rr_crf) {
+            region_conc <- region_conc[
+              stats::complete.cases(
+                region_conc[, required_cols, drop = FALSE]
+              ),
+              ,
+              drop = FALSE
+            ]
+            if (nrow(region_conc) == 0) {
+              return(NULL)
+            }
+          }
+
+          apply_crf(
+            crf = crf,
+            conc_base = region_conc[[base_name]],
+            conc_perm = region_conc[[perm_name]],
+            pop = region_conc[["pop"]],
+            region_id = region_id,
+            epi_version = epi_version
           )
         }
 
-        effect_df <- apply_crf(
-          crf = crf,
-          conc_base = region_conc[[base_name]],
-          conc_perm = region_conc[[perm_name]],
-          pop = region_conc[["pop"]],
-          region_id = region_id,
-          epi_version = epi_version
-        )
+        if (is_compatibility_rr_crf) {
+          attempt <- tryCatch(
+            list(value = compute_region_effect(), error = NULL),
+            error = function(error) list(value = NULL, error = error)
+          )
+          if (!is.null(attempt$error)) {
+            failed_rr_regions <- c(failed_rr_regions, region_id)
+            warning_message <- paste(
+              "Failed for region ", region_id, ": ",
+              conditionMessage(attempt$error)
+            )
+            logger::log_warn(warning_message)
+            warning(warning_message)
+            next
+          }
+          effect_df <- attempt$value
+        } else {
+          effect_df <- compute_region_effect()
+        }
 
         if (!is.null(effect_df)) {
           scenario_rows[[length(scenario_rows) + 1]] <- effect_df
+          scenario_row_rr_regions <- c(
+            scenario_row_rr_regions,
+            if (is_compatibility_rr_crf) region_id else NA_character_
+          )
         }
       }
+    }
+
+    if (length(failed_rr_regions) > 0) {
+      # Match compute_hia_paf_rr_curves() by discarding the whole failed region.
+      keep_row <- is.na(scenario_row_rr_regions) |
+        !(scenario_row_rr_regions %in% failed_rr_regions)
+      scenario_rows <- scenario_rows[keep_row]
     }
 
     paf_crfs[[scenario]] <- if (length(scenario_rows) == 0) {

@@ -618,6 +618,15 @@ test_that("unchanged route application preserves an explicit Registry route", {
 
 test_that("Registry route application replaces all compute inputs atomically", {
   registry_set <- crfs_set("gbd2019_deaths")
+  class(registry_set) <- unique(c(
+    "creahia_hia_diagnostic_set",
+    class(registry_set)
+  ))
+  # Test double: this ordinary CRF is marked only to satisfy the internal RR-provenance guard.
+  registry_set <- .mark_hia_compatibility_rr_crfs(
+    registry_set,
+    registry_set$crf_id[[1]]
+  )
   plan <- .plan_hia_compatibility_route(
     make_adapter_route_observation(ready = TRUE),
     registry_set_resolver = function(...) registry_set

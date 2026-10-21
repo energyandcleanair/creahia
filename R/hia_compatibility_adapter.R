@@ -98,6 +98,7 @@
   input_contract = NULL,
   blocking_component_ids = character(),
   registry_set = NULL,
+  rr_provenance_required = FALSE,
   error = NULL
 ) {
   structure(
@@ -108,6 +109,7 @@
       input_contract = input_contract,
       blocking_component_ids = blocking_component_ids,
       registry_set = registry_set,
+      rr_provenance_required = rr_provenance_required,
       error = error
     ),
     class = c("creahia_hia_compatibility_route_plan", "list")
@@ -229,7 +231,10 @@
     route = "registry",
     reason = "all_components_ready",
     input_contract = observation$input_contract,
-    registry_set = registry_set
+    registry_set = registry_set,
+    rr_provenance_required = nrow(
+      observation$specification$components$rr
+    ) > 0
   )
 }
 
@@ -298,6 +303,20 @@
       "A Registry compatibility plan requires a resolved crfs_set().",
       call. = FALSE
     )
+  }
+  if (isTRUE(route_plan$rr_provenance_required)) {
+    compatibility_rr_crf_ids <- .hia_compatibility_rr_crf_ids(
+      route_plan$registry_set
+    )
+    if (length(compatibility_rr_crf_ids) == 0) {
+      stop(
+        paste(
+          "A Registry compatibility plan with RR components requires",
+          "non-empty compatibility RR provenance."
+        ),
+        call. = FALSE
+      )
+    }
   }
 
   list(

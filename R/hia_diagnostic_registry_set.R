@@ -221,6 +221,63 @@
 }
 
 
+.mark_hia_compatibility_rr_crfs <- function(crfs, rr_crf_ids) {
+  if (!inherits(crfs, "creahia_hia_diagnostic_set")) {
+    stop(
+      "Compatibility RR provenance can only be attached to an internal HIA diagnostic Set.",
+      call. = FALSE
+    )
+  }
+
+  rr_crf_ids <- unique(as.character(rr_crf_ids))
+  if (anyNA(rr_crf_ids) || !all(rr_crf_ids %in% crfs$crf_id)) {
+    stop("Compatibility RR provenance contains invalid CRF IDs.", call. = FALSE)
+  }
+
+  attr(crfs, "creahia.hia_compatibility_rr_crf_ids") <- rr_crf_ids
+  crfs
+}
+
+
+.hia_compatibility_rr_crf_ids <- function(crfs) {
+  if (!inherits(crfs, "creahia_hia_diagnostic_set")) {
+    return(character())
+  }
+
+  rr_crf_ids <- attr(crfs, "creahia.hia_compatibility_rr_crf_ids", exact = TRUE)
+  if (is.null(rr_crf_ids)) {
+    stop(
+      paste(
+        "Compatibility RR provenance is missing.",
+        paste(
+          "Call inspect_hia_configuration() again to obtain a fresh registry_set,",
+          "or use crfs_set() to build a method Set before calculating PAFs."
+        )
+      ),
+      call. = FALSE
+    )
+  }
+  if (
+    !is.character(rr_crf_ids) ||
+    anyNA(rr_crf_ids) ||
+    anyDuplicated(rr_crf_ids)
+  ) {
+    stop(
+      paste(
+        "Compatibility RR provenance is malformed.",
+        paste(
+          "Call inspect_hia_configuration() again to obtain a fresh registry_set,",
+          "or use crfs_set() to build a method Set before calculating PAFs."
+        )
+      ),
+      call. = FALSE
+    )
+  }
+
+  intersect(rr_crf_ids, crfs$crf_id)
+}
+
+
 .resolve_hia_diagnostic_registry_set <- function(specification) {
   .validate_hia_diagnostic_specification(specification)
 
@@ -250,5 +307,5 @@
     "creahia_hia_diagnostic_set",
     class(resolved)
   ))
-  resolved
+  .mark_hia_compatibility_rr_crfs(resolved, rr_crf_ids)
 }
