@@ -768,9 +768,12 @@ not calculated in addition to it. Explicit non-overlapping `rr_sources` can be
 combined with the Set, while overlapping pollutant/cause/outcome slots are
 rejected before PAF calculation.
 
-If a calculation output contains an aggregate cause and its components in the
-same pollutant/outcome group, `compute_hia()` uses `dc_groups` to mark component
-rows `double_counted = TRUE`; exclude those rows from totals.
+For defined aggregate breakdowns in the same pollutant/outcome group,
+`compute_hia()` uses `dc_groups` to mark component rows `double_counted = TRUE`.
+Alternative methods such as AllCause and disease-specific estimates remain
+available together; choose one reporting method before summing. Competing
+whole-burden aggregates produce an error. See "How total inclusion is decided"
+below for the selection rules.
 
 An explicit Set never skips a failing region silently. If any region fails, for
 example because its exposure is outside a CRF's range or its EPI data are
@@ -924,9 +927,18 @@ end-to-end parity and fixed-fingerprint tests.
 
 `double_counted` is a calculation output, not a CRF property. At the beginning
 of `compute_hia()`, before PAF calculation, the final CRF/RR selection is resolved once against the
-shared cause coverage table. Selected ensembles take precedence over their
-components within the same pollutant and outcome. All estimates remain
-available for comparison; use `!double_counted` when summing impacts.
+shared cause coverage table. Defined aggregate breakdowns take precedence over
+their components within the same pollutant and outcome. Competing whole-burden
+aggregates (AllCause, NCD.LRI, NCD) require an explicit choice: selecting more
+than one for the same pollutant/outcome stops before PAF calculation.
+
+AllCause alongside disease-specific estimates retains both alternatives with
+`double_counted = FALSE`. The caller must choose the reporting method before
+summing; `!double_counted` alone is not sufficient for this selection. For
+example, Eskom reporting removes PM25 AllCause and retains the GBD components.
+Strict `validate_crf_selection(..., check_double_counting = TRUE)` still rejects
+this overlap. In `dc_groups.csv`, `alternative_component` marks this relationship;
+ordinary `component` rows define the breakdowns used for automatic exclusion.
 
 | Selection | Included in totals |
 | --- | --- |
@@ -935,6 +947,8 @@ available for comparison; use `!double_counted` when summing impacts.
 | TotCV, IHD, Stroke, OthCV | TotCV |
 | TotResp, COPD, OthResp | TotResp |
 | AllCause, TotCV, TotResp | AllCause |
+| AllCause, GBD disease-specific outcomes | Both retained; choose reporting method before summing |
+| AllCause, NCD.LRI | Error: choose one aggregate |
 
 TotResp means chronic respiratory diseases and does not include LRI. Editing
 an inspected Set is supported: each new calculation rebuilds the decision.

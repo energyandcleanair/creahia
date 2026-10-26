@@ -7,6 +7,7 @@ CRF_DC_GROUP_REQUIRED_COLUMNS <- c(
 
 CRF_DC_ROLE_AGGREGATE <- "aggregate"
 CRF_DC_ROLE_COMPONENT <- "component"
+CRF_DC_ROLE_ALTERNATIVE_COMPONENT <- "alternative_component"
 
 
 check_dc_conflicts <- function(crfs, dc_groups = load_dc_groups()) {
@@ -20,6 +21,11 @@ check_dc_conflicts <- function(crfs, dc_groups = load_dc_groups()) {
     conflicts,
     function(pollutant, outcome, dc_group, aggregates, components,
              n_aggregates, n_components) {
+      if (n_aggregates > 1) {
+        return(paste0("Conflicting aggregates in '", pollutant, "/", outcome,
+                      "' for dc_group '", dc_group, "': ",
+                      paste(aggregates, collapse = ", "), ". Choose one aggregate."))
+      }
       paste0(
         "Conflict in pollutant/outcome group '",
         pollutant, "/", outcome,
@@ -75,12 +81,12 @@ find_dc_conflicts <-  function(crfs, dc_groups = load_dc_groups()) {
     dplyr::group_by(pollutant, outcome, dc_group) %>%
     dplyr::summarise(
       aggregates = list(sort(unique(cause[role == CRF_DC_ROLE_AGGREGATE]))),
-      components = list(sort(unique(cause[role == CRF_DC_ROLE_COMPONENT]))),
+      components = list(sort(unique(cause[role %in% c(CRF_DC_ROLE_COMPONENT, CRF_DC_ROLE_ALTERNATIVE_COMPONENT)]))),
       n_aggregates = length(unique(cause[role == CRF_DC_ROLE_AGGREGATE])),
-      n_components = length(unique(cause[role == CRF_DC_ROLE_COMPONENT])),
+      n_components = length(unique(cause[role %in% c(CRF_DC_ROLE_COMPONENT, CRF_DC_ROLE_ALTERNATIVE_COMPONENT)])),
       .groups = "drop"
     ) %>%
-    dplyr::filter(n_aggregates >= 1 & n_components >= 1)
+    dplyr::filter(n_aggregates > 1 | (n_aggregates >= 1 & n_components >= 1))
 
 }
 
@@ -135,7 +141,8 @@ validate_dc_groups <- function(dc_groups) {
 
   valid_roles <- c(
     CRF_DC_ROLE_AGGREGATE,
-    CRF_DC_ROLE_COMPONENT
+    CRF_DC_ROLE_COMPONENT,
+    CRF_DC_ROLE_ALTERNATIVE_COMPONENT
   )
 
   invalid_roles <- setdiff(unique(dc_groups$role), valid_roles)
@@ -165,16 +172,17 @@ validate_dc_groups <- function(dc_groups) {
     dplyr::group_by(dc_group) %>%
     dplyr::summarise(
       n_aggregates = sum(role == CRF_DC_ROLE_AGGREGATE),
-      n_components = sum(role == CRF_DC_ROLE_COMPONENT),
+      n_components = sum(role %in% c(CRF_DC_ROLE_COMPONENT, CRF_DC_ROLE_ALTERNATIVE_COMPONENT)),
       .groups = "drop"
     )
 
   invalid_groups <- group_summary %>%
-    dplyr::filter(n_aggregates != 1 | n_components < 1)
+    dplyr::filter(!((n_aggregates == 1 & n_components >= 1) |
+                      (n_aggregates >= 2 & n_components == 0)))
 
   if (nrow(invalid_groups) > 0) {
     stop(
-      "Each CRF double-counting group must have exactly one aggregate and at least one component.",
+      "Each CRF double-counting group must have one aggregate with components, or multiple alternative aggregates without components.",
       call. = FALSE
     )
   }
@@ -190,7 +198,24 @@ validate_dc_groups <- function(dc_groups) {
   ) %>%
     dplyr::distinct() %>%
     dplyr::arrange(pollutant, cause, outcome)
-  conflicts <- find_dc_conflicts(slots, dc_groups = dc_groups)
+  validate_dc_groups(dc_groups)
+  decision_groups <- dc_groups %>%
+    dplyr::filter(role != CRF_DC_ROLE_ALTERNATIVE_COMPONENT) %>%
+    dplyr::group_by(dc_group) %>%
+    dplyr::filter(any(role == CRF_DC_ROLE_COMPONENT) | sum(role == CRF_DC_ROLE_AGGREGATE) > 1) %>%
+    dplyr::ungroup()
+  conflicts <- find_dc_conflicts(slots, dc_groups = decision_groups)
+  alternatives <- if (nrow(conflicts)) dplyr::filter(conflicts, n_aggregates > 1) else conflicts
+  if (nrow(alternatives) > 0) {
+    details <- purrr::pmap_chr(
+      dplyr::select(alternatives, pollutant, outcome, aggregates),
+      function(pollutant, outcome, aggregates) paste0(
+        pollutant, "/", outcome, ": ", paste(aggregates, collapse = ", ")
+      )
+    )
+    stop("Conflicting aggregate estimates selected: ", paste(details, collapse = "; "),
+         ". Choose one aggregate before calculation.", call. = FALSE)
+  }
   excluded <- slots[0, ]
   if (nrow(conflicts) > 0) {
     excluded <- conflicts %>%
@@ -211,6 +236,20 @@ validate_dc_groups <- function(dc_groups) {
       dplyr::select(pollutant, outcome, aggregates, components) %>%
       tidyr::unnest_longer(aggregates, values_to = "covered_by") %>%
       tidyr::unnest_longer(components, values_to = "cause") %>%
+      dplyr::distinct(pollutant, cause, outcome, covered_by)
+    repeat {
+      expanded <- coverage %>%
+        dplyr::inner_join(
+          coverage %>% dplyr::rename(intermediate = cause, parent = covered_by),
+          by = c("pollutant", "outcome", "covered_by" = "intermediate"),
+          relationship = "many-to-many"
+        ) %>%
+        dplyr::transmute(pollutant, cause, outcome, covered_by = parent) %>%
+        dplyr::bind_rows(coverage) %>% dplyr::distinct()
+      if (nrow(expanded) == nrow(coverage)) break
+      coverage <- expanded
+    }
+    coverage <- coverage %>%
       dplyr::semi_join(
         dplyr::filter(plan, !double_counted),
         by = c("pollutant", "outcome", "covered_by" = "cause")
