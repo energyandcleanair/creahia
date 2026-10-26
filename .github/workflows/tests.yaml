@@ -36,9 +36,13 @@ jobs:
         run: |
           Rscript -e 'pak::local_install_deps(".", ask = FALSE, upgrade = FALSE)'
 
-      - name: Run tests
+      - name: Run ordinary tests
         run: |
-          Rscript -e 'devtools::test(stop_on_failure = TRUE)'
+          Rscript -e 'devtools::test(filter = "^results_immutability$", invert = TRUE, stop_on_failure = TRUE)'
+
+      - name: Run cross-version fingerprints in a separate R process
+        run: |
+          Rscript -e 'devtools::test(filter = "^results_immutability$", stop_on_failure = TRUE)'
 
       - name: Run installed-package check
         run: |
