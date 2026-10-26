@@ -142,3 +142,35 @@ test_that("output validation cannot borrow an ensemble from another region or es
     "selected ensemble is missing"
   )
 })
+
+
+test_that("alternative whole-burden aggregates require an explicit choice", {
+  for (causes in combn(c("AllCause", "NCD.LRI", "NCD"), 2, simplify = FALSE)) {
+    slots <- tibble::tibble(pollutant = "PM25", cause = causes, outcome = "Deaths")
+    expect_error(.resolve_double_counting(slots), "Conflicting aggregate estimates selected: PM25/Deaths")
+    expect_error(check_dc_conflicts(slots), "whole_burden_alternatives")
+    slots$pollutant[2] <- "NO2"
+    expect_no_error(.resolve_double_counting(slots))
+    slots$pollutant[2] <- "PM25"
+    slots$outcome[2] <- "YLLs"
+    expect_no_error(.resolve_double_counting(slots))
+  }
+})
+
+
+test_that("AllCause does not exclude an alternative disease-specific estimate", {
+  slots <- tibble::tibble(pollutant = "PM25", outcome = "Deaths",
+                         cause = c("AllCause", "COPD", "Diabetes", "IHD", "LC", "LRI", "Stroke"))
+  expect_true(all(!.resolve_double_counting(slots)$double_counted))
+  expect_error(check_dc_conflicts(slots), "allcause_ensembles")
+})
+
+
+test_that("nested breakdown coverage reaches the included aggregate", {
+  slots <- tibble::tibble(pollutant = "NO2", outcome = "Deaths",
+                         cause = c("AllCause", "TotCV", "IHD"))
+  plan <- .resolve_double_counting(slots)
+  result <- add_double_counted(dplyr::mutate(slots, number = c(100, 70, 40)),
+                              .double_counting = plan)
+  expect_equal(result$double_counted, c(FALSE, TRUE, TRUE))
+})

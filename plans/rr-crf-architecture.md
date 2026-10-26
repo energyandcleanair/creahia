@@ -271,8 +271,15 @@ a selection as non-overlapping or summable.
 
 At the start of `compute_hia()`, after routing and final selection and before
 PAF calculation, one resolver builds an overlap plan from the selected CRF
-and RR cause slots. It prefers a selected ensemble over its components within
-each pollutant/outcome. The plan stays local to this calculation and is passed
+and RR cause slots. It uses defined aggregate/component breakdowns within each pollutant/outcome.
+Competing whole-burden aggregates (AllCause, NCD.LRI, NCD) stop setup and require
+one aggregate to be selected. AllCause with alternative disease-specific
+estimates retains both, leaving the reporting choice to the caller; filtering
+only `!double_counted` is insufficient for that selection. Strict overlap
+validation still rejects those alternatives together. The coverage table uses
+`alternative_component` for these alternatives and `component` for automatic
+breakdown exclusions. Groups containing multiple aggregate rows and no
+components identify competing aggregates. The plan stays local to this calculation and is passed
 directly to `compute_hia_impacts()` through its internal `.double_counting`
 argument. Every calculation rebuilds it, including calculations using filtered
 or extended inspected Sets. Registry definitions and compilers no longer store
