@@ -55,9 +55,19 @@ Depends:
 Remotes:
     energyandcleanair/creaexposure,
     energyandcleanair/creahelpers,
+    energyandcleanair/rcrea,
     laurimyllyvirta/lauR,
     nset-ornl/wbstats
 RoxygenNote: 7.2.3
 Suggests:
+    devtools,
     knitr,
-    rmarkdown
+    purrr,
+    rcrea,
+    remotes,
+    rmarkdown,
+    scales,
+    stringr,
+    testthat,
+    tibble,
+    withr
