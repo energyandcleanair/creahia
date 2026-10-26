@@ -1,6 +1,6 @@
 # RR/CRF Maintenance Runbook
 
-- Last reviewed: 2026-10-19
+- Last reviewed: 2026-10-26
 
 ## Purpose
 
@@ -120,16 +120,22 @@ Rscript -e 'devtools::test(filter = "fingerprint|parity|compatibility|contract",
 This combines live old-versus-new comparisons with fixed expected results. It
 does not replace the full package suite.
 
-### Level 3: full development suite with known side effects
+### Level 3: full development suite with isolated cross-version tests
 
 Use after changing shared computation, routing, selection, packaged data, or
 several test families:
 
 ```sh
-Rscript -e 'devtools::test(stop_on_failure = TRUE)'
+Rscript -e 'devtools::test(filter = "^results_immutability$", invert = TRUE, stop_on_failure = TRUE)'
+Rscript -e 'devtools::test(filter = "^results_immutability$", stop_on_failure = TRUE)'
 ```
 
-This command includes `test_results_immutability.R`. That test can install old
+Run these as separate R processes, as CI does. `test_results_immutability.R`
+installs and reloads package versions; running it with the other tests leaves
+their helpers attached to an old package environment and can invalidate mocks.
+Both groups must pass before running the installed-package check.
+
+The cross-version test can install old
 package releases, regenerate current-version fingerprint files, and create a
 missing historical fingerprint. Before running it, require a clean working
 tree, confirm that network/package installation is acceptable, and compare
@@ -157,7 +163,7 @@ look clean.
 Use for release-level work or a deliberate result change:
 
 ```sh
-Rscript -e 'devtools::test(filter = "results_immutability", stop_on_failure = TRUE)'
+Rscript -e 'devtools::test(filter = "^results_immutability$", stop_on_failure = TRUE)'
 ```
 
 This test can install older package releases, regenerate current-version
