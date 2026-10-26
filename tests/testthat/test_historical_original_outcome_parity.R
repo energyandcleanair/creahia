@@ -91,3 +91,20 @@ test_that("internal original RR rows reproduce warnings, PAF, and impacts", {
   expect_equal(nrow(expected_fingerprint), 4L)
   expect_equal(actual_fingerprint, expected_fingerprint, tolerance = 1e-12)
 })
+
+
+test_that("original Diabetes contributes without a selected covering ensemble", {
+  results <- run_historical_original_outcome_parity_fixture(include_ensemble = FALSE)
+  standalone <- results$registry_impacts$value %>%
+    filter_historical_original_impacts() %>%
+    arrange_historical_original_impacts()
+  reference <- results$legacy_impacts$value %>%
+    filter_historical_original_impacts() %>%
+    arrange_historical_original_impacts()
+  expect_true(all(!standalone$double_counted))
+  expect_equal(
+    dplyr::select(standalone, -double_counted),
+    dplyr::select(reference, -double_counted),
+    tolerance = 1e-12
+  )
+})

@@ -81,7 +81,7 @@ capture_historical_original_warnings <- function(code) {
 }
 
 
-run_historical_original_outcome_parity_fixture <- function() {
+run_historical_original_outcome_parity_fixture <- function(include_ensemble = TRUE) {
   configuration_id <- "legacy_default_gemm_gbd2019_2020"
   configuration <- load_historical_fingerprint_configurations() %>%
     dplyr::filter(mapping_id == configuration_id)
@@ -90,6 +90,16 @@ run_historical_original_outcome_parity_fixture <- function() {
   )
   legacy_rr_sources <- legacy_hia_configuration_rr_sources(configuration)
   registry_crfs <- historical_original_outcome_registry()
+  if (include_ensemble) {
+    # The reference configuration includes GEMM NCD.LRI. Include the same
+    # covering ensemble when comparing total-inclusion decisions.
+    selected_rr <- parse_rr_sources(legacy_rr_sources)
+    stopifnot(any(selected_rr$cause == "NCD.LRI" &
+                  selected_rr$source == RR_GEMM))
+    registry_crfs <- dplyr::bind_rows(
+      registry_crfs, crfs_set("gemm_adult_deaths_aggregate")
+    )
+  }
   empty_rr_sources <- legacy_hia_empty_rr_sources()
   epi_version <- legacy_hia_configuration_value(configuration, "epi_version")
   epi <- legacy_hia_epi_fixture(

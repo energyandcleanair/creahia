@@ -332,7 +332,7 @@
 }
 
 
-# Retain historical provenance independently of calculation overlap decisions.
+# Mark the Set's historical provenance.
 .new_historical_crf_set <- function(crfs) {
   crfs <- new_crfs_set(crfs)
   class(crfs) <- unique(c("creahia_historical_crf_set", class(crfs)))

@@ -9,7 +9,7 @@
 #' @param regions Spatial regions data
 #' @param epi Epidemiological data
 #' @param crfs CRF data table
-#' @param .overlap_plan Internal calculation plan supplied by compute_hia().
+#' @param .double_counting Internal calculation plan supplied by compute_hia().
 #' @return Health impact assessment results
 #' @export
 compute_hia_impacts <- function(species,
@@ -18,17 +18,17 @@ compute_hia_impacts <- function(species,
                                 regions,
                                 epi = get_epi(),
                                 crfs = get_crfs(),
-                                .overlap_plan = NULL) {
+                                .double_counting = NULL) {
 
   polls <- species_to_hiapoll(species)
   scenarios <- names(conc_map)
   impacts <- list()
 
-  overlap_plan <- .overlap_plan
-  if (is.null(overlap_plan)) {
+  double_counting <- .double_counting
+  if (is.null(double_counting)) {
     # Standalone impact calculation resolves once at its entry boundary,
     # using the available precomputed PAF slots.
-    overlap_plan <- .resolve_hia_overlap_plan(
+    double_counting <- .resolve_double_counting(
       dplyr::select(paf, pollutant, cause, outcome)
     )
   }
@@ -80,7 +80,7 @@ compute_hia_impacts <- function(species,
 
     impacts_scenario <- impacts_scenario %>%
       to_long_hia() %>%
-      .attach_hia_overlap_plan(overlap_plan) %>%
+      add_double_counted(.double_counting = double_counting) %>%
       add_age_group() %>%
       clean_cause_outcome()
 

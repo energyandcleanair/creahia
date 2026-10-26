@@ -273,7 +273,7 @@ At the start of `compute_hia()`, after routing and final selection and before
 PAF calculation, one resolver builds an overlap plan from the selected CRF
 and RR cause slots. It prefers a selected ensemble over its components within
 each pollutant/outcome. The plan stays local to this calculation and is passed
-directly to `compute_hia_impacts()` through its internal `.overlap_plan`
+directly to `compute_hia_impacts()` through its internal `.double_counting`
 argument. Every calculation rebuilds it, including calculations using filtered
 or extended inspected Sets. Registry definitions and compilers no longer store
 `double_counted`; archived legacy input tables retain their original flags for

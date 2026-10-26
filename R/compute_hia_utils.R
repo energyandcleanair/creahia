@@ -152,22 +152,55 @@ hiapoll_to_species <- function(hiapoll) {
 }
 
 
-#' Add selection-derived double-counting flags to HIA results
+#' Add double-counting flags to HIA results
 #'
 #' @param hia HIA result rows.
-#' @param crfs Selected CRFs (legacy flags are ignored).
-#' @param epi Retained for call compatibility.
-#' @return HIA rows with a derived double_counted column.
+#' @param crfs Selected CRFs.
+#' @param epi Epidemiological data (unused).
+#' @param .double_counting Internal selection decisions supplied by compute_hia().
+#' @return HIA rows with a double_counted column.
 #' @export
-add_double_counted <- function(hia, crfs, epi) {
-  # Standalone helper: derive from the supplied selection plus RR result slots.
-  # The compute pipeline instead resolves once in compute_hia() before PAF calculation and
-  # calls .attach_hia_overlap_plan() with that fixed plan.
-  slots <- dplyr::bind_rows(
-    dplyr::select(crfs, pollutant, cause, outcome),
-    dplyr::select(hia, pollutant, cause, outcome)
-  )
-  .attach_hia_overlap_plan(hia, .resolve_hia_overlap_plan(slots))
+add_double_counted <- function(hia, crfs = NULL, epi = NULL, .double_counting = NULL) {
+  double_counting <- .double_counting
+  if (is.null(double_counting)) {
+    slots <- dplyr::select(hia, pollutant, cause, outcome)
+    if (!is.null(crfs)) {
+      slots <- dplyr::bind_rows(
+        slots, dplyr::select(crfs, pollutant, cause, outcome)
+      )
+    }
+    double_counting <- .resolve_double_counting(slots)
+  }
+
+  keys <- c("pollutant", "cause", "outcome")
+  unknown <- dplyr::anti_join(hia, double_counting, by = keys)
+  if (nrow(unknown) > 0) {
+    stop("HIA results contain cause slots absent from the overlap plan.", call. = FALSE)
+  }
+  # Verify ensemble coverage within each result context.
+  coverage <- attr(double_counting, "coverage", exact = TRUE)
+  if (!is.null(coverage) && nrow(coverage) > 0 && "number" %in% names(hia)) {
+    context <- intersect(c("scenario", "region_id", "estimate"), names(hia))
+    valid <- dplyr::filter(hia, !is.na(number))
+    required <- valid %>%
+      dplyr::select(dplyr::all_of(c(context, keys))) %>%
+      dplyr::inner_join(coverage, by = keys, relationship = "many-to-many")
+    covered <- required %>%
+      dplyr::semi_join(
+        valid,
+        by = c(stats::setNames(context, context),
+               pollutant = "pollutant", outcome = "outcome", covered_by = "cause")
+      )
+    missing <- dplyr::anti_join(required, covered, by = c(context, keys))
+    if (nrow(missing) > 0) {
+      stop("A selected ensemble is missing for excluded component results; cannot produce a complete total.",
+           call. = FALSE)
+    }
+  }
+  attr(double_counting, "coverage") <- NULL
+  hia %>%
+    dplyr::select(-dplyr::any_of("double_counted")) %>%
+    dplyr::left_join(double_counting, by = keys, relationship = "many-to-one")
 }
 
 

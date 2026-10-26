@@ -183,10 +183,8 @@ validate_dc_groups <- function(dc_groups) {
 }
 
 
-# A calculation decision, never CRF metadata. Rebuild from the final selection
-# on every invocation so filtered/extended Sets cannot retain stale flags.
-.resolve_hia_overlap_plan <- function(slots, dc_groups = load_dc_groups()) {
-  # Build a plain table: Set classes/provenance must not leak into the plan.
+# Determine total inclusion for the selected pollutant/cause/outcome slots.
+.resolve_double_counting <- function(slots, dc_groups = load_dc_groups()) {
   slots <- tibble::tibble(
     pollutant = slots$pollutant, cause = slots$cause, outcome = slots$outcome
   ) %>%
@@ -222,38 +220,4 @@ validate_dc_groups <- function(dc_groups) {
   }
   attr(plan, "coverage") <- coverage
   plan
-}
-
-
-.attach_hia_overlap_plan <- function(hia, overlap_plan) {
-  keys <- c("pollutant", "cause", "outcome")
-  unknown <- dplyr::anti_join(hia, overlap_plan, by = keys)
-  if (nrow(unknown) > 0) {
-    stop("HIA results contain cause slots absent from the overlap plan.", call. = FALSE)
-  }
-  # Validation only: never change the initial selection decision or substitute
-  # components when an expected ensemble is missing in a region/estimate.
-  coverage <- attr(overlap_plan, "coverage", exact = TRUE)
-  if (!is.null(coverage) && nrow(coverage) > 0 && "number" %in% names(hia)) {
-    context <- intersect(c("scenario", "region_id", "estimate"), names(hia))
-    valid <- dplyr::filter(hia, !is.na(number))
-    required <- valid %>%
-      dplyr::select(dplyr::all_of(c(context, keys))) %>%
-      dplyr::inner_join(coverage, by = keys, relationship = "many-to-many")
-    covered <- required %>%
-      dplyr::semi_join(
-        valid,
-        by = c(stats::setNames(context, context),
-               pollutant = "pollutant", outcome = "outcome", covered_by = "cause")
-      )
-    missing <- dplyr::anti_join(required, covered, by = c(context, keys))
-    if (nrow(missing) > 0) {
-      stop("A selected ensemble is missing for excluded component results; cannot produce a complete total.",
-           call. = FALSE)
-    }
-  }
-  attr(overlap_plan, "coverage") <- NULL
-  hia %>%
-    dplyr::select(-dplyr::any_of("double_counted")) %>%
-    dplyr::left_join(overlap_plan, by = keys, relationship = "many-to-one")
 }

@@ -156,7 +156,7 @@ compute_hia <- function(conc_map,
         dplyr::transmute(pollutant = "PM25", cause, outcome = measure)
     )
   }
-  overlap_plan <- .resolve_hia_overlap_plan(overlap_slots)
+  double_counting <- .resolve_double_counting(overlap_slots)
 
   message("Computing PAF")
   paf <- compute_hia_paf(
@@ -179,7 +179,7 @@ compute_hia <- function(conc_map,
     conc_map = conc_map,
     epi = epi,
     crfs = crfs,
-    .overlap_plan = overlap_plan
+    .double_counting = double_counting
   )
 
   # Population scaling
