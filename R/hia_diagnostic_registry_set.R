@@ -178,49 +178,6 @@
 }
 
 
-.apply_hia_set_double_counting <- function(crfs, rr_crf_ids) {
-  dc_groups <- load_dc_groups()
-  dc_aggregates <- dc_groups %>%
-    dplyr::filter(role == CRF_DC_ROLE_AGGREGATE) %>%
-    dplyr::select(dc_group, aggregate_cause = cause)
-  dc_components <- dc_groups %>%
-    dplyr::filter(role == CRF_DC_ROLE_COMPONENT) %>%
-    dplyr::select(dc_group, component_cause = cause)
-
-  aggregate_presence <- crfs %>%
-    dplyr::inner_join(
-      dc_aggregates,
-      by = c("cause" = "aggregate_cause"),
-      relationship = "many-to-many"
-    ) %>%
-    dplyr::distinct(pollutant, outcome, dc_group)
-
-  inferred_double_counted_ids <- crfs %>%
-    dplyr::filter(crf_id %in% rr_crf_ids) %>%
-    dplyr::inner_join(
-      dc_components,
-      by = c("cause" = "component_cause"),
-      relationship = "many-to-many"
-    ) %>%
-    dplyr::inner_join(
-      aggregate_presence,
-      by = c("pollutant", "outcome", "dc_group"),
-      relationship = "many-to-many"
-    ) %>%
-    dplyr::distinct(crf_id) %>%
-    dplyr::pull(crf_id)
-
-  crfs %>%
-    dplyr::mutate(
-      double_counted = dplyr::if_else(
-        crf_id %in% rr_crf_ids,
-        crf_id %in% inferred_double_counted_ids,
-        double_counted
-      )
-    )
-}
-
-
 .mark_hia_compatibility_rr_crfs <- function(crfs, rr_crf_ids) {
   if (!inherits(crfs, "creahia_hia_diagnostic_set")) {
     stop(
@@ -298,8 +255,7 @@
   } else {
     historical_rr$crf_id
   }
-  resolved <- dplyr::bind_rows(historical_crfs, historical_rr) %>%
-    .apply_hia_set_double_counting(rr_crf_ids = rr_crf_ids)
+  resolved <- dplyr::bind_rows(historical_crfs, historical_rr)
 
   validate_crf_selection(resolved)
   resolved <- new_crfs_set(resolved)

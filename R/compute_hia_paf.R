@@ -233,6 +233,19 @@ compute_hia_paf <- function(conc_map,
     crf_compute <- "registry"
   }
   
+  # Resolve overlap once from the final selection, before calculating any PAF.
+  overlap_slots <- crfs %>%
+    dplyr::filter(pollutant %in% species_to_hiapoll(species)) %>%
+    dplyr::select(pollutant, cause, outcome)
+  if (has_rr_sources(rr_sources)) {
+    overlap_slots <- dplyr::bind_rows(
+      overlap_slots,
+      get_cause_source(rr_sources, add_measure = TRUE) %>%
+        dplyr::transmute(pollutant = "PM25", cause, outcome = measure)
+    )
+  }
+  overlap_plan <- .resolve_hia_overlap_plan(overlap_slots)
+
   paf <- tibble::tibble(
     scenario = character(),
     pollutant = character(),
@@ -288,6 +301,7 @@ compute_hia_paf <- function(conc_map,
 
   diagnose_paf(paf, diagnostic_folder)
 
+  attr(paf, "creahia.overlap_plan") <- overlap_plan
   paf
 }
 

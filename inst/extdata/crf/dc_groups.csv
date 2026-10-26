@@ -10,3 +10,31 @@ ncdlri_mortality,Dementia,component,Component cause included in NCD.LRI aggregat
 cv_mortality,CV,aggregate,Cardiovascular aggregate mortality group
 cv_mortality,IHD,component,Component cause included in CV aggregate
 cv_mortality,Stroke,component,Component cause included in CV aggregate
+total_cv,TotCV,aggregate,Aggregate cause coverage
+total_cv,IHD,component,Component cause included in TotCV
+total_cv,Stroke,component,Component cause included in TotCV
+total_cv,OthCV,component,Component cause included in TotCV
+total_resp,TotResp,aggregate,Aggregate cause coverage
+total_resp,COPD,component,Component cause included in TotResp
+total_resp,OthResp,component,Component cause included in TotResp
+allcause_ensembles,AllCause,aggregate,Aggregate cause coverage
+allcause_ensembles,NCD.LRI,component,Component cause included in AllCause
+allcause_ensembles,NCD,component,Component cause included in AllCause
+allcause_ensembles,CV,component,Component cause included in AllCause
+allcause_ensembles,TotCV,component,Component cause included in AllCause
+allcause_ensembles,TotResp,component,Component cause included in AllCause
+allcause_ensembles,IHD,component,Component cause included in AllCause
+allcause_ensembles,Stroke,component,Component cause included in AllCause
+allcause_ensembles,OthCV,component,Component cause included in AllCause
+allcause_ensembles,COPD,component,Component cause included in AllCause
+allcause_ensembles,OthResp,component,Component cause included in AllCause
+allcause_ensembles,LC,component,Component cause included in AllCause
+allcause_ensembles,LRI,component,Component cause included in AllCause
+allcause_ensembles,Diabetes,component,Component cause included in AllCause
+allcause_ensembles,Dementia,component,Component cause included in AllCause
+ncdlri_mortality,NCD,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,TotCV,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,TotResp,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,OthCV,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,OthResp,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,CV,component,Component cause included in NCD.LRI aggregate

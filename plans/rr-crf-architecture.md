@@ -117,7 +117,8 @@ Primary files and data:
 
 The Registry stores one structured row per CRF definition. A row identifies
 the pollutant, cause, outcome, age range, functional form, parameters or data
-path, counterfactual, units, overlap flag, and `reference_id`.
+path, counterfactual, units, and `reference_id`. Overlap decisions belong to the
+calculation selection, not to individual CRF definitions.
 
 References describe the scientific source. Registry validation requires every
 `reference_id` to exist in the References table. Updating a Registry row and
@@ -185,8 +186,8 @@ Registry process.
 Primary file: `R/hia_diagnostic_registry_set.R`
 
 When all components are ready, the resolver combines historical CRF and RR
-components into one Registry-shaped Set. It then applies the overlap rules and
-validates the complete selection before calculation.
+components into one Registry-shaped Set and validates the complete selection.
+It does not store precomputed overlap flags on the Set.
 
 The name of this internal file reflects its development history. In the current
 Phase 1 flow, the same resolver supplies the active compatibility route. Do not
@@ -266,15 +267,31 @@ aggregate burden must not be added to the component burdens that it already
 contains. Ordinary Set construction allows both alternatives to be retained
 for comparison. A maintainer must explicitly request strict overlap validation
 with `validate_crf_selection(..., check_double_counting = TRUE)` before treating
-a selection as non-overlapping or summable. The resolved compatibility Set
-also preserves the overlap marking expected by historical output.
-Calculation output from an explicit `crfs_set()` likewise applies `dc_groups`:
-when an aggregate is present for a pollutant/outcome group, its component impact
-rows are marked `double_counted = TRUE`. The choice is made by Set class:
-compatibility (`creahia_hia_diagnostic_set`) and historical
-(`creahia_historical_crf_set`) Sets keep their legacy marking, and every other
-`crfs_set()` is marked from `dc_groups`, so an unrecognised Set errs toward
-flagging overlap.
+a selection as non-overlapping or summable.
+
+At the start of `compute_hia_paf()`, after routing and final selection, one
+resolver builds an overlap plan from the selected CRF and RR cause slots.
+It prefers a selected ensemble over its components within each
+pollutant/outcome. The plan is attached to the returned PAF table as
+`creahia.overlap_plan`. Every calculation rebuilds it, including calculations
+using filtered or extended inspected Sets. Registry definitions and compilers
+no longer store `double_counted`; archived legacy input tables retain their
+original flags for provenance only and those flags do not control calculation.
+
+`compute_hia_impacts()` attaches the plan's flags to results without choosing
+again. It verifies that excluded components have a non-missing covering
+ensemble in the same region, scenario and estimate. Missing coverage is an
+error, not a switch to component estimates. When imported PAFs have no plan,
+the same resolver runs once at the start of impact calculation using their
+available slots. Preserve the PAF attribute when exporting/reloading an
+original selection; a plain table cannot recover selected-but-missing causes.
+The standalone `add_double_counted()` helper also uses this resolver.
+
+Cause coverage lives in `dc_groups.csv`, including `TotCV` (IHD, Stroke,
+OthCV), `TotResp` (COPD, OthResp), and enclosing NCD.LRI/AllCause relationships.
+`TotResp` covers chronic respiratory diseases; LRI is separate. The historical
+`CV` rule retains its existing IHD/Stroke membership rather than being silently
+reinterpreted as TotCV.
 
 Passing numerical parity does not by itself approve a new aggregate mapping.
 Changing an overlap group or interpreting a new aggregate requires methodology

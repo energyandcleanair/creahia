@@ -22,6 +22,15 @@ compute_hia_impacts <- function(species,
   scenarios <- names(conc_map)
   impacts <- list()
 
+  overlap_plan <- attr(paf, "creahia.overlap_plan", exact = TRUE)
+  if (is.null(overlap_plan)) {
+    # Imported/precomputed PAFs have no original selection plan. Resolve once
+    # at this entry boundary using their available cause slots.
+    overlap_plan <- .resolve_hia_overlap_plan(
+      dplyr::select(paf, pollutant, cause, outcome)
+    )
+  }
+
   # Validate epi data
   # validate_epi(epi)
 
@@ -69,7 +78,7 @@ compute_hia_impacts <- function(species,
 
     impacts_scenario <- impacts_scenario %>%
       to_long_hia() %>%
-      add_double_counted(crfs = crfs, epi = epi) %>%
+      .attach_hia_overlap_plan(overlap_plan) %>%
       add_age_group() %>%
       clean_cause_outcome()
 

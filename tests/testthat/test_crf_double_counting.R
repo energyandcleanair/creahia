@@ -95,3 +95,50 @@ test_that("describe_dc_group errors on unknown group", {
     "Unknown dc_group"
   )
 })
+
+test_that("ensemble decisions follow final cause coverage, not stored flags", {
+  slots <- tibble::tibble(
+    pollutant = "NO2", outcome = "Deaths",
+    cause = c("TotCV", "IHD", "Stroke", "OthCV", "TotResp", "COPD", "OthResp"),
+    double_counted = c(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE)
+  )
+  plan <- .resolve_hia_overlap_plan(slots)
+  expect_equal(plan$double_counted[match(slots$cause, plan$cause)],
+               c(FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE))
+  alone <- .resolve_hia_overlap_plan(dplyr::filter(slots, cause == "TotCV"))
+  expect_false(alone$double_counted)
+  components <- .resolve_hia_overlap_plan(dplyr::filter(slots, !cause %in% c("TotCV", "TotResp")))
+  expect_true(all(!components$double_counted))
+  nested <- .resolve_hia_overlap_plan(dplyr::bind_rows(
+    slots, tibble::tibble(pollutant = "NO2", outcome = "Deaths", cause = "AllCause")
+  ))
+  expect_equal(nested$cause[!nested$double_counted], "AllCause")
+})
+
+
+test_that("overlap decisions stay separate by pollutant and outcome", {
+  slots <- tibble::tribble(
+    ~pollutant, ~cause, ~outcome,
+    "PM25", "TotResp", "Deaths",
+    "NO2", "COPD", "Deaths",
+    "PM25", "COPD", "YLLs"
+  )
+  expect_true(all(!.resolve_hia_overlap_plan(slots)$double_counted))
+})
+
+
+test_that("output validation cannot borrow an ensemble from another region or estimate", {
+  slots <- tibble::tibble(pollutant = "PM25", outcome = "Deaths", cause = c("NCD.LRI", "IHD"))
+  plan <- .resolve_hia_overlap_plan(slots)
+  hia <- dplyr::mutate(slots, region_id = "A", estimate = "central", number = c(100, 30))
+  expect_equal(.attach_hia_overlap_plan(hia, plan)$double_counted, c(FALSE, TRUE))
+  for (field in c("region_id", "estimate")) {
+    mismatch <- hia
+    mismatch[[field]][2] <- "other"
+    expect_error(.attach_hia_overlap_plan(mismatch, plan), "selected ensemble is missing")
+  }
+  expect_error(
+    .attach_hia_overlap_plan(dplyr::filter(hia, cause == "IHD"), plan),
+    "selected ensemble is missing"
+  )
+})

@@ -33,7 +33,7 @@
   c(
     "component_id",
     "source",
-    CRF_REGISTRY_REQUIRED_COLUMNS,
+    append(CRF_REGISTRY_REQUIRED_COLUMNS, "double_counted", after = 4L),
     .historical_registry_metadata_columns()
   )
 }

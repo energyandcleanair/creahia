@@ -345,7 +345,6 @@ gbd_deaths_registry_rows <- function(version = RR_GBD2019) {
       pollutant = "PM25",
       cause = cause,
       outcome = MEASURE_DEATHS,
-      double_counted = FALSE,
       age_low = if (child_lri) 0 else 25,
       age_high = if (child_lri) 4 else Inf,
       region_applicability = "global",

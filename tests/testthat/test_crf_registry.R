@@ -61,12 +61,11 @@ test_that("unknown reference_id fails validation", {
   )
 })
 
-test_that("CRF registry exposes double_counted metadata", {
-  registry <- load_crf_registry(validate = FALSE)
-
-  expect_true("double_counted" %in% names(registry))
-  expect_type(registry$double_counted, "logical")
-  expect_false(any(is.na(registry$double_counted)))
+test_that("CRF definitions do not store calculation overlap decisions", {
+  registry <- load_crf_registry()
+  expect_false("double_counted" %in% names(registry))
+  expect_false("double_counted" %in% CRF_REGISTRY_REQUIRED_COLUMNS)
+  expect_no_error(validate_crf_registry(registry))
 })
 
 test_that("reviewed CRF references preserve formal citation metadata", {

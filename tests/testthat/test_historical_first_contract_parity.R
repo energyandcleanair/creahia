@@ -102,7 +102,7 @@ test_that("diagnostic Registry resolution accepts a CRF-only component set", {
 
   expect_s3_class(resolved, "creahia_crf_set")
   expect_equal(nrow(resolved), 15L)
-  expect_false(any(resolved$double_counted))
+  expect_false("double_counted" %in% names(resolved))
 })
 
 

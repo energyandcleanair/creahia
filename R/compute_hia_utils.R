@@ -152,99 +152,22 @@ hiapoll_to_species <- function(hiapoll) {
 }
 
 
-# Compatibility and historical Sets carry the legacy double_counted marking
-# expected by historical output. Every other crfs_set() is marked from
-# dc_groups, so a Set whose origin is not recognised errs toward flagging
-# overlap rather than allowing aggregate and component rows to be summed.
-.crfs_set_uses_dc_groups <- function(crfs) {
-  is_crfs_set(crfs) &&
-    !inherits(crfs, c("creahia_hia_diagnostic_set", "creahia_historical_crf_set")) &&
-    !any(crfs$reference_id %in% CRF_INTERNAL_REFERENCE_IDS)
-}
-
-
-#' Key function to add a double_counted field to hia results
+#' Add selection-derived double-counting flags to HIA results
 #'
-#' @param hia
-#' @param crfs
-#' @param epi
-#'
-#' @return
+#' @param hia HIA result rows.
+#' @param crfs Selected CRFs (legacy flags are ignored).
+#' @param epi Retained for call compatibility.
+#' @return HIA rows with a derived double_counted column.
 #' @export
-#'
-#' @examples
 add_double_counted <- function(hia, crfs, epi) {
-
-  dc_groups <- load_dc_groups()
-
-  dc_aggregates <- dc_groups %>%
-    dplyr::filter(role == CRF_DC_ROLE_AGGREGATE) %>%
-    dplyr::select(dc_group, aggregate_cause = cause) 
-
-  dc_components <- dc_groups %>%
-    dplyr::filter(role == CRF_DC_ROLE_COMPONENT) %>%
-    dplyr::select(dc_group, component_cause = cause) 
-
-  # Use CRFS double counted field first
-  joined <- hia %>%
-    dplyr::mutate(.hia_row_id = dplyr::row_number()) %>%
-    dplyr::left_join(
-        crfs %>% select(cause, outcome, pollutant, double_counted),
-        by = c('cause', 'outcome', 'pollutant')
-      )
-
-  public_set_output <- .crfs_set_uses_dc_groups(crfs)
-  if (public_set_output) {
-    joined <- joined %>%
-      dplyr::mutate(double_counted = NA)
-  }
-
-  # Except PM25, all of them should have been found in CRFs
-  if(!public_set_output && nrow(joined %>% filter(is.na(double_counted) & pollutant != 'PM25' & number > 0)) > 0) {
-    stop('merged has failed in double counting detection')
-  }
-
-  # Find aggregate causes that are present within each pollutant/outcome group.
-  aggregate_presence <- joined %>%
-    dplyr::inner_join(
-      dc_aggregates, 
-      by = c("cause" = "aggregate_cause"),
-      relationship = "many-to-many"
-    ) %>%
-    filter(!is.na(number)) %>%
-    distinct(pollutant, outcome, dc_group)
-
-  # Mark component causes as double-counted only when their aggregate is present
-  # in the same pollutant/outcome group.
-  inferred_double_counted <- joined %>%
-    filter(is.na(double_counted)) %>%
-    inner_join(
-      dc_components,
-      by = c("cause" = "component_cause"),
-      relationship = "many-to-many"
-    ) %>%
-    inner_join(
-      aggregate_presence,
-      by = c("pollutant", "outcome", "dc_group"),
-      relationship = "many-to-many"
-    ) %>%
-    distinct(.hia_row_id) %>%
-    mutate(inferred_double_counted = TRUE)
-
-
-  joined <- joined %>%
-    left_join(inferred_double_counted, by = ".hia_row_id") %>%
-    mutate(
-      double_counted = case_when(
-        !is.na(double_counted) ~ double_counted,
-        dplyr::coalesce(inferred_double_counted, FALSE) ~ TRUE,
-        TRUE ~ FALSE
-      )
-    ) %>%
-    select(-.hia_row_id, -inferred_double_counted)
-
-  return(joined)
-
+  # Standalone helper: derive from the supplied selection plus RR result slots.
+  # The compute pipeline instead resolves once before PAF calculation and
+  # calls .attach_hia_overlap_plan() with that fixed plan.
+  slots <- dplyr::bind_rows(
+    dplyr::select(crfs, pollutant, cause, outcome),
+    dplyr::select(hia, pollutant, cause, outcome)
+  )
+  .attach_hia_overlap_plan(hia, .resolve_hia_overlap_plan(slots))
 }
 
 

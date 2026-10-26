@@ -170,7 +170,7 @@ test_that("Fusion adult death candidates create valid Registry rows", {
   expect_named(rows, CRF_REGISTRY_REQUIRED_COLUMNS)
   expect_equal(rows$cause, specs$cause)
   expect_true(all(rows$outcome == MEASURE_DEATHS))
-  expect_true(all(!rows$double_counted))
+  expect_false("double_counted" %in% names(rows))
   expect_true(all(rows$reference_id == "burnett_2022_fusion"))
   expect_equal(reference$doi, "10.1016/j.envres.2021.112245")
   expect_match(reference$notes, "Fusion Parameters Jul 7, 2021.csv", fixed = TRUE)

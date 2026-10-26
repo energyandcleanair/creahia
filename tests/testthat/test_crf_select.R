@@ -819,9 +819,8 @@ test_that("crfs_set returns a typed CRF set", {
   expect_true(is_crfs_set(crfs))
 })
 
-test_that("crfs_set output preserves double_counted metadata", {
+test_that("crfs_set contains definitions without calculation overlap decisions", {
   selected <- crfs_set(presets = "experimental_default")
 
-  expect_true("double_counted" %in% names(selected))
-  expect_false(any(is.na(selected$double_counted)))
+  expect_false("double_counted" %in% names(selected))
 })

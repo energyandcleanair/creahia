@@ -739,7 +739,7 @@ crfs <- do.call(crfs_set, set_spec)
 ```
 
 The returned object contains the full Registry rows needed by the downstream
-PAF calculation, including `form`, `reference_id`, `double_counted`, age
+PAF calculation, including `form`, `reference_id`, age
 metadata, and calculation inputs.
 
 Pass it to the existing HIA flow with the other required analysis inputs:
@@ -918,3 +918,32 @@ devtools::test(filter = "crf_fixture_isolation")
 
 When changing GEMM or Fusion Registry data or presets, also run the relevant
 end-to-end parity and fixed-fingerprint tests.
+
+
+### How total inclusion is decided
+
+`double_counted` is a calculation output, not a CRF property. At the beginning
+of PAF calculation, the final CRF/RR selection is resolved once against the
+shared cause coverage table. Selected ensembles take precedence over their
+components within the same pollutant and outcome. All estimates remain
+available for comparison; use `!double_counted` when summing impacts.
+
+| Selection | Included in totals |
+| --- | --- |
+| TotCV alone | TotCV |
+| IHD, Stroke, OthCV | All three components |
+| TotCV, IHD, Stroke, OthCV | TotCV |
+| TotResp, COPD, OthResp | TotResp |
+| AllCause, TotCV, TotResp | AllCause |
+
+TotResp means chronic respiratory diseases and does not include LRI. Editing
+an inspected Set is supported: each new calculation rebuilds the decision.
+Old CRF `double_counted` columns are ignored. The output stage verifies that
+an expected covering ensemble exists for each excluded component, but never
+silently changes the initial selection when a result is missing.
+
+PAF tables returned by `compute_hia_paf()` carry the selection plan in the
+`creahia.overlap_plan` attribute. Standalone impact calculation of an imported
+PAF table without that attribute resolves inclusion from the available PAF
+slots once at entry. Such a table cannot identify a selected cause that was
+never exported.

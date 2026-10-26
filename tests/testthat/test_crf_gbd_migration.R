@@ -278,7 +278,7 @@ test_that("GBD 2019 death candidates create valid Registry rows", {
   expect_named(rows, CRF_REGISTRY_REQUIRED_COLUMNS)
   expect_equal(rows$cause, gbd_death_causes(RR_GBD2019))
   expect_true(all(rows$outcome == MEASURE_DEATHS))
-  expect_true(all(!rows$double_counted))
+  expect_false("double_counted" %in% names(rows))
   expect_true(all(
     rows$reference_id == "ihme_2021_gbd2019_pm_risk_curves"
   ))

@@ -183,7 +183,6 @@ fusion_deaths_registry_row <- function(cause, crf_id, data_path, notes) {
     pollutant = "PM25",
     cause = cause,
     outcome = MEASURE_DEATHS,
-    double_counted = FALSE,
     age_low = 25,
     age_high = Inf,
     region_applicability = "global",

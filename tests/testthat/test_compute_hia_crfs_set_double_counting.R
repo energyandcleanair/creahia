@@ -154,31 +154,7 @@ test_that("Set double-counting groups do not cross pollutants", {
 })
 
 
-test_that("Set origin decides whether output is marked from dc_groups", {
-  public_set <- crfs_set(presets = c(
-    "gemm_adult_deaths_aggregate",
-    "gemm_adult_deaths_components"
-  ))
-  memberships <- .load_historical_crf_memberships()
-  historical_set <- .resolve_historical_crf_components(
-    memberships$component_id[memberships$selection_id == "legacy_profile_c40"]
-  )
-  diagnostic_set <- suppressMessages(inspect_hia_configuration())$registry_set
 
-  expect_true(.crfs_set_uses_dc_groups(public_set))
-  expect_true(.crfs_set_uses_dc_groups(
-    dplyr::filter(public_set, .data$cause != "LRI")
-  ))
-  expect_true(.crfs_set_uses_dc_groups(
-    dplyr::mutate(public_set, analysis_note = "kept")
-  ))
-
-  expect_s3_class(historical_set, "creahia_historical_crf_set")
-  expect_false(.crfs_set_uses_dc_groups(historical_set))
-  expect_s3_class(diagnostic_set, "creahia_hia_diagnostic_set")
-  expect_false(.crfs_set_uses_dc_groups(diagnostic_set))
-  expect_false(.crfs_set_uses_dc_groups(as.data.frame(public_set)))
-})
 
 
 test_that("a filtered public Set still marks component impacts", {
@@ -196,4 +172,23 @@ test_that("a filtered public Set still marks component impacts", {
     expected_ncdlri_overlap_flags() %>%
       dplyr::filter(.data$cause != "LRI")
   )
+})
+
+
+test_that("editing an inspected Set rebuilds its overlap decisions", {
+  inspected <- suppressMessages(inspect_hia_configuration(
+    rr_sources = list(gemm = c("IHD", "Stroke", "COPD", "LC", "LRI"))
+  ))$registry_set
+  expanded <- dplyr::bind_rows(
+    inspected, crfs_set("gemm_adult_deaths_aggregate")
+  )
+  expect_equal(
+    death_double_counting(run_crfs_set_double_counting_hia(expanded)),
+    expected_ncdlri_overlap_flags()
+  )
+  filtered <- dplyr::filter(expanded, cause != "NCD.LRI")
+  expect_true(all(!death_double_counting(
+    run_crfs_set_double_counting_hia(filtered)
+  )$double_counted))
+  expect_false("double_counted" %in% names(inspected))
 })

@@ -331,7 +331,7 @@ test_that("compute_hia_impacts handles multiple scenarios", {
 })
 
 # Tests for add_double_counted function
-test_that("add_double_counted joins CRF double_counted field correctly", {
+test_that("add_double_counted ignores stored CRF flags", {
   test_data <- setup_impacts_test_data()
 
   # Create HIA data that needs double_counted field added
@@ -369,7 +369,7 @@ test_that("add_double_counted joins CRF double_counted field correctly", {
 
   # Check specific values
   ncdlri_row <- result[result$cause == "NCD.LRI" & result$outcome == "Deaths", ]
-  expect_true(ncdlri_row$double_counted)
+  expect_false(ncdlri_row$double_counted)
 
   asthma_row <- result[result$cause == "Asthma.1to18" & result$outcome == "AsthmaIncidence", ]
   expect_false(asthma_row$double_counted)
@@ -539,7 +539,7 @@ test_that("add_double_counted handles YLLs outcomes correctly", {
   expect_true(all(pm25_cv_ylls_rows$double_counted))
 })
 
-test_that("add_double_counted fails when non-PM25 pollutant has missing double_counted", {
+test_that("add_double_counted accepts non-PM25 selections without stored flags", {
   test_data <- setup_impacts_test_data()
 
   # Create HIA data with NO2 (non-PM25) that has positive number but no CRF match
@@ -567,10 +567,9 @@ test_that("add_double_counted fails when non-PM25 pollutant has missing double_c
     stringsAsFactors = FALSE
   )
 
-  # Should throw error for non-PM25 pollutant with missing double_counted and positive number
-  expect_error(
-    add_double_counted(hia_data, crfs_no_match, epi_minimal),
-    "merged has failed in double counting detection"
+  # Stored flags are not required for any pollutant.
+  expect_no_error(
+    add_double_counted(hia_data, crfs_no_match, epi_minimal)
   )
 })
 
@@ -625,7 +624,7 @@ test_that("to_long_hia keeps combinations with partial NA values", {
   expect_true(any(!is.na(ihd_rows$number)))
 })
 
-test_that("add_double_counted does not set double_counted when NCD.LRI has only NA values", {
+test_that("add_double_counted rejects missing selected ensemble instead of changing the selection", {
   # Create HIA data with NCD.LRI having NA values and individual causes with non-NA values
   hia_data <- data.frame(
     cause = c("NCD.LRI", "IHD", "Stroke", "COPD"),
@@ -651,17 +650,10 @@ test_that("add_double_counted does not set double_counted when NCD.LRI has only 
     stringsAsFactors = FALSE
   )
 
-  result <- add_double_counted(hia_data, crfs_no_pm25, epi_minimal)
-
-  # Check that no double_counted values are NA
-  expect_false(any(is.na(result$double_counted)))
-
-  # Since NCD.LRI has only NA values, the individual causes should NOT be marked as double_counted
-  pm25_individual_rows <- result[result$pollutant == "PM25" &
-                                 result$cause %in% c("IHD", "Stroke", "COPD") &
-                                 result$outcome == "Deaths", ]
-
-  expect_false(all(pm25_individual_rows$double_counted))
+  expect_error(
+    add_double_counted(hia_data, crfs_no_pm25, epi_minimal),
+    "selected ensemble is missing"
+  )
 })
 
 test_that("add_double_counted sets double_counted when NCD.LRI has non-NA values", {

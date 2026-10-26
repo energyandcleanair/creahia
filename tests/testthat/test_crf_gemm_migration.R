@@ -246,7 +246,7 @@ test_that("GEMM IHD compiler creates a complete Registry row", {
   )
 
   expect_named(row, CRF_REGISTRY_REQUIRED_COLUMNS)
-  expect_false(row$double_counted)
+  expect_false("double_counted" %in% names(row))
   expect_equal(row$form, CRF_FORM_TABULAR)
   expect_equal(row$reference_id, "burnett_2018_gemm")
 })
@@ -269,7 +269,7 @@ test_that("full adult GEMM candidate creates valid Registry rows", {
   expect_named(rows, CRF_REGISTRY_REQUIRED_COLUMNS)
   expect_equal(rows$cause, specs$cause)
   expect_true(all(rows$outcome == "Deaths"))
-  expect_true(all(!rows$double_counted))
+  expect_false("double_counted" %in% names(rows))
   expect_true(validate_crf_registry(rows, references = gemm_reference_row()))
 })
 
