@@ -3,7 +3,7 @@
 #' @param conc_map
 #' @param species
 #' @param regions
-#' @param scenarios
+#' @param scenarios Names in conc_map to calculate for both RR and CRF methods.
 #' @param calc_causes
 #' @param gbd_causes
 #' @param epi_version
@@ -44,6 +44,8 @@ compute_hia <- function(conc_map,
                         gbd_causes = NULL,
                         ...,
                         crf_compute = c("legacy", "registry")){
+
+  conc_map <- .select_hia_scenarios(conc_map, scenarios)
 
   argument_provenance <- list(
     rr_sources_supplied = !missing(rr_sources),

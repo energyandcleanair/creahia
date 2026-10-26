@@ -425,3 +425,15 @@ practical workflows, exact `add`/`remove`/`replace` rules, real Registry
 examples, and validation behaviour, see:
 
 - [CRF Registry Discovery and Selection](crf-registry-selection.md)
+
+## Selecting scenarios
+
+`scenarios` selects named entries from `conc_map` for both RR and CRF
+calculations. For example, `scenarios = "close_plant"` calculates only that
+comparison, even when `conc_map` also contains other scenarios. Omit the
+argument to calculate every scenario. Unknown names produce an error.
+
+This also applies to standalone `compute_hia_paf()` calls. Earlier CRF
+calculations ignored this argument and included all supplied scenarios; callers
+that relied on those extra results should omit `scenarios` or explicitly select
+all desired names. Values for the selected scenarios are unchanged.

@@ -75,7 +75,10 @@ Primary file: `R/compute_hia.R`
 `compute_hia()` receives concentration maps, regions, CRF choices, RR choices,
 EPI, and population-year intent. It records whether key inputs were explicitly
 supplied, translates deprecated population arguments, and preserves the public
-calculation sequence.
+calculation sequence. It restricts concentration maps to the requested
+`scenarios` before calculation, so RR, CRF and impact stages use the same
+selection. Standalone `compute_hia_paf()` calls apply the same selection at
+their entry boundary. Unknown scenario names are rejected.
 
 The function does not decide that a historical method is scientifically
 approved. It asks the compatibility layer whether the supplied configuration

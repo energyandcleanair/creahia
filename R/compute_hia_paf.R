@@ -6,7 +6,7 @@
 #' @param conc_map
 #' @param epi_version
 #' @param rr_sources
-#' @param scenarios
+#' @param scenarios Names in conc_map to calculate.
 #'
 #' @return
 #' @export
@@ -206,7 +206,7 @@ compute_hia_paf_crfs <- function(species,
 #' @param conc_map List of concentration maps by scenario
 #' @param species Vector of pollutant species
 #' @param regions Spatial regions data
-#' @param scenarios Vector of scenario names
+#' @param scenarios Names in conc_map to calculate for both RR and CRF methods.
 #' @param epi_version EPI data version
 #' @param rr_sources Vector of RR sources (for RR-based PAF)
 #' @param crfs CRF data table (for CRF-based PAF)
@@ -227,6 +227,8 @@ compute_hia_paf <- function(conc_map,
                            crf_compute = c("legacy", "registry")
                            ) {
   
+  conc_map <- .select_hia_scenarios(conc_map, scenarios)
+
   crf_compute <- match.arg(crf_compute)
 
   if (is_crfs_set(crfs)) {
@@ -636,4 +638,15 @@ has_rr_sources <- function(rr_sources) {
   }
 
   length(rr_sources) > 0
+}
+
+.select_hia_scenarios <- function(conc_map, scenarios) {
+  if ((!is.null(scenarios) && !is.character(scenarios)) || anyNA(scenarios)) {
+    stop("scenarios must contain scenario names from conc_map.", call. = FALSE)
+  }
+  unknown <- setdiff(scenarios, names(conc_map))
+  if (length(unknown)) {
+    stop("Unknown scenarios: ", paste(unknown, collapse = ", "), call. = FALSE)
+  }
+  conc_map[unique(scenarios)]
 }
