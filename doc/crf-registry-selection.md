@@ -923,7 +923,7 @@ end-to-end parity and fixed-fingerprint tests.
 ### How total inclusion is decided
 
 `double_counted` is a calculation output, not a CRF property. At the beginning
-of PAF calculation, the final CRF/RR selection is resolved once against the
+of `compute_hia()`, before PAF calculation, the final CRF/RR selection is resolved once against the
 shared cause coverage table. Selected ensembles take precedence over their
 components within the same pollutant and outcome. All estimates remain
 available for comparison; use `!double_counted` when summing impacts.
@@ -942,8 +942,7 @@ Old CRF `double_counted` columns are ignored. The output stage verifies that
 an expected covering ensemble exists for each excluded component, but never
 silently changes the initial selection when a result is missing.
 
-PAF tables returned by `compute_hia_paf()` carry the selection plan in the
-`creahia.overlap_plan` attribute. Standalone impact calculation of an imported
-PAF table without that attribute resolves inclusion from the available PAF
-slots once at entry. Such a table cannot identify a selected cause that was
-never exported.
+The plan stays local to the calculation and is passed directly to the impact
+step. Standalone `compute_hia_impacts()` calls with precomputed PAFs resolve
+inclusion once from their available slots at entry. Such a table cannot
+identify a selected cause that was never calculated/exported.

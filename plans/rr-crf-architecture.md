@@ -269,23 +269,24 @@ for comparison. A maintainer must explicitly request strict overlap validation
 with `validate_crf_selection(..., check_double_counting = TRUE)` before treating
 a selection as non-overlapping or summable.
 
-At the start of `compute_hia_paf()`, after routing and final selection, one
-resolver builds an overlap plan from the selected CRF and RR cause slots.
-It prefers a selected ensemble over its components within each
-pollutant/outcome. The plan is attached to the returned PAF table as
-`creahia.overlap_plan`. Every calculation rebuilds it, including calculations
-using filtered or extended inspected Sets. Registry definitions and compilers
-no longer store `double_counted`; archived legacy input tables retain their
-original flags for provenance only and those flags do not control calculation.
+At the start of `compute_hia()`, after routing and final selection and before
+PAF calculation, one resolver builds an overlap plan from the selected CRF
+and RR cause slots. It prefers a selected ensemble over its components within
+each pollutant/outcome. The plan stays local to this calculation and is passed
+directly to `compute_hia_impacts()` through its internal `.overlap_plan`
+argument. Every calculation rebuilds it, including calculations using filtered
+or extended inspected Sets. Registry definitions and compilers no longer store
+`double_counted`; archived legacy input tables retain their original flags for
+provenance only and those flags do not control calculation.
 
-`compute_hia_impacts()` attaches the plan's flags to results without choosing
-again. It verifies that excluded components have a non-missing covering
-ensemble in the same region, scenario and estimate. Missing coverage is an
-error, not a switch to component estimates. When imported PAFs have no plan,
-the same resolver runs once at the start of impact calculation using their
-available slots. Preserve the PAF attribute when exporting/reloading an
-original selection; a plain table cannot recover selected-but-missing causes.
-The standalone `add_double_counted()` helper also uses this resolver.
+`compute_hia_impacts()` attaches the plan's flags without choosing again. It
+verifies that excluded components have a non-missing covering ensemble in the
+same region, scenario and estimate. Missing coverage is an error, not a switch
+to component estimates. For standalone calls with precomputed PAFs, the same
+resolver runs once at the start of impact calculation using the available PAF
+slots. Precomputed PAFs cannot identify selected causes that were never
+calculated/exported. The standalone `add_double_counted()` helper also uses
+this resolver.
 
 Cause coverage lives in `dc_groups.csv`, including `TotCV` (IHD, Stroke,
 OthCV), `TotResp` (COPD, OthResp), and enclosing NCD.LRI/AllCause relationships.

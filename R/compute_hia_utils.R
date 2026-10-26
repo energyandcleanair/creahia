@@ -161,7 +161,7 @@ hiapoll_to_species <- function(hiapoll) {
 #' @export
 add_double_counted <- function(hia, crfs, epi) {
   # Standalone helper: derive from the supplied selection plus RR result slots.
-  # The compute pipeline instead resolves once before PAF calculation and
+  # The compute pipeline instead resolves once in compute_hia() before PAF calculation and
   # calls .attach_hia_overlap_plan() with that fixed plan.
   slots <- dplyr::bind_rows(
     dplyr::select(crfs, pollutant, cause, outcome),

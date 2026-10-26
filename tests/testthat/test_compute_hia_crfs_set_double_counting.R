@@ -192,3 +192,25 @@ test_that("editing an inspected Set rebuilds its overlap decisions", {
   )$double_counted))
   expect_false("double_counted" %in% names(inspected))
 })
+
+
+test_that("compute_hia resolves overlap exactly once before PAF calculation", {
+  calls <- 0L
+  resolve <- .resolve_hia_overlap_plan
+  calculate_paf <- compute_hia_paf
+  with_mocked_bindings(
+    {
+      run_crfs_set_double_counting_hia(crfs_set("gemm_adult_deaths_aggregate"))
+      expect_equal(calls, 1L)
+    },
+    .resolve_hia_overlap_plan = function(...) {
+      calls <<- calls + 1L
+      resolve(...)
+    },
+    compute_hia_paf = function(...) {
+      expect_equal(calls, 1L)
+      calculate_paf(...)
+    },
+    .package = "creahia"
+  )
+})

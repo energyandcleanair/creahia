@@ -9,6 +9,7 @@
 #' @param regions Spatial regions data
 #' @param epi Epidemiological data
 #' @param crfs CRF data table
+#' @param .overlap_plan Internal calculation plan supplied by compute_hia().
 #' @return Health impact assessment results
 #' @export
 compute_hia_impacts <- function(species,
@@ -16,16 +17,17 @@ compute_hia_impacts <- function(species,
                                 conc_map,
                                 regions,
                                 epi = get_epi(),
-                                crfs = get_crfs()) {
+                                crfs = get_crfs(),
+                                .overlap_plan = NULL) {
 
   polls <- species_to_hiapoll(species)
   scenarios <- names(conc_map)
   impacts <- list()
 
-  overlap_plan <- attr(paf, "creahia.overlap_plan", exact = TRUE)
+  overlap_plan <- .overlap_plan
   if (is.null(overlap_plan)) {
-    # Imported/precomputed PAFs have no original selection plan. Resolve once
-    # at this entry boundary using their available cause slots.
+    # Standalone impact calculation resolves once at its entry boundary,
+    # using the available precomputed PAF slots.
     overlap_plan <- .resolve_hia_overlap_plan(
       dplyr::select(paf, pollutant, cause, outcome)
     )

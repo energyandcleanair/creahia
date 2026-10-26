@@ -257,7 +257,11 @@ test_that("GBD 2019 historical call emits its canonical specification", {
     get_crfs = function(version = "default") make_shadow_test_crfs(),
     get_epi = function(version = "default") make_shadow_test_epi(),
     parse_rr_sources = function(rr_sources) {
-      seen$translated_rr_sources <- rr_sources
+      # Capture the boundary translation. Selection planning may subsequently
+      # normalize the already-parsed table while resolving RR cause slots.
+      if (is.null(seen$translated_rr_sources)) {
+        seen$translated_rr_sources <- rr_sources
+      }
       tibble::tibble(cause = "NCD.LRI", source = RR_GEMM)
     },
     validate_crfs_against_epi = function(...) invisible(TRUE),
