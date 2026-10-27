@@ -5,4 +5,5 @@ PTB,Preterm birth,"321,989",USD,birth,2010,Trasande et al 2016,USA,1,gdp,True
 Deaths,"Deaths, adults","9,631,000",USD,death,2015,Viscusi and Masterman (2017),USA,1,gni,True
 Deaths.child,"Deaths, children","19,262,000",USD,death,2015,OECD 2012,USA,1,gni,True
 YLDs,Year lived with disability,"62,800",GBP,year lived with disability,2017,Birchby 2019,GBR,1,gni,True
+YLLs,Year of life lost,42800,GBP,year of life lost,2017,Birchby 2019,GBR,1,gni,True
 Absences,Lost workday,166,EUR,work day,2019,EEA 2021,EUU,1,gdp,True
