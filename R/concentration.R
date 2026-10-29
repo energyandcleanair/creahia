@@ -76,7 +76,7 @@ get_conc_baseline_pm25 <- function(target_year = lubridate::year(lubridate::toda
                                    grid_raster){
   r <- creaexposure::get_concentration("pm25", source = "vandonkelaar", year = target_year,
                                        grid_raster = grid_raster)
-  .validate_unit(r, "µg/m3")
+  .validate_unit(r, "\u00b5g/m3")
   r
 }
 
@@ -116,7 +116,7 @@ get_conc_baseline_no2 <- function(grid_raster, no2_targetyear){
     "no2", source = "larkin", grid_raster = grid_raster,
     scale_year = no2_targetyear
   )
-  .validate_unit(conc_no2, "µg/m3")
+  .validate_unit(conc_no2, "\u00b5g/m3")
 
   conc_no2 <- creahelpers::to_raster(conc_no2)
   conc_no2[] <- conc_no2[] %>% zoo::na.approx(maxgap = 5, na.rm = F)

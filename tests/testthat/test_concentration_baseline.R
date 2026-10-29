@@ -20,14 +20,14 @@ make_raster_with_unit <- function(vals = 25, unit = NULL,
 # --- .validate_unit -----------------------------------------------------------
 
 test_that(".validate_unit passes for correct unit", {
-  r <- make_raster_with_unit(unit = "µg/m3")
-  expect_silent(creahia:::.validate_unit(r, enc2native("µg/m3")))
+  r <- make_raster_with_unit(unit = "\u00b5g/m3")
+  expect_silent(creahia:::.validate_unit(r, "\u00b5g/m3"))
 })
 
 test_that(".validate_unit errors when unit is missing", {
   r <- make_raster_with_unit(unit = NULL)
   expect_error(
-    creahia:::.validate_unit(r, enc2native("µg/m3")),
+    creahia:::.validate_unit(r, "\u00b5g/m3"),
     "No unit set"
   )
 })
@@ -35,7 +35,7 @@ test_that(".validate_unit errors when unit is missing", {
 test_that(".validate_unit errors when unit is wrong", {
   r <- make_raster_with_unit(unit = "kg/m3")
   expect_error(
-    creahia:::.validate_unit(r, enc2native("µg/m3")),
+    creahia:::.validate_unit(r, "\u00b5g/m3"),
     "Unexpected unit"
   )
 })
@@ -45,7 +45,7 @@ test_that(".validate_unit errors when unit is wrong", {
 
 test_that("get_conc_baseline_pm25 calls creaexposure with correct args", {
   captured <- list()
-  mock_raster <- make_raster_with_unit(vals = 25, unit = "µg/m3")
+  mock_raster <- make_raster_with_unit(vals = 25, unit = "\u00b5g/m3")
   grid <- make_raster_with_unit(vals = 0)
 
   local_mocked_bindings(
@@ -119,7 +119,7 @@ test_that("get_conc_baseline_o3 maps species='o3_8h' to variant='sm8h'", {
 
 test_that("get_conc_baseline_no2 passes scale_year to creaexposure", {
   captured <- list()
-  mock_raster <- make_raster_with_unit(vals = 20, unit = "µg/m3")
+  mock_raster <- make_raster_with_unit(vals = 20, unit = "\u00b5g/m3")
   grid <- make_raster_with_unit(vals = 0)
 
   local_mocked_bindings(
