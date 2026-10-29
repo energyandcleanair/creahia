@@ -401,8 +401,18 @@ test_that("Estimates are compatible with previous versions", {
       all_fingerprints %>% distinct(cause)
     )
 
+  # Dementia in RR_GBD2023 moved to the official IHME release (doi:10.6069/K4TW-Q814).
+  # 0.7.2 to 0.8.1 used the 2024 GBD 2023 mean curve. The 2025 mean curve is lower
+  # below ~25 ug/m3 and higher above. Other GBD 2023 causes are unchanged.
+  # Change from_ref to "0.8.2" once 0.8.2 fingerprints are added above.
+  authorised_breaks3 <- tibble(
+    cause = "Dementia",
+    from_ref = "current",
+    description = "GBD 2023 Dementia curve regenerated from the official IHME release"
+  )
+
   # Detect all breaks and identify unauthorised ones
-  authorised_breaks = bind_rows(authorised_breaks1, authorised_breaks2)
+  authorised_breaks = bind_rows(authorised_breaks1, authorised_breaks2, authorised_breaks3)
   breaks_analysis <- detect_breaks(all_fingerprints, authorised_breaks)
 
   # Show which breaks were detected

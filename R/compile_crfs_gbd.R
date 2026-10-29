@@ -1,5 +1,6 @@
 gbd_release_catalog <- function() {
   gbd2019_source_path <- "rr/processed/rr_gbd2019.csv"
+  gbd2023_source_path <- "rr/processed/rr_gbd2023.csv"
 
   releases <- list(
     list(
@@ -40,9 +41,34 @@ gbd_release_catalog <- function() {
     ),
     list(
       version = RR_GBD2023,
-      source_path = "rr/processed/rr_gbd2023.csv",
-      reviewed = FALSE,
-      reference = NULL
+      source_path = gbd2023_source_path,
+      reviewed = TRUE,
+      reference = tibble::tibble(
+        reference_id = "ihme_2026_gbd2023_air_pollution_risk_curves",
+        author = "Global Burden of Disease Collaborative Network",
+        year = 2026,
+        title = paste(
+          "Global Burden of Disease Study 2023 (GBD 2023) Air Pollution",
+          "Exposure Estimates and Risk Curves 1990-2023"
+        ),
+        journal = "Institute for Health Metrics and Evaluation (IHME)",
+        volume = NA_real_,
+        pages = NA_character_,
+        doi = "10.6069/K4TW-Q814",
+        url = "https://doi.org/10.6069/K4TW-Q814",
+        notes = paste(
+          "Official IHME dataset for the GBD 2023 air pollution risk curves.",
+          "In the packaged", paste0(gbd2023_source_path, ","), "Dementia is",
+          "regenerated from the official 2025 mean file by",
+          "generate_rr_gbd2023(). IHD, LRI and Stroke come from the earlier",
+          "2024 GBD 2023 files, on a different exposure grid, and match the",
+          "official release within 1e-4 RR. COPD, Diabetes and LC are the",
+          "GBD 2021 curves, re-released as is in GBD 2023. YLL and YLD rows",
+          "apply the death curves, as in historical CREA workflows. LRI.child",
+          "is created locally by add_lri_child() from the processed LRI curve",
+          "and is not an independently downloaded child-specific curve."
+        )
+      )
     )
   )
 

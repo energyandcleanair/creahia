@@ -307,9 +307,5 @@ expect_historical_contract_parity <- function(
     dplyr::filter(configuration_id == results$configuration_id)
 
   testthat::expect_equal(nrow(actual_fingerprint), expected_paf_rows)
-  testthat::expect_equal(
-    actual_fingerprint,
-    expected_fingerprint,
-    tolerance = 1e-12
-  )
+  expect_legacy_fingerprint_equal(actual_fingerprint, expected_fingerprint)
 }

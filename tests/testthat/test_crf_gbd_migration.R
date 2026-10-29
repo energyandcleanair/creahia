@@ -199,7 +199,7 @@ test_that("GBD candidate paths match legacy age-weighted PAFs", {
 })
 
 
-test_that("only GBD 2019 has completed provenance review", {
+test_that("only GBD 2019 and GBD 2023 have completed provenance review", {
   releases <- lapply(gbd_versions(), gbd_release_metadata)
 
   expect_equal(
@@ -208,17 +208,20 @@ test_that("only GBD 2019 has completed provenance review", {
   )
   expect_equal(
     vapply(releases, function(release) release$reviewed, logical(1)),
-    c(TRUE, FALSE, FALSE)
+    c(TRUE, FALSE, TRUE)
   )
   expect_null(gbd_release_metadata(RR_GBD2021)$reference)
-  expect_null(gbd_release_metadata(RR_GBD2023)$reference)
-  expect_equal(gbd_reviewed_versions(), RR_GBD2019)
+  expect_equal(
+    gbd_release_metadata(RR_GBD2023)$reference$doi,
+    "10.6069/K4TW-Q814"
+  )
+  expect_equal(gbd_reviewed_versions(), c(RR_GBD2019, RR_GBD2023))
   expect_error(
     gbd_deaths_registry_rows(RR_GBD2021),
     "has not completed provenance review"
   )
   expect_error(
-    gbd_reference_row(RR_GBD2023),
+    gbd_reference_row(RR_GBD2021),
     "has not completed provenance review"
   )
   expect_error(
