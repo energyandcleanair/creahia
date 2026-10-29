@@ -1,0 +1,16 @@
+pollutant,cause,outcome,crf_id,notes
+NO2,Asthma.1to18,AsthmaIncidence,legacy_no2_asthma_1to18_incidence_v1,CREA other functions v1
+NO2,Asthma.1to18,AsthmaPrevalence,legacy_no2_asthma_1to18_prevalence_v1,CREA other functions v1
+PM25,Asthma.0to17,AsthmaERV,legacy_pm25_asthma_0to17_erv_v1,CREA other functions v1
+PM25,Asthma.18to99,AsthmaERV,legacy_pm25_asthma_18to99_erv_v1,CREA other functions v1
+O3_8h,Asthma.0to17,AsthmaERV,legacy_o3_asthma_0to17_erv_v1,CREA other functions v1
+O3_8h,Asthma.18to99,AsthmaERV,legacy_o3_asthma_18to99_erv_v1,CREA other functions v1
+PM25,PTB,PTB,legacy_pm25_ptb_v1,CREA other functions v1
+PM25,LBW,LBW,legacy_pm25_lbw_v1,CREA other functions v1
+PM25,Absences,Absences,legacy_pm25_absences_v1,CREA other functions v1
+O3_8h,COPD,Deaths,legacy_o3_copd_deaths_v1,CREA other functions v1
+O3_8h,COPD,YLLs,legacy_o3_copd_ylls_v1,CREA other functions v1
+NO2,NCD.LRI,Deaths,legacy_no2_ncdlri_deaths_v1,CREA other functions v1
+NO2,NCD.LRI,YLLs,legacy_no2_ncdlri_ylls_v1,CREA other functions v1
+SO2,NCD.LRI,Deaths,legacy_so2_ncdlri_deaths_v1,CREA other functions v1
+SO2,NCD.LRI,YLLs,legacy_so2_ncdlri_ylls_v1,CREA other functions v1

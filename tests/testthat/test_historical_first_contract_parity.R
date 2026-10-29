@@ -13,8 +13,8 @@ test_that("the first historical contract reproduces as one Registry Set", {
   ))
   expect_equal(nrow(registry_crfs), 33L)
   expect_equal(sum(registry_crfs$crf_id %in% historical_crf_ids), 15L)
-  expect_equal(sum(registry_crfs$crf_id %in% internal_rr_ids), 12L)
-  expect_equal(sum(registry_crfs$crf_id %in% public_crf_ids), 6L)
+  expect_equal(sum(registry_crfs$crf_id %in% internal_rr_ids), 4L)
+  expect_equal(sum(registry_crfs$crf_id %in% public_crf_ids), 14L)
   expect_equal(dplyr::n_distinct(registry_crfs$crf_id), 33L)
 
   expected_warnings <- c(

@@ -142,9 +142,9 @@ test_that("direct GBD 2019 source selection reproduces through Registry", {
   expect_equal(nrow(results$specification$components$rr), 16L)
   expect_equal(nrow(results$registry_crfs), 31L)
   expect_equal(nrow(rr_manifest), 16L)
-  expect_equal(sum(rr_manifest$coverage_status == "public_registry_candidate"), 7L)
-  expect_equal(sum(rr_manifest$coverage_status == "historical_internal_candidate"), 9L)
-  expect_equal(nrow(internal_registry), 9L)
+  expect_equal(sum(rr_manifest$coverage_status == "public_registry_candidate"), 16L)
+  expect_equal(sum(rr_manifest$coverage_status == "historical_internal_candidate"), 0L)
+  expect_equal(nrow(internal_registry), 0L)
   expect_true(all(rr_manifest$routing_status == "ready"))
   expect_true(all(rr_manifest$scientific_review_status == "not_reviewed"))
 
