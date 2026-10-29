@@ -1,13 +1,13 @@
-test_that("internal Fusion YLL and YLD rows reproduce historical results", {
+test_that("promoted Fusion YLL and YLD rows reproduce historical results", {
   results <- run_historical_fusion_outcome_parity_fixture()
-  internal_registry <- .load_historical_rr_registry() %>%
-    dplyr::filter(source == RR_FUSION, cause != CAUSE_LRICHILD)
-  manifest <- .load_historical_rr_manifest() %>%
-    dplyr::filter(component_id %in% internal_registry$component_id)
+  manifest <- promoted_rr_manifest(RR_FUSION, child = FALSE)
 
-  expect_true(all(internal_registry$reproduction_status == "parity_verified"))
+  expect_gt(nrow(manifest), 0)
+  expect_true(all(
+    manifest$public_registry_crf_ids %in% load_crf_registry()$crf_id
+  ))
+
   expect_true(all(manifest$reproduction_status == "parity_verified"))
-  expect_true(all(is.na(internal_registry$reproduction_blocking_reason)))
   expect_true(all(is.na(manifest$reproduction_blocking_reason)))
   expect_true(all(manifest$routing_checklist_complete))
   expect_true(all(manifest$routing_status == "ready"))

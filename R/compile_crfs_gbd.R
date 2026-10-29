@@ -25,9 +25,8 @@ gbd_release_catalog <- function() {
           "migration source. The original downloaded IHME files are not",
           "versioned in this repository, and Git history does not establish",
           "regeneration of the packaged CSV by the current",
-          "generate_rr_gbd2019() code. Registry outcome labels preserve the",
-          "package's historical death-calculation use and do not establish",
-          "YLL or YLD applicability. LRI.child is created locally by",
+          "generate_rr_gbd2019() code. YLL and YLD rows apply the death",
+          "curves, as in historical CREA workflows. LRI.child is created locally by",
           "add_lri_child() from the processed LRI curve and is not an",
           "independently downloaded child-specific curve."
         )

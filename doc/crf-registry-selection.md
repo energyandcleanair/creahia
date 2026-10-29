@@ -32,13 +32,11 @@ presets are omitted from public discovery and are never defaults. They can be
 loaded by explicit name, but are for development only, are not reviewed, and
 are not recommended methods.
 
-The two public `legacy_` rows were migrated from the previous `CRFs.csv` table.
-They remain searchable and selectable, but are not methodologically reviewed or
-recommended defaults. `legacy_no2_ncdlri_deaths_v1` cites
-`legacy_default_crfs`, a temporary provenance record rather than a scientific
-source. `legacy_no2_asthma_1to18_incidence_v1` cites
-`khreis_2017_childhood_asthma`; a recovered citation is not a methodology
-endorsement.
+The 15 public `legacy_` rows were migrated from the previous `CRFs.csv` table
+and make up the `crea_others_v1` preset. Each cites the source recovered for
+its historical row, e.g. `who_hrapie_2013` for the NO2 NCD.LRI rows and
+`khreis_2017_childhood_asthma` for NO2 asthma; a recovered citation is not a
+methodology endorsement.
 
 The strongest replacement example currently available is the
 `PM25 / IHD / Deaths` slot:

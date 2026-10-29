@@ -288,7 +288,7 @@ test_that("GBD 2019 death candidates create valid Registry rows", {
     "Git history does not establish regeneration",
     fixed = TRUE
   )
-  expect_match(reference$notes, "do not establish YLL or YLD", fixed = TRUE)
+  expect_match(reference$notes, "YLL and YLD rows apply the death curves", fixed = TRUE)
   expect_match(
     reference$notes,
     "not an independently downloaded child-specific curve",

@@ -1,8 +1,5 @@
 historical_fusion_outcome_registry <- function() {
-  .load_historical_rr_registry() %>%
-    dplyr::filter(source == RR_FUSION, cause != CAUSE_LRICHILD) %>%
-    dplyr::select(dplyr::all_of(CRF_REGISTRY_REQUIRED_COLUMNS)) %>%
-    .new_historical_crf_set()
+  promoted_rr_registry(RR_FUSION, child = FALSE)
 }
 
 

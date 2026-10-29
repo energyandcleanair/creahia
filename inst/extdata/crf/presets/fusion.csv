@@ -1,0 +1,19 @@
+pollutant,cause,outcome,crf_id,notes
+PM25,NCD.LRI,Deaths,fusion_pm25_ncd_lri_25plus_deaths_v1,Fusion PM2.5 curve
+PM25,NCD.LRI,YLLs,fusion_pm25_ncd_lri_25plus_ylls_v1,Fusion PM2.5 curve
+PM25,LRI,Deaths,fusion_pm25_lri_25plus_deaths_v1,Fusion PM2.5 curve
+PM25,LRI,YLLs,fusion_pm25_lri_25plus_ylls_v1,Fusion PM2.5 curve
+PM25,LRI.child,Deaths,fusion_pm25_lri_child_under5_deaths_v1,Fusion PM2.5 curve
+PM25,LRI.child,YLLs,fusion_pm25_lri_child_under5_ylls_v1,Fusion PM2.5 curve
+PM25,COPD,Deaths,fusion_pm25_copd_25plus_deaths_v1,Fusion PM2.5 curve
+PM25,COPD,YLLs,fusion_pm25_copd_25plus_ylls_v1,Fusion PM2.5 curve
+PM25,COPD,YLDs,fusion_pm25_copd_25plus_ylds_v1,Fusion PM2.5 curve
+PM25,IHD,Deaths,fusion_pm25_ihd_adult_deaths_v1,Fusion PM2.5 curve
+PM25,IHD,YLLs,fusion_pm25_ihd_adult_ylls_v1,Fusion PM2.5 curve
+PM25,LC,Deaths,fusion_pm25_lc_25plus_deaths_v1,Fusion PM2.5 curve
+PM25,LC,YLLs,fusion_pm25_lc_25plus_ylls_v1,Fusion PM2.5 curve
+PM25,Stroke,Deaths,fusion_pm25_stroke_adult_deaths_v1,Fusion PM2.5 curve
+PM25,Stroke,YLLs,fusion_pm25_stroke_adult_ylls_v1,Fusion PM2.5 curve
+PM25,Stroke,YLDs,fusion_pm25_stroke_adult_ylds_v1,Fusion PM2.5 curve
+PM25,Diabetes,Deaths,fusion_pm25_diabetes_25plus_deaths_v1,Fusion PM2.5 curve
+PM25,Diabetes,YLDs,fusion_pm25_diabetes_25plus_ylds_v1,Fusion PM2.5 curve

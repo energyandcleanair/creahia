@@ -1,13 +1,13 @@
-test_that("internal GEMM YLL and YLD rows reproduce historical PAF and impacts", {
+test_that("promoted GEMM YLL and YLD rows reproduce historical PAF and impacts", {
   results <- run_historical_gemm_outcome_parity_fixture()
-  internal_registry <- .load_historical_rr_registry() %>%
-    dplyr::filter(source == RR_GEMM)
-  manifest <- .load_historical_rr_manifest() %>%
-    dplyr::filter(component_id %in% internal_registry$component_id)
+  manifest <- promoted_rr_manifest(RR_GEMM, child = FALSE)
 
-  expect_true(all(internal_registry$reproduction_status == "parity_verified"))
+  expect_gt(nrow(manifest), 0)
+  expect_true(all(
+    manifest$public_registry_crf_ids %in% load_crf_registry()$crf_id
+  ))
+
   expect_true(all(manifest$reproduction_status == "parity_verified"))
-  expect_true(all(is.na(internal_registry$reproduction_blocking_reason)))
   expect_true(all(is.na(manifest$reproduction_blocking_reason)))
   expect_true(all(manifest$routing_checklist_complete))
   expect_true(all(manifest$routing_status == "ready"))

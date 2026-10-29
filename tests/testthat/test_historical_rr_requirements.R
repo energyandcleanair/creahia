@@ -79,11 +79,11 @@ test_that("historical RR inventory records current Registry data coverage", {
   )
   expect_equal(
     sum(inventory$coverage_status == "public_registry_candidate"),
-    20
+    50
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_candidate"),
-    81
+    51
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_required"),
@@ -98,6 +98,7 @@ test_that("Fusion death requirements satisfy the routing checklist", {
     dplyr::filter(
       source == RR_FUSION,
       outcome == MEASURE_DEATHS,
+      cause != CAUSE_LRICHILD,
       coverage_status == "public_registry_candidate"
     )
   expect_equal(nrow(fusion_deaths), 7L)
@@ -160,41 +161,26 @@ test_that("Fusion death requirements satisfy the routing checklist", {
 })
 
 
-test_that("Fusion YLL and YLD outcome reuse is represented only internally", {
-  historical_registry <- .load_historical_rr_registry() %>%
-    dplyr::filter(source == RR_FUSION, cause != CAUSE_LRICHILD)
-  manifest <- .load_historical_rr_manifest() %>%
-    dplyr::filter(component_id %in% historical_registry$component_id)
+test_that("Fusion YLL and YLD outcome reuse is represented in the public Registry", {
+  manifest <- promoted_rr_manifest(RR_FUSION, child = FALSE)
+  historical_registry <- load_crf_registry() %>%
+    dplyr::filter(crf_id %in% manifest$public_registry_crf_ids) %>%
+    dplyr::mutate(
+      component_id = manifest$component_id[
+        match(crf_id, manifest$public_registry_crf_ids)
+      ]
+    )
 
   expect_equal(nrow(historical_registry), 9L)
   expect_setequal(unique(historical_registry$outcome), c("YLLs", "YLDs"))
   expect_false(any(historical_registry$cause == CAUSE_LRICHILD))
-  expect_true(all(historical_registry$lifecycle == "historical_reproduction"))
-  expect_true(all(
-    historical_registry$visibility == "internal_compatibility"
-  ))
-  expect_true(all(
-    historical_registry$reproduction_status == "parity_verified"
-  ))
-  expect_true(all(is.na(
-    historical_registry$reproduction_blocking_reason
-  )))
-  expect_true(all(
-    historical_registry$scientific_review_status == "not_reviewed"
-  ))
-  expect_true(all(manifest$coverage_status == "historical_internal_candidate"))
+  expect_true(all(manifest$coverage_status == "public_registry_candidate"))
   expect_true(all(manifest$routing_checklist_complete))
   expect_true(all(manifest$routing_status == "ready"))
   expect_true(all(is.na(manifest$routing_blocking_reason)))
-  expect_true(all(is.na(manifest$public_registry_crf_ids)))
   expect_false(any(
-    historical_registry$crf_id %in% load_crf_registry()$crf_id
+    historical_registry$component_id %in% .load_historical_rr_registry()$component_id
   ))
-  expect_identical(
-    historical_registry$double_counted,
-    historical_registry$outcome == MEASURE_YLLS &
-      historical_registry$cause != "NCD.LRI"
-  )
 
   legacy_fusion <- get_rr(RR_FUSION)
   for (i in seq_len(nrow(historical_registry))) {
@@ -226,11 +212,15 @@ test_that("Fusion YLL and YLD outcome reuse is represented only internally", {
 })
 
 
-test_that("Fusion child LRI keeps one exact internal copy of duplicate rows", {
-  historical_registry <- .load_historical_rr_registry() %>%
-    dplyr::filter(source == RR_FUSION, cause == CAUSE_LRICHILD)
-  manifest <- .load_historical_rr_manifest() %>%
-    dplyr::filter(component_id %in% historical_registry$component_id)
+test_that("Fusion child LRI keeps one exact public copy of duplicate rows", {
+  manifest <- promoted_rr_manifest(RR_FUSION, child = TRUE)
+  historical_registry <- load_crf_registry() %>%
+    dplyr::filter(crf_id %in% manifest$public_registry_crf_ids) %>%
+    dplyr::mutate(
+      component_id = manifest$component_id[
+        match(crf_id, manifest$public_registry_crf_ids)
+      ]
+    )
   legacy_child <- get_rr(RR_FUSION) %>%
     dplyr::filter(cause == CAUSE_LRICHILD, age == AGE_CHILDREN)
   duplicate_contract <- legacy_child %>%
@@ -244,23 +234,12 @@ test_that("Fusion child LRI keeps one exact internal copy of duplicate rows", {
   expect_equal(nrow(historical_registry), 2L)
   expect_setequal(historical_registry$outcome, c("Deaths", "YLLs"))
   expect_equal(dplyr::n_distinct(historical_registry$data_path), 1L)
-  expect_false(any(historical_registry$double_counted))
-  expect_true(all(
-    historical_registry$reproduction_status == "parity_verified"
-  ))
-  expect_true(all(is.na(
-    historical_registry$reproduction_blocking_reason
-  )))
-  expect_true(all(
-    historical_registry$scientific_review_status == "not_reviewed"
-  ))
-  expect_true(all(manifest$coverage_status == "historical_internal_candidate"))
+  expect_true(all(manifest$coverage_status == "public_registry_candidate"))
   expect_true(all(manifest$routing_checklist_complete))
   expect_true(all(manifest$routing_status == "ready"))
   expect_true(all(is.na(manifest$routing_blocking_reason)))
-  expect_true(all(is.na(manifest$public_registry_crf_ids)))
   expect_false(any(
-    historical_registry$crf_id %in% load_crf_registry()$crf_id
+    historical_registry$component_id %in% .load_historical_rr_registry()$component_id
   ))
 
   expect_equal(nrow(legacy_child), 6002L)
@@ -346,11 +325,15 @@ test_that("Fusion child LRI internal curve is reproducible and fail-closed", {
 })
 
 
-test_that("GEMM child LRI keeps one exact internal copy of duplicate rows", {
-  historical_registry <- .load_historical_rr_registry() %>%
-    dplyr::filter(source == RR_GEMM, cause == CAUSE_LRICHILD)
-  manifest <- .load_historical_rr_manifest() %>%
-    dplyr::filter(component_id %in% historical_registry$component_id)
+test_that("GEMM child LRI keeps one exact public copy of duplicate rows", {
+  manifest <- promoted_rr_manifest(RR_GEMM, child = TRUE)
+  historical_registry <- load_crf_registry() %>%
+    dplyr::filter(crf_id %in% manifest$public_registry_crf_ids) %>%
+    dplyr::mutate(
+      component_id = manifest$component_id[
+        match(crf_id, manifest$public_registry_crf_ids)
+      ]
+    )
   legacy_child <- get_rr(RR_GEMM) %>%
     dplyr::filter(cause == CAUSE_LRICHILD, age == AGE_CHILDREN)
   duplicate_contract <- legacy_child %>%
@@ -364,23 +347,12 @@ test_that("GEMM child LRI keeps one exact internal copy of duplicate rows", {
   expect_equal(nrow(historical_registry), 2L)
   expect_setequal(historical_registry$outcome, c("Deaths", "YLLs"))
   expect_equal(dplyr::n_distinct(historical_registry$data_path), 1L)
-  expect_false(any(historical_registry$double_counted))
-  expect_true(all(
-    historical_registry$reproduction_status == "parity_verified"
-  ))
-  expect_true(all(is.na(
-    historical_registry$reproduction_blocking_reason
-  )))
-  expect_true(all(
-    historical_registry$scientific_review_status == "not_reviewed"
-  ))
-  expect_true(all(manifest$coverage_status == "historical_internal_candidate"))
+  expect_true(all(manifest$coverage_status == "public_registry_candidate"))
   expect_true(all(manifest$routing_checklist_complete))
   expect_true(all(manifest$routing_status == "ready"))
   expect_true(all(is.na(manifest$routing_blocking_reason)))
-  expect_true(all(is.na(manifest$public_registry_crf_ids)))
   expect_false(any(
-    historical_registry$crf_id %in% load_crf_registry()$crf_id
+    historical_registry$component_id %in% .load_historical_rr_registry()$component_id
   ))
 
   expect_equal(nrow(legacy_child), 39013L)
@@ -634,7 +606,7 @@ test_that("historical RR routing fields must match the engineering checklist", {
 })
 
 
-test_that("GEMM YLL and YLD outcome reuse is represented only internally", {
+test_that("GEMM YLL and YLD outcome reuse is represented in the public Registry", {
   rr_selection <- .resolve_hia_rr_selection_boundary(
     rr_sources = c(RR_GEMM, RR_ORIGINAL),
     calc_causes = "GEMM and GBD",
@@ -645,36 +617,29 @@ test_that("GEMM YLL and YLD outcome reuse is represented only internally", {
   )
   expected_components <- selected_components %>%
     dplyr::filter(source == RR_GEMM, outcome != MEASURE_DEATHS)
-  complete_historical_registry <- .load_historical_rr_registry()
-  historical_registry <- complete_historical_registry %>%
-    dplyr::filter(source == RR_GEMM, cause != CAUSE_LRICHILD)
-  manifest <- .load_historical_rr_manifest() %>%
-    dplyr::filter(component_id %in% historical_registry$component_id)
+  manifest <- promoted_rr_manifest(RR_GEMM, child = FALSE)
+  historical_registry <- load_crf_registry() %>%
+    dplyr::filter(crf_id %in% manifest$public_registry_crf_ids) %>%
+    dplyr::mutate(
+      component_id = manifest$component_id[
+        match(crf_id, manifest$public_registry_crf_ids)
+      ]
+    )
 
   expect_equal(nrow(expected_components), 8L)
-  expect_equal(nrow(complete_historical_registry), 81L)
+  expect_equal(nrow(.load_historical_rr_registry()), 51L)
   expect_equal(nrow(historical_registry), 8L)
   expect_setequal(
     historical_registry$component_id,
     expected_components$component_id
   )
   expect_setequal(unique(historical_registry$outcome), c("YLLs", "YLDs"))
-  expect_true(all(historical_registry$lifecycle == "historical_reproduction"))
-  expect_true(all(historical_registry$visibility == "internal_compatibility"))
-  expect_true(all(
-    historical_registry$reproduction_status == "parity_verified"
-  ))
-  expect_true(all(is.na(historical_registry$reproduction_blocking_reason)))
+  expect_true(all(manifest$coverage_status == "public_registry_candidate"))
   expect_true(all(manifest$routing_checklist_complete))
   expect_true(all(manifest$routing_status == "ready"))
   expect_true(all(is.na(manifest$routing_blocking_reason)))
-  expect_true(all(
-    historical_registry$scientific_review_status == "not_reviewed"
-  ))
-  expect_true(all(manifest$coverage_status == "historical_internal_candidate"))
-  expect_true(all(is.na(manifest$public_registry_crf_ids)))
   expect_false(any(
-    historical_registry$crf_id %in% load_crf_registry()$crf_id
+    historical_registry$component_id %in% .load_historical_rr_registry()$component_id
   ))
 
   legacy_gemm <- get_rr(RR_GEMM)

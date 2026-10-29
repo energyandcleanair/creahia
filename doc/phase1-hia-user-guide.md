@@ -294,13 +294,11 @@ methodology decision.
 
 ### Legacy Registry rows
 
-The public Registry currently includes two `legacy_` rows migrated from the
-previous `CRFs.csv` table. They can be searched and explicitly selected, but
-are not methodologically reviewed or recommended defaults.
-`legacy_no2_ncdlri_deaths_v1` cites `legacy_default_crfs`, a temporary
-provenance record rather than a scientific source.
-`legacy_no2_asthma_1to18_incidence_v1` cites `khreis_2017_childhood_asthma`;
-a recovered citation is not a methodology endorsement.
+The public Registry includes 15 `legacy_` rows migrated from the previous
+`CRFs.csv` table; together they form the `crea_others_v1` preset. Each cites
+the source recovered for its historical row, e.g. `who_hrapie_2013` for the
+NO2 NCD.LRI rows and `khreis_2017_childhood_asthma` for NO2 asthma; a
+recovered citation is not a methodology endorsement.
 
 The resulting `crfs` object can then be passed to the existing HIA compute
 flow:
