@@ -15,6 +15,8 @@ wrappers.compute_hia_two_images <- function(obj, ...) {
 #' @param perturbation_rasters
 #' @param baseline_rasters
 #' @param crfs_version
+#' @param crfs a Registry selection from crfs_set(); when supplied, crfs_version and rr_sources are not used.
+#' @param epi baseline epidemiological data; defaults to get_epi(epi_version).
 #' @param return_concentrations include the population-weighted concentrations by admin area in the results. In this case, the function returns a list.
 #' @param pm2.5_to_pm10_ratio if the PM2.5 input data should be used to assess PM10 exposure, provide a ratio to use for calculation of baseline concentrations
 #'
@@ -34,6 +36,8 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
                                                     scale_target_year = NULL, # Deprecated
                                                     crfs_version = "default",
                                                     epi_version = "default",
+                                                    crfs = NULL,
+                                                    epi = NULL,
                                                     # valuation_version = "default",
                                                     return_concentrations = F,
                                                     pm2.5_to_pm10_ratio = NULL,
@@ -127,14 +131,16 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
   conc_regions <- creahia::extract_concs_and_pop(concs, regions, species)
 
   # 06: Compute hia --------------------------------------------------------------------------
-  hia <- creahia::compute_hia(conc_map = conc_regions,
-                              species = species,
-                              regions = regions,
-                              pop_year = pop_year,
-                              epi_version = epi_version,
-                              crfs_version = crfs_version,
-                              diagnostic_folder = diagnostic_folder,
-                              ...)
+  hia <- .compute_hia_from_wrapper(conc_map = conc_regions,
+                                   species = species,
+                                   regions = regions,
+                                   pop_year = pop_year,
+                                   epi_version = epi_version,
+                                   crfs_version = crfs_version,
+                                   crfs = crfs,
+                                   epi = epi,
+                                   diagnostic_folder = diagnostic_folder,
+                                   ...)
 
   if(return_concentrations) {
     conc_regions_mean <- conc_regions %>%
@@ -165,6 +171,8 @@ wrappers.compute_hia_two_images.default <- function(perturbation_rasters,
 #' @param baseline_rasters_table the table from wrapper.get_conc_baseline function.
 #' @param grid_raster grid raster for the model.
 #' @param crfs_version version of the CRFs to use.
+#' @param crfs a Registry selection from crfs_set(); when supplied, crfs_version and rr_sources are not used.
+#' @param epi baseline epidemiological data; defaults to get_epi(epi_version).
 #' @param return_concentrations include the population-weighted concentrations by admin area in the results. In this case, the function returns a list.
 #' @param output_folder folder to save the results.
 #'
@@ -182,6 +190,8 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
                                                       scale_target_year = NULL, # No scaling by default
                                                       crfs_version = "default",
                                                       epi_version = "default",
+                                                      crfs = NULL,
+                                                      epi = NULL,
                                                       # valuation_version = "default",
                                                       return_concentrations = F,
                                                       output_folder = '.',
@@ -225,14 +235,16 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
     conc_regions <- creahia::extract_concs_and_pop(concs, regions, pollutants_for_hia)
 
     # 04: Compute hia ----
-    hia <- creahia::compute_hia(conc_map = conc_regions,
-                                species = pollutants_for_hia,
-                                regions = regions,
-                                pop_year = pop_year,
-                                epi_version = epi_version,
-                                crfs_version = crfs_version,
-                                diagnostic_folder = diagnostic_folder,
-                                ...)
+    hia <- .compute_hia_from_wrapper(conc_map = conc_regions,
+                                     species = pollutants_for_hia,
+                                     regions = regions,
+                                     pop_year = pop_year,
+                                     epi_version = epi_version,
+                                     crfs_version = crfs_version,
+                                     crfs = crfs,
+                                     epi = epi,
+                                     diagnostic_folder = diagnostic_folder,
+                                     ...)
 
     if(return_concentrations) {
       conc_regions_mean <- conc_regions %>%
@@ -256,4 +268,15 @@ wrappers.compute_hia_two_images.character <- function(scenarios,
             file.path(output_folder, 'hia',
                       glue(if(!is.null(custom_glue)) custom_glue else 'hia_GBD__{scen}.RDS')))
   }, ...)
+}
+
+
+# Pass crfs and epi on only when supplied, so compute_hia() keeps its own defaults.
+# Named wrapper arguments stop `crfs =` and `epi =` partially matching
+# `crfs_version` and `epi_version`.
+.compute_hia_from_wrapper <- function(crfs = NULL, epi = NULL, ...) {
+  args <- list(...)
+  if (!is.null(crfs)) args$crfs <- crfs
+  if (!is.null(epi)) args$epi <- epi
+  do.call(creahia::compute_hia, args)
 }
