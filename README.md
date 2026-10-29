@@ -4,9 +4,11 @@
 
 ## Installing creahia
 ```{r}
-install.packages("remotes");
-library(remotes);
-remotes::install_github("energyandcleanair/creahia")
+install.packages("remotes")
+remotes::install_github(
+  "energyandcleanair/creahia@0.8.0",
+  upgrade = "never"
+)
 ```
 
 ## Getting started

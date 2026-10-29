@@ -118,8 +118,7 @@ test_that("Population is properly calculated and scaled- using HIA", {
 
   # Cached WB SP.POP.TOTL for BEL 2015–2020 (avoids flaky api.worldbank.org in CI)
   pop_wb <- readr::read_csv(
-    testthat::test_path("..", "..", "inst", "testdata", "worldbank",
-                        "pop_bel_2015_2020.csv"),
+    get_testdata_file("worldbank", "pop_bel_2015_2020.csv"),
     show_col_types = FALSE
   ) %>%
     select(iso3 = iso3c,

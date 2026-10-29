@@ -1,5 +1,6 @@
 get_nrt_conc <- function(region_ids, conc_name, nrt, conc_map,
                          units_multiplier = 1, nrt_flag = NULL, nrt_flag_value = 2) {
+  # non risk threshod conc = nrt = counterfact
   conc_map[region_ids] %>%
     lapply(function(m) {
       if(!is.null(nrt_flag)) nrt = ifelse(m[,nrt_flag] == nrt_flag_value, 0, nrt)
@@ -151,47 +152,55 @@ hiapoll_to_species <- function(hiapoll) {
 }
 
 
-#' Key function to add a double_counted field to hia results
+#' Add double-counting flags to HIA results
 #'
-#' @param hia
-#' @param crfs
-#' @param epi
-#'
-#' @return
+#' @param hia HIA result rows.
+#' @param crfs Selected CRFs.
+#' @param epi Epidemiological data (unused).
+#' @param .double_counting Internal selection decisions supplied by compute_hia().
+#' @return HIA rows with a double_counted column.
 #' @export
-#'
-#' @examples
-add_double_counted <- function(hia, crfs, epi) {
-
-  # Use CRFS double counted field first
-  joined <- hia %>%
-    left_join(crfs %>%
-                select(cause, outcome, pollutant, double_counted),
-              by = c('cause', 'outcome', 'pollutant'))
-
-  # Except PM25, all of them should have been found in CRFs
-  if(nrow(joined %>% filter(is.na(double_counted) & pollutant != 'PM25' & number > 0)) > 0) {
-    stop('merged has failed in double counting detection')
+add_double_counted <- function(hia, crfs = NULL, epi = NULL, .double_counting = NULL) {
+  double_counting <- .double_counting
+  if (is.null(double_counting)) {
+    slots <- dplyr::select(hia, pollutant, cause, outcome)
+    if (!is.null(crfs)) {
+      slots <- dplyr::bind_rows(
+        slots, dplyr::select(crfs, pollutant, cause, outcome)
+      )
+    }
+    double_counting <- .resolve_double_counting(slots)
   }
 
-  # For rows where double_counted is still NA, detect ensemble causes by pollutant/outcome
-  # This handles any pollutant (including PM25) that uses ensemble causes
-  joined <- joined %>%
-    group_by(pollutant, outcome) %>%
-    mutate(
-      has_ncdlri = any(cause == CAUSE_NCDLRI & !is.na(number)),
-      has_cv = any(cause == CAUSE_CV & !is.na(number)),
-      double_counted = case_when(
-        !is.na(double_counted) ~ double_counted,  # Trust CRFs first
-        has_ncdlri & cause %in% CAUSE_NCDLRI_INCLUDED ~ TRUE,
-        has_cv & cause %in% CAUSE_CV_INCLUDED ~ TRUE,
-        TRUE ~ FALSE
+  keys <- c("pollutant", "cause", "outcome")
+  unknown <- dplyr::anti_join(hia, double_counting, by = keys)
+  if (nrow(unknown) > 0) {
+    stop("HIA results contain cause slots absent from the overlap plan.", call. = FALSE)
+  }
+  # Verify ensemble coverage within each result context.
+  coverage <- attr(double_counting, "coverage", exact = TRUE)
+  if (!is.null(coverage) && nrow(coverage) > 0 && "number" %in% names(hia)) {
+    context <- intersect(c("scenario", "region_id", "estimate"), names(hia))
+    valid <- dplyr::filter(hia, !is.na(number))
+    required <- valid %>%
+      dplyr::select(dplyr::all_of(c(context, keys))) %>%
+      dplyr::inner_join(coverage, by = keys, relationship = "many-to-many")
+    covered <- required %>%
+      dplyr::semi_join(
+        valid,
+        by = c(stats::setNames(context, context),
+               pollutant = "pollutant", outcome = "outcome", covered_by = "cause")
       )
-    ) %>%
-    select(-has_ncdlri, -has_cv) %>%
-    ungroup()
-
-  return(joined)
+    missing <- dplyr::anti_join(required, covered, by = c(context, keys))
+    if (nrow(missing) > 0) {
+      stop("A selected ensemble is missing for excluded component results; cannot produce a complete total.",
+           call. = FALSE)
+    }
+  }
+  attr(double_counting, "coverage") <- NULL
+  hia %>%
+    dplyr::select(-dplyr::any_of("double_counted")) %>%
+    dplyr::left_join(double_counting, by = keys, relationship = "many-to-one")
 }
 
 

@@ -32,7 +32,8 @@ test_that("wrapper 2 images works", {
   hia <- creahia::wrappers.compute_hia_two_images(perturbation_rasters = perturbation_rasters,
                                            baseline_rasters = baseline_rasters,
                                            administrative_iso3s = "PHL",
-                                           pop_year=2020
+                                           pop_year=2020,
+                                           diagnostic_folder = NULL
                                            )
 
   dir.create("tmp", showWarnings = F)

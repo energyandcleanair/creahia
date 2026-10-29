@@ -1,4 +1,8 @@
 get_examples_dir <- function(){
+  if (nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))) {
+    testthat::skip("Source-checkout examples are validated outside R CMD check")
+  }
+
   dirs <- c("../../../examples", "../../examples", "../examples", "examples")
   dir <- dirs[which(dir.exists(dirs))]
   if(length(dir) == 0){
@@ -19,6 +23,15 @@ get_test_file <- function(filename){
   return(filepath)
 }
 
+get_testdata_file <- function(...) {
+  installed_path <- system.file("testdata", ..., package = "creahia")
+  if (nzchar(installed_path)) {
+    return(installed_path)
+  }
+
+  testthat::test_path("..", "..", "inst", "testdata", ...)
+}
+
 copy_epi_data_update <- function(){
   # Copy data/epi_update
   dir_dest <- "data/epi_update"
@@ -28,7 +41,5 @@ copy_epi_data_update <- function(){
     lapply(function(x){file.copy(file.path(dir_org, x), file.path(dir_dest, x))})
 
 }
-
-
 
 

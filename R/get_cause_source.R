@@ -23,7 +23,13 @@ get_cause_source <- function(rr_sources, add_measure=F) {
 
   if(add_measure){
     cause_measure <- get_cause_measure()
-    cause_source <- left_join(cause_source, cause_measure, by = "cause")
+    if ("outcome" %in% names(cause_source)) {
+      cause_source <- cause_source %>%
+        dplyr::mutate(measure = as.character(outcome)) %>%
+        dplyr::semi_join(cause_measure, by = c("cause", "measure"))
+    } else {
+      cause_source <- left_join(cause_source, cause_measure, by = "cause")
+    }
   }
 
   return(cause_source)
@@ -52,6 +58,13 @@ get_cause_source <- function(rr_sources, add_measure=F) {
 #' # Direct tibble input
 #' parse_rr_sources(tibble(cause = c("cause1", "cause2"), source = c(RR_GEMM, RR_ORIGINAL)))
 parse_rr_sources <- function(rr_sources) {
+
+  if (is.null(rr_sources) || length(rr_sources) == 0) {
+    return(tibble::tibble(
+      cause = character(),
+      source = character()
+    ))
+  }
   
   # Case 1: If already a tibble with cause and source, return directly
   if (is.data.frame(rr_sources) && all(c("cause", "source") %in% names(rr_sources))) {
@@ -124,7 +137,99 @@ parse_rr_sources <- function(rr_sources) {
 convert_old_parameters_to_rr_sources <- function(calc_causes, gbd_causes){
 
   rr_sources <- list()
+
+  if (identical(calc_causes, "none")) {
+    return(tibble::tibble(
+      cause = character(),
+      source = character(),
+      outcome = character()
+    ))
+  }
+
+  if (length(calc_causes) == 0) {
+    stop(
+      paste(
+        "calc_causes must be provided as a preset name,",
+        "a '<cause>_<outcome>' vector, or \"none\";",
+        "NULL and empty character vectors are not valid conversion inputs."
+      ),
+      call. = FALSE
+    )
+  }
+
   gbd_causes <- gbd_causes %||% "default"
+
+  preset_labels <- c("GEMM and GBD", "GBD only", "GEMM only")
+  explicit_selection <- length(calc_causes) != 1 ||
+    !(calc_causes %in% preset_labels)
+
+  if (explicit_selection) {
+    if (!is.character(calc_causes) || any(!grepl("_", calc_causes))) {
+      stop(
+        paste(
+          "Explicit legacy calc_causes values must use",
+          "'<cause>_<outcome>' names."
+        ),
+        call. = FALSE
+      )
+    }
+    selected <- tibble::tibble(
+      cause = sub("_.*$", "", calc_causes),
+      outcome = sub("^[^_]+_", "", calc_causes)
+    )
+    legacy_gemm_causes <- setdiff(
+      unique(get_rr(RR_GEMM)$cause),
+      CAUSE_LRICHILD
+    )
+    original_causes <- unique(get_rr(RR_ORIGINAL)$cause)
+    selected_original_causes <- if (identical(gbd_causes, "default")) {
+      setdiff(selected$cause, legacy_gemm_causes)
+    } else if (identical(gbd_causes, "all")) {
+      intersect(selected$cause, original_causes)
+    } else {
+      intersect(selected$cause, as.character(gbd_causes))
+    }
+    selected <- selected %>%
+      dplyr::mutate(source = dplyr::if_else(
+        cause %in% selected_original_causes,
+        RR_ORIGINAL,
+        RR_GEMM
+      ))
+
+    unavailable <- selected %>%
+      dplyr::filter(
+        (source == RR_GEMM & !(cause %in% legacy_gemm_causes)) |
+          (source == RR_ORIGINAL & !(cause %in% original_causes))
+      )
+
+    if (nrow(unavailable) > 0) {
+      stop(
+        "Legacy calc_causes contains causes without an RR source: ",
+        paste(unique(unavailable$cause), collapse = ", "),
+        call. = FALSE
+      )
+    }
+
+    supported <- get_cause_measure() %>%
+      dplyr::transmute(cause, outcome = measure)
+    unsupported <- dplyr::anti_join(
+      selected,
+      supported,
+      by = c("cause", "outcome")
+    )
+    if (nrow(unsupported) > 0) {
+      stop(
+        "Legacy calc_causes contains unsupported cause/outcome values: ",
+        paste(
+          paste0(unsupported$cause, "_", unsupported$outcome),
+          collapse = ", "
+        ),
+        call. = FALSE
+      )
+    }
+
+    return(selected %>% dplyr::distinct(cause, source, outcome))
+  }
 
   if(gbd_causes == "all" && calc_causes == "GEMM and GBD"){
     rr_sources[[RR_GEMM]] <- c(CAUSE_NCDLRI)
@@ -138,6 +243,24 @@ convert_old_parameters_to_rr_sources <- function(calc_causes, gbd_causes){
 
   if(gbd_causes == "default" && calc_causes == "GBD only"){
     rr_sources[[RR_ORIGINAL]] <- c(CAUSE_LRICHILD, CAUSE_LRI, CAUSE_COPD, CAUSE_DIABETES, CAUSE_IHD, CAUSE_LUNGCANCER, CAUSE_STROKE)
+  }
+
+  if(gbd_causes == "default" && calc_causes == "GEMM only"){
+    # Same cause/outcome set as the "GEMM only" preset of get_calc_causes_old():
+    # component YLLs are not part of this legacy selection.
+    gemm_only_causes <- c(
+      paste0(CAUSE_NCDLRI, "_", MEASURE_YLLS),
+      paste0(c(CAUSE_STROKE, CAUSE_COPD), "_", MEASURE_YLDS),
+      paste0(
+        c(CAUSE_NCDLRI, CAUSE_IHD, CAUSE_STROKE, CAUSE_COPD, CAUSE_LUNGCANCER, CAUSE_LRI),
+        "_",
+        MEASURE_DEATHS
+      )
+    )
+    return(convert_old_parameters_to_rr_sources(
+      calc_causes = gemm_only_causes,
+      gbd_causes = gbd_causes
+    ))
   }
 
   if(length(rr_sources) == 0) stop("Invalid combination of gbd_causes and calc_causes. Please check the input values.")

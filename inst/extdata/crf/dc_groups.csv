@@ -1,0 +1,40 @@
+dc_group,cause,role,notes
+ncdlri_mortality,NCD.LRI,aggregate,Non-communicable diseases plus lower respiratory infections aggregate mortality group
+ncdlri_mortality,IHD,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,Stroke,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,COPD,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,LC,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,LRI,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,Diabetes,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,Dementia,component,Component cause included in NCD.LRI aggregate
+cv_mortality,CV,aggregate,Cardiovascular aggregate mortality group
+cv_mortality,IHD,component,Component cause included in CV aggregate
+cv_mortality,Stroke,component,Component cause included in CV aggregate
+total_cv,TotCV,aggregate,Aggregate cause coverage
+total_cv,IHD,component,Component cause included in TotCV
+total_cv,Stroke,component,Component cause included in TotCV
+total_cv,OthCV,component,Component cause included in TotCV
+total_resp,TotResp,aggregate,Aggregate cause coverage
+total_resp,COPD,component,Component cause included in TotResp
+total_resp,OthResp,component,Component cause included in TotResp
+allcause_ensembles,AllCause,aggregate,Aggregate cause coverage
+allcause_ensembles,CV,component,Component cause included in AllCause
+allcause_ensembles,TotCV,component,Component cause included in AllCause
+allcause_ensembles,TotResp,component,Component cause included in AllCause
+ncdlri_mortality,TotCV,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,TotResp,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,OthCV,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,OthResp,component,Component cause included in NCD.LRI aggregate
+ncdlri_mortality,CV,component,Component cause included in NCD.LRI aggregate
+whole_burden_alternatives,AllCause,aggregate,Alternative whole-burden estimate; choose one for each pollutant and outcome
+whole_burden_alternatives,NCD.LRI,aggregate,Alternative whole-burden estimate; choose one for each pollutant and outcome
+whole_burden_alternatives,NCD,aggregate,Alternative whole-burden estimate; choose one for each pollutant and outcome
+allcause_ensembles,IHD,alternative_component,Alternative disease-specific estimate; select reporting method before summing
+allcause_ensembles,Stroke,alternative_component,Alternative disease-specific estimate; select reporting method before summing
+allcause_ensembles,OthCV,alternative_component,Alternative disease-specific estimate; select reporting method before summing
+allcause_ensembles,COPD,alternative_component,Alternative disease-specific estimate; select reporting method before summing
+allcause_ensembles,OthResp,alternative_component,Alternative disease-specific estimate; select reporting method before summing
+allcause_ensembles,LC,alternative_component,Alternative disease-specific estimate; select reporting method before summing
+allcause_ensembles,LRI,alternative_component,Alternative disease-specific estimate; select reporting method before summing
+allcause_ensembles,Diabetes,alternative_component,Alternative disease-specific estimate; select reporting method before summing
+allcause_ensembles,Dementia,alternative_component,Alternative disease-specific estimate; select reporting method before summing
