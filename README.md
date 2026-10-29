@@ -14,7 +14,7 @@ remotes::install_github("energyandcleanair/creahia")
 - Example (Philippines): `examples/HIA_GEMM_Philippines_clean.R`
 
 ## Choosing health impact functions
-Every function an HIA can use, both the PM2.5 RR curves (GEMM, Fusion, GBD) and the log-linear CRFs (asthma, preterm birth, NO2 mortality, ...), is a row in one Registry, with its literature reference. You pick the functions for an HIA with `crfs_set()`, by combining presets and then adding, removing or replacing rows.
+Every function an HIA can use, both the PM2.5 RR curves (GBD 2023, GEMM, Fusion, ...) and the log-linear CRFs (asthma, preterm birth, NO2 mortality, ...), is a row in one Registry, with its literature reference. You pick the functions for an HIA with `crfs_set()`, by combining presets and then adding, removing or replacing rows.
 
 Existing workflows using `rr_sources` and `crfs_version` keep working unchanged.
 
@@ -26,16 +26,17 @@ describe_crf_preset("crea_others_v1")
 
 | Preset | Contents |
 |---|---|
+| `gbd2023` | GBD 2023 PM2.5 curves: LRI, COPD, IHD, LC, Stroke, Diabetes, Dementia, LRI.child |
 | `gemm` | GEMM PM2.5 curves: NCD.LRI, LRI, COPD, IHD, LC, Stroke, LRI.child |
 | `fusion` | Fusion PM2.5 curves: same as GEMM, plus Diabetes |
 | `gbd2019` | GBD 2019 PM2.5 curves: LRI, COPD, IHD, LC, Stroke, Diabetes, LRI.child |
 | `crea_others_v1` | CREA's other functions: asthma (NO2, PM2.5, O3), preterm birth, low birth weight, work absences, O3 COPD, NO2 and SO2 mortality |
 
-The PM2.5 presets cover deaths, YLLs and YLDs. Combine one of them with `crea_others_v1`. When CREA updates its other functions, they will be released as `crea_others_v2`, and `crea_others_v1` stays available to reproduce earlier results.
+The PM2.5 presets cover deaths, YLLs and YLDs. Combine one of them with `crea_others_v1`. `gbd2023` follows IHME's GBD 2023 release, which reuses the GBD 2021 curves for COPD, Diabetes and LC. When CREA updates its other functions, they will be released as `crea_others_v2`, and `crea_others_v1` stays available to reproduce earlier results.
 
-### Example: GEMM curves with CREA's other functions
+### Example: GBD 2023 curves with CREA's other functions
 ```r
-crfs <- crfs_set(presets = c("gemm", "crea_others_v1"))
+crfs <- crfs_set(presets = c("gbd2023", "crea_others_v1"))
 crfs   # one row per function: pollutant, cause, outcome, crf_id, reference_id
 
 hia <- wrappers.compute_hia_two_images(
@@ -43,21 +44,21 @@ hia <- wrappers.compute_hia_two_images(
   baseline_rasters = baseline_rasters,
   regions = regions,
   crfs = crfs,
-  epi_version = "default",
+  epi_version = "gbd2023",
   pop_year = 2025
 )
 ```
 
 The selection is the complete list of functions used: `rr_sources` and `crfs_version` are ignored and nothing else is added.
 
-To use other curves, swap the preset, e.g. `crfs_set(presets = c("gbd2019", "crea_others_v1"))`.
+To use other curves, swap the preset, e.g. `crfs_set(presets = c("gemm", "crea_others_v1"))`.
 
 ### Adjusting a selection
 Replace, remove or add individual rows:
 ```r
 crfs <- crfs_set(
-  presets = c("gemm", "crea_others_v1"),
-  replace = list(                                   # Fusion instead of GEMM for IHD
+  presets = c("gbd2023", "crea_others_v1"),
+  replace = list(                                   # Fusion instead of GBD 2023 for IHD
     list(crf_id = "fusion_pm25_ihd_adult_deaths_v1"),
     list(crf_id = "fusion_pm25_ihd_adult_ylls_v1")
   ),
@@ -85,22 +86,22 @@ crfs %>%
 ### Checking a selection
 ```r
 validate_crf_selection(crfs)                                    # one function per pollutant, cause and outcome
-validate_crf_selection(crfs_set(presets = c("gbd2019", "crea_others_v1")),
+validate_crf_selection(crfs_set(presets = c("gbd2023", "crea_others_v1")),
                        check_double_counting = TRUE)            # also rejects an aggregate selected with its components
 describe_dc_group("ncdlri_mortality")                           # which causes NCD.LRI covers
-validate_crfs_against_epi(crfs, epi = get_epi("default"),
+validate_crfs_against_epi(crfs, epi = get_epi("gbd2023"),
                           species = c("pm25", "no2", "o3_8h", "so2"))  # baseline data missing for any function
 ```
 
 `gemm` and `fusion` fail the strict check by design: they include NCD.LRI and its components, and the HIA flags the components as `double_counted` (see below). `compute_hia()` runs `validate_crfs_against_epi()` itself and warns about missing baseline data.
 
 ### Current limits
-- GBD 2021 and GBD 2023 curves aren't presets yet: use `rr_sources = RR_GBD2021` or `RR_GBD2023` for now.
+- GBD 2021 curves aren't a preset yet: use `rr_sources = RR_GBD2021` for now.
 - `gemm` has no Diabetes curve. The default `rr_sources = c(RR_GEMM, RR_ORIGINAL)` takes Diabetes from the older IER curves, which aren't in the Registry; otherwise `crfs_set(presets = c("gemm", "crea_others_v1"))` gives the same results as the default.
 
 To see which functions an `rr_sources` call uses, without running it:
 ```r
-inspect_hia_configuration(rr_sources = RR_GBD2023, crfs_version = "default", epi_version = "gbd2023")$registry_set
+inspect_hia_configuration(rr_sources = RR_GBD2021, crfs_version = "default", epi_version = "gbd2021")$registry_set
 ```
 
 ### Double counting

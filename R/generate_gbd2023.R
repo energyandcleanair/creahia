@@ -1,23 +1,33 @@
-generate_rr_gbd2023 <- function(){
+generate_rr_gbd2023 <- function(folder = '~/Downloads/IHME_GBD_2023_AIR_POLLUTION_1990_2021_RR_CURVES/'){
 
-  # stop("Not validated yet! There is no age info")
-  # Download RR_CURVES from GBD2023: https://cloud.ihme.washington.edu/s/dDPNXqCdSLqjSzW?dir=/IHME_GBD_2023_AIR_POLLUTION_1990_2023_RR_CURVES
-  folder <- '~/Downloads/IHME_GBD_2023_AIR_POLLUTION_1990_2023_RR_CURVES/'
-
+  # Official release: Global Burden of Disease Study 2023 (GBD 2023) Air Pollution Exposure
+  # Estimates and Risk Curves 1990-2023, https://doi.org/10.6069/K4TW-Q814
+  # Download "Relative Risk Estimates" from
+  # https://ghdx.healthdata.org/record/ihme-data/gbd-2023-air-pollution-exposure-estimates-1990-2023
+  # and unzip it in `folder`. PM mean files in that release:
+  # IHME_GBD_2023_AIR_POLLUTION_1990_2021_PM_RR_BIRTH_WEIGHT_MEAN_Y2022M01D31.CSV
+  # IHME_GBD_2023_AIR_POLLUTION_1990_2021_PM_RR_COPD_MEAN_Y2022M01D31.CSV
+  # IHME_GBD_2023_AIR_POLLUTION_1990_2021_PM_RR_DIABETES_MEAN_Y2022M01D31.CSV
+  # IHME_GBD_2023_AIR_POLLUTION_1990_2021_PM_RR_GESTATIONAL_AGE_SHIFT_MEAN_Y2022M01D31.CSV
+  # IHME_GBD_2023_AIR_POLLUTION_1990_2021_PM_RR_LUNG_CANCER_MEAN_Y2022M01D31.CSV
+  # IHME_GBD_2023_AIR_POLLUTION_1990_2022_PM_RR_DEMENTIA_MEAN_Y2025M11D18.CSV
+  # IHME_GBD_2023_AIR_POLLUTION_1990_2022_PM_RR_ISCHEMIC_HEART_DISEASE_MEAN_Y2025M11D18.CSV
+  # IHME_GBD_2023_AIR_POLLUTION_1990_2022_PM_RR_LOWER_RESPIRATORY_INFECTIONS_MEAN_Y2025M11D18.CSV
+  # IHME_GBD_2023_AIR_POLLUTION_1990_2022_PM_RR_STROKE_MEAN_Y2025M11D18.CSV
+  # COPD, Diabetes and LC are the GBD 2021 curves, re-released as is. The 2025 files
+  # have no cause column, use `risk` for exposure, and are in log(RR).
+  # The packaged rr_gbd2023.csv only takes Dementia from this output. IHD, LRI and
+  # Stroke are kept from the earlier 2024 files (another exposure grid, within 1e-4 RR)
+  # so that their results do not change.
+  read_rr_file <- function(path){
+    read_csv(path, col_types=cols()) %>%
+      rename(any_of(c(exposure = "risk")))
+  }
 
   tibble(file = list.files(folder)) %>%
     filter(grepl("_PM_", file),
            grepl("_MEAN_", file)
     ) %>%
-    # 1 IHME_GBD_2021_AIR_POLLUTION_1990_2021_PM_RR_BIRTH_WEIGHT_MEAN_Y2022M01D31.CSV
-  #   2 IHME_GBD_2021_AIR_POLLUTION_1990_2021_PM_RR_COPD_MEAN_Y2022M01D31.CSV
-  # 3 IHME_GBD_2021_AIR_POLLUTION_1990_2021_PM_RR_DIABETES_MEAN_Y2022M01D31.CSV
-  # 4 IHME_GBD_2021_AIR_POLLUTION_1990_2021_PM_RR_GESTATIONAL_AGE_SHIFT_MEAN_Y2022M01D31.CSV
-  # 5 IHME_GBD_2021_AIR_POLLUTION_1990_2021_PM_RR_LUNG_CANCER_MEAN_Y2022M01D31.CSV
-  # 6 IHME_GBD_2023_AIR_POLLUTION_1990_2022_AIR_PM_RR_DEMENTIA_MEAN_Y2024M02D07.csv      # Ignored for now
-  # 7 IHME_GBD_2023_AIR_POLLUTION_1990_2022_AIR_PM_RR_ISCHEMIC_HEART_DISEASE_MEAN_Y2024M02D07.csv
-  # 8 IHME_GBD_2023_AIR_POLLUTION_1990_2022_AIR_PM_RR_LOWER_RESPIRATORY_INFECTIONS_MEAN_Y2024M02D07.csv
-  # 9 IHME_GBD_2023_AIR_POLLUTION_1990_2022_AIR_PM_RR_STROKE_MEAN_Y2024M02D07.csv
     mutate(
       cause_from_file = tolower(str_extract(file, 'BIRTH_WEIGHT|COPD|DIABETES|GESTATIONAL_AGE_SHIFT|ISCHEMIC_HEART_DISEASE|LOWER_RESPIRATORY_INFECTIONS|LUNG_CANCER|STROKE|DEMENTIA')),
       age = as.numeric(str_extract(file, '(?<=_)[0-9]{2}(?=_)')),
@@ -26,7 +36,7 @@ generate_rr_gbd2023 <- function(){
     # Replace NA age_group with 9999 (or another value) for files without age in name
     mutate(age = ifelse(is.na(age), 9999, age)) %>%
     mutate(age = recode_age(age)) %>%
-    mutate(data = map(full_path, read_csv, col_types=cols())) %>%
+    mutate(data = map(full_path, read_rr_file)) %>%
     select(age, cause_from_file, data) %>%
     unnest(data) %>%
     mutate(cause=coalesce(cause, cause_from_file)) %>%

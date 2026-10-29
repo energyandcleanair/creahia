@@ -110,10 +110,9 @@ test_that("all nine historical HIA configurations have fixed legacy fingerprints
       .data$outcome
     )
 
-  expect_equal(
+  expect_legacy_fingerprint_equal(
     fingerprints,
-    read_legacy_historical_configurations_hia_fingerprint(),
-    tolerance = 1e-12
+    read_legacy_historical_configurations_hia_fingerprint()
   )
   expect_setequal(
     unique(fingerprints$configuration_id),

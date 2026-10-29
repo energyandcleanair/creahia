@@ -1,9 +1,35 @@
-historical_rr_parity_registry <- function(source, cause) {
-  .load_historical_rr_registry() %>%
+historical_rr_parity_manifest <- function(source, cause) {
+  .load_historical_rr_manifest() %>%
     dplyr::filter(
+      .data$component_type == "rr",
       .data$source == .env$source,
       .data$cause == .env$cause
-    ) %>%
+    )
+}
+
+
+# Rows an rr_sources route resolves to: the internal compatibility rows, or the
+# public Registry rows they were promoted to. double_counted is only stored on
+# internal rows; promoted rows are single causes without an aggregate.
+historical_rr_parity_rows <- function(source, cause) {
+  manifest <- historical_rr_parity_manifest(source, cause)
+  internal <- .load_historical_rr_registry() %>%
+    dplyr::filter(.data$component_id %in% manifest$component_id) %>%
+    dplyr::select(dplyr::all_of(c(CRF_REGISTRY_REQUIRED_COLUMNS, "double_counted")))
+  promoted_ids <- manifest$public_registry_crf_ids[
+    manifest$coverage_status == "public_registry_candidate"
+  ]
+  public <- load_crf_registry() %>%
+    dplyr::filter(.data$crf_id %in% promoted_ids) %>%
+    dplyr::select(dplyr::all_of(CRF_REGISTRY_REQUIRED_COLUMNS)) %>%
+    dplyr::mutate(double_counted = FALSE)
+
+  dplyr::bind_rows(internal, public)
+}
+
+
+historical_rr_parity_registry <- function(source, cause) {
+  historical_rr_parity_rows(source, cause) %>%
     dplyr::select(dplyr::all_of(CRF_REGISTRY_REQUIRED_COLUMNS)) %>%
     .new_historical_crf_set()
 }
@@ -157,22 +183,12 @@ expect_historical_rr_parity <- function(source, cause, configuration_id) {
     cause = cause,
     configuration_id = configuration_id
   )
-  internal_registry <- .load_historical_rr_registry() %>%
-    dplyr::filter(
-      .data$source == .env$source,
-      .data$cause == .env$cause
-    )
-  manifest <- .load_historical_rr_manifest() %>%
-    dplyr::filter(component_id %in% internal_registry$component_id)
+  internal_registry <- historical_rr_parity_rows(source, cause)
+  manifest <- historical_rr_parity_manifest(source, cause)
 
   testthat::expect_true(nrow(internal_registry) > 0)
-  testthat::expect_true(all(
-    internal_registry$reproduction_status == "parity_verified"
-  ))
+  testthat::expect_equal(nrow(internal_registry), nrow(manifest))
   testthat::expect_true(all(manifest$reproduction_status == "parity_verified"))
-  testthat::expect_true(all(is.na(
-    internal_registry$reproduction_blocking_reason
-  )))
   testthat::expect_true(all(is.na(manifest$reproduction_blocking_reason)))
   testthat::expect_true(all(manifest$routing_checklist_complete))
   testthat::expect_true(all(manifest$routing_status == "ready"))
@@ -253,9 +269,5 @@ expect_historical_rr_parity <- function(source, cause, configuration_id) {
     nrow(expected_fingerprint),
     nrow(internal_registry)
   )
-  testthat::expect_equal(
-    actual_fingerprint,
-    expected_fingerprint,
-    tolerance = 1e-12
-  )
+  expect_legacy_fingerprint_equal(actual_fingerprint, expected_fingerprint)
 }

@@ -272,3 +272,52 @@ read_legacy_historical_configurations_hia_fingerprint <- function() {
       .data$outcome
     )
 }
+
+# Frozen fingerprint rows allowed to differ from current results. Each rule is a
+# reviewed scientific change; every other row must still match.
+authorised_legacy_fingerprint_differences <- function() {
+  tibble::tibble(
+    configuration_id = c(
+      "legacy_default_gbd2023_gbd2021_2021",
+      "legacy_default_gbd2023_gbd2023_2023"
+    ),
+    pollutant = "PM25",
+    cause = CAUSE_DEMENTIA,
+    release = "0.8.2",
+    description = paste(
+      "GBD 2023 Dementia curve regenerated from the official IHME release",
+      "(doi:10.6069/K4TW-Q814). These fingerprints were frozen with the 2024",
+      "GBD 2023 mean curve."
+    )
+  )
+}
+
+
+expect_legacy_fingerprint_equal <- function(actual, expected, tolerance = 1e-12) {
+  rules <- authorised_legacy_fingerprint_differences()
+  authorised <- function(x) {
+    paste(x$configuration_id, x$pollutant, x$cause) %in%
+      paste(rules$configuration_id, rules$pollutant, rules$cause)
+  }
+  actual_authorised <- authorised(actual)
+  expected_authorised <- authorised(expected)
+
+  testthat::expect_equal(
+    actual[!actual_authorised, ],
+    expected[!expected_authorised, ],
+    tolerance = tolerance
+  )
+
+  # Authorised rows keep their keys and metadata, and their numbers must have
+  # changed, so that a rule is removed once it no longer applies.
+  testthat::expect_equal(
+    dplyr::select(actual[actual_authorised, ], -number),
+    dplyr::select(expected[expected_authorised, ], -number)
+  )
+  if (any(expected_authorised)) {
+    testthat::expect_true(any(
+      abs(actual$number[actual_authorised] - expected$number[expected_authorised]) >
+        1e-6 * abs(expected$number[expected_authorised])
+    ))
+  }
+}

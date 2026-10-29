@@ -25,7 +25,7 @@ compute_hia() -> compute_hia_paf() -> compute_hia_impacts()
 ## Current Status and Scope
 
 The public Registry now contains real, opt-in CRFs for GEMM, Fusion, GBD 2019,
-and two migrated log-linear definitions. The examples in this document use
+GBD 2023, and the 15 migrated log-linear definitions. The examples in this document use
 only those user-facing Registry rows. Internal validation fixtures are excluded
 from public search, preset, preview, and Set workflows. Internal development
 presets are omitted from public discovery and are never defaults. They can be
@@ -109,8 +109,8 @@ NO2 / NCD.LRI / Deaths
 NO2 / Asthma.1to18 / AsthmaIncidence
 ```
 
-Several Registry rows may occupy the same slot. For example, GEMM, Fusion, and
-GBD 2019 all provide a public CRF for `PM25 / IHD / Deaths`. A preset selects
+Several Registry rows may occupy the same slot. For example, GEMM, Fusion,
+GBD 2019 and GBD 2023 all provide a public CRF for `PM25 / IHD / Deaths`. A preset selects
 one of those alternatives.
 
 ## Recommended Workflow

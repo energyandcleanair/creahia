@@ -79,11 +79,11 @@ test_that("historical RR inventory records current Registry data coverage", {
   )
   expect_equal(
     sum(inventory$coverage_status == "public_registry_candidate"),
-    50
+    69
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_candidate"),
-    51
+    32
   )
   expect_equal(
     sum(inventory$coverage_status == "historical_internal_required"),
@@ -627,7 +627,7 @@ test_that("GEMM YLL and YLD outcome reuse is represented in the public Registry"
     )
 
   expect_equal(nrow(expected_components), 8L)
-  expect_equal(nrow(.load_historical_rr_registry()), 51L)
+  expect_equal(nrow(.load_historical_rr_registry()), 32L)
   expect_equal(nrow(historical_registry), 8L)
   expect_setequal(
     historical_registry$component_id,
@@ -819,54 +819,39 @@ test_that("original RR internal curves can be regenerated from the legacy source
 })
 
 
-test_that("GBD 2023 internal curves can be regenerated from their processed source", {
-  output_dir <- withr::local_tempdir()
-  output_paths <- .compile_historical_gbd2023_rr_curves(
-    output_dir = output_dir
-  )
-  committed_dir <- get_hia_path(
-    "rr/compatibility/tabular",
-    error_if_not_exists = TRUE
-  )
-
-  expect_setequal(
-    basename(output_paths),
-    .historical_gbd2023_rr_curve_specs()$filename
-  )
-  for (output_path in output_paths) {
-    generated <- readr::read_csv(output_path, show_col_types = FALSE)
-    committed <- readr::read_csv(
-      file.path(committed_dir, basename(output_path)),
-      show_col_types = FALSE
+test_that("GBD 2023 public curves reproduce their processed source", {
+  # RR_GBD2023 routes to the public gbd2023 rows. Their tables must match
+  # rr/processed/rr_gbd2023.csv, which the legacy route reads.
+  manifest <- .load_historical_rr_manifest() %>%
+    dplyr::filter(
+      .data$component_type == "rr",
+      .data$source == RR_GBD2023,
+      .data$outcome == MEASURE_DEATHS
     )
-    expect_equal(
-      generated,
-      committed,
-      tolerance = 0,
-      info = basename(output_path)
-    )
-  }
-
-  specs <- .historical_gbd2023_rr_curve_specs()
+  public_rows <- load_crf_registry() %>%
+    dplyr::filter(.data$crf_id %in% manifest$public_registry_crf_ids)
   legacy_rr <- get_rr(RR_GBD2023)
-  for (i in seq_len(nrow(specs))) {
-    generated <- readr::read_csv(
-      output_paths[[i]],
+
+  expect_true(all(manifest$coverage_status == "public_registry_candidate"))
+  expect_setequal(public_rows$cause, unique(legacy_rr$cause))
+  for (i in seq_len(nrow(public_rows))) {
+    public_curve <- readr::read_csv(
+      get_hia_path(public_rows$data_path[[i]], error_if_not_exists = TRUE),
       show_col_types = FALSE
     ) %>%
       dplyr::arrange(age, exposure) %>%
       tibble::as_tibble()
     legacy_source <- legacy_rr %>%
-      dplyr::filter(cause == specs$cause[[i]]) %>%
+      dplyr::filter(cause == public_rows$cause[[i]]) %>%
       dplyr::select(exposure, age, low, central, high) %>%
       dplyr::arrange(age, exposure) %>%
       tibble::as_tibble()
 
     expect_equal(
-      generated,
+      public_curve,
       legacy_source,
       tolerance = 0,
-      info = specs$cause[[i]]
+      info = public_rows$cause[[i]]
     )
   }
 })

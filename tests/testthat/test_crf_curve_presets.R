@@ -54,7 +54,7 @@ curve_preset_rows <- function(hia, causes) {
 
 
 test_that("curve presets select one source per PM2.5 slot", {
-  expected_rows <- c(gemm = 16L, fusion = 18L, gbd2019 = 16L)
+  expected_rows <- c(gemm = 16L, fusion = 18L, gbd2019 = 16L, gbd2023 = 19L)
 
   for (preset in names(expected_rows)) {
     selected <- crfs_set(presets = preset)
@@ -70,11 +70,13 @@ test_that("curve presets select one source per PM2.5 slot", {
   expect_true("NCD.LRI" %in% crfs_set(presets = "gemm")$cause)
   expect_true("NCD.LRI" %in% crfs_set(presets = "fusion")$cause)
   expect_false("NCD.LRI" %in% crfs_set(presets = "gbd2019")$cause)
+  expect_false("NCD.LRI" %in% crfs_set(presets = "gbd2023")$cause)
+  expect_true(CAUSE_DEMENTIA %in% crfs_set(presets = "gbd2023")$cause)
 })
 
 
 test_that("curve presets combine with crea_others_v1 in one Set", {
-  for (preset in c("gemm", "fusion", "gbd2019")) {
+  for (preset in c("gemm", "fusion", "gbd2019", "gbd2023")) {
     selected <- crfs_set(presets = c(preset, "crea_others_v1"))
     expect_equal(
       nrow(selected),
@@ -86,7 +88,7 @@ test_that("curve presets combine with crea_others_v1 in one Set", {
 
 
 test_that("LRI.child curves are the adult LRI curves relabelled Under 5", {
-  for (preset in c("gemm", "fusion", "gbd2019")) {
+  for (preset in c("gemm", "fusion", "gbd2019", "gbd2023")) {
     selected <- crfs_set(presets = preset)
     read_curve <- function(cause) {
       path <- selected$data_path[
@@ -111,7 +113,9 @@ test_that("LRI.child curves are the adult LRI curves relabelled Under 5", {
 
 
 test_that("curve presets reproduce the matching rr_sources results", {
-  sources <- c(gemm = RR_GEMM, fusion = RR_FUSION, gbd2019 = RR_GBD2019)
+  sources <- c(
+    gemm = RR_GEMM, fusion = RR_FUSION, gbd2019 = RR_GBD2019, gbd2023 = RR_GBD2023
+  )
 
   for (preset in names(sources)) {
     causes <- unique(crfs_set(presets = preset)$cause)
@@ -126,6 +130,30 @@ test_that("curve presets reproduce the matching rr_sources results", {
       info = preset
     )
   }
+})
+
+
+test_that("gbd2023 Dementia uses the official IHME release", {
+  # Central RR from IHME_GBD_2023_AIR_POLLUTION_1990_2022_PM_RR_DEMENTIA_MEAN_Y2025M11D18.CSV
+  # (doi:10.6069/K4TW-Q814). The 2024 curve used up to 0.8.1 gave 1.27, 1.53,
+  # 1.85 and 1.90 at these exposures.
+  selected <- crfs_set(presets = "gbd2023")
+  path <- selected$data_path[
+    selected$cause == CAUSE_DEMENTIA & selected$outcome == "Deaths"
+  ]
+  curve <- readr::read_csv(
+    get_hia_path(path, error_if_not_exists = TRUE),
+    col_types = readr::cols()
+  )
+
+  expect_equal(
+    curve$central[match(c(5, 10, 35, 100), curve$exposure)],
+    c(1.2301, 1.4779, 1.9340, 1.9907),
+    tolerance = 1e-4
+  )
+  expect_true(all(
+    selected$reference_id == "ihme_2026_gbd2023_air_pollution_risk_curves"
+  ))
 })
 
 
