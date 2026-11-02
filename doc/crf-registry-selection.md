@@ -277,6 +277,30 @@ are rejected before PAF calculation.
 The Set is compute-ready, but creating it does not run HIA or change the
 Registry. Ordinary legacy CRF inputs and package defaults remain unchanged.
 
+### Workflow 5c: Reproduce A C40 Configuration
+
+The `c40` preset holds the 19 CRFs of `crfs_version = "C40"`. Eleven are the
+shared default-profile rows also in `crea_others_v1`; the other eight are the
+NO2 AllCause, TotCV and TotResp functions (Faustini 2014) and SO2 AllCause
+(Krewski 2009), with unchanged parameters. Combine it with a PM2.5 preset:
+
+```r
+crfs <- crfs_set(presets = c("fusion", "c40"))
+
+hia <- wrappers.compute_hia_two_images(
+  ...,
+  crfs = crfs,
+  epi_version = "C40"
+)
+```
+
+This gives the same results as `crfs_version = "C40", rr_sources = RR_FUSION`.
+The eight NO2 and SO2 rows reproduce the historical values but have not been
+scientifically reviewed: their age range, counterfactual and overlap rules are
+open methodology questions Q06 and Q07. Like `gemm` and `fusion`, `c40` fails
+the strict double-counting check, because NO2 AllCause is selected with its
+TotCV and TotResp components, which the HIA flags as `double_counted`.
+
 ### Workflow 6: Inspect An Unchanged Legacy Configuration
 
 HIA users can keep their existing wrapper arguments and inspect how those

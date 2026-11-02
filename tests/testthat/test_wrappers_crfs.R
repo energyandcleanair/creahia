@@ -63,3 +63,30 @@ test_that("the wrapper passes epi to compute_hia()", {
     run_wrapper_crfs_hia()
   )
 })
+
+
+test_that("fusion and c40 presets reproduce the C40 wrapper call", {
+  key <- function(hia) {
+    hia %>%
+      dplyr::select(
+        scenario, region_id, pollutant, cause, outcome, estimate,
+        age_group, double_counted, number
+      ) %>%
+      dplyr::arrange(pollutant, cause, outcome, estimate, age_group) %>%
+      as.data.frame()
+  }
+
+  legacy <- run_wrapper_crfs_hia(
+    crfs_version = "C40",
+    epi_version = "C40",
+    rr_sources = RR_FUSION
+  )
+  presets <- run_wrapper_crfs_hia(
+    crfs = crfs_set(presets = c("fusion", "c40")),
+    epi_version = "C40"
+  )
+
+  expect_gt(nrow(presets), 0)
+  expect_true(all(c("NO2", "PM25") %in% presets$pollutant))
+  expect_equal(key(presets), key(legacy), tolerance = 1e-12)
+})
