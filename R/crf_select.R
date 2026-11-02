@@ -513,12 +513,6 @@ preview_crf_set <- function(
     stop("`presets` must contain at least one CRF preset name.", call. = FALSE)
   }
 
-  custom_add <- register_custom_crfs(add, registry = registry)
-  custom_replace <- register_custom_crfs(replace, registry = custom_add$registry)
-  add <- custom_add$entries
-  replace <- custom_replace$entries
-  registry <- custom_replace$registry
-
   selected <- dplyr::bind_rows(
     lapply(
       presets,
@@ -933,15 +927,11 @@ crfs_set <- function(
   replace = NULL,
   registry = load_crf_registry()
 ) {
-  custom_add <- register_custom_crfs(add, registry = registry)
-  custom_replace <- register_custom_crfs(replace, registry = custom_add$registry)
-  registry <- custom_replace$registry
-
   preview <- preview_crf_set(
     presets = presets,
-    add = custom_add$entries,
+    add = add,
     remove = remove,
-    replace = custom_replace$entries,
+    replace = replace,
     registry = registry
   )
 
@@ -949,10 +939,7 @@ crfs_set <- function(
     dplyr::filter(.data$action != "removed") %>%
     dplyr::select(dplyr::all_of(CRF_SELECTION_REQUIRED_COLUMNS))
 
-  crfs <- resolve_crf_selection(selection, registry = registry)
-  warn_custom_crf_overlaps(crfs)
-
-  new_crfs_set(crfs)
+  new_crfs_set(resolve_crf_selection(selection, registry = registry))
 }
 
 new_crfs_set <- function(crfs) {

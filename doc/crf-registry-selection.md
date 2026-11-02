@@ -277,39 +277,6 @@ are rejected before PAF calculation.
 The Set is compute-ready, but creating it does not run HIA or change the
 Registry. Ordinary legacy CRF inputs and package defaults remain unchanged.
 
-### Workflow 5b: Add A Custom Log-Linear CRF
-
-For a sensitivity run with RR values that are not in the Registry, build the
-function with `crf_log_linear()` and pass it to `add` or `replace`:
-
-```r
-custom_ihd <- crf_log_linear(
-  "PM25", cause = "IHD", outcome = "Deaths",
-  rr = c(central = 1.10, low = 1.05, high = 1.15),
-  per = 10,
-  counterfactual = 5,
-  source = "Sensitivity run"
-)
-
-crfs <- crfs_set(
-  presets = "gbd2023",
-  replace = list(custom_ihd)
-)
-```
-
-The custom row uses the same log-linear calculation as Registry log-linear
-CRFs. It gets a `custom_*` `crf_id` and a note saying it has not been
-reviewed. It exists only in that Set: it is not written to the Registry and
-does not appear in presets, `search_crf_registry()` or
-`crf_override_options()`. For ppb units, `units_multiplier` defaults to the
-Registry value for that pollutant; other conversions must be given explicitly.
-`age_low` and `age_high` are metadata only, as for Registry log-linear CRFs.
-
-`crfs_set()` warns when a custom CRF overlaps another selected cause in the
-same double-counting group, for example a custom `AllCause` deaths row next to
-the preset's IHD deaths. Choosing which rows a custom aggregate replaces stays
-an explicit scientific decision.
-
 ### Workflow 6: Inspect An Unchanged Legacy Configuration
 
 HIA users can keep their existing wrapper arguments and inspect how those
