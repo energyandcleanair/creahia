@@ -4,6 +4,8 @@
 
 - This repository is an R package for air-pollution health impact assessment
   (HIA).
+- Support two kinds of work: developing the package and using the package for
+  an HIA through scripts in `project_workflows/`.
 - Changes can affect both software behavior and scientific interpretation.
   Numerical reproduction is not the same as scientific approval.
 
@@ -12,12 +14,50 @@
 1. Check the active worktree, branch, `git status`, and recent commit before
    editing. Do not overwrite or reformat unrelated user changes.
 2. Read `plans/README.md` and follow its task-specific reading route.
-3. Inspect the current code and tests before relying on planning prose. When
-   they disagree, stop and report the mismatch instead of guessing.
+3. Identify whether the request concerns package development, an HIA workflow,
+   or both. Infer this from the request and files; ask only if it is unclear.
+   Inspect the relevant workflow, current code, and tests before relying on
+   planning prose. When they disagree, stop and report the mismatch instead
+   of guessing.
 4. Define a small, reviewable change and its validation before implementation.
 
 Do not assume that a branch name, rollout date, or unfinished proposal in a
 historical planning file still describes the current repository.
+
+## Development and analysis
+
+- For package development, follow the maintenance runbook and safeguards below.
+- For HIA workflows in `project_workflows/`, read
+  `doc/phase1-hia-user-guide.md` and `doc/crf-registry-selection.md`.
+  Keep project configuration in the workflow.
+- Before analysis, fetch `origin` and check the checkout against its tracked
+  `origin` branch. Report if it is behind or diverged, has no tracked branch,
+  or the fetch fails.
+- Perform the checks below yourself. Use existing project decisions and ask
+  users only about consequential gaps or scientific choices.
+
+## HIA configuration and results
+
+- Aim for adult and child results unless the project restricts the population.
+  Respect each CRF's supported ages and report missing coverage.
+- Default to the latest available epidemiological data supported by the
+  package, unless the project explicitly requires another version. Verify
+  compatibility with the selected CRFs and record the version used.
+- Inspect the actual method selection and references using
+  `inspect_hia_configuration()` or the explicit Set discovery/preview tools.
+  Keep CRF, RR, EPI, and population choices explicit and separate.
+- Check that CRFs and EPI match by cause, outcome, age, location, and estimate;
+  verify exposure units, scenario meaning, and population scaling.
+- Check overlap before summing. Use
+  `validate_crf_selection(crfs, check_double_counting = TRUE)` for explicit Sets.
+  Filtering `!double_counted` alone is insufficient: AllCause and
+  disease-specific alternatives can both remain unflagged.
+- Keep unlike outcomes, alternative methods, and scenarios separate. Check
+  overlapping ages and regions. Missing or skipped results are not zero.
+- Report warnings, coverage gaps, units, time basis, and uncertainty limitations.
+  Save the selected methods, input sources, and reporting filters with outputs.
+- Implement confirmed choices without repeated approval; seek review for new
+  scientific choices under the boundaries below.
 
 ## Architecture invariants
 
@@ -72,6 +112,9 @@ historical planning file still describes the current repository.
 
 ## Validation expectations
 
+- For workflow-only changes, run a representative case when inputs are
+  available and report what remains unverified; the full package suite is
+  not required.
 - Run the smallest relevant tests first. For routing or numerical changes,
   include the applicable compatibility, parity, fixed-fingerprint, and output-
   structure checks.

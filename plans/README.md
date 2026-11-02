@@ -5,7 +5,10 @@
 ## Purpose
 
 This directory is the shared entry point for maintainers and AI agents working
-on the RR/CRF redesign and the resulting maintenance tasks. It contains the
+on the RR/CRF redesign and the resulting maintenance tasks. For HIA analysis
+work in `project_workflows/`, follow the analysis route in the root `AGENTS.md`
+and the user guides linked below; use this directory when package maintenance
+or architecture details are needed. It contains the
 current architecture and safe maintenance procedures, not the full history of
 the refactor.
 
