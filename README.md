@@ -72,6 +72,32 @@ search_crf_registry(pollutant = "PM25", cause = "IHD", outcome = "Deaths")
 search_crf_registry(query = "asthma")
 ```
 
+### Custom log-linear functions
+For a sensitivity run with RR values that are not in the Registry, build the function with `crf_log_linear()` and pass it to `add` or `replace`:
+```r
+allcause <- crf_log_linear(
+  "PM25", cause = "AllCause", outcome = "Deaths",
+  rr = c(central = 1.08, low = 1.06, high = 1.09),  # per `per` µg/m3
+  per = 10,
+  counterfactual = 0,
+  source = "Sensitivity run, values from ..."
+)
+
+# All-cause deaths replace the adult cause-specific curves; LRI.child (under 5) stays
+curve_deaths <- crfs_set(presets = "gbd2023") %>%
+  filter(outcome == "Deaths", cause != "LRI.child")
+
+crfs <- crfs_set(
+  presets = c("gbd2023", "crea_others_v1"),
+  remove = lapply(curve_deaths$cause, function(c) list(pollutant = "PM25", cause = c, outcome = "Deaths")),
+  add = list(allcause)
+)
+```
+
+- `rr` is `c(central, low, high)`. For ppb functions (`unit = "ppb"`), the conversion from µg/m3 is taken from the Registry for that pollutant.
+- The function gets a `custom_*` `crf_id`, which shows in the HIA output. It is not added to the Registry, presets or `search_crf_registry()`, and it has not been reviewed.
+- `crfs_set()` warns if a custom function overlaps other selected causes, e.g. AllCause deaths kept next to IHD deaths. Deciding what it replaces is up to you.
+
 ### References
 Each row has a `reference_id`. To list the references behind a selection:
 ```r
