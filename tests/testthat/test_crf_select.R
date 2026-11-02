@@ -654,6 +654,42 @@ test_that("preview_crf_set errors on incomplete removal entry", {
   )
 })
 
+test_that("a removal entry can list several causes", {
+  adult_causes <- c("COPD", "Dementia", "Diabetes", "IHD", "LC", "LRI", "Stroke")
+
+  crfs <- crfs_set(
+    presets = "gbd2023",
+    remove = list(list(pollutant = "PM25", cause = adult_causes, outcome = "Deaths"))
+  )
+  one_by_one <- crfs_set(
+    presets = "gbd2023",
+    remove = lapply(adult_causes, function(cause) {
+      list(pollutant = "PM25", cause = cause, outcome = "Deaths")
+    })
+  )
+
+  expect_equal(crfs$crf_id, one_by_one$crf_id)
+  expect_equal(crfs$cause[crfs$outcome == "Deaths"], "LRI.child")
+  expect_equal(crfs$outcome[crfs$cause == "IHD"], "YLLs")
+})
+
+test_that("a multi-cause removal errors on any unselected slot", {
+  expect_error(
+    crfs_set(
+      presets = "gbd2023",
+      remove = list(list(pollutant = "PM25", cause = c("IHD", "NCD.LRI"), outcome = "Deaths"))
+    ),
+    "PM25/NCD.LRI/Deaths"
+  )
+  expect_error(
+    crfs_set(
+      presets = "gbd2023",
+      remove = list(list(pollutant = "PM25", cause = character(), outcome = "Deaths"))
+    ),
+    "one or more non-empty strings"
+  )
+})
+
 test_that("preview_crf_set errors when replacing a removed slot", {
   expect_error(
     preview_crf_set(

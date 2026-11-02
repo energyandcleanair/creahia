@@ -95,14 +95,12 @@ test_that("crf_log_linear rejects invalid parameters", {
 })
 
 test_that("crfs_set adds a custom CRF without changing the Registry", {
-  curve_deaths <- crfs_set(presets = "gbd2023") %>%
-    dplyr::filter(outcome == "Deaths", cause != "LRI.child")
-
   crfs <- crfs_set(
     presets = c("gbd2023", "crea_others_v1"),
-    remove = lapply(curve_deaths$cause, function(cause) {
-      list(pollutant = "PM25", cause = cause, outcome = "Deaths")
-    }),
+    remove = list(list(
+      pollutant = "PM25", outcome = "Deaths",
+      cause = c("COPD", "Dementia", "Diabetes", "IHD", "LC", "LRI", "Stroke")
+    )),
     add = list(custom_pm25_allcause())
   )
 

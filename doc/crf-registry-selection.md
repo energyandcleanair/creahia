@@ -683,6 +683,24 @@ preview_crf_set(
 
 Removed rows remain visible with `action = "removed"`.
 
+Each field of a removal entry can list several values. This removes the
+deaths of several causes in one entry:
+
+```r
+preview_crf_set(
+  presets = "gbd2023",
+  remove = list(
+    list(
+      pollutant = "PM25",
+      cause = c("IHD", "Stroke"),
+      outcome = "Deaths"
+    )
+  )
+)
+```
+
+Every listed slot must be selected; otherwise the call errors.
+
 #### Replace A Selected Slot
 
 Replace GEMM IHD with the corresponding public Fusion adult-age curve:

@@ -85,12 +85,12 @@ allcause <- crf_log_linear(
 )
 
 # All-cause deaths replace the adult cause-specific curves; LRI.child (under 5) stays
-curve_deaths <- crfs_set(presets = "gbd2023") %>%
-  filter(outcome == "Deaths", cause != "LRI.child")
-
 crfs <- crfs_set(
   presets = c("gbd2023", "crea_others_v1"),
-  remove = lapply(curve_deaths$cause, function(c) list(pollutant = "PM25", cause = c, outcome = "Deaths")),
+  remove = list(list(
+    pollutant = "PM25", outcome = "Deaths",
+    cause = c("COPD", "Dementia", "Diabetes", "IHD", "LC", "LRI", "Stroke")
+  )),
   add = list(allcause)
 )
 ```
