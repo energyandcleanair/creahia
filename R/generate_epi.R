@@ -1065,9 +1065,10 @@ generate_epi_count_long <- function(version = "gbd2023") {
     group_by(location_id, location_name, iso3, location_level, age, measure_name, age_low, age_name, cause_name, sex_name, metric_name, estimate) %>%
     summarise(val = sum(val), .groups = "drop")
 
-  # Check that we have all these
-  if(length(setdiff(c(CAUSE_DIABETES, CAUSE_STROKE, CAUSE_LRI, CAUSE_NCD, CAUSE_IHD, CAUSE_COPD, CAUSE_LUNGCANCER, CAUSE_DEMENTIA),
-          unique(epi_long$cause_name)))>0) stop("Missing data in epi_long")
+  # Check that we have all these (the GBD 2017 download has no Dementia)
+  required_causes <- c(CAUSE_DIABETES, CAUSE_STROKE, CAUSE_LRI, CAUSE_NCD, CAUSE_IHD, CAUSE_COPD, CAUSE_LUNGCANCER)
+  if (version != "gbd2017") required_causes <- c(required_causes, CAUSE_DEMENTIA)
+  if(length(setdiff(required_causes, unique(epi_long$cause_name)))>0) stop("Missing data in epi_long")
 
   epi_long <- epi_long %>%
     dplyr::filter(cause_name %in% c(CAUSE_NCD, CAUSE_LRI)) %>%
