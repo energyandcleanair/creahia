@@ -19,13 +19,16 @@ arrange_historical_crf_profile_impacts <- function(impacts) {
 
 run_historical_crf_profile_parity_fixture <- function(
   profile_version,
-  selection_id
+  selection_id,
+  registry_crfs = NULL
 ) {
-  memberships <- .load_historical_crf_memberships() %>%
-    dplyr::filter(.data$selection_id == !!selection_id)
-  registry_crfs <- .resolve_historical_crf_components(
-    component_ids = memberships$component_id
-  )
+  if (is.null(registry_crfs)) {
+    memberships <- .load_historical_crf_memberships() %>%
+      dplyr::filter(.data$selection_id == !!selection_id)
+    registry_crfs <- .resolve_historical_crf_components(
+      component_ids = memberships$component_id
+    )
+  }
   legacy_crfs <- get_crfs(profile_version)
   empty_rr_sources <- legacy_hia_empty_rr_sources()
   epi <- legacy_hia_epi_fixture(legacy_crfs, empty_rr_sources)

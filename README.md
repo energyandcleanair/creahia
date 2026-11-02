@@ -31,8 +31,9 @@ describe_crf_preset("crea_others_v1")
 | `fusion` | Fusion PM2.5 curves: same as GEMM, plus Diabetes |
 | `gbd2019` | GBD 2019 PM2.5 curves: LRI, COPD, IHD, LC, Stroke, Diabetes, LRI.child |
 | `crea_others_v1` | CREA's other functions: asthma (NO2, PM2.5, O3), preterm birth, low birth weight, work absences, O3 COPD, NO2 and SO2 mortality |
+| `c40` | The C40 CRFs (`crfs_version = "C40"`): same as `crea_others_v1` except NO2 and SO2 mortality, which use all-cause functions (Faustini 2014 for NO2, Krewski 2009 for SO2) with NO2 cardiovascular and respiratory components |
 
-The PM2.5 presets cover deaths, YLLs and YLDs. Combine one of them with `crea_others_v1`. `gbd2023` follows IHME's GBD 2023 release, which reuses the GBD 2021 curves for COPD, Diabetes and LC. When CREA updates its other functions, they will be released as `crea_others_v2`, and `crea_others_v1` stays available to reproduce earlier results.
+The PM2.5 presets cover deaths, YLLs and YLDs. Combine one of them with `crea_others_v1`, or with `c40`: `crfs_set(presets = c("fusion", "c40"))` reproduces `crfs_version = "C40", rr_sources = RR_FUSION`. The NO2 and SO2 all-cause functions in `c40` reproduce historical CREA results but haven't been scientifically reviewed yet; their age range, counterfactual and overlap with PM2.5 are open methodology questions. `gbd2023` follows IHME's GBD 2023 release, which reuses the GBD 2021 curves for COPD, Diabetes and LC. When CREA updates its other functions, they will be released as `crea_others_v2`, and `crea_others_v1` stays available to reproduce earlier results.
 
 ### Example: GBD 2023 curves with CREA's other functions
 ```r
@@ -93,7 +94,7 @@ validate_crfs_against_epi(crfs, epi = get_epi("gbd2023"),
                           species = c("pm25", "no2", "o3_8h", "so2"))  # baseline data missing for any function
 ```
 
-`gemm` and `fusion` fail the strict check by design: they include NCD.LRI and its components, and the HIA flags the components as `double_counted` (see below). `compute_hia()` runs `validate_crfs_against_epi()` itself and warns about missing baseline data.
+`gemm` and `fusion` fail the strict check by design: they include NCD.LRI and its components, and the HIA flags the components as `double_counted` (see below). `c40` fails it for the same reason: NO2 AllCause comes with its TotCV and TotResp components. `compute_hia()` runs `validate_crfs_against_epi()` itself and warns about missing baseline data.
 
 ### Current limits
 - GBD 2021 curves aren't a preset yet: use `rr_sources = RR_GBD2021` for now.

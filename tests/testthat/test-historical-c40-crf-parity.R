@@ -65,3 +65,59 @@ test_that("C40 reproduction evidence remains separate from science review", {
   expect_true(all(manifest$routing_status == "ready"))
   expect_true(all(manifest$scientific_review_status == "not_reviewed"))
 })
+
+
+test_that("the c40 preset copies the historical C40 CRF parameters", {
+  numeric_cols <- c(
+    "rr_central", "rr_low", "rr_high", "conc_change", "counterfact",
+    "units_multiplier"
+  )
+  slot_cols <- c("pollutant", "cause", "outcome")
+
+  memberships <- .load_historical_crf_memberships() %>%
+    dplyr::filter(.data$selection_id == "legacy_profile_c40")
+  historical <- .load_historical_crf_registry() %>%
+    dplyr::semi_join(memberships, by = "crf_id") %>%
+    dplyr::select(dplyr::all_of(c(slot_cols, numeric_cols, "unit", "reference_id"))) %>%
+    dplyr::arrange(pollutant, cause, outcome)
+  public <- crfs_set(presets = "c40") %>%
+    dplyr::select(dplyr::all_of(c(slot_cols, numeric_cols, "unit", "reference_id"))) %>%
+    dplyr::arrange(pollutant, cause, outcome)
+
+  expect_equal(nrow(public), 19L)
+  expect_equal(
+    as.data.frame(public),
+    as.data.frame(historical),
+    tolerance = 0,
+    ignore_attr = TRUE
+  )
+})
+
+
+test_that("the c40 preset reproduces the C40 profile and its fingerprint", {
+  results <- run_historical_crf_profile_parity_fixture(
+    profile_version = "C40",
+    selection_id = "legacy_profile_c40",
+    registry_crfs = crfs_set(presets = "c40")
+  )
+
+  legacy_impacts <- arrange_historical_crf_profile_impacts(
+    results$legacy_impacts
+  )
+  registry_impacts <- arrange_historical_crf_profile_impacts(
+    results$registry_impacts
+  )
+  expect_equal(nrow(registry_impacts), 57L)
+  expect_equal(registry_impacts, legacy_impacts, tolerance = 1e-12)
+  expect_true(all(registry_impacts$double_counted[
+    registry_impacts$cause %in% c("TotCV", "TotResp")
+  ]))
+
+  actual_fingerprint <- legacy_hia_fingerprint(
+    registry_impacts,
+    configuration_id = "C40"
+  )
+  expected_fingerprint <- read_legacy_crf_profiles_hia_fingerprint() %>%
+    dplyr::filter(.data$configuration_id == "C40")
+  expect_equal(actual_fingerprint, expected_fingerprint, tolerance = 1e-12)
+})
