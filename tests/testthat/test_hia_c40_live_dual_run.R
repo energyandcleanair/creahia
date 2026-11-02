@@ -71,14 +71,16 @@ test_that("Korea C40 legacy selection matches the Registry candidate", {
   )
 
   expect_s3_class(result, "data.frame")
-  expect_equal(nrow(result), 75L)
+  expect_equal(nrow(result), 78L)
   expect_s3_class(seen$result, "creahia_hia_dual_run_result")
   expect_equal(seen$result$status, "matched")
   expect_equal(seen$result$reason, "outputs_match")
-  expect_equal(seen$result$legacy_rows, 75L)
-  expect_equal(seen$result$registry_rows, 75L)
+  expect_equal(seen$result$legacy_rows, 78L)
+  expect_equal(seen$result$registry_rows, 78L)
   expect_length(seen$result$differences, 0L)
-  expect_true(any(grepl("No age weights found.*LRI.child", warnings)))
+  # C40 EPI uses GBD 2017 age weights, which hold under-5 LRI as LRI
+  expect_false(any(grepl("No age weights found.*LRI.child", warnings)))
+  expect_true(any(result$cause == CAUSE_LRICHILD))
   expect_true(any(grepl(
     "PAF estimates are not properly ordered.*Diabetes",
     warnings
@@ -107,7 +109,7 @@ test_that("Korea C40 can use the activated compatibility route", {
   )
 
   expect_s3_class(result, "data.frame")
-  expect_equal(nrow(result), 75L)
+  expect_equal(nrow(result), 78L)
   expect_equal(seen$observation$status, "resolved")
   expect_equal(seen$observation$route_plan$route, "registry")
   expect_equal(seen$observation$route_application$status, "applied")
@@ -115,7 +117,9 @@ test_that("Korea C40 can use the activated compatibility route", {
     seen$observation$route_application$compute_inputs$crf_compute,
     "registry"
   )
-  expect_true(any(grepl("No age weights found.*LRI.child", warnings)))
+  # C40 EPI uses GBD 2017 age weights, which hold under-5 LRI as LRI
+  expect_false(any(grepl("No age weights found.*LRI.child", warnings)))
+  expect_true(any(result$cause == CAUSE_LRICHILD))
   expect_true(any(grepl(
     "PAF estimates are not properly ordered.*Diabetes",
     warnings

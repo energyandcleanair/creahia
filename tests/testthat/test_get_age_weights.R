@@ -129,3 +129,36 @@ test_that("get_age_weights returns NULL for missing data", {
   result <- get_age_weights("NONEXISTENT", cause, measure, rr_source, version)
   expect_null(result)
 })
+
+test_that("child LRI finds its under-5 age weight in every EPI version", {
+
+  for (version in c("C40", "gbd2017", "gbd2019", "gbd2021", "gbd2023")) {
+    for (measure in c("Deaths", "YLLs")) {
+      expect_no_warning(
+        result <- get_age_weights("BGD", CAUSE_LRICHILD, measure, RR_FUSION, version)
+      )
+      expect_equal(result$ages, AGE_CHILDREN, info = paste(version, measure))
+      expect_gt(result$age_weights$val, 0)
+    }
+  }
+})
+
+test_that("GBD 2017 counts use the same labels as later GBD versions", {
+
+  raw <- readr::read_csv(
+    get_hia_path("epi/processed/epi_count_long_gbd2017.csv"),
+    col_types = readr::cols()
+  )
+
+  expect_true("cause" %in% names(raw))
+  expect_false("<5" %in% raw$age)
+  expect_false(any(raw$cause == CAUSE_LRI & raw$age == AGE_CHILDREN))
+
+  child <- raw %>%
+    filter(location_id == get_epi_location_id("BGD"), cause == CAUSE_LRICHILD,
+           age == AGE_CHILDREN, measure_name == "Deaths", estimate == "central")
+  result <- get_age_weights("BGD", CAUSE_LRICHILD, "Deaths", RR_FUSION, "C40")
+
+  expect_equal(result$age_weights$val, sum(child$val))
+  expect_false(AGE_CHILDREN %in% get_age_weights("BGD", CAUSE_LRI, "Deaths", RR_FUSION, "C40")$ages)
+})

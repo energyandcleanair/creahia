@@ -390,13 +390,6 @@ get_epi_count_long_raw <- function(version = 'gbd2021') {
 
   epi_long <- read_csv(get_hia_path(glue("epi/processed/epi_count_long_{file_version}.csv")), col_types = cols())
 
-  # Backward compatibility: handle old format with cause_short and cause_name
-  if ("cause_short" %in% names(epi_long) && "cause_name" %in% names(epi_long)) {
-    epi_long <- epi_long %>%
-      mutate(cause = cause_short) %>%
-      select(-cause_name, -cause_short)
-  }
-
   # Aggregate to make sure there is no duplicate rows (these happened with OthCV and OthResp for instance)
   # Now done in generate_epi_long but adding here for backward compatibility
   epi_long <- epi_long %>%
